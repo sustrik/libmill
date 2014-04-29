@@ -28,9 +28,13 @@ require "clexer"
 $name = input[0..-6]
 
 vars = []
+
+./!output $name + ".h"
 .
-./* This file was generated from @{input} on @{Time.now}. */
+./*  @{Time.now}:
+.    This file was generated from @{input} */
 .
+
 .#ifndef @{$name.upcase}_H_INCLUDED
 .#define @{$name.upcase}_H_INCLUDED
 .
@@ -46,24 +50,38 @@ root.elements.each("var") do |v|
 end
 .};
 .
-.#endif
-
+.void @{$name}_init(struct @{$name} *self
+root.elements.each("arg") do |a|
+.    /+, @{a.attributes["type"]} @{a.attributes["name"]}
+end
+.    /+);
+.void @{$name}_handle(struct @{$name} *self, int src, int event);
 .
-../* This file was generated from @{input} on @{Time.now}. */
+.#endif
+.
+./!output $name + ".c"
+.
+./*  @{Time.now}:
+.    This file was generated from @{input} */
+.
+.#include "@{$name}.h"
+.
+.#include <assert.h>
 .
 .#define ____EXPECT(s)\
-.    ____self->____state = s;\
+.    self->____state = s;\
 .    return;\
-.    ____state#s:
+.    ____state##s:\
+.    switch (src * 1000 + event)
 .
 .#define ____EVENT(obj, ev)\
 .    case 1
 .
-.#define ____UNEXPECTED
+.#define ____UNEXPECTED\
 .    default:\
 .        assert (0);
 
-body = root.elements["body"][0].to_s
+body = root.texts.join.to_s
 ids = scan(body)
 state = 1
 offset = 0
@@ -80,7 +98,7 @@ for it in ids
     elsif(id == "unexpected")
         re = "____UNEXPECTED"
     elsif(vars.include?(id))
-        re = "(____self->#{id})"
+        re = "(self->#{id})"
     end
     if(re != nil)
         body[it[0]+offset..it[1]+offset] = re
@@ -89,20 +107,20 @@ for it in ids
 end
 
 .
-.void @{$name}_init(struct @{$name} *____self
+.void @{$name}_init(struct @{$name} *self
 root.elements.each("arg") do |a|
-.    /+, @{a.attributes["type"]} ____arg_@{a.attributes["name"]}
+.    /+, @{a.attributes["type"]} @{a.attributes["name"]}
 end
 .    /+) {
-.    ____self->____state = 0;
+.    self->____state = 0;
 root.elements.each("arg") do |a|
-.    ____self->@{a.attributes["name"]} = ____arg_@{a.attributes["name"]};
+.    self->@{a.attributes["name"]} = @{a.attributes["name"]};
 end
-.    @{$name}_event_handler(____self, -1, -1);
+.    @{$name}_handle(self, -1, -1);
 .}
 .
-.void @{$name}_event_handler(struct @{$name} *____self, int ____src, int ____event) {
-.    switch (____self->____state) {
+.void @{$name}_handle(struct @{$name} *self, int src, int event) {
+.    switch (self->____state) {
 .    case 0:
 .        break;
 for it in ids
@@ -117,4 +135,4 @@ end
 .
 .    @{body}
 .}
-
+.

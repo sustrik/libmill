@@ -1,7 +1,7 @@
-<fsm>
+<mill>
     <arg name = "foo" type = "int"/>
     <var name = "bar" type = "int"/>
-    <body><![CDATA[
+    <![CDATA[
     foo = 0;
     while(1) {
         expect {
@@ -11,5 +11,5 @@
         unexpected;
         }
     }
-    ]]></body>
-</fsm>
+    ]]>
+</mill>
