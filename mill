@@ -25,7 +25,7 @@
 require "clexer"
 
 ./!loadxml
-$name = input[0..-5]
+$name = input[0..-6]
 
 vars = []
 .
