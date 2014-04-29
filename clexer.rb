@@ -2,7 +2,7 @@
 # line 1 "clexer.rl"
 
 
-# line 73 "clexer.rl"
+# line 71 "clexer.rl"
 
 
 
@@ -159,14 +159,14 @@ end
 self.c_en_main = 10;
 
 
-# line 76 "clexer.rl"
+# line 74 "clexer.rl"
 
 def scan(data)
 
     curline = 1
     data = data.unpack("c*")
     eof = data.length
-    identifiers = [] 
+    tokens = [] 
 
 	
 # line 173 "clexer.rb"
@@ -179,7 +179,7 @@ begin
 	act = 0
 end
 
-# line 85 "clexer.rl"
+# line 83 "clexer.rl"
     
 # line 185 "clexer.rb"
 begin
@@ -305,37 +305,38 @@ when 5 then
 		begin
 te = p+1
  begin 
-		#puts "symbol(#{curline}): #{data[ts..te-1].pack("c*")}"
+        token = data[ts..te-1].pack("c*")
+        if(["(", ")", "{", "}"].include? token)
+            tokens << [ts, te - 1, token]
+        end
 	 end
 		end
 when 6 then
-# line 34 "clexer.rl"
+# line 37 "clexer.rl"
 		begin
 te = p+1
  begin 
-        #puts "single_lit(#{curline}): #{data[ts..te-1].pack("c*")}"
 	 end
 		end
 when 7 then
-# line 40 "clexer.rl"
+# line 42 "clexer.rl"
 		begin
 te = p+1
  begin 
-		#puts "double_lit(#{curline}): #{data[ts..te-1].pack("c*")}"
 	 end
 		end
 when 8 then
-# line 45 "clexer.rl"
+# line 46 "clexer.rl"
 		begin
 te = p+1
 		end
 when 9 then
-# line 50 "clexer.rl"
+# line 51 "clexer.rl"
 		begin
 te = p+1
 		end
 when 10 then
-# line 52 "clexer.rl"
+# line 53 "clexer.rl"
 		begin
 te = p+1
  begin  	begin
@@ -351,24 +352,26 @@ when 11 then
 		begin
 te = p
 p = p - 1; begin 
-		#puts "symbol(#{curline}): #{data[ts..te-1].pack("c*")}"
+        token = data[ts..te-1].pack("c*")
+        if(["(", ")", "{", "}"].include? token)
+            tokens << [ts, te - 1, token]
+        end
 	 end
 		end
 when 12 then
-# line 27 "clexer.rl"
+# line 30 "clexer.rl"
 		begin
 te = p
 p = p - 1; begin 
-        #puts "ident(#{curline}): #{data[ts..te-1].pack("c*")}"
-        identifiers << [ts, te-1]
+        token = data[ts..te-1].pack("c*")
+        tokens << [ts, te-1, token]
 	 end
 		end
 when 13 then
-# line 56 "clexer.rl"
+# line 57 "clexer.rl"
 		begin
 te = p
 p = p - 1; begin 
-		#puts "int(#{curline}): #{data[ts..te-1].pack("c*")}"
 	 end
 		end
 when 14 then
@@ -376,15 +379,13 @@ when 14 then
 		begin
 te = p
 p = p - 1; begin 
-		#puts "float(#{curline}): #{data[ts..te-1].pack("c*")}"
 	 end
 		end
 when 15 then
-# line 68 "clexer.rl"
+# line 67 "clexer.rl"
 		begin
 te = p
 p = p - 1; begin 
-		#puts "hex(#{curline}): #{data[ts..te-1].pack("c*")}"
 	 end
 		end
 when 16 then
@@ -392,18 +393,20 @@ when 16 then
 		begin
  begin p = ((te))-1; end
  begin 
-		#puts "symbol(#{curline}): #{data[ts..te-1].pack("c*")}"
+        token = data[ts..te-1].pack("c*")
+        if(["(", ")", "{", "}"].include? token)
+            tokens << [ts, te - 1, token]
+        end
 	 end
 		end
 when 17 then
-# line 56 "clexer.rl"
+# line 57 "clexer.rl"
 		begin
  begin p = ((te))-1; end
  begin 
-		#puts "int(#{curline}): #{data[ts..te-1].pack("c*")}"
 	 end
 		end
-# line 407 "clexer.rb"
+# line 410 "clexer.rb"
 			end # action switch
 		end
 	end
@@ -423,7 +426,7 @@ when 2 then
 # line 1 "NONE"
 		begin
 ts = nil;		end
-# line 427 "clexer.rb"
+# line 430 "clexer.rb"
 		end # to state action switch
 	end
 	if _trigger_goto
@@ -454,9 +457,9 @@ end
 	end
 	end
 
-# line 86 "clexer.rl"
+# line 84 "clexer.rl"
 
-    return identifiers
+    return tokens
 
 end
 

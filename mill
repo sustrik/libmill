@@ -27,6 +27,34 @@ require "clexer"
 ./!loadxml
 $name = input[0..-6]
 
+# Replace specific token in the text by a different text.
+def replace(text, tokens, index, newtext)
+    text[tokens[index][0]..tokens[index][1]] = newtext
+    offset = newtext.size - (tokens[index][1] - tokens[index][0] + 1)
+    for i in index + 1..tokens.size - 1
+        tokens[i][0] += offset
+        tokens[i][1] += offset
+    end
+end
+
+# Find the matching bracket in the list of tokens.
+def matchingb(tokens, index)
+     startb = "("
+     endb = ")"
+     if(tokens[index][2] == "{")
+         startb = "{"
+         endb = "}"
+     end
+     count = 1
+     for i in index + 1..tokens.size - 1
+         count += 1 if tokens[i][2] == startb
+         count -= 1 if tokens[i][2] == endb
+         return i if count == 0
+     end
+     puts("can't find matching bracket\n")
+     exit
+end
+
 vars = []
 
 ./!output $name + ".h"
@@ -72,37 +100,41 @@ end
 .    self->____state = s;\
 .    return;\
 .    ____state##s:\
-.    switch (src * 1000 + event)
+.    switch (src * 1000 + event) {
 .
 .#define ____EVENT(obj, ev)\
 .    case 1
 .
-.#define ____UNEXPECTED\
+.#define ____ENDEXPECT\
 .    default:\
-.        assert (0);
+.        assert (0);\
+.    }
 
 body = root.texts.join.to_s
-ids = scan(body)
+tokens = scan(body)
 state = 1
 offset = 0
-for it in ids
-    id = body[it[0]+offset..it[1]+offset]
-    re = nil
-    if(id.index('$') != nil)
-        els = id.split('$')
+for i in 0..tokens.size - 1
+    token = tokens[i][2]
+    if(token.index('$') != nil)
+        els = token.split('$')
         re = "____EVENT(" + els[0] + ", " + els[1] + ")"
-    elsif(id == "expect")
+        replace(body, tokens, i, re)
+    elsif(token == "expect")
         re = "____EXPECT(#{state})"
-        it << state
+        tokens[i] << state
         state += 1
-    elsif(id == "unexpected")
-        re = "____UNEXPECTED"
-    elsif(vars.include?(id))
-        re = "(self->#{id})"
-    end
-    if(re != nil)
-        body[it[0]+offset..it[1]+offset] = re
-        offset += re.size - (it[1] - it [0] + 1)
+        replace(body, tokens, i, re)
+        if (tokens[i + 1][2] != "{")
+            puts "expect should be followed by '{'"
+            exit
+        end
+        replace(body, tokens, i + 1, "")
+        im = matchingb(tokens, i + 1)
+        replace(body, tokens, im, "____ENDEXPECT")
+    elsif(vars.include?(token))
+        re = "(self->#{token})"
+        replace(body, tokens, i, re)
     end
 end
 
@@ -123,10 +155,10 @@ end
 .    switch (self->____state) {
 .    case 0:
 .        break;
-for it in ids
-    if(it.size == 3)
-.    case @{it[2]}:
-.        goto ____state@{it[2]};
+for it in tokens
+    if(it.size == 4)
+.    case @{it[3]}:
+.        goto ____state@{it[3]};
     end
 end
 .    default:

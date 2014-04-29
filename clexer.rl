@@ -19,26 +19,27 @@
 	# Symbols. Upon entering clear the buffer. On all transitions
 	# buffer a character. Upon leaving dump the symbol.
 	( punct - [_'"] ) {
-		#puts "symbol(#{curline}): #{data[ts..te-1].pack("c*")}"
+        token = data[ts..te-1].pack("c*")
+        if(["(", ")", "{", "}"].include? token)
+            tokens << [ts, te - 1, token]
+        end
 	};
 
 	# Identifier. Upon entering clear the buffer. On all transitions
 	# buffer a character. Upon leaving, dump the identifier.
 	alpha_u alnum_u* {
-        #puts "ident(#{curline}): #{data[ts..te-1].pack("c*")}"
-        identifiers << [ts, te-1]
+        token = data[ts..te-1].pack("c*")
+        tokens << [ts, te-1, token]
 	};
 
 	# Single Quote.
 	sliteralChar = [^'\\] | newline | ( '\\' . any_count_line );
 	'\'' . sliteralChar* . '\'' {
-        #puts "single_lit(#{curline}): #{data[ts..te-1].pack("c*")}"
 	};
 
 	# Double Quote.
 	dliteralChar = [^"\\] | newline | ( '\\' any_count_line );
 	'"' . dliteralChar* . '"' {
-		#puts "double_lit(#{curline}): #{data[ts..te-1].pack("c*")}"
 	};
 
 	# Whitespace is standard ws, newlines and control codes.
@@ -54,19 +55,16 @@
 	# Match an integer. We don't bother clearing the buf or filling it.
 	# The float machine overlaps with int and it will do it.
 	digit+ {
-		#puts "int(#{curline}): #{data[ts..te-1].pack("c*")}"
 	};
 
 	# Match a float. Upon entering the machine clear the buf, buffer
 	# characters on every trans and dump the float upon leaving.
 	digit+ '.' digit+ {
-		#puts "float(#{curline}): #{data[ts..te-1].pack("c*")}"
 	};
 
 	# Match a hex. Upon entering the hex part, clear the buf, buffer characters
 	# on every trans and dump the hex on leaving transitions.
 	'0x' xdigit+ {
-		#puts "hex(#{curline}): #{data[ts..te-1].pack("c*")}"
 	};
 
 	*|;
@@ -79,12 +77,12 @@ def scan(data)
     curline = 1
     data = data.unpack("c*")
     eof = data.length
-    identifiers = [] 
+    tokens = [] 
 
 	%% write init;
     %% write exec;
 
-    return identifiers
+    return tokens
 
 end
 

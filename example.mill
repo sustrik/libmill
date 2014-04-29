@@ -1,13 +1,12 @@
 <mill>
-    <arg name = "foo" type = "int"/>
+    <arg name = "baz" type = "int"/>
     <var name = "bar" type = "int"/>
-    foo = 0;
+    bar = 0;
     while(1) {
         expect {
         a$b:
-            foo++;
+            bar++;
             break;
-        unexpected;
         }
     }
 </mill>
