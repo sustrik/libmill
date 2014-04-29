@@ -1,0 +1,99 @@
+#!/usr/bin/ribosome
+
+require "lexer"
+
+./!loadxml
+$name = input[0..-5]
+
+vars = []
+.
+./* This file was generated from @{input} on @{Time.now}. */
+.
+.#ifndef @{$name.upcase}_H_INCLUDED
+.#define @{$name.upcase}_H_INCLUDED
+.
+.struct @{$name} {
+.    int ____state;
+root.elements.each("arg") do |a|
+.    @{a.attributes["type"]} @{a.attributes["name"]};
+    vars << a.attributes["name"]
+end
+root.elements.each("var") do |v|
+.    @{v.attributes["type"]} @{v.attributes["name"]};
+    vars << v.attributes["name"]
+end
+.};
+.
+.#endif
+
+.
+../* This file was generated from @{input} on @{Time.now}. */
+.
+.#define ____EXPECT(s)\
+.    ____self->____state = s;\
+.    return;\
+.    ____state#s:
+.
+.#define ____EVENT(obj, ev)\
+.    case 1
+.
+.#define ____UNEXPECTED
+.    default:\
+.        assert (0);
+
+body = root.elements["body"][0].to_s
+ids = scan(body)
+state = 1
+offset = 0
+for it in ids
+    id = body[it[0]+offset..it[1]+offset]
+    re = nil
+    if(id.index('$') != nil)
+        els = id.split('$')
+        re = "____EVENT(" + els[0] + ", " + els[1] + ")"
+    elsif(id == "expect")
+        re = "____EXPECT(#{state})"
+        it << state
+        state += 1
+    elsif(id == "unexpected")
+        re = "____UNEXPECTED"
+    elsif(vars.include?(id))
+        re = "(____self->#{id})"
+    end
+    if(re != nil)
+        body[it[0]+offset..it[1]+offset] = re
+        offset += re.size - (it[1] - it [0] + 1)
+    end
+end
+
+.
+.void @{$name}_init(struct @{$name} *____self
+root.elements.each("arg") do |a|
+.    /+, @{a.attributes["type"]} ____arg_@{a.attributes["name"]}
+end
+.    /+) {
+.    ____self->____state = 0;
+root.elements.each("arg") do |a|
+.    ____self->@{a.attributes["name"]} = ____arg_@{a.attributes["name"]};
+end
+.    @{$name}_event_handler(____self, -1, -1);
+.}
+.
+.void @{$name}_event_handler(struct @{$name} *____self, int ____src, int ____event) {
+.    switch (____self->____state) {
+.    case 0:
+.        break;
+for it in ids
+    if(it.size == 3)
+.    case @{it[2]}:
+.        goto ____state@{it[2]};
+    end
+end
+.    default:
+.        assert(0);
+.    }
+.
+.    @{body}
+.}
+
+

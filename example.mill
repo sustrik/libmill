@@ -1,0 +1,15 @@
+<fsm>
+    <arg name = "foo" type = "int"/>
+    <var name = "bar" type = "int"/>
+    <body><![CDATA[
+    foo = 0;
+    while(1) {
+        expect {
+        a$b:
+            foo++;
+            break;
+        unexpected;
+        }
+    }
+    ]]></body>
+</fsm>
