@@ -24,8 +24,20 @@
 
 require "clexer"
 
-./!loadxml
+./!loadyaml
+
+################################################################################
+#  Global variables.                                                           #
+################################################################################
+
 $name = input[0..-6]
+$args = []
+$vars = []
+$states = []
+
+################################################################################
+#  Helper functions.                                                           #
+################################################################################
 
 # Replace specific token in the text by a different text.
 def replace(text, tokens, index, newtext)
@@ -55,7 +67,44 @@ def matchingb(tokens, index)
      exit
 end
 
-vars = []
+################################################################################
+#  Preprocess the function body.                                               #
+################################################################################
+
+for a in root["args"]
+    name = a.strip.split(/\s+/)[-1]
+    $args << name;
+    $vars << name;
+end
+for v in root["vars"]
+    name = v.strip.split(/\s+/)[-1]
+    $vars << name;
+end
+
+body = root["body"]
+tokens = scan(body)
+state = 1
+for i in 0..tokens.size - 1
+    token = tokens[i][2]
+    if(token == "getevent")
+        if (tokens[i + 1][2] != "(")
+            puts "error: getevent should be followed by '('"
+            exit
+        end
+        replace(body, tokens, i, "MILL_GETEVENT")
+        replace(body, tokens, i + 1, "(#{state}, ")
+        $states << state
+        state += 1
+    elsif(token == "return")
+        replace(body, tokens, i, "goto mill_shutdown_state_0")
+    elsif($vars.include?(token))
+        replace(body, tokens, i, "(self->#{token})")
+    end
+end
+
+################################################################################
+#  Generation of the header file.                                              #
+################################################################################
 
 ./!output $name + ".h"
 .
@@ -66,27 +115,31 @@ vars = []
 .#ifndef @{$name.upcase}_H_INCLUDED
 .#define @{$name.upcase}_H_INCLUDED
 .
+.#include "mill.h"
+.
 .struct @{$name} {
-.    int ____state;
-root.elements.each("arg") do |a|
-.    @{a.attributes["type"]} @{a.attributes["name"]};
-    vars << a.attributes["name"]
+.    struct mill_ctx mill_ctx;
+for a in root["args"]
+.    @{a};
 end
-root.elements.each("var") do |v|
-.    @{v.attributes["type"]} @{v.attributes["name"]};
-    vars << v.attributes["name"]
+for v in root["vars"]
+.    @{v};
 end
 .};
 .
 .void @{$name}_init(struct @{$name} *self
-root.elements.each("arg") do |a|
-.    /+, @{a.attributes["type"]} @{a.attributes["name"]}
+for a in root["args"]
+.    /+, @{a}
 end
 .    /+);
-.void @{$name}_handle(struct @{$name} *self, int src, int event);
 .
 .#endif
 .
+
+################################################################################
+#  Generation of the source file.                                              #
+################################################################################
+
 ./!output $name + ".c"
 .
 ./*  @{Time.now}:
@@ -94,77 +147,36 @@ end
 .
 .#include "@{$name}.h"
 .
-.#include <assert.h>
+.static void @{$name}_handler(struct mill_ctx *ctx, int src, int event) {
 .
-.#define ____EXPECT(s)\
-.    self->____state = s;\
-.    return;\
-.    ____state##s:\
-.    switch (src * 1000 + event) {
+.    struct @{$name} *self = (struct @{$name}*) ctx;
 .
-.#define ____EVENT(obj, ev)\
-.    case 1
-.
-.#define ____ENDEXPECT\
-.    default:\
-.        assert (0);\
-.    }
-
-body = root.texts.join.to_s
-tokens = scan(body)
-state = 1
-offset = 0
-for i in 0..tokens.size - 1
-    token = tokens[i][2]
-    if(token.index('$') != nil)
-        els = token.split('$')
-        re = "____EVENT(" + els[0] + ", " + els[1] + ")"
-        replace(body, tokens, i, re)
-    elsif(token == "expect")
-        re = "____EXPECT(#{state})"
-        tokens[i] << state
-        state += 1
-        replace(body, tokens, i, re)
-        if (tokens[i + 1][2] != "{")
-            puts "expect should be followed by '{'"
-            exit
-        end
-        replace(body, tokens, i + 1, "")
-        im = matchingb(tokens, i + 1)
-        replace(body, tokens, im, "____ENDEXPECT")
-    elsif(vars.include?(token))
-        re = "(self->#{token})"
-        replace(body, tokens, i, re)
-    end
-end
-
-.
-.void @{$name}_init(struct @{$name} *self
-root.elements.each("arg") do |a|
-.    /+, @{a.attributes["type"]} @{a.attributes["name"]}
-end
-.    /+) {
-.    self->____state = 0;
-root.elements.each("arg") do |a|
-.    self->@{a.attributes["name"]} = @{a.attributes["name"]};
-end
-.    @{$name}_handle(self, -1, -1);
-.}
-.
-.void @{$name}_handle(struct @{$name} *self, int src, int event) {
-.    switch (self->____state) {
+.    switch (self->mill_ctx.state) {
 .    case 0:
 .        break;
-for it in tokens
-    if(it.size == 4)
-.    case @{it[3]}:
-.        goto ____state@{it[3]};
-    end
+for state in $states
+.    case @{state}:
+.        goto mill_state_@{state};
 end
 .    default:
 .        assert(0);
 .    }
 .
 .    @{body}
+.
+.mill_shutdown_state_0:
+.    ;
+.}
+.
+.void @{$name}_init(struct @{$name} *self
+for a in root["args"]
+.    /+, @{a}
+end
+.    /+) {
+.    mill_ctx_init (&self->mill_ctx, @{$name}_handler);
+for a in $args
+.    self->@{a} = @{a};
+end
+.    @{$name}_handler (&self->mill_ctx, -1, -1);
 .}
 .

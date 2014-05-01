@@ -1,12 +1,17 @@
-<mill>
-    <arg name = "baz" type = "int"/>
-    <var name = "bar" type = "int"/>
+args:
+    - int baz
+    - int bar
+
+vars:
+    - int src
+    - int event
+
+body: |
+
     bar = 0;
     while(1) {
-        expect {
-        a$b:
-            bar++;
-            break;
-        }
+        getevent(&src, &event);
+        if (event == 1)
+            return;
     }
-</mill>
+
