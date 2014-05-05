@@ -41,7 +41,7 @@ struct mill_ctx {
 void mill_ctx_init (struct mill_ctx *self, mill_handler_fn handler); 
 
 #define MILL_GETEVENT(statearg, srcarg, eventarg)\
-    self->mill_ctx.state = statearg;\
+    ctx->mill_ctx.state = statearg;\
     return;\
     mill_state_##statearg:\
     *(srcarg) = src;\

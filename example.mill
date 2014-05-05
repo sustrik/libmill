@@ -1,3 +1,6 @@
+imports:
+    - foo
+
 args:
     - int baz
     - int bar
@@ -5,10 +8,11 @@ args:
 vars:
     - int src
     - int event
+    - struct foo_ctx f
 
 body: |
 
-    bar = 0;
+    foo(&f);
     while(1) {
         getevent(&src, &event);
         if (event == 1)

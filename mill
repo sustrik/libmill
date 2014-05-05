@@ -31,6 +31,8 @@ require "clexer"
 ################################################################################
 
 $name = input[0..-6]
+$includes = []
+$imports = []
 $args = []
 $vars = []
 $states = []
@@ -71,6 +73,13 @@ end
 #  Preprocess the function body.                                               #
 ################################################################################
 
+root["imports"] = [] if root["imports"] == nil
+root["args"] = [] if root["args"] == nil
+root["vars"] = [] if root["vars"] == nil
+
+for i in root["imports"]
+    $imports << i;
+end
 for a in root["args"]
     name = a.strip.split(/\s+/)[-1]
     $args << name;
@@ -98,7 +107,9 @@ for i in 0..tokens.size - 1
     elsif(token == "return")
         replace(body, tokens, i, "goto mill_shutdown_state_0")
     elsif($vars.include?(token))
-        replace(body, tokens, i, "(self->#{token})")
+        replace(body, tokens, i, "(ctx->#{token})")
+    elsif($imports.include?(token))
+        replace(body, tokens, i, "MILL_INVOKE(#{token})")
     end
 end
 
@@ -116,8 +127,11 @@ end
 .#define @{$name.upcase}_H_INCLUDED
 .
 .#include "mill.h"
+for i in $imports
+.#include "@{i}.h"
+end
 .
-.struct @{$name} {
+.struct @{$name}_ctx {
 .    struct mill_ctx mill_ctx;
 for a in root["args"]
 .    @{a};
@@ -127,7 +141,7 @@ for v in root["vars"]
 end
 .};
 .
-.void @{$name}_init(struct @{$name} *self
+.void @{$name} (struct @{$name}_ctx *ctx
 for a in root["args"]
 .    /+, @{a}
 end
@@ -147,11 +161,11 @@ end
 .
 .#include "@{$name}.h"
 .
-.static void @{$name}_handler(struct mill_ctx *ctx, int src, int event) {
+.static void @{$name}_handler(struct mill_ctx *mctx, int src, int event) {
 .
-.    struct @{$name} *self = (struct @{$name}*) ctx;
+.    struct @{$name}_ctx *ctx = (struct @{$name}_ctx*) mctx;
 .
-.    switch (self->mill_ctx.state) {
+.    switch (ctx->mill_ctx.state) {
 .    case 0:
 .        break;
 for state in $states
@@ -168,15 +182,15 @@ end
 .    ;
 .}
 .
-.void @{$name}_init(struct @{$name} *self
+.void @{$name} (struct @{$name}_ctx *ctx
 for a in root["args"]
 .    /+, @{a}
 end
 .    /+) {
-.    mill_ctx_init (&self->mill_ctx, @{$name}_handler);
+.    mill_ctx_init (&ctx->mill_ctx, @{$name}_handler);
 for a in $args
-.    self->@{a} = @{a};
+.    ctx->@{a} = @{a};
 end
-.    @{$name}_handler (&self->mill_ctx, -1, -1);
+.    @{$name}_handler (&ctx->mill_ctx, -1, -1);
 .}
 .
