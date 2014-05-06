@@ -1,21 +1,12 @@
-imports:
-    - foo
 
-args:
-    - int baz
-    - int bar
-
-vars:
-    - int src
-    - int event
-    - struct foo_ctx f
-
-body: |
-
-    foo(&f);
+coroutine(int baz, int bar) {
+    void *src;
+    int event;
+body:
     while(1) {
         getevent(&src, &event);
-        if (event == 1)
+        if (src == hndl && event == 1)
             return;
     }
+}
 
