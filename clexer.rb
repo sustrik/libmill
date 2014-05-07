@@ -2,7 +2,7 @@
 # line 1 "clexer.rl"
 
 
-# line 152 "clexer.rl"
+# line 150 "clexer.rl"
 
 
 
@@ -159,7 +159,7 @@ end
 self.c_en_main = 11;
 
 
-# line 155 "clexer.rl"
+# line 153 "clexer.rl"
 
 def parse(phase, data)
 
@@ -184,7 +184,7 @@ begin
 	act = 0
 end
 
-# line 169 "clexer.rl"
+# line 167 "clexer.rl"
     
 # line 190 "clexer.rb"
 begin
@@ -386,20 +386,18 @@ te = p+1
         elsif phase == :phase2
             token = data[ts..te-1].pack("c*")
             if (token.strip[0..7] == "#include")
-                start = token.index(/[<\"]/)
-                stop = token.index(/[>\"]/, start + 1)
-                tokens << [ts + start + 1, ts + stop - 1, token[start + 1..stop - 1]]
+                tokens << [ts, te - 1, token]
             end
         end
      end
 		end
 when 10 then
-# line 123 "clexer.rl"
+# line 121 "clexer.rl"
 		begin
 te = p+1
 		end
 when 11 then
-# line 125 "clexer.rl"
+# line 123 "clexer.rl"
 		begin
 te = p+1
  begin  	begin
@@ -483,7 +481,7 @@ p = p - 1; begin
 	 end
 		end
 when 14 then
-# line 129 "clexer.rl"
+# line 127 "clexer.rl"
 		begin
 te = p
 p = p - 1; begin 
@@ -493,7 +491,7 @@ p = p - 1; begin
      end
 		end
 when 15 then
-# line 137 "clexer.rl"
+# line 135 "clexer.rl"
 		begin
 te = p
 p = p - 1; begin 
@@ -503,7 +501,7 @@ p = p - 1; begin
      end
 		end
 when 16 then
-# line 145 "clexer.rl"
+# line 143 "clexer.rl"
 		begin
 te = p
 p = p - 1; begin 
@@ -559,7 +557,7 @@ when 17 then
 	 end
 		end
 when 18 then
-# line 129 "clexer.rl"
+# line 127 "clexer.rl"
 		begin
  begin p = ((te))-1; end
  begin 
@@ -568,7 +566,7 @@ when 18 then
         end
      end
 		end
-# line 572 "clexer.rb"
+# line 570 "clexer.rb"
 			end # action switch
 		end
 	end
@@ -588,7 +586,7 @@ when 2 then
 # line 1 "NONE"
 		begin
 ts = nil;		end
-# line 592 "clexer.rb"
+# line 590 "clexer.rb"
 		end # to state action switch
 	end
 	if _trigger_goto
@@ -619,7 +617,7 @@ end
 	end
 	end
 
-# line 170 "clexer.rl"
+# line 168 "clexer.rl"
 
     if phase == :phase1
         if stack.size != 1

@@ -1,11 +1,13 @@
 
+#include "foo.mill"
+
 coroutine(int baz, int bar) {
     void *src;
     int event;
 body:
     while(1) {
         getevent(&src, &event);
-        if (src == hndl && event == 1)
+        if (event == 1)
             return;
     }
 }

@@ -24,12 +24,13 @@
 #define MILL_H_INCLUDED
 
 #include <assert.h>
+#include <stdlib.h>
 
-struct mill_ctx;
+struct mill_base;
 
-typedef void (*mill_handler_fn) (struct mill_ctx *self, int src, int event);
+typedef void (*mill_handler_fn) (struct mill_base *self, void* src, int event);
 
-struct mill_ctx {
+struct mill_base {
     mill_handler_fn handler; 
     int state;
     struct mill_ctx *parent;
@@ -38,10 +39,10 @@ struct mill_ctx {
     struct mill_ctx *next;
 };
 
-void mill_ctx_init (struct mill_ctx *self, mill_handler_fn handler); 
+void mill_base_init (struct mill_base *self, mill_handler_fn handler); 
 
 #define MILL_GETEVENT(statearg, srcarg, eventarg)\
-    ctx->mill_ctx.state = statearg;\
+    self->mill_base.state = statearg;\
     return;\
     mill_state_##statearg:\
     *(srcarg) = src;\

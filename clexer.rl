@@ -110,9 +110,7 @@
         elsif phase == :phase2
             token = data[ts..te-1].pack("c*")
             if (token.strip[0..7] == "#include")
-                start = token.index(/[<\"]/)
-                stop = token.index(/[>\"]/, start + 1)
-                tokens << [ts + start + 1, ts + stop - 1, token[start + 1..stop - 1]]
+                tokens << [ts, te - 1, token]
             end
         end
     };

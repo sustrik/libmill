@@ -22,7 +22,7 @@
 
 #include "mill.h"
 
-void mill_ctx_init (struct mill_ctx *self, mill_handler_fn handler)
+void mill_base_init (struct mill_base *self, mill_handler_fn handler)
 {
     self->handler = handler;
     self->state = 0;
