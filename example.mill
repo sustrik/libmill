@@ -1,14 +1,25 @@
 
-#include "foo.mill"
+#include <stdio.h>
+#include "foo.h"
 
-coroutine(int baz, int bar) {
-    void *src;
-    int event;
-body:
+int coroutine quux (int baz, int bar)
+{
+    event e;
+    coroutine foo f;
+    endvars;
+
+    call foo &f (1, 2, 3);
     while(1) {
-        getevent(&src, &event);
-        if (event == 1)
-            return;
+        getevent e;
+        if (e == &f)
+            break;
     }
+    return 8;
 }
+
+int test()
+{
+}
+
+
 

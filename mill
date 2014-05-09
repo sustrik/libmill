@@ -28,275 +28,230 @@ if input.size < 6 || input[-5..-1] != ".mill"
     $stderr.write "The input file must be a mill file.\n"
     exit
 end
-$name = input[0..-6]
+base_filename = input[0..-6]
 
 ################################################################################
-# Helper functions. #
+# Tokenise the input file.                                                     #
 ################################################################################
 
-# Replace specific token in the text by a different text.
-def replace(text, tokens, index, newtext)
-    text[tokens[index][0]..tokens[index][1]] = newtext
-    offset = newtext.size - (tokens[index][1] - tokens[index][0] + 1)
-    for i in index + 1..tokens.size - 1
-        tokens[i][0] += offset
-        tokens[i][1] += offset
-    end
-end
+text = IO.read(input)
+tokens = parse(text)
+i = 0
+sections = []
 
 ################################################################################
-#  Split the text into several sections.                                       #
-################################################################################
-
-prologue = nil
-args = nil
-vars = nil
-body = nil
-cleanup = nil
-epilogue = nil
-
-begin
-    text = IO.read(input)
-    tree = parse(:phase1, text)
-    prologue_start = 0
-    prologue_stop = -2
-    for i in 0..tree.size - 1
-        if tree[i][0] == :coroutine
-            prologue_stop = tree[i][1] - 1
-            break
-        end
-    end
-    if prologue_stop == -2
-        $stderr.write "No coroutine found in the source file.\n"
-        exit
-    end
-    if tree[i + 1][0] != :braces
-        $stderr.write "Coroutine keyword must by followed by a list of arguments.\n"
-        exit
-    end
-    args_start = tree[i + 1][1] + 1
-    args_stop = tree[i + 1][2] - 1
-    if tree[i + 2][0] != :cbraces
-        $stderr.write "Coroutine argument list must by followed by a function body.\n"
-        exit
-    end
-    vars_start = tree[i + 2][1] + 1
-    cleanup_stop = tree[i + 2][2] - 1
-    epilogue_start = tree[i + 2][2] + 1
-    epilogue_stop = text.size
-    btree = tree [i + 2][3]
-    vars_stop = -2
-    for j in 0..btree.size - 1
-        if btree[j][0] == :body
-            if btree[j + 1][0] != :colon
-                $stderr.write "Body keyword must by followed by a colon.\n"
-                exit
-            end
-            vars_stop = btree[j][1] - 1
-            body_start = btree[j + 1][2] + 1
-            break
-        end
-    end
-    if vars_stop == -2
-        vars_stop = vars_start
-        body_start = vars_start
-    end
-    body_stop = -2
-    for k in j + 2..btree.size - 1
-        if btree[k][0] == :cleanup
-            if btree[k + 1][0] != :colon
-                $stderr.write "Cleanup keyword must by followed by a colon.\n"
-                exit
-            end
-            body_stop = btree[k][1] - 1
-            cleanup_start = btree[k + 1][2] + 1
-            break
-        end
-    end
-    if body_stop == -2
-        body_stop = cleanup_stop
-        cleanup_start = cleanup_stop
-    end
-
-    prologue = text[prologue_start..prologue_stop]
-    args = text[args_start..args_stop]
-    vars = text[vars_start..vars_stop]
-    body = text[body_start..body_stop]
-    cleanup = text[cleanup_start..cleanup_stop]
-    epilogue = text[epilogue_start..epilogue_stop]
-end
-
-################################################################################
-# Process includes.                                                            #
-################################################################################
-
-$mill_includes = []
-$includes = ""
-begin
-    def process_includes(text)
-        incls = parse(:phase2, text)
-        for i in 0..incls.size - 1
-            start = incls[i][2].index(/[<\"]/)
-            stop = incls[i][2].index(/[>\"]/, start + 1)
-            filename = incls[i][2][start + 1..stop - 1]
-            if filename.size >= 5 && filename[-5..-1] == ".mill"
-                $includes += "#include #{incls[i][2][start..start]}#{filename[0..-6]}.h#{incls[i][2][stop..stop]}\n"
-                $mill_includes << filename[0..-6]
-            else
-                $includes += "#{incls[i][2].strip}\n"
-            end
-            replace(text, incls, i, "\n")
-        end
-    end
-    process_includes(prologue)
-    process_includes(epilogue)
-end
-
-################################################################################
-# Process the coroutine arguments.                                             #
-################################################################################
-
-$args = []
-$locals = []
-$localdecls = ""
-begin
-    tokens = parse(:phase3, args + ",")
-    start = 0
-    if tokens.size > 1
-        for i in 0..tokens.size - 1
-            if tokens[i][2] == :comma
-                if i == 0 || tokens[i - 1][2] != :identifier
-                    $stderr.write "Malformed coroutine argument list.\n"
-                    exit
-                end
-                $args << tokens[i - 1][3]
-                $locals << tokens[i - 1][3]
-                $localdecls += args[start..tokens[i - 1][1]].strip
-                $localdecls += ";\n"
-                start = tokens[i][1] + 1
-            end
-        end
-    end
-end
-
-################################################################################
-# Process the coroutine local variables.                                       #
+#  Process includes.                                                           #
 ################################################################################
 
 begin
-    tokens = parse(:phase4, vars)
-    start = 0
+
+    # Parse the includes section.
     for i in 0..tokens.size - 1
-        if tokens[i][2] == :semicolon
-            if i == 0 || tokens[i - 1][2] != :identifier
-                $stderr.write "Malformed coroutine local variable list.\n"
-                exit
-            end
-            $locals << tokens[i - 1][3]
-            $localdecls += vars[start..tokens[i - 1][1]].strip
-            $localdecls += ";\n"
-            start = tokens[i][1] + 1
+        break if tokens[i][0] != :include
+    end
+    includes_end = i == tokens.size ? text.size : tokens[i][1] 
+    sections << [:includes, text[0..includes_end - 1]]
+
+    # Make sure there are no more includes in the rest of the file.
+    def no_includes(token)
+        if token[0] == :include
+            $stderr.write "All includes must be in the beginning of the file.\n"
+            exit
         end
+        if [:braces, :cbraces, :sbraces].include? token[0]
+            no_includes token[3]
+        end
+    end
+    for j in i..tokens.size - 1
+        no_includes tokens[j]
     end
 end
 
 ################################################################################
-# Expand local variables in the coroutine body.                                #
+# Parse all coroutines.                                                        #
 ################################################################################
 
-$states = []
 begin
-    def process_locals(text, body)
-        tokens = parse(:phase5, text)
-        state = 1
-        for i in 0..tokens.size - 1
-            if body && tokens[i][3] == "getevent"
-                if (tokens[i + 1][2] != :lbrace)
-                    $stderr.write  "Getevent function must be followed by argument list.\n"
+
+    loop do
+
+        # Find the start of next coroutine.
+        # Treat anything that precedes it as raw C code.
+        start = i
+        while ![:coroutine, :end].include? tokens[i][0]
+            i += 1;
+        end
+        stop = i
+        if tokens[i][0] == :coroutine
+            while stop > start
+                break if [:cbraces, :semicolon].include? tokens[stop - 1][0]
+                stop -= 1
+            end
+        end
+        sections << [:c, text[tokens[start][1]..tokens[stop][1] - 1]]
+
+        # End of file.
+        break if tokens[i][0] == :end
+
+        # Parse the coroutine itself.
+        # First get the result type.
+        type = text[tokens[stop][1]..tokens[i - 1][2]]
+            
+        # Coroutine name.
+        i += 1
+        if tokens[i][0] != :identifier
+            $stderr.write "Coroutine name missing.\n"
+            exit
+        end
+        name = text[tokens[i][1]..tokens[i][2]]
+
+        # Coroutine argument list.
+        i += 1
+        if tokens[i][0] != :braces
+            $stderr.write "Coroutine argument list missing.\n"
+            exit
+        end
+        args = []
+        argtokens = tokens[i][3]
+        start = 0
+        for k in 0..argtokens.size - 1
+            break if argtokens[k][0] == :end && k == start
+            if [:comma, :end].include? argtokens[k][0]
+                if argtokens[k - 1][0] != :identifier
+                    $stderr.write "Invalid coroutine argument.\n"
                     exit
                 end
-                replace(text, tokens, i, "MILL_GETEVENT")
-                replace(text, tokens, i + 1, "(#{state}, ")
-                $states << state
-                state += 1
-            elsif body && tokens[i][3] == "return"
-                replace(text, tokens, i, "goto mill_shutdown_state_0")
-            elsif $locals.include? tokens[i][3]
-                replace(text, tokens, i, "(self->#{tokens[i][3]})")
+                argname = text[argtokens[k - 1][1]..argtokens[k - 1][2]]
+                argtype = text[argtokens[start][1]..argtokens[k - 2][2]]
+                args << {:name => argname, :type => argtype}
+                start = k + 1
             end
         end
+
+        # Coroutine body.
+        i += 1
+        if tokens[i][0] != :cbraces
+            $stderr.write "Coroutine body missing.\n"
+            exit
+        end
+        bodytokens = tokens[i][3]
+
+        # Split the body into variable declarations and executable part.
+        vartokens = []
+        for j in 0..bodytokens.size - 1
+            break if bodytokens[j][0] == :end
+            if bodytokens[j][0] == :endvars
+                if bodytokens[j + 1][0] != :semicolon
+                   $stderr.write "'endvars' must be followed by a semicolon.\n"
+                   exit
+                end
+                vartokens = bodytokens[0..j - 1]
+                bodytokens = bodytokens[j + 2..-1]
+                break
+            end
+        end
+        #vartokens << [:end, bodytokens[0][1] - 1, bodytokens[0][1] - 1]
+
+        # Local variables.
+        vars = []
+        start = 0
+        for j in 0..vartokens.size - 1
+           if vartokens[j][0] == :end
+               break if start == j
+               $stderr.write "Invalid tokens following variable declaration.\n"
+               exit
+           end
+           if vartokens[j][0] == :semicolon
+               if vartokens[j - 1][0] != :identifier
+                   $stderr.write "Invalid variable declaration.\n"
+                   exit
+               end
+               varname = text[vartokens[j - 1][1]..vartokens[j - 1][2]]
+               vartype = text[vartokens[start][1]..vartokens[j - 2][2]]
+               vars << {:name => varname, :type => vartype}
+               start = j + 1
+           end
+        end
+
+        # Parse the actual executable part of the coroutine.
+        body = text[bodytokens[0][1]..bodytokens[-1][1]]
+         
+        # Create a coroutine section.
+        sections << [:coroutine, {:name => name, :type => type, :args => args, :vars => vars, :body => body}]
+
+        i += 1
     end
-    process_locals(body, true)
-    process_locals(cleanup, false)
+
 end
 
-################################################################################
-# Generate the header file.                                                    #
-################################################################################
-
-./!output $name + ".h"
-
-./* @{Time.now}:
-.   This file was generated from @{input} */
-if $includes.size > 0
-.
-.@{$includes}
-end
-.
-.void *@{$name} (@{args});
-.
+# We won't need the original source code anymore. Let's garbage-collect it!
+text = nil
+tokens = nil
 
 ################################################################################
-# Generate the C file.                                                         #
+# Generate the .h file.                                                        #
 ################################################################################
 
-./!output $name + ".c"
+./!output base_filename + ".h"
 
 ./* @{Time.now}:
 .   This file was generated from @{input} */
 .
-.#include "@{$name}.h"
 .#include "mill.h"
 .
-.@{prologue}
+# Includes.
+.@{sections[0][1]}
 .
-.struct @{$name} {
-.    struct mill_base mill_base;
-.    @{$localdecls}
+for s in sections
+    if s[0] == :coroutine
+        c = s[1]
+.struct ____coroutine_@{c[:name]} {
+.    struct ____base ____base;
+if c[:type] != "void"
+.    @{c[:type]} ____result;
+end
+for a in c[:args]
+.    @{a[:type]} @{a[:name]};
+end
+for v in c[:vars]
+.    @{v[:type]} @{v[:name]};
+end
 .};
 .
-.static void @{$name}_handler(struct mill_base *base, void *src, int event) {
-.    struct @{$name} *self = (struct @{$name}*) base;
-.    switch (self->mill_base.state) {
+    end
+end
+
+################################################################################
+# Generate the .c file.                                                        #
+################################################################################
+
+./!output base_filename + ".c"
+
+./* @{Time.now}:
+.   This file was generated from @{input} */
+.
+.#include "@{base_filename}.h"
+.
+for s in sections
+    if s[0] == :c
+.@{s[1]}
+.
+    elsif s[0] == :coroutine
+        c = s[1]
+.static void @{c[:name]}_handler(____base *base, event ev)
+.{
+.    struct ____coroutine_@{c[:name]} *self = (struct ____coroutine_@{c[:name]}*) base;
+.
+.    switch (self->____base.state) {
 .    case 0:
 .        break;
-for state in $states
-.    case @{state}:
-.        goto mill_state_@{state};
-end
 .    default:
-.        assert(0);
+.        assert (0);
 .    }
 .
-.    @{body}
-.
-.mill_shutdown_state_0:
-.    ;
-.    @{cleanup}
+.    @{c[:body]}
 .}
 .
-.void *@{$name}(@{args}) {
-.    struct @{$name}* self = malloc(sizeof (struct @{$name}));
-.    if (!self)
-.        return 0;
-.    mill_base_init (&self->mill_base, @{$name}_handler);
-for a in $args
-.    self->@{a} = @{a};
+    end
 end
-.    @{$name}_handler (&self->mill_base, 0, 0);
-.    return (void*) self;
-.}
-.
-.@{epilogue}
-.
 

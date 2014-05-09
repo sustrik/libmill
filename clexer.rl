@@ -20,43 +20,44 @@
 	# buffer a character. Upon leaving dump the symbol.
 	( punct - [_'"] ) {
         token = data[ts..te-1].pack("c*")
-
-        if phase == :phase1
-            if token == "("
-                stack << [[:lbrace, ts]]
-            elsif token == ")"
-                last = stack.pop
-                if last[0][0] != :lbrace
-                    $stderr.write "#{curline}: Mismatched braces!\n"
-                    exit
-                end
-                stack.last << [:braces, last[0][1], ts, last[1..-1]]
-            elsif token == "{"
-                stack << [[:lcbrace, ts]]
-            elsif token == "}"
-                last = stack.pop
-                if last[0][0] != :lcbrace
-                    $stderr.write "#{curline}: Mismatched braces!\n"
-                    exit
-                end
-                stack.last << [:cbraces, last[0][1], ts, last[1..-1]]
-            elsif token == ":"
-                stack.last << [:colon, ts, te - 1]
-            else
-                stack.last << [:cruft]
+        if token == "("
+            stack << [[:lbrace, ts, ts]]
+        elsif token == ")"
+            last = stack.pop
+            last << [:end, ts, ts]
+            if last[0][0] != :lbrace
+                $stderr.write "#{curline}: Mismatched braces!\n"
+                exit
             end
-        elsif phase == :phase3
-            if token == ","
-                tokens << [ts, te - 1, :comma, token]
+            stack.last << [:braces, last[0][1], ts, last[1..-1]]
+        elsif token == "{"
+            stack << [[:lcbrace, ts, ts]]
+        elsif token == "}"
+            last = stack.pop
+            last << [:end, ts, ts]
+            if last[0][0] != :lcbrace
+                $stderr.write "#{curline}: Mismatched braces!\n"
+                exit
             end
-        elsif phase == :phase4
-            if token == ";"
-                tokens << [ts, te - 1, :semicolon, token]
+            stack.last << [:cbraces, last[0][1], ts, last[1..-1]]
+        elsif token == "["
+            stack << [[:lsbrace, ts, ts]]
+        elsif token == "]"
+            last = stack.pop
+            last << [:end, ts, ts]
+            if last[0][0] != :lsbrace
+                $stderr.write "#{curline}: Mismatched braces!\n"
+                exit
             end
-        elsif phase == :phase5
-            if token == "("
-                tokens << [ts, te - 1, :lbrace, token]
-            end
+            stack.last << [:sbraces, last[0][1], ts, last[1..-1]]
+        elsif token == ":"
+            stack.last << [:colon, ts, te - 1]
+        elsif token == ";"
+            stack.last << [:semicolon, ts, te - 1]
+        elsif token == ","
+            stack.last << [:comma, ts, te - 1]
+        else
+            stack.last << [:cruft, ts, te - 1]
         end
 	};
 
@@ -64,40 +65,29 @@
 	# buffer a character. Upon leaving, dump the identifier.
 	alpha_u alnum_u* {
         token = data[ts..te-1].pack("c*")
-
-        if phase == :phase1
-            if token == "coroutine"
-                stack.last << [:coroutine, ts, te - 1]
-            elsif token == "body"
-                stack.last << [:body, ts, te - 1]
-            elsif token == "cleanup"
-                stack.last << [:cleanup, ts, te - 1]
-            else
-                stack.last << [:cruft]
-            end
-        elsif phase == :phase3
-            tokens << [ts, te - 1, :identifier, token]
-        elsif phase == :phase4
-            tokens << [ts, te - 1, :identifier, token]
-        elsif phase == :phase5
-            tokens << [ts, te - 1, :identifier, token]
+        if token == "coroutine"
+            stack.last << [:coroutine, ts, te - 1]
+        elsif token == "endvars"
+            stack.last << [:endvars, ts, te - 1]
+        elsif token == "call"
+            stack.last << [:call, ts, te - 1]
+        elsif token == "getevent"
+            stack.last << [:getevent, ts, te - 1]
+        else
+            stack.last << [:identifier, ts, te - 1]
         end
 	};
 
 	# Single Quote.
 	sliteralChar = [^'\\] | newline | ( '\\' . any_count_line );
 	'\'' . sliteralChar* . '\'' {
-        if phase == :phase1
-            stack.last << [:cruft]
-        end
+        stack.last << [:cruft, ts, te - 1]
     };
 
 	# Double Quote.
 	dliteralChar = [^"\\] | newline | ( '\\' any_count_line );
 	'"' . dliteralChar* . '"' {
-        if phase == :phase1
-            stack.last << [:cruft]
-        end
+        stack.last << [:cruft, ts, te - 1]
     };
 
 	# Whitespace is standard ws, newlines and control codes.
@@ -105,13 +95,11 @@
 
     # A pre-processor directive.
     '#' [^\n]* newline {
-        if phase == :phase1
-            stack.last << [:cruft]
-        elsif phase == :phase2
-            token = data[ts..te-1].pack("c*")
-            if (token.strip[0..7] == "#include")
-                tokens << [ts, te - 1, token]
-            end
+        token = data[ts..te-1].pack("c*")
+        if (token.strip[0..7] == "#include")
+            stack.last << [:include, ts, te - 1]
+        else
+            stack.last << [:cruft, ts, te - 1]
         end
     };
 
@@ -125,25 +113,19 @@
 	# Match an integer. We don't bother clearing the buf or filling it.
 	# The float machine overlaps with int and it will do it.
 	digit+ {
-        if phase == :phase1
-            stack.last << [:cruft]
-        end
+        stack.last << [:cruft, ts, te - 1]
     };
 
 	# Match a float. Upon entering the machine clear the buf, buffer
 	# characters on every trans and dump the float upon leaving.
 	digit+ '.' digit+ {
-        if phase == :phase1
-            stack.last << [:cruft]
-        end
+        stack.last << [:cruft, ts, te - 1]
     };
 
 	# Match a hex. Upon entering the hex part, clear the buf, buffer characters
 	# on every trans and dump the hex on leaving transitions.
 	'0x' xdigit+ {
-        if phase == :phase1
-            stack.last << [:cruft]
-        end
+        stack.last << [:cruft, ts, te - 1]
     };
 
 	*|;
@@ -151,30 +133,25 @@
 
 %% write data nofinal;
 
-def parse(phase, data)
+def parse(data)
 
     curline = 1
     data = data.unpack("c*")
     eof = data.length
 
-    if phase == :phase1
-        stack = [[]]
-    else
-        tokens = []
-    end
+    stack = [[]]
 
 	%% write init;
     %% write exec;
 
-    if phase == :phase1
-        if stack.size != 1
-            $stderr.write "#{curline}: Missing brace at the end of the source file.\n"
-            exit
-        end
-        return stack[0]
-    else
-        return tokens
+    stack.last << [:end, data.length - 1, data.length - 1]
+
+    if stack.size != 1
+        $stderr.write "Missing brace at the end of the source file.\n"
+        exit
     end
+
+    return stack[0]
 
 end
 

@@ -2,7 +2,7 @@
 # line 1 "clexer.rl"
 
 
-# line 150 "clexer.rl"
+# line 132 "clexer.rl"
 
 
 
@@ -159,22 +159,18 @@ end
 self.c_en_main = 11;
 
 
-# line 153 "clexer.rl"
+# line 135 "clexer.rl"
 
-def parse(phase, data)
+def parse(data)
 
     curline = 1
     data = data.unpack("c*")
     eof = data.length
 
-    if phase == :phase1
-        stack = [[]]
-    else
-        tokens = []
-    end
+    stack = [[]]
 
 	
-# line 178 "clexer.rb"
+# line 174 "clexer.rb"
 begin
 	p ||= 0
 	pe ||= data.length
@@ -184,9 +180,9 @@ begin
 	act = 0
 end
 
-# line 167 "clexer.rl"
+# line 145 "clexer.rl"
     
-# line 190 "clexer.rb"
+# line 186 "clexer.rb"
 begin
 	_klen, _trans, _keys, _acts, _nacts = nil
 	_goto_level = 0
@@ -220,7 +216,7 @@ begin
 		begin
 ts = p
 		end
-# line 224 "clexer.rb"
+# line 220 "clexer.rb"
 		end # from state action switch
 	end
 	if _trigger_goto
@@ -311,93 +307,88 @@ when 5 then
 te = p+1
  begin 
         token = data[ts..te-1].pack("c*")
-
-        if phase == :phase1
-            if token == "("
-                stack << [[:lbrace, ts]]
-            elsif token == ")"
-                last = stack.pop
-                if last[0][0] != :lbrace
-                    $stderr.write "#{curline}: Mismatched braces!\n"
-                    exit
-                end
-                stack.last << [:braces, last[0][1], ts, last[1..-1]]
-            elsif token == "{"
-                stack << [[:lcbrace, ts]]
-            elsif token == "}"
-                last = stack.pop
-                if last[0][0] != :lcbrace
-                    $stderr.write "#{curline}: Mismatched braces!\n"
-                    exit
-                end
-                stack.last << [:cbraces, last[0][1], ts, last[1..-1]]
-            elsif token == ":"
-                stack.last << [:colon, ts, te - 1]
-            else
-                stack.last << [:cruft]
+        if token == "("
+            stack << [[:lbrace, ts, ts]]
+        elsif token == ")"
+            last = stack.pop
+            last << [:end, ts, ts]
+            if last[0][0] != :lbrace
+                $stderr.write "#{curline}: Mismatched braces!\n"
+                exit
             end
-        elsif phase == :phase3
-            if token == ","
-                tokens << [ts, te - 1, :comma, token]
+            stack.last << [:braces, last[0][1], ts, last[1..-1]]
+        elsif token == "{"
+            stack << [[:lcbrace, ts, ts]]
+        elsif token == "}"
+            last = stack.pop
+            last << [:end, ts, ts]
+            if last[0][0] != :lcbrace
+                $stderr.write "#{curline}: Mismatched braces!\n"
+                exit
             end
-        elsif phase == :phase4
-            if token == ";"
-                tokens << [ts, te - 1, :semicolon, token]
+            stack.last << [:cbraces, last[0][1], ts, last[1..-1]]
+        elsif token == "["
+            stack << [[:lsbrace, ts, ts]]
+        elsif token == "]"
+            last = stack.pop
+            last << [:end, ts, ts]
+            if last[0][0] != :lsbrace
+                $stderr.write "#{curline}: Mismatched braces!\n"
+                exit
             end
-        elsif phase == :phase5
-            if token == "("
-                tokens << [ts, te - 1, :lbrace, token]
-            end
+            stack.last << [:sbraces, last[0][1], ts, last[1..-1]]
+        elsif token == ":"
+            stack.last << [:colon, ts, te - 1]
+        elsif token == ";"
+            stack.last << [:semicolon, ts, te - 1]
+        elsif token == ","
+            stack.last << [:comma, ts, te - 1]
+        else
+            stack.last << [:cruft, ts, te - 1]
         end
 	 end
 		end
 when 6 then
+# line 83 "clexer.rl"
+		begin
+te = p+1
+ begin 
+        stack.last << [:cruft, ts, te - 1]
+     end
+		end
+when 7 then
 # line 89 "clexer.rl"
 		begin
 te = p+1
  begin 
-        if phase == :phase1
-            stack.last << [:cruft]
-        end
-     end
-		end
-when 7 then
-# line 97 "clexer.rl"
-		begin
-te = p+1
- begin 
-        if phase == :phase1
-            stack.last << [:cruft]
-        end
+        stack.last << [:cruft, ts, te - 1]
      end
 		end
 when 8 then
-# line 104 "clexer.rl"
+# line 94 "clexer.rl"
 		begin
 te = p+1
 		end
 when 9 then
-# line 107 "clexer.rl"
+# line 97 "clexer.rl"
 		begin
 te = p+1
  begin 
-        if phase == :phase1
-            stack.last << [:cruft]
-        elsif phase == :phase2
-            token = data[ts..te-1].pack("c*")
-            if (token.strip[0..7] == "#include")
-                tokens << [ts, te - 1, token]
-            end
+        token = data[ts..te-1].pack("c*")
+        if (token.strip[0..7] == "#include")
+            stack.last << [:include, ts, te - 1]
+        else
+            stack.last << [:cruft, ts, te - 1]
         end
      end
 		end
 when 10 then
-# line 121 "clexer.rl"
+# line 109 "clexer.rl"
 		begin
 te = p+1
 		end
 when 11 then
-# line 123 "clexer.rl"
+# line 111 "clexer.rl"
 		begin
 te = p+1
  begin  	begin
@@ -414,100 +405,88 @@ when 12 then
 te = p
 p = p - 1; begin 
         token = data[ts..te-1].pack("c*")
-
-        if phase == :phase1
-            if token == "("
-                stack << [[:lbrace, ts]]
-            elsif token == ")"
-                last = stack.pop
-                if last[0][0] != :lbrace
-                    $stderr.write "#{curline}: Mismatched braces!\n"
-                    exit
-                end
-                stack.last << [:braces, last[0][1], ts, last[1..-1]]
-            elsif token == "{"
-                stack << [[:lcbrace, ts]]
-            elsif token == "}"
-                last = stack.pop
-                if last[0][0] != :lcbrace
-                    $stderr.write "#{curline}: Mismatched braces!\n"
-                    exit
-                end
-                stack.last << [:cbraces, last[0][1], ts, last[1..-1]]
-            elsif token == ":"
-                stack.last << [:colon, ts, te - 1]
-            else
-                stack.last << [:cruft]
+        if token == "("
+            stack << [[:lbrace, ts, ts]]
+        elsif token == ")"
+            last = stack.pop
+            last << [:end, ts, ts]
+            if last[0][0] != :lbrace
+                $stderr.write "#{curline}: Mismatched braces!\n"
+                exit
             end
-        elsif phase == :phase3
-            if token == ","
-                tokens << [ts, te - 1, :comma, token]
+            stack.last << [:braces, last[0][1], ts, last[1..-1]]
+        elsif token == "{"
+            stack << [[:lcbrace, ts, ts]]
+        elsif token == "}"
+            last = stack.pop
+            last << [:end, ts, ts]
+            if last[0][0] != :lcbrace
+                $stderr.write "#{curline}: Mismatched braces!\n"
+                exit
             end
-        elsif phase == :phase4
-            if token == ";"
-                tokens << [ts, te - 1, :semicolon, token]
+            stack.last << [:cbraces, last[0][1], ts, last[1..-1]]
+        elsif token == "["
+            stack << [[:lsbrace, ts, ts]]
+        elsif token == "]"
+            last = stack.pop
+            last << [:end, ts, ts]
+            if last[0][0] != :lsbrace
+                $stderr.write "#{curline}: Mismatched braces!\n"
+                exit
             end
-        elsif phase == :phase5
-            if token == "("
-                tokens << [ts, te - 1, :lbrace, token]
-            end
+            stack.last << [:sbraces, last[0][1], ts, last[1..-1]]
+        elsif token == ":"
+            stack.last << [:colon, ts, te - 1]
+        elsif token == ";"
+            stack.last << [:semicolon, ts, te - 1]
+        elsif token == ","
+            stack.last << [:comma, ts, te - 1]
+        else
+            stack.last << [:cruft, ts, te - 1]
         end
 	 end
 		end
 when 13 then
-# line 65 "clexer.rl"
+# line 66 "clexer.rl"
 		begin
 te = p
 p = p - 1; begin 
         token = data[ts..te-1].pack("c*")
-
-        if phase == :phase1
-            if token == "coroutine"
-                stack.last << [:coroutine, ts, te - 1]
-            elsif token == "body"
-                stack.last << [:body, ts, te - 1]
-            elsif token == "cleanup"
-                stack.last << [:cleanup, ts, te - 1]
-            else
-                stack.last << [:cruft]
-            end
-        elsif phase == :phase3
-            tokens << [ts, te - 1, :identifier, token]
-        elsif phase == :phase4
-            tokens << [ts, te - 1, :identifier, token]
-        elsif phase == :phase5
-            tokens << [ts, te - 1, :identifier, token]
+        if token == "coroutine"
+            stack.last << [:coroutine, ts, te - 1]
+        elsif token == "endvars"
+            stack.last << [:endvars, ts, te - 1]
+        elsif token == "call"
+            stack.last << [:call, ts, te - 1]
+        elsif token == "getevent"
+            stack.last << [:getevent, ts, te - 1]
+        else
+            stack.last << [:identifier, ts, te - 1]
         end
 	 end
 		end
 when 14 then
+# line 115 "clexer.rl"
+		begin
+te = p
+p = p - 1; begin 
+        stack.last << [:cruft, ts, te - 1]
+     end
+		end
+when 15 then
+# line 121 "clexer.rl"
+		begin
+te = p
+p = p - 1; begin 
+        stack.last << [:cruft, ts, te - 1]
+     end
+		end
+when 16 then
 # line 127 "clexer.rl"
 		begin
 te = p
 p = p - 1; begin 
-        if phase == :phase1
-            stack.last << [:cruft]
-        end
-     end
-		end
-when 15 then
-# line 135 "clexer.rl"
-		begin
-te = p
-p = p - 1; begin 
-        if phase == :phase1
-            stack.last << [:cruft]
-        end
-     end
-		end
-when 16 then
-# line 143 "clexer.rl"
-		begin
-te = p
-p = p - 1; begin 
-        if phase == :phase1
-            stack.last << [:cruft]
-        end
+        stack.last << [:cruft, ts, te - 1]
      end
 		end
 when 17 then
@@ -516,57 +495,56 @@ when 17 then
  begin p = ((te))-1; end
  begin 
         token = data[ts..te-1].pack("c*")
-
-        if phase == :phase1
-            if token == "("
-                stack << [[:lbrace, ts]]
-            elsif token == ")"
-                last = stack.pop
-                if last[0][0] != :lbrace
-                    $stderr.write "#{curline}: Mismatched braces!\n"
-                    exit
-                end
-                stack.last << [:braces, last[0][1], ts, last[1..-1]]
-            elsif token == "{"
-                stack << [[:lcbrace, ts]]
-            elsif token == "}"
-                last = stack.pop
-                if last[0][0] != :lcbrace
-                    $stderr.write "#{curline}: Mismatched braces!\n"
-                    exit
-                end
-                stack.last << [:cbraces, last[0][1], ts, last[1..-1]]
-            elsif token == ":"
-                stack.last << [:colon, ts, te - 1]
-            else
-                stack.last << [:cruft]
+        if token == "("
+            stack << [[:lbrace, ts, ts]]
+        elsif token == ")"
+            last = stack.pop
+            last << [:end, ts, ts]
+            if last[0][0] != :lbrace
+                $stderr.write "#{curline}: Mismatched braces!\n"
+                exit
             end
-        elsif phase == :phase3
-            if token == ","
-                tokens << [ts, te - 1, :comma, token]
+            stack.last << [:braces, last[0][1], ts, last[1..-1]]
+        elsif token == "{"
+            stack << [[:lcbrace, ts, ts]]
+        elsif token == "}"
+            last = stack.pop
+            last << [:end, ts, ts]
+            if last[0][0] != :lcbrace
+                $stderr.write "#{curline}: Mismatched braces!\n"
+                exit
             end
-        elsif phase == :phase4
-            if token == ";"
-                tokens << [ts, te - 1, :semicolon, token]
+            stack.last << [:cbraces, last[0][1], ts, last[1..-1]]
+        elsif token == "["
+            stack << [[:lsbrace, ts, ts]]
+        elsif token == "]"
+            last = stack.pop
+            last << [:end, ts, ts]
+            if last[0][0] != :lsbrace
+                $stderr.write "#{curline}: Mismatched braces!\n"
+                exit
             end
-        elsif phase == :phase5
-            if token == "("
-                tokens << [ts, te - 1, :lbrace, token]
-            end
+            stack.last << [:sbraces, last[0][1], ts, last[1..-1]]
+        elsif token == ":"
+            stack.last << [:colon, ts, te - 1]
+        elsif token == ";"
+            stack.last << [:semicolon, ts, te - 1]
+        elsif token == ","
+            stack.last << [:comma, ts, te - 1]
+        else
+            stack.last << [:cruft, ts, te - 1]
         end
 	 end
 		end
 when 18 then
-# line 127 "clexer.rl"
+# line 115 "clexer.rl"
 		begin
  begin p = ((te))-1; end
  begin 
-        if phase == :phase1
-            stack.last << [:cruft]
-        end
+        stack.last << [:cruft, ts, te - 1]
      end
 		end
-# line 570 "clexer.rb"
+# line 548 "clexer.rb"
 			end # action switch
 		end
 	end
@@ -586,7 +564,7 @@ when 2 then
 # line 1 "NONE"
 		begin
 ts = nil;		end
-# line 590 "clexer.rb"
+# line 568 "clexer.rb"
 		end # to state action switch
 	end
 	if _trigger_goto
@@ -617,17 +595,16 @@ end
 	end
 	end
 
-# line 168 "clexer.rl"
+# line 146 "clexer.rl"
 
-    if phase == :phase1
-        if stack.size != 1
-            $stderr.write "#{curline}: Missing brace at the end of the source file.\n"
-            exit
-        end
-        return stack[0]
-    else
-        return tokens
+    stack.last << [:end, data.length - 1, data.length - 1]
+
+    if stack.size != 1
+        $stderr.write "Missing brace at the end of the source file.\n"
+        exit
     end
+
+    return stack[0]
 
 end
 
