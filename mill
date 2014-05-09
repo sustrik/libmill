@@ -173,11 +173,24 @@ begin
            end
         end
 
-        # Parse the actual executable part of the coroutine.
+        # Store the executable part of the coroutine
+        # along with the corresponding tokens.
         body = text[bodytokens[0][1]..bodytokens[-1][1]]
+        offset = bodytokens[0][1];
+        for t in bodytokens
+            t[1] -= offset
+            t[2] -= offset
+        end
          
         # Create a coroutine section.
-        sections << [:coroutine, {:name => name, :type => type, :args => args, :vars => vars, :body => body}]
+        sections << [:coroutine, {
+            :name => name,
+            :type => type,
+            :args => args,
+            :vars => vars,
+            :body => body,
+            :tokens => bodytokens
+        }]
 
         i += 1
     end
@@ -187,6 +200,63 @@ end
 # We won't need the original source code anymore. Let's garbage-collect it!
 text = nil
 tokens = nil
+
+################################################################################
+# Transformations within coroutine body.                                       #
+################################################################################
+
+begin
+
+    # Replace specific token in the text by a different text.
+    def replace(text, tokens, index, newtext)
+        text[tokens[index][1]..tokens[index][2]] = newtext
+        offset = newtext.size - (tokens[index][2] - tokens[index][1] + 1)
+        for i in index + 1..tokens.size - 1
+            tokens[i][1] += offset
+            tokens[i][2] += offset
+        end
+    end
+
+    for s in sections
+        if s[0] == :coroutine
+            c = s[1]
+            body = c[:body]
+            tokens = c[:tokens]
+            state = 0
+            for i in 0..tokens.size - 1
+
+                if tokens[i][0] == :getevent
+                    for j in i + 1..tokens.size - 1
+                        break if [:semicolon, :end].include? tokens[j][0]
+                    end
+                    if tokens[j][0] != :semicolon
+                        $stderr.write "'getevent' statement should be terminated by semicolon.\n"
+                        exit
+                    end
+                    state += 1
+                    replace(body, tokens, i, "____getevent(#{state}, ")
+                    replace(body, tokens, j, ");")
+                end
+
+                if tokens[i][0] == :return
+                    for j in i + 1..tokens.size - 1
+                        break if [:semicolon, :end].include? tokens[j][0]
+                    end
+                    if tokens[j][0] != :semicolon
+                        $stderr.write "'return' statement should be terminated by semicolon.\n"
+                        exit
+                    end
+                    replace(body, tokens, i, "____return(");
+                    replace(body, tokens, j, ");")
+                end
+
+            end
+            c[:laststate] = state
+
+        end
+    end
+
+end
 
 ################################################################################
 # Generate the .h file.                                                        #
@@ -245,6 +315,10 @@ for s in sections
 .    switch (self->____base.state) {
 .    case 0:
 .        break;
+for i in 1..c[:laststate]
+.    case @{i}:
+.        goto state@{i}:
+end
 .    default:
 .        assert (0);
 .    }

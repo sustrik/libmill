@@ -9,11 +9,9 @@ int coroutine quux (int baz, int bar)
     endvars;
 
     call foo &f (1, 2, 3);
-    while(1) {
-        getevent e;
-        if (e == &f)
-            break;
-    }
+    getevent e;
+    if (e == &f)
+        break;
     return 8;
 }
 

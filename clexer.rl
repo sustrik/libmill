@@ -73,6 +73,8 @@
             stack.last << [:call, ts, te - 1]
         elsif token == "getevent"
             stack.last << [:getevent, ts, te - 1]
+        elsif token == "return"
+            stack.last << [:return, ts, te - 1]
         else
             stack.last << [:identifier, ts, te - 1]
         end
