@@ -75,6 +75,8 @@
             stack.last << [:getevent, ts, te - 1]
         elsif token == "return"
             stack.last << [:return, ts, te - 1]
+        elsif token == "struct"
+            stack.last << [:struct, ts, te - 1]
         else
             stack.last << [:identifier, ts, te - 1]
         end

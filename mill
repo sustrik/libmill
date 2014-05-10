@@ -31,6 +31,19 @@ end
 base_filename = input[0..-6]
 
 ################################################################################
+# Debug helpers.                                                               #
+################################################################################
+
+def dump(text, tokens)
+    for t in tokens
+        puts "#{t[0]}, #{t[1]}, #{t[2]}, \"#{text[t[1]..t[2]]}\""
+        if t[3] != nil
+            dump(text, t[3])
+        end
+    end
+end
+
+################################################################################
 # Tokenise the input file.                                                     #
 ################################################################################
 
@@ -70,6 +83,17 @@ end
 ################################################################################
 # Parse all coroutines.                                                        #
 ################################################################################
+
+# Shift positions of all tokens past the position start by offset.
+def apply_offset(tokens, start, offset)
+    for t in tokens
+        t[1] += offset if t[1] > start
+        t[2] += offset if t[2] > start
+        if t[3] != nil
+            apply_offset(t[3], start, offset)
+        end
+    end
+end
 
 begin
 
@@ -112,6 +136,7 @@ begin
             exit
         end
         args = []
+        locals = []
         argtokens = tokens[i][3]
         start = 0
         for k in 0..argtokens.size - 1
@@ -124,6 +149,7 @@ begin
                 argname = text[argtokens[k - 1][1]..argtokens[k - 1][2]]
                 argtype = text[argtokens[start][1]..argtokens[k - 2][2]]
                 args << {:name => argname, :type => argtype}
+                locals << argname
                 start = k + 1
             end
         end
@@ -135,6 +161,7 @@ begin
             exit
         end
         bodytokens = tokens[i][3]
+        bodytokens.unshift [:whitespace, tokens [i - 1][2] + 1, bodytokens[0][1] - 1]
 
         # Split the body into variable declarations and executable part.
         vartokens = []
@@ -145,8 +172,10 @@ begin
                    $stderr.write "'endvars' must be followed by a semicolon.\n"
                    exit
                 end
+                wsstart = bodytokens[j + 1][2] + 1
                 vartokens = bodytokens[0..j - 1]
                 bodytokens = bodytokens[j + 2..-1]
+                bodytokens.unshift [:whitespace, wsstart, bodytokens[0][1] - 1]
                 break
             end
         end
@@ -169,18 +198,15 @@ begin
                varname = text[vartokens[j - 1][1]..vartokens[j - 1][2]]
                vartype = text[vartokens[start][1]..vartokens[j - 2][2]]
                vars << {:name => varname, :type => vartype}
+               locals << varname
                start = j + 1
            end
         end
 
         # Store the executable part of the coroutine
         # along with the corresponding tokens.
-        body = text[bodytokens[0][1]..bodytokens[-1][1]]
-        offset = bodytokens[0][1];
-        for t in bodytokens
-            t[1] -= offset
-            t[2] -= offset
-        end
+        body = text[bodytokens[0][1]..bodytokens[-1][1] - 1]
+        apply_offset(bodytokens, 0, -bodytokens[0][1])
          
         # Create a coroutine section.
         sections << [:coroutine, {
@@ -188,6 +214,7 @@ begin
             :type => type,
             :args => args,
             :vars => vars,
+            :locals => locals,
             :body => body,
             :tokens => bodytokens
         }]
@@ -205,52 +232,84 @@ tokens = nil
 # Transformations within coroutine body.                                       #
 ################################################################################
 
-begin
+# Replace specific token in the text by a different text.
+def replace(text, tokens, token, newtext)
+    text[token[1]..token[2]] = newtext
+    offset = newtext.size - (token[2] - token[1] + 1)
+    apply_offset(tokens, token[1], offset)
+end
 
-    # Replace specific token in the text by a different text.
-    def replace(text, tokens, index, newtext)
-        text[tokens[index][1]..tokens[index][2]] = newtext
-        offset = newtext.size - (tokens[index][2] - tokens[index][1] + 1)
-        for i in index + 1..tokens.size - 1
-            tokens[i][1] += offset
-            tokens[i][2] += offset
-        end
-    end
+begin
 
     for s in sections
         if s[0] == :coroutine
             c = s[1]
             body = c[:body]
             tokens = c[:tokens]
-            state = 0
-            for i in 0..tokens.size - 1
 
-                if tokens[i][0] == :getevent
-                    for j in i + 1..tokens.size - 1
-                        break if [:semicolon, :end].include? tokens[j][0]
+            # Expand local variables.
+            def expand_vars(body, alltokens, tokens, locals)
+                for i in 0..tokens.size - 1
+                    if tokens[i][0] == :identifier && (i == 0 || tokens[i - 1][0] != :struct)
+                        idname = body[tokens[i][1]..tokens[i][2]]
+                        if locals.include? idname
+                            replace(body, alltokens, tokens[i], "(self->#{idname})")
+                        end
+                    elsif [:braces, :cbraces, :sbraces].include? tokens[i][0]
+                        expand_vars(body, alltokens, tokens[i][3], locals)
                     end
-                    if tokens[j][0] != :semicolon
-                        $stderr.write "'getevent' statement should be terminated by semicolon.\n"
-                        exit
-                    end
-                    state += 1
-                    replace(body, tokens, i, "____getevent(#{state}, ")
-                    replace(body, tokens, j, ");")
                 end
-
-                if tokens[i][0] == :return
-                    for j in i + 1..tokens.size - 1
-                        break if [:semicolon, :end].include? tokens[j][0]
-                    end
-                    if tokens[j][0] != :semicolon
-                        $stderr.write "'return' statement should be terminated by semicolon.\n"
-                        exit
-                    end
-                    replace(body, tokens, i, "____return(");
-                    replace(body, tokens, j, ");")
-                end
-
             end
+            expand_vars(body, tokens, tokens, c[:locals])
+
+            # Expand mill keywords.
+            def expand_keywords(body, alltokens, tokens, state)
+                for i in 0..tokens.size - 1
+
+                    if tokens[i][0] == :getevent
+                        for j in i + 1..tokens.size - 1
+                            break if [:semicolon, :end].include? tokens[j][0]
+                        end
+                        if tokens[j][0] != :semicolon
+                            $stderr.write "'getevent' statement should be terminated by semicolon.\n"
+                            exit
+                        end
+                        state += 1
+                        replace(body, alltokens, tokens[i], "____getevent (#{state},")
+                        replace(body, alltokens, tokens[j], ");")
+                    end
+
+                    if tokens[i][0] == :return
+                        for j in i + 1..tokens.size - 1
+                            break if [:semicolon, :end].include? tokens[j][0]
+                        end
+                        if tokens[j][0] != :semicolon
+                            $stderr.write "'return' statement should be terminated by semicolon.\n"
+                            exit
+                        end
+                        replace(body, alltokens, tokens[i], "____return (");
+                        replace(body, alltokens, tokens[j], ");")
+                    end
+
+                    if tokens[i][0] == :call
+                        if tokens[i + 1][0] != :identifier
+                            $stderr.write "'call' statement should be terminated by coroutine name.\n"
+                            exit
+                        end
+                        replace(body, alltokens, tokens[i], "____call_#{body[tokens[i + 1][1]..tokens[i+1][2]]} (");
+                        replace(body, alltokens, tokens[i + 1], "")
+                    end
+
+                    if tokens[i][3] != nil
+                        expand_keywords(body, alltokens, tokens[i][3], state)
+                    end
+
+                end
+            end
+            state = 0
+            expand_keywords(body, tokens, tokens, state)
+
+            # Store the overall number of states in the coroutine object.
             c[:laststate] = state
 
         end
@@ -287,6 +346,12 @@ for v in c[:vars]
 .    @{v[:type]} @{v[:name]};
 end
 .};
+.
+.void ____call_@{c[:name]} (struct ____coroutine_@{c[:name]} *self
+for a in c[:args]
+.    /+, @{a[:type]} @{a[:name]}
+end
+./+);
 .
     end
 end
