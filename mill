@@ -97,6 +97,21 @@ end
 
 begin
 
+    # Make typestring from a list of tokens.
+    def make_type(text, tokens)
+        type = ""
+        last = tokens[0][1]
+        for k in 0..tokens.size - 1
+            if tokens[k][0] == :coroutine
+                type += text[last..tokens[k][1] - 1]
+                type += "____coroutine_#{text[tokens[k+1][1]..tokens[k+1][2]]}"
+                last = tokens[k + 1][2] + 1
+            end
+        end
+        type += text[last..tokens[-1][2]]
+        return type
+    end
+
     loop do
 
         # Find the start of next coroutine.
@@ -147,7 +162,8 @@ begin
                     exit
                 end
                 argname = text[argtokens[k - 1][1]..argtokens[k - 1][2]]
-                argtype = text[argtokens[start][1]..argtokens[k - 2][2]]
+                argtype = make_type(text, argtokens[start..k - 2])
+#                argtype = text[argtokens[start][1]..argtokens[k - 2][2]]
                 args << {:name => argname, :type => argtype}
                 locals << argname
                 start = k + 1
@@ -179,12 +195,12 @@ begin
                 break
             end
         end
-        #vartokens << [:end, bodytokens[0][1] - 1, bodytokens[0][1] - 1]
+        vartokens << [:end, bodytokens[0][1] - 1, bodytokens[0][1] - 1]
 
         # Local variables.
         vars = []
-        start = 0
-        for j in 0..vartokens.size - 1
+        start = 1
+        for j in 1..vartokens.size - 1
            if vartokens[j][0] == :end
                break if start == j
                $stderr.write "Invalid tokens following variable declaration.\n"
@@ -196,7 +212,7 @@ begin
                    exit
                end
                varname = text[vartokens[j - 1][1]..vartokens[j - 1][2]]
-               vartype = text[vartokens[start][1]..vartokens[j - 2][2]]
+               vartype = make_type(text, vartokens[start..j - 2])
                vars << {:name => varname, :type => vartype}
                locals << varname
                start = j + 1
@@ -301,16 +317,14 @@ begin
                     end
 
                     if tokens[i][3] != nil
-                        expand_keywords(body, alltokens, tokens[i][3], state)
+                        state = expand_keywords(body, alltokens, tokens[i][3], state)
                     end
 
                 end
-            end
-            state = 0
-            expand_keywords(body, tokens, tokens, state)
 
-            # Store the overall number of states in the coroutine object.
-            c[:laststate] = state
+                return state
+            end
+            c[:laststate] = expand_keywords(body, tokens, tokens, 0)
 
         end
     end

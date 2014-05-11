@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include "foo.h"
 
-int coroutine quux (int baz, int bar)
+int coroutine quux (int bar, coroutine baz *baz)
 {
     event e;
     coroutine foo f;
