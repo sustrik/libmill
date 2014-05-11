@@ -176,7 +176,7 @@ begin
             exit
         end
         bodytokens = tokens[i][3]
-        bodytokens.unshift [:whitespace, tokens [i - 1][2] + 1, bodytokens[0][1] - 1]
+        bodytokens.unshift [:whitespace, tokens [i][1] + 1, bodytokens[0][1] - 1]
 
         # Split the body into variable declarations and executable part.
         vartokens = []
