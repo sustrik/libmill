@@ -1,18 +1,16 @@
 
-#include <stdio.h>
-#include "foo.h"
-
-int coroutine quux (int bar, coroutine baz *baz)
+void coroutine foo ()
 {
-    event e;
+    endvars;
+}
+
+int coroutine quux (int bar)
+{
     coroutine foo f;
     endvars;
 
-    call foo (&f, 1, 2, 3);
-    getevent e;
-    if (e == &f)
-        break;
-    return 8;
+    call foo (&f);
+    return 0;
 }
 
 int test()

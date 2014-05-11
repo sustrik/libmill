@@ -26,27 +26,28 @@
 #include <assert.h>
 #include <stdlib.h>
 
-struct mill_base;
+typedef void* event;
 
-typedef void (*mill_handler_fn) (struct mill_base *self, void* src, int event);
+struct ____base;
 
-struct mill_base {
-    mill_handler_fn handler; 
+typedef void (*____handler_fn) (struct ____base *self, event ev);
+
+struct ____base {
+    ____handler_fn handler; 
     int state;
-    struct mill_ctx *parent;
-    struct mill_ctx *children;
-    struct mill_ctx *prev;
-    struct mill_ctx *next;
 };
 
-void mill_base_init (struct mill_base *self, mill_handler_fn handler); 
+void ____base_init (struct ____base *self, ____handler_fn handler); 
 
-#define MILL_GETEVENT(statearg, srcarg, eventarg)\
-    self->mill_base.state = statearg;\
+#define ____getevent(statearg, eventarg)\
+    self->____base.state = (statearg);\
     return;\
-    mill_state_##statearg:\
-    *(srcarg) = src;\
-    *(eventarg) = event;
+    state_##statearg:\
+    (eventarg) = ev;
+
+#define ____return(resarg)\
+    self->____result = (resarg);\
+    return;
 
 #endif
 

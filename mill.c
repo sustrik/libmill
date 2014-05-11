@@ -22,12 +22,9 @@
 
 #include "mill.h"
 
-void mill_base_init (struct mill_base *self, mill_handler_fn handler)
+void ____base_init (struct ____base *self, ____handler_fn handler)
 {
     self->handler = handler;
     self->state = 0;
-    self->children = 0;
-    self->prev = 0;
-    self->next = 0;
 }
 

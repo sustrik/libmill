@@ -104,7 +104,7 @@ begin
         for k in 0..tokens.size - 1
             if tokens[k][0] == :coroutine
                 type += text[last..tokens[k][1] - 1]
-                type += "____coroutine_#{text[tokens[k+1][1]..tokens[k+1][2]]}"
+                type += "struct ____coroutine_#{text[tokens[k+1][1]..tokens[k+1][2]]}"
                 last = tokens[k + 1][2] + 1
             end
         end
@@ -163,7 +163,6 @@ begin
                 end
                 argname = text[argtokens[k - 1][1]..argtokens[k - 1][2]]
                 argtype = make_type(text, argtokens[start..k - 2])
-#                argtype = text[argtokens[start][1]..argtokens[k - 2][2]]
                 args << {:name => argname, :type => argtype}
                 locals << argname
                 start = k + 1
@@ -312,7 +311,7 @@ begin
                             $stderr.write "'call' statement should be terminated by coroutine name.\n"
                             exit
                         end
-                        replace(body, alltokens, tokens[i], "____call_#{body[tokens[i + 1][1]..tokens[i+1][2]]} (");
+                        replace(body, alltokens, tokens[i], "____call_#{body[tokens[i + 1][1]..tokens[i+1][2]]}");
                         replace(body, alltokens, tokens[i + 1], "")
                     end
 
@@ -387,7 +386,7 @@ for s in sections
 .
     elsif s[0] == :coroutine
         c = s[1]
-.static void @{c[:name]}_handler(____base *base, event ev)
+.static void @{c[:name]}_handler(struct ____base *base, event ev)
 .{
 .    struct ____coroutine_@{c[:name]} *self = (struct ____coroutine_@{c[:name]}*) base;
 .
@@ -403,6 +402,17 @@ end
 .    }
 .
 .    @{c[:body]}
+.}
+.
+.void ____call_@{c[:name]} (struct ____coroutine_@{c[:name]} *self
+for a in c[:args]
+.    /+, @{a[:type]} @{a[:name]}
+end
+./+) {
+.    ____base_init (&self->____base, @{c[:name]}_handler);
+for a in c[:args]
+.    self->@{a[:name]} = @{a[:name]};
+end
 .}
 .
     end
