@@ -13,9 +13,6 @@ int coroutine quux (int bar)
     return 0;
 }
 
-int test()
-{
-}
 
 
 
