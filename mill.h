@@ -29,43 +29,43 @@
 
 typedef void* event;
 
-struct ____base;
+struct mill_base;
 
-typedef void (*____handler_fn) (struct ____base *self, event ev);
+typedef void (*mill_handler_fn) (struct mill_base *self, event ev);
 
-struct ____base {
-    ____handler_fn handler; 
+struct mill_base {
+    mill_handler_fn handler; 
     int state;
-    struct ____base *parent;
+    struct mill_base *parent;
 };
 
-void ____base_init (
-    struct ____base *self,
-    ____handler_fn handler,
-    struct ____base *parent);
+void mill_base_init (
+    struct mill_base *self,
+    mill_handler_fn handler,
+    struct mill_base *parent);
 
-#define ____getevent(statearg, eventarg)\
-    self->____base.state = (statearg);\
+#define mill_getevent(statearg, eventarg)\
+    self->mill_base.state = (statearg);\
     return;\
     state##statearg:\
     (eventarg) = ev;
 
-#define ____return(resarg)\
-    self->____result = (resarg);\
+#define mill_return(resarg)\
+    self->mill_result = (resarg);\
     return;
 
-#define ____result(coro)\
-    ((coro)->____result)
+#define mill_result(coro)\
+    ((coro)->mill_result)
 
-struct ____coroutine_wait {
-    struct ____base ____base;
+struct mill_coroutine_wait {
+    struct mill_base mill_base;
     uv_timer_t timer;
 };
 
-void ____call_wait (
-    struct ____coroutine_wait *self,
+void mill_call_wait (
+    struct mill_coroutine_wait *self,
     int milliseconds,
-    struct ____base *parent);
+    struct mill_base *parent);
 
 #endif
 

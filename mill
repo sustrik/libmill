@@ -104,7 +104,7 @@ begin
         for k in 0..tokens.size - 1
             if tokens[k][0] == :coroutine
                 type += text[last..tokens[k][1] - 1]
-                type += "struct ____coroutine_#{text[tokens[k+1][1]..tokens[k+1][2]]}"
+                type += "struct mill_coroutine_#{text[tokens[k+1][1]..tokens[k+1][2]]}"
                 last = tokens[k + 1][2] + 1
             end
         end
@@ -296,7 +296,7 @@ begin
                             exit
                         end
                         state += 1
-                        replace(body, alltokens, tokens[i], "____getevent (#{state},")
+                        replace(body, alltokens, tokens[i], "mill_getevent (#{state},")
                         replace(body, alltokens, tokens[j], ");")
                     end
 
@@ -308,7 +308,7 @@ begin
                             $stderr.write "'return' statement should be terminated by semicolon.\n"
                             exit
                         end
-                        replace(body, alltokens, tokens[i], "____return (");
+                        replace(body, alltokens, tokens[i], "mill_return (");
                         replace(body, alltokens, tokens[j], ");")
                     end
 
@@ -321,13 +321,13 @@ begin
                             $stderr.write "'call' should be followed by a list of arguments.\n"
                             exit
                         end
-                        replace(body, alltokens, tokens[i], "____call_#{body[tokens[i + 1][1]..tokens[i+1][2]]}");
+                        replace(body, alltokens, tokens[i], "mill_call_#{body[tokens[i + 1][1]..tokens[i+1][2]]}");
                         replace(body, alltokens, tokens[i + 1], "")
-                        insert(body, alltokens, tokens[i + 2][2], ", &self->____base")
+                        insert(body, alltokens, tokens[i + 2][2], ", &self->mill_base")
                     end
 
                     if tokens[i][0] == :result
-                        replace(body, alltokens, tokens[i], "____result");
+                        replace(body, alltokens, tokens[i], "mill_result");
                     end
 
                     if tokens[i][3] != nil
@@ -362,10 +362,10 @@ end
 for s in sections
     if s[0] == :coroutine
         c = s[1]
-.struct ____coroutine_@{c[:name]} {
-.    struct ____base ____base;
+.struct mill_coroutine_@{c[:name]} {
+.    struct mill_base mill_base;
 if c[:type] != "void"
-.    @{c[:type]} ____result;
+.    @{c[:type]} mill_result;
 end
 for a in c[:args]
 .    @{a[:type]} @{a[:name]};
@@ -375,14 +375,14 @@ for v in c[:vars]
 end
 .};
 .
-.void ____call_@{c[:name]} (
-.    struct ____coroutine_@{c[:name]} *self
+.void mill_call_@{c[:name]} (
+.    struct mill_coroutine_@{c[:name]} *self
 for a in c[:args]
 .    /+,
 .    @{a[:type]} @{a[:name]}
 end
 .    /+,
-.    struct ____base *parent);
+.    struct mill_base *parent);
 .
     end
 end
@@ -404,11 +404,11 @@ for s in sections
 .
     elsif s[0] == :coroutine
         c = s[1]
-.static void @{c[:name]}_handler(struct ____base *base, event ev)
+.static void @{c[:name]}_handler(struct mill_base *base, event ev)
 .{
-.    struct ____coroutine_@{c[:name]} *self = (struct ____coroutine_@{c[:name]}*) base;
+.    struct mill_coroutine_@{c[:name]} *self = (struct mill_coroutine_@{c[:name]}*) base;
 .
-.    switch (self->____base.state) {
+.    switch (self->mill_base.state) {
 .    case 0:
 .        break;
 for i in 1..c[:laststate]
@@ -422,20 +422,20 @@ end
 .    @{c[:body]}
 .}
 .
-.void ____call_@{c[:name]} (
-.    struct ____coroutine_@{c[:name]} *self
+.void mill_call_@{c[:name]} (
+.    struct mill_coroutine_@{c[:name]} *self
 for a in c[:args]
 .    /+,
 .    @{a[:type]} @{a[:name]}
 end
 .    /+,
-.    struct ____base *parent)
+.    struct mill_base *parent)
 .{
-.    ____base_init (&self->____base, @{c[:name]}_handler, parent);
+.    mill_base_init (&self->mill_base, @{c[:name]}_handler, parent);
 for a in c[:args]
 .    self->@{a[:name]} = @{a[:name]};
 end
-.    @{c[:name]}_handler(&self->____base, 0);
+.    @{c[:name]}_handler(&self->mill_base, 0);
 .}
 .
     end

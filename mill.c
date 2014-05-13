@@ -28,20 +28,20 @@
 /* Generic stuff.                                                             */
 /******************************************************************************/
 
-#define cont(ptr, type, member) \
+#define mill_cont(ptr, type, member) \
     (ptr ? ((type*) (((char*) ptr) - offsetof(type, member))) : NULL)
 
-void ____base_init (
-    struct ____base *self,
-    ____handler_fn handler,
-    struct ____base *parent)
+void mill_base_init (
+    struct mill_base *self,
+    mill_handler_fn handler,
+    struct mill_base *parent)
 {
     self->handler = handler;
     self->state = 0;
     self->parent = parent;
 }
 
-void ____base_term (struct ____base *self)
+void mill_base_term (struct mill_base *self)
 {
 }
 
@@ -49,23 +49,24 @@ void ____base_term (struct ____base *self)
 /* Wait coroutine.                                                            */
 /******************************************************************************/
 
-static void wait_handler(struct ____base *base, event ev)
+static void wait_handler(struct mill_base *base, event ev)
 {
-    struct ____coroutine_wait *self = (struct ____coroutine_wait*) base;
-    ____base_term (&self->____base);
+    struct mill_coroutine_wait *self = (struct mill_coroutine_wait*) base;
+    mill_base_term (&self->mill_base);
 }
 
 static void wait_cb (uv_timer_t *timer)
 {
-    wait_handler (&cont (timer, struct ____coroutine_wait, timer)->____base, 0);
+    wait_handler (&mill_cont (timer,
+        struct mill_coroutine_wait, timer)->mill_base, 0);
 }
 
-void ____call_wait (
-    struct ____coroutine_wait *self,
+void mill_call_wait (
+    struct mill_coroutine_wait *self,
     int milliseconds,
-    struct ____base *parent)
+    struct mill_base *parent)
 {
-    ____base_init (&self->____base, wait_handler, parent);
+    mill_base_init (&self->mill_base, wait_handler, parent);
     uv_timer_init(uv_default_loop(), &self->timer);
     uv_timer_start(&self->timer, wait_cb, milliseconds, 0);
 }
