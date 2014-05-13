@@ -53,6 +53,28 @@ i = 0
 sections = []
 
 ################################################################################
+# Make sure that the program won't collide with mill's internal variables.     #
+################################################################################
+
+begin
+    def check(text, tokens)
+        for t in tokens
+            if t[0] == :identifier
+                name = text[t[1]..t[2]]
+                if name.size >= 5 && name[0..4] == "mill_"
+                    $stderr.write "Identifiers can't start with mill_ prefix.\n"
+                    exit
+                end
+            end
+            if t[3] != nil
+                check(text, t[3])
+            end
+        end
+    end
+    check(text, tokens)
+end
+
+################################################################################
 #  Process includes.                                                           #
 ################################################################################
 
