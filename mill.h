@@ -30,6 +30,7 @@
 typedef void* event;
 
 struct mill_base;
+struct mill_loop;
 
 typedef void (*mill_handler_fn) (struct mill_base *self, event ev);
 
@@ -37,12 +38,18 @@ struct mill_base {
     mill_handler_fn handler; 
     int state;
     struct mill_base *parent;
+    struct mill_loop *loop;
 };
 
 void mill_base_init (
     struct mill_base *self,
     mill_handler_fn handler,
-    struct mill_base *parent);
+    struct mill_base *parent,
+    struct mill_loop *loop);
+
+void mill_base_term (struct mill_base *self);
+
+void mill_base_emit (struct mill_base *self);
 
 #define mill_getevent(statearg, eventarg)\
     self->mill_base.state = (statearg);\
@@ -50,12 +57,9 @@ void mill_base_init (
     state##statearg:\
     (eventarg) = ev;
 
-#define mill_return(resarg)\
-    self->mill_result = (resarg);\
+#define mill_return\
+    mill_base_emit (&self->mill_base);\
     return;
-
-#define mill_result(coro)\
-    ((coro)->mill_result)
 
 struct mill_coroutine_wait {
     struct mill_base mill_base;
@@ -65,7 +69,18 @@ struct mill_coroutine_wait {
 void mill_call_wait (
     struct mill_coroutine_wait *self,
     int milliseconds,
-    struct mill_base *parent);
+    struct mill_base *parent,
+    struct mill_loop *loop);
+
+struct mill_loop
+{
+    uv_loop_t uv_loop;
+};
+
+void mill_loop_init (struct mill_loop *self);
+void mill_loop_term (struct mill_loop *self);
+void mill_loop_run (struct mill_loop *self);
+void mill_loop_emit (struct mill_loop *self, struct mill_base *dst, event e);
 
 #endif
 

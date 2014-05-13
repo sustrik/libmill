@@ -2,7 +2,7 @@
 # line 1 "clexer.rl"
 
 
-# line 138 "clexer.rl"
+# line 136 "clexer.rl"
 
 
 
@@ -159,7 +159,7 @@ end
 self.c_en_main = 11;
 
 
-# line 141 "clexer.rl"
+# line 139 "clexer.rl"
 
 def parse(data)
 
@@ -180,7 +180,7 @@ begin
 	act = 0
 end
 
-# line 151 "clexer.rl"
+# line 149 "clexer.rl"
     
 # line 186 "clexer.rb"
 begin
@@ -349,7 +349,7 @@ te = p+1
 	 end
 		end
 when 6 then
-# line 89 "clexer.rl"
+# line 87 "clexer.rl"
 		begin
 te = p+1
  begin 
@@ -357,7 +357,7 @@ te = p+1
      end
 		end
 when 7 then
-# line 95 "clexer.rl"
+# line 93 "clexer.rl"
 		begin
 te = p+1
  begin 
@@ -365,12 +365,12 @@ te = p+1
      end
 		end
 when 8 then
-# line 100 "clexer.rl"
+# line 98 "clexer.rl"
 		begin
 te = p+1
 		end
 when 9 then
-# line 103 "clexer.rl"
+# line 101 "clexer.rl"
 		begin
 te = p+1
  begin 
@@ -383,12 +383,12 @@ te = p+1
      end
 		end
 when 10 then
-# line 115 "clexer.rl"
+# line 113 "clexer.rl"
 		begin
 te = p+1
 		end
 when 11 then
-# line 117 "clexer.rl"
+# line 115 "clexer.rl"
 		begin
 te = p+1
  begin  	begin
@@ -458,8 +458,6 @@ p = p - 1; begin
             stack.last << [:endvars, ts, te - 1]
         elsif token == "call"
             stack.last << [:call, ts, te - 1]
-        elsif token == "result"
-            stack.last << [:result, ts, te - 1]
         elsif token == "getevent"
             stack.last << [:getevent, ts, te - 1]
         elsif token == "return"
@@ -472,7 +470,7 @@ p = p - 1; begin
 	 end
 		end
 when 14 then
-# line 121 "clexer.rl"
+# line 119 "clexer.rl"
 		begin
 te = p
 p = p - 1; begin 
@@ -480,7 +478,7 @@ p = p - 1; begin
      end
 		end
 when 15 then
-# line 127 "clexer.rl"
+# line 125 "clexer.rl"
 		begin
 te = p
 p = p - 1; begin 
@@ -488,7 +486,7 @@ p = p - 1; begin
      end
 		end
 when 16 then
-# line 133 "clexer.rl"
+# line 131 "clexer.rl"
 		begin
 te = p
 p = p - 1; begin 
@@ -543,14 +541,14 @@ when 17 then
 	 end
 		end
 when 18 then
-# line 121 "clexer.rl"
+# line 119 "clexer.rl"
 		begin
  begin p = ((te))-1; end
  begin 
         stack.last << [:cruft, ts, te - 1]
      end
 		end
-# line 554 "clexer.rb"
+# line 552 "clexer.rb"
 			end # action switch
 		end
 	end
@@ -570,7 +568,7 @@ when 2 then
 # line 1 "NONE"
 		begin
 ts = nil;		end
-# line 574 "clexer.rb"
+# line 572 "clexer.rb"
 		end # to state action switch
 	end
 	if _trigger_goto
@@ -601,7 +599,7 @@ end
 	end
 	end
 
-# line 152 "clexer.rl"
+# line 150 "clexer.rl"
 
     stack.last << [:end, data.length - 1, data.length - 1]
 

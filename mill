@@ -143,22 +143,13 @@ begin
             i += 1;
         end
         stop = i
-        if tokens[i][0] == :coroutine
-            while stop > start
-                break if [:cbraces, :semicolon].include? tokens[stop - 1][0]
-                stop -= 1
-            end
-        end
         sections << [:c, text[tokens[start][1]..tokens[stop][1] - 1]]
 
         # End of file.
         break if tokens[i][0] == :end
 
         # Parse the coroutine itself.
-        # First get the result type.
-        type = text[tokens[stop][1]..tokens[i - 1][2]]
-            
-        # Coroutine name.
+        # First goes coroutine name.
         i += 1
         if tokens[i][0] != :identifier
             $stderr.write "Coroutine name missing.\n"
@@ -248,7 +239,6 @@ begin
         # Create a coroutine section.
         sections << [:coroutine, {
             :name => name,
-            :type => type,
             :args => args,
             :vars => vars,
             :locals => locals,
@@ -345,11 +335,7 @@ begin
                         end
                         replace(body, alltokens, tokens[i], "mill_call_#{body[tokens[i + 1][1]..tokens[i+1][2]]}");
                         replace(body, alltokens, tokens[i + 1], "")
-                        insert(body, alltokens, tokens[i + 2][2], ", &self->mill_base")
-                    end
-
-                    if tokens[i][0] == :result
-                        replace(body, alltokens, tokens[i], "mill_result");
+                        insert(body, alltokens, tokens[i + 2][2], ", &self->mill_base, self->mill_base.loop")
                     end
 
                     if tokens[i][3] != nil
@@ -386,9 +372,6 @@ for s in sections
         c = s[1]
 .struct mill_coroutine_@{c[:name]} {
 .    struct mill_base mill_base;
-if c[:type] != "void"
-.    @{c[:type]} mill_result;
-end
 for a in c[:args]
 .    @{a[:type]} @{a[:name]};
 end
@@ -404,7 +387,15 @@ for a in c[:args]
 .    @{a[:type]} @{a[:name]}
 end
 .    /+,
-.    struct mill_base *parent);
+.    struct mill_base *parent,
+.    struct mill_loop *loop);
+.
+.void @{c[:name]} (
+./!separate ", "
+for a in c[:args]
+.    @{a[:type]} @{a[:name]}
+end
+./+);
 .
     end
 end
@@ -451,13 +442,34 @@ for a in c[:args]
 .    @{a[:type]} @{a[:name]}
 end
 .    /+,
-.    struct mill_base *parent)
+.    struct mill_base *parent,
+.    struct mill_loop *loop)
 .{
-.    mill_base_init (&self->mill_base, @{c[:name]}_handler, parent);
+.    mill_base_init (&self->mill_base, @{c[:name]}_handler, parent, loop);
 for a in c[:args]
 .    self->@{a[:name]} = @{a[:name]};
 end
 .    @{c[:name]}_handler(&self->mill_base, 0);
+.}
+.
+.void @{c[:name]} (
+./!separate ", "
+for a in c[:args]
+.    @{a[:type]} @{a[:name]}
+end
+./+)
+.{
+.    struct mill_loop mill_loop;
+.    struct mill_coroutine_@{c[:name]} mill_coroutine;
+.
+.    mill_loop_init (&mill_loop);
+.    mill_call_@{c[:name]} (&mill_coroutine
+for a in c[:args]
+.    /+, @{a[:name]}
+end
+./+, 0, &mill_loop);
+.    mill_loop_run (&mill_loop);
+.    mill_loop_term (&mill_loop);
 .}
 .
     end

@@ -34,15 +34,23 @@
 void mill_base_init (
     struct mill_base *self,
     mill_handler_fn handler,
-    struct mill_base *parent)
+    struct mill_base *parent,
+    struct mill_loop *loop)
 {
     self->handler = handler;
     self->state = 0;
     self->parent = parent;
+    self->loop = loop;
 }
 
 void mill_base_term (struct mill_base *self)
 {
+    assert (0);
+}
+
+void mill_base_emit (struct mill_base *self)
+{
+    mill_loop_emit (self->loop, self->parent, self);
 }
 
 /******************************************************************************/
@@ -52,7 +60,7 @@ void mill_base_term (struct mill_base *self)
 static void wait_handler(struct mill_base *base, event ev)
 {
     struct mill_coroutine_wait *self = (struct mill_coroutine_wait*) base;
-    mill_base_term (&self->mill_base);
+    mill_base_emit (&self->mill_base);
 }
 
 static void wait_cb (uv_timer_t *timer)
@@ -64,10 +72,42 @@ static void wait_cb (uv_timer_t *timer)
 void mill_call_wait (
     struct mill_coroutine_wait *self,
     int milliseconds,
-    struct mill_base *parent)
+    struct mill_base *parent,
+    struct mill_loop *loop)
 {
-    mill_base_init (&self->mill_base, wait_handler, parent);
-    uv_timer_init(uv_default_loop(), &self->timer);
+    mill_base_init (&self->mill_base, wait_handler, parent, loop);
+    uv_timer_init(&loop->uv_loop, &self->timer);
     uv_timer_start(&self->timer, wait_cb, milliseconds, 0);
+}
+
+/******************************************************************************/
+/* The event loop.                                                            */
+/******************************************************************************/
+
+void mill_loop_init (struct mill_loop *self)
+{
+    int rc;
+
+    rc = uv_loop_init (&self->uv_loop);
+    assert (rc == 0);
+}
+
+void mill_loop_term (struct mill_loop *self)
+{
+    int rc;
+    rc = uv_loop_close (&self->uv_loop);
+    assert (rc == 0);
+}
+
+void mill_loop_run (struct mill_loop *self) {
+    int rc;
+
+    rc = uv_run (&self->uv_loop, UV_RUN_DEFAULT);
+    assert (rc == 0);
+}
+
+void mill_loop_emit (struct mill_loop *self, struct mill_base *dst, event e)
+{
+    assert (0);
 }
 

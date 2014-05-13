@@ -1,7 +1,7 @@
 
 #include <stdio.h>
 
-void coroutine quux (int bar)
+coroutine quux (int bar)
 {
     coroutine wait w;
     event e;

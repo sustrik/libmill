@@ -71,8 +71,6 @@
             stack.last << [:endvars, ts, te - 1]
         elsif token == "call"
             stack.last << [:call, ts, te - 1]
-        elsif token == "result"
-            stack.last << [:result, ts, te - 1]
         elsif token == "getevent"
             stack.last << [:getevent, ts, te - 1]
         elsif token == "return"
