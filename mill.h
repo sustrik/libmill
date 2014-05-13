@@ -25,6 +25,7 @@
 
 #include <assert.h>
 #include <stdlib.h>
+#include <uv.h>
 
 typedef void* event;
 
@@ -35,19 +36,36 @@ typedef void (*____handler_fn) (struct ____base *self, event ev);
 struct ____base {
     ____handler_fn handler; 
     int state;
+    struct ____base *parent;
 };
 
-void ____base_init (struct ____base *self, ____handler_fn handler); 
+void ____base_init (
+    struct ____base *self,
+    ____handler_fn handler,
+    struct ____base *parent);
 
 #define ____getevent(statearg, eventarg)\
     self->____base.state = (statearg);\
     return;\
-    state_##statearg:\
+    state##statearg:\
     (eventarg) = ev;
 
 #define ____return(resarg)\
     self->____result = (resarg);\
     return;
+
+#define ____result(coro)\
+    ((coro)->____result)
+
+struct ____coroutine_wait {
+    struct ____base ____base;
+    uv_timer_t timer;
+};
+
+void ____call_wait (
+    struct ____coroutine_wait *self,
+    int milliseconds,
+    struct ____base *parent);
 
 #endif
 

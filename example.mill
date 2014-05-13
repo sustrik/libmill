@@ -1,16 +1,16 @@
 
-void coroutine foo ()
-{
-   
-}
+#include <stdio.h>
 
-int coroutine quux (int bar)
+void coroutine quux (int bar)
 {
-    coroutine foo f;
+    coroutine wait w;
+    event e;
     endvars;
 
-    call foo (&f);
-    return 0;
+    call wait (&w, 1000);
+    getevent e;
+    if (e == &w)
+        printf ("timeout\n");
 }
 
 

@@ -254,6 +254,12 @@ def replace(text, tokens, token, newtext)
     apply_offset(tokens, token[1], offset)
 end
 
+# Inset specified string at the give position in the text.
+def insert(text, tokens, pos, newtext)
+    text.insert(pos, newtext)
+    apply_offset(tokens, pos, newtext.size)
+end
+
 begin
 
     for s in sections
@@ -308,11 +314,20 @@ begin
 
                     if tokens[i][0] == :call
                         if tokens[i + 1][0] != :identifier
-                            $stderr.write "'call' statement should be terminated by coroutine name.\n"
+                            $stderr.write "'call' keyword should be followed by coroutine name.\n"
+                            exit
+                        end
+                        if tokens[i + 2][0] != :braces
+                            $stderr.write "'call' should be followed by a list of arguments.\n"
                             exit
                         end
                         replace(body, alltokens, tokens[i], "____call_#{body[tokens[i + 1][1]..tokens[i+1][2]]}");
                         replace(body, alltokens, tokens[i + 1], "")
+                        insert(body, alltokens, tokens[i + 2][2], ", &self->____base")
+                    end
+
+                    if tokens[i][0] == :result
+                        replace(body, alltokens, tokens[i], "____result");
                     end
 
                     if tokens[i][3] != nil
@@ -360,11 +375,14 @@ for v in c[:vars]
 end
 .};
 .
-.void ____call_@{c[:name]} (struct ____coroutine_@{c[:name]} *self
+.void ____call_@{c[:name]} (
+.    struct ____coroutine_@{c[:name]} *self
 for a in c[:args]
-.    /+, @{a[:type]} @{a[:name]}
+.    /+,
+.    @{a[:type]} @{a[:name]}
 end
-./+);
+.    /+,
+.    struct ____base *parent);
 .
     end
 end
@@ -395,7 +413,7 @@ for s in sections
 .        break;
 for i in 1..c[:laststate]
 .    case @{i}:
-.        goto state@{i}:
+.        goto state@{i};
 end
 .    default:
 .        assert (0);
@@ -404,15 +422,20 @@ end
 .    @{c[:body]}
 .}
 .
-.void ____call_@{c[:name]} (struct ____coroutine_@{c[:name]} *self
+.void ____call_@{c[:name]} (
+.    struct ____coroutine_@{c[:name]} *self
 for a in c[:args]
-.    /+, @{a[:type]} @{a[:name]}
+.    /+,
+.    @{a[:type]} @{a[:name]}
 end
-./+) {
-.    ____base_init (&self->____base, @{c[:name]}_handler);
+.    /+,
+.    struct ____base *parent)
+.{
+.    ____base_init (&self->____base, @{c[:name]}_handler, parent);
 for a in c[:args]
 .    self->@{a[:name]} = @{a[:name]};
 end
+.    @{c[:name]}_handler(&self->____base, 0);
 .}
 .
     end
