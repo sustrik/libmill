@@ -40,6 +40,8 @@ void mill_base_init (
     self->handler = handler;
     self->state = 0;
     self->parent = parent;
+    self->prev = 0;
+    self->next = 0;
     self->loop = loop;
 }
 

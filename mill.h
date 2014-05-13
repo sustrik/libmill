@@ -38,6 +38,8 @@ struct mill_base {
     mill_handler_fn handler; 
     int state;
     struct mill_base *parent;
+    struct mill_base *prev;
+    struct mill_base *next;
     struct mill_loop *loop;
 };
 
@@ -52,14 +54,18 @@ void mill_base_term (struct mill_base *self);
 void mill_base_emit (struct mill_base *self);
 
 #define mill_getevent(statearg, eventarg)\
-    self->mill_base.state = (statearg);\
-    return;\
-    state##statearg:\
-    (eventarg) = ev;
+    do {\
+        self->mill_base.state = (statearg);\
+        return;\
+        state##statearg:\
+        (eventarg) = ev;\
+    } while (0)
 
 #define mill_return\
-    mill_base_emit (&self->mill_base);\
-    return;
+    do {\
+        mill_base_emit (&self->mill_base);\
+        return;\
+    } while (0)
 
 struct mill_coroutine_wait {
     struct mill_base mill_base;
