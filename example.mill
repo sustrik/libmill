@@ -1,5 +1,6 @@
 
 #include <stdio.h>
+#include <assert.h>
 
 coroutine quux (int bar)
 {
@@ -8,9 +9,10 @@ coroutine quux (int bar)
     endvars;
 
     call wait (&w, 1000);
+    printf ("Waiting for timeout to expire...\n");
     getevent e;
-    if (e == &w)
-        printf ("timeout\n");
+    assert (e == &w);
+    printf ("Done!\n");
 }
 
 int main ()

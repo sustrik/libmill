@@ -14,6 +14,32 @@ WARNING: This project is under development. Do not use!
 The former is needed at compilation time, the latter at both compilation time
 and runtime.
 
+## Example
+
+```
+#include <stdio.h>
+#include <assert.h>
+
+coroutine quux (int bar)
+{
+    coroutine wait w;
+    event e;
+    endvars;
+
+    call wait (&w, 1000);
+    printf ("Waiting for timeout to expire...\n");
+    getevent e;
+    assert (e == &w);
+    printf ("Done!\n");
+}
+
+int main ()
+{
+    quux (1);
+    return 0;
+}
+```
+
 ## Usage
 
 ```
@@ -21,6 +47,8 @@ and runtime.
 gcc -o example example.c mill.c -luv -g -O0
 ./example
 ```
+
+Note that the first printf is executed in parallel with the wait coroutine!
 
 ## License
 
