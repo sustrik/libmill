@@ -13,6 +13,12 @@ coroutine quux (int bar)
         printf ("timeout\n");
 }
 
+int main ()
+{
+    quux (1);
+    return 0;
+}
+
 
 
 

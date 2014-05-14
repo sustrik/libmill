@@ -40,7 +40,6 @@ void mill_base_init (
     self->handler = handler;
     self->state = 0;
     self->parent = parent;
-    self->prev = 0;
     self->next = 0;
     self->loop = loop;
 }
@@ -52,7 +51,7 @@ void mill_base_term (struct mill_base *self)
 
 void mill_base_emit (struct mill_base *self)
 {
-    mill_loop_emit (self->loop, self->parent, self);
+    mill_loop_emit (self->loop, self);
 }
 
 /******************************************************************************/
@@ -62,13 +61,14 @@ void mill_base_emit (struct mill_base *self)
 static void wait_handler(struct mill_base *base, event ev)
 {
     struct mill_coroutine_wait *self = (struct mill_coroutine_wait*) base;
-    mill_base_emit (&self->mill_base);
+    assert (0);
 }
 
 static void wait_cb (uv_timer_t *timer)
 {
-    wait_handler (&mill_cont (timer,
-        struct mill_coroutine_wait, timer)->mill_base, 0);
+    struct mill_coroutine_wait *self = mill_cont (timer,
+        struct mill_coroutine_wait, timer);
+    mill_base_emit (&self->mill_base);
 }
 
 void mill_call_wait (
@@ -92,24 +92,45 @@ void mill_loop_init (struct mill_loop *self)
 
     rc = uv_loop_init (&self->uv_loop);
     assert (rc == 0);
+    self->first = 0;
+    self->last = 0;
 }
 
 void mill_loop_term (struct mill_loop *self)
 {
-    int rc;
-    rc = uv_loop_close (&self->uv_loop);
-    assert (rc == 0);
+    //int rc;
+    //
+    //rc = uv_loop_close (&self->uv_loop);
+    //assert (rc == 0);
 }
 
-void mill_loop_run (struct mill_loop *self) {
-    int rc;
-
-    rc = uv_run (&self->uv_loop, UV_RUN_DEFAULT);
-    assert (rc == 0);
-}
-
-void mill_loop_emit (struct mill_loop *self, struct mill_base *dst, event e)
+void mill_loop_run (struct mill_loop *self)
 {
-    assert (0);
+    int rc;
+
+    while (1) {
+        rc = uv_run (&self->uv_loop, UV_RUN_ONCE);
+        assert (rc == 0);
+        while (self->first) {
+            if (!self->first->parent)
+                return;
+            self->first->parent->handler (self->first->parent, self->first);
+            self->first = self->first->next;
+        }
+    }
+}
+
+void mill_loop_emit (
+    struct mill_loop *self,
+    struct mill_base *base)
+{
+    if (self->first == 0) {
+        self->first = base;
+        self->last = base;
+        return;
+    }
+    self->last->next = base;
+    base->next = 0;
+    self->last = base;
 }
 

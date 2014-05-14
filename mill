@@ -433,6 +433,8 @@ end
 .    }
 .
 .    @{c[:body]}
+.
+.    mill_base_emit (&self->mill_base);
 .}
 .
 .void mill_call_@{c[:name]} (

@@ -38,7 +38,6 @@ struct mill_base {
     mill_handler_fn handler; 
     int state;
     struct mill_base *parent;
-    struct mill_base *prev;
     struct mill_base *next;
     struct mill_loop *loop;
 };
@@ -81,12 +80,17 @@ void mill_call_wait (
 struct mill_loop
 {
     uv_loop_t uv_loop;
+
+    /* Local event queue. Items in this list are processed immediately, before
+       control is returned to libuv. */
+    struct mill_base *first;
+    struct mill_base *last;
 };
 
 void mill_loop_init (struct mill_loop *self);
 void mill_loop_term (struct mill_loop *self);
 void mill_loop_run (struct mill_loop *self);
-void mill_loop_emit (struct mill_loop *self, struct mill_base *dst, event e);
+void mill_loop_emit (struct mill_loop *self, struct mill_base *base);
 
 #endif
 
