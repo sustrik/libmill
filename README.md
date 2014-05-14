@@ -20,7 +20,7 @@ and runtime.
 #include <stdio.h>
 #include <assert.h>
 
-coroutine quux (int bar)
+coroutine quux ()
 {
     coroutine wait w;
     event e;
@@ -35,7 +35,7 @@ coroutine quux (int bar)
 
 int main ()
 {
-    quux (1);
+    quux ();
     return 0;
 }
 ```
