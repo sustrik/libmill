@@ -44,7 +44,7 @@ int main ()
 
 ```
 ./mill example.mill
-gcc -o example example.c mill.c -luv -g -O0
+gcc -o example example.c mill.c -luv
 ./example
 ```
 
