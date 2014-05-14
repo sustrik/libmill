@@ -27,6 +27,10 @@
 #include <stdlib.h>
 #include <uv.h>
 
+/******************************************************************************/
+/* Generic stuff.                                                             */
+/******************************************************************************/
+
 typedef void* event;
 
 struct mill_base;
@@ -66,6 +70,25 @@ void mill_base_emit (struct mill_base *self);
         return;\
     } while (0)
 
+struct mill_loop
+{
+    uv_loop_t uv_loop;
+
+    /* Local event queue. Items in this list are processed immediately,
+       before control is returned to libuv. */
+    struct mill_base *first;
+    struct mill_base *last;
+};
+
+void mill_loop_init (struct mill_loop *self);
+void mill_loop_term (struct mill_loop *self);
+void mill_loop_run (struct mill_loop *self);
+void mill_loop_emit (struct mill_loop *self, struct mill_base *base);
+
+/******************************************************************************/
+/* Waiting.                                                                   */
+/******************************************************************************/
+
 struct mill_coroutine_wait {
     struct mill_base mill_base;
     uv_timer_t timer;
@@ -77,20 +100,29 @@ void mill_call_wait (
     struct mill_base *parent,
     struct mill_loop *loop);
 
-struct mill_loop
-{
-    uv_loop_t uv_loop;
+/******************************************************************************/
+/* TCP socket.                                                                */
+/******************************************************************************/
 
-    /* Local event queue. Items in this list are processed immediately, before
-       control is returned to libuv. */
-    struct mill_base *first;
-    struct mill_base *last;
+struct tcpsocket {
+    uv_tcp_t s;
 };
 
-void mill_loop_init (struct mill_loop *self);
-void mill_loop_term (struct mill_loop *self);
-void mill_loop_run (struct mill_loop *self);
-void mill_loop_emit (struct mill_loop *self, struct mill_base *base);
+int tcpsocket_init (struct tcpsocket *self, struct mill_loop *loop);
+
+void tcpsocket_term (struct tcpsocket *self);
+
+struct mill_coroutine_tcpconnect {
+    struct mill_base mill_base;
+    uv_connect_t conn;
+};
+
+void mill_call_tcpconnect (
+    struct mill_coroutine_tcpconnect *self,
+    struct tcpsocket *s,
+    struct sockaddr *addr,
+    struct mill_base *parent,
+    struct mill_loop *loop);
 
 #endif
 

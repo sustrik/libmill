@@ -55,7 +55,7 @@ void mill_base_emit (struct mill_base *self)
 }
 
 /******************************************************************************/
-/* Wait coroutine.                                                            */
+/* Waiting.                                                            */
 /******************************************************************************/
 
 static void wait_handler(struct mill_base *base, event ev)
@@ -80,6 +80,42 @@ void mill_call_wait (
     mill_base_init (&self->mill_base, wait_handler, parent, loop);
     uv_timer_init(&loop->uv_loop, &self->timer);
     uv_timer_start(&self->timer, wait_cb, milliseconds, 0);
+}
+
+/******************************************************************************/
+/* TCP socket.                                                                */
+/******************************************************************************/
+
+int tcpsocket_init (struct tcpsocket *self, struct mill_loop *loop)
+{
+    return uv_tcp_init (&loop->uv_loop, &self->s);
+}
+
+void tcpsocket_term (struct tcpsocket *self)
+{
+    assert (0);
+}
+
+static void connect_cb (uv_connect_t* req, int status)
+{
+    struct mill_coroutine_tcpconnect *self = mill_cont (req,
+        struct mill_coroutine_tcpconnect, conn);
+
+    assert (status == 0);
+    mill_base_emit (&self->mill_base);
+}
+
+void mill_call_tcpconnect (
+    struct mill_coroutine_tcpconnect *self,
+    struct tcpsocket *s,
+    struct sockaddr *addr,
+    struct mill_base *parent,
+    struct mill_loop *loop)
+{
+    int rc;
+
+    rc = uv_tcp_connect (&self->conn, &s->s, addr, connect_cb);
+    assert (rc == 0);
 }
 
 /******************************************************************************/

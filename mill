@@ -337,6 +337,11 @@ begin
                         replace(body, alltokens, tokens[i + 1], "")
                         insert(body, alltokens, tokens[i + 2][2], ", &self->mill_base, self->mill_base.loop")
                     end
+ 
+                    if tokens[i][0] == :tcpsocket_init && tokens[i + 1][0] == :braces
+                        insert(body, alltokens, tokens[i + 1][2], ", self->mill_base.loop")
+                    end
+                    
 
                     if tokens[i][3] != nil
                         state = expand_keywords(body, alltokens, tokens[i][3], state)
