@@ -9,7 +9,6 @@ WARNING: This project is under development. Do not use!
 ## Prerequisites
 
 * Install Ruby
-* Install ribosome from here: https://github.com/sustrik/ribosome
 * Install libuv from here: https://github.com/joyent/libuv
 
 The former is needed at compilation time, the latter at both compilation time
