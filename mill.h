@@ -70,6 +70,10 @@ void mill_base_emit (struct mill_base *self);
         return;\
     } while (0)
 
+/******************************************************************************/
+/* The event loop.                                                            */
+/******************************************************************************/
+
 struct mill_loop
 {
     uv_loop_t uv_loop;
@@ -106,11 +110,16 @@ void mill_call_wait (
 
 struct tcpsocket {
     uv_tcp_t s;
+    uv_loop_t *loop;
+
+    /*  When this socket is listening for new connection, here's the pointer
+        to the associated coroutine. */
+    struct mill_coroutine_tcplisten *listen;
 };
 
 int tcpsocket_init (struct tcpsocket *self, struct mill_loop *loop);
-
 void tcpsocket_term (struct tcpsocket *self);
+int tcpbind (struct tcpsocket *s, struct sockaddr *addr, int flags);
 
 struct mill_coroutine_tcpconnect {
     struct mill_base mill_base;
@@ -121,6 +130,19 @@ void mill_call_tcpconnect (
     struct mill_coroutine_tcpconnect *self,
     struct tcpsocket *s,
     struct sockaddr *addr,
+    struct mill_base *parent,
+    struct mill_loop *loop);
+
+struct mill_coroutine_tcplisten {
+    struct mill_base mill_base;
+    struct tcpsocket *s;
+};
+
+void mill_call_tcplisten (
+    struct mill_coroutine_tcplisten *self,
+    struct tcpsocket *ls,
+    int backlog,
+    struct tcpsocket *s,
     struct mill_base *parent,
     struct mill_loop *loop);
 

@@ -1,18 +1,42 @@
 
 #include <stdio.h>
 #include <assert.h>
+#include <uv.h>
 
 coroutine quux ()
 {
-    coroutine wait w;
+    int rc;
+    struct sockaddr_in addr;
+    struct tcpsocket ls;
+    struct tcpsocket s;
+    struct tcpsocket cs;
+    coroutine tcplisten l;
+    coroutine tcpconnect c;
     event e;
     endvars;
 
-    call wait (&w, 1000);
-    printf ("Waiting for timeout to expire...\n");
-    getevent e;
-    assert (e == &w);
-    printf ("Done!\n");
+    rc = tcpsocket_init (&ls);
+    assert (rc == 0);
+    rc = tcpsocket_init (&s);
+    assert (rc == 0);
+    rc = tcpsocket_init (&cs);
+    assert (rc == 0);
+    rc = uv_ip4_addr ("127.0.0.1", 7000, &addr);
+    assert (rc == 0);
+    rc = tcpbind (&ls, (struct sockaddr*) &addr, 0);
+    assert (rc == 0);
+    call tcplisten (&l, &ls, 10, &s);
+    call tcpconnect (&c, &cs, (struct sockaddr*) &addr);
+
+    while (1) {
+        getevent e;
+        if (e == &l)
+            printf ("accepted\n");
+        else if (e == &c)
+            printf ("connected\n");
+        else
+            printf ("unexpected\n");
+    }
 }
 
 int main ()

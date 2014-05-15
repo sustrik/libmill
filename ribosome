@@ -147,6 +147,7 @@ module Ribosome
             # Strip off the whitespace on the left and on the right.
             for i in 0..@text.size() - 1
                 @text[i] = @text[i].rstrip()[left..right]
+                @text[i] = "" if @text[i] == nil
             end
 
             # Adjust the overall width of the block.
@@ -354,13 +355,14 @@ module Ribosome
         for i in 0..e.backtrace.size - 1
             l = e.backtrace[i]
             if l.start_with?(rnafile + ":")
-                num = l[rnafile.size + 1..-1].to_i
+                stop = l.index(":", rnafile.size + 1) || l.size
+                num = l[rnafile.size + 1..stop - 1].to_i
                 for j in 0..linemap.size - 1
                     break if linemap[j][0] == nil || linemap[j][0] > num
                 end
                 j -= 1
                 num = num - linemap[j][0] + linemap[j][2]
-                l = "#{linemap[j][1]}:#{num}"
+                l = "#{linemap[j][1]}:#{num}#{l[stop..-1]}"
                 e.backtrace[i] = l
             end
         end

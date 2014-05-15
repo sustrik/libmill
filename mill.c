@@ -55,6 +55,57 @@ void mill_base_emit (struct mill_base *self)
 }
 
 /******************************************************************************/
+/* The event loop.                                                            */
+/******************************************************************************/
+
+void mill_loop_init (struct mill_loop *self)
+{
+    int rc;
+
+    rc = uv_loop_init (&self->uv_loop);
+    assert (rc == 0);
+    self->first = 0;
+    self->last = 0;
+}
+
+void mill_loop_term (struct mill_loop *self)
+{
+    //int rc;
+    //
+    //rc = uv_loop_close (&self->uv_loop);
+    //assert (rc == 0);
+}
+
+void mill_loop_run (struct mill_loop *self)
+{
+    int rc;
+
+    while (1) {
+        rc = uv_run (&self->uv_loop, UV_RUN_ONCE);
+        assert (rc >= 0);
+        while (self->first) {
+            if (!self->first->parent)
+                return;
+            self->first->parent->handler (self->first->parent, self->first);
+            self->first = self->first->next;
+        }
+        self->last = 0;
+    }
+}
+
+void mill_loop_emit (
+    struct mill_loop *self,
+    struct mill_base *ev)
+{
+    if (self->first == 0)
+        self->first = ev;
+    else
+        self->last->next = ev;
+    ev->next = 0;
+    self->last = ev;
+}
+
+/******************************************************************************/
 /* Waiting.                                                            */
 /******************************************************************************/
 
@@ -88,11 +139,20 @@ void mill_call_wait (
 
 int tcpsocket_init (struct tcpsocket *self, struct mill_loop *loop)
 {
+    self->loop = &loop->uv_loop;
+printf ("loop=%p\n", (void*) self->loop);
+    self->listen = 0;
     return uv_tcp_init (&loop->uv_loop, &self->s);
 }
 
 void tcpsocket_term (struct tcpsocket *self)
 {
+    assert (0);
+}
+
+static void connect_handler(struct mill_base *base, event ev)
+{
+    struct mill_coroutine_connect *self = (struct mill_coroutine_connect*) base;
     assert (0);
 }
 
@@ -114,59 +174,61 @@ void mill_call_tcpconnect (
 {
     int rc;
 
+    mill_base_init (&self->mill_base, connect_handler, parent, loop);
     rc = uv_tcp_connect (&self->conn, &s->s, addr, connect_cb);
     assert (rc == 0);
 }
 
-/******************************************************************************/
-/* The event loop.                                                            */
-/******************************************************************************/
-
-void mill_loop_init (struct mill_loop *self)
+int tcpbind (struct tcpsocket *s, struct sockaddr *addr, int flags)
 {
-    int rc;
-
-    rc = uv_loop_init (&self->uv_loop);
-    assert (rc == 0);
-    self->first = 0;
-    self->last = 0;
+    return uv_tcp_bind(&s->s, addr, flags);
 }
 
-void mill_loop_term (struct mill_loop *self)
+static void listen_handler(struct mill_base *base, event ev)
 {
-    //int rc;
-    //
-    //rc = uv_loop_close (&self->uv_loop);
-    //assert (rc == 0);
+    struct mill_coroutine_listen *self = (struct mill_coroutine_listen*) base;
+    assert (0);
 }
 
-void mill_loop_run (struct mill_loop *self)
+static void listen_cb (uv_stream_t *ls, int status)
 {
     int rc;
+    struct tcpsocket *sock = mill_cont (ls, struct tcpsocket, s);
+    struct mill_coroutine_tcplisten *self;
+    uv_tcp_t s;
 
-    while (1) {
-        rc = uv_run (&self->uv_loop, UV_RUN_ONCE);
+    /* If nobody is listening we'll drop the incoming connections. */
+    if (!sock->listen) {
+        rc = uv_tcp_init (ls->loop, &s);
         assert (rc == 0);
-        while (self->first) {
-            if (!self->first->parent)
-                return;
-            self->first->parent->handler (self->first->parent, self->first);
-            self->first = self->first->next;
-        }
-    }
-}
-
-void mill_loop_emit (
-    struct mill_loop *self,
-    struct mill_base *base)
-{
-    if (self->first == 0) {
-        self->first = base;
-        self->last = base;
+        rc = uv_accept (ls, (uv_stream_t*) &s);
+        assert (rc == 0);
+        uv_close ((uv_handle_t*) &s, NULL);
         return;
     }
-    self->last->next = base;
-    base->next = 0;
-    self->last = base;
+
+    self = sock->listen;
+    rc = uv_accept (ls, (uv_stream_t*) &self->s->s);
+    assert (rc == 0);
+    sock->listen = 0;
+    mill_base_emit (&self->mill_base);
+}
+
+
+void mill_call_tcplisten (
+    struct mill_coroutine_tcplisten *self,
+    struct tcpsocket *ls,
+    int backlog,
+    struct tcpsocket *s,
+    struct mill_base *parent,
+    struct mill_loop *loop)
+{
+    int rc;
+
+    mill_base_init (&self->mill_base, listen_handler, parent, loop);
+    self->s = s;
+    ls->listen = self;
+    rc = uv_listen((uv_stream_t*) &ls->s, backlog, listen_cb);
+    assert (rc == 0);
 }
 
