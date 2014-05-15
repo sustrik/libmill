@@ -146,5 +146,19 @@ void mill_call_tcplisten (
     struct mill_base *parent,
     struct mill_loop *loop);
 
+struct mill_coroutine_send {
+    struct mill_base mill_base;
+    uv_write_t req;
+    uv_buf_t buf;
+};
+
+void mill_call_send (
+    struct mill_coroutine_send *self,
+    struct tcpsocket *ls,
+    const void *buf,
+    size_t len,
+    struct mill_base *parent,
+    struct mill_loop *loop);
+
 #endif
 

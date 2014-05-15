@@ -9,9 +9,8 @@ coroutine quux ()
     struct sockaddr_in addr;
     struct tcpsocket ls;
     struct tcpsocket s;
-    struct tcpsocket cs;
     coroutine tcplisten l;
-    coroutine tcpconnect c;
+    coroutine send snd;
     event e;
     endvars;
 
@@ -19,23 +18,20 @@ coroutine quux ()
     assert (rc == 0);
     rc = tcpsocket_init (&s);
     assert (rc == 0);
-    rc = tcpsocket_init (&cs);
-    assert (rc == 0);
     rc = uv_ip4_addr ("127.0.0.1", 7000, &addr);
     assert (rc == 0);
     rc = tcpbind (&ls, (struct sockaddr*) &addr, 0);
     assert (rc == 0);
-    call tcplisten (&l, &ls, 10, &s);
-    call tcpconnect (&c, &cs, (struct sockaddr*) &addr);
-
+    
     while (1) {
+        call tcplisten (&l, &ls, 10, &s);
         getevent e;
-        if (e == &l)
-            printf ("accepted\n");
-        else if (e == &c)
-            printf ("connected\n");
-        else
-            printf ("unexpected\n");
+        assert (e == &l);
+        printf ("accepted\n");
+        call send (&snd, &s, "Hello, world!", 13);
+        getevent e;
+        assert (e == &snd);
+        printf ("sent\n");
     }
 }
 

@@ -140,7 +140,6 @@ void mill_call_wait (
 int tcpsocket_init (struct tcpsocket *self, struct mill_loop *loop)
 {
     self->loop = &loop->uv_loop;
-printf ("loop=%p\n", (void*) self->loop);
     self->listen = 0;
     return uv_tcp_init (&loop->uv_loop, &self->s);
 }
@@ -204,7 +203,7 @@ static void listen_cb (uv_stream_t *ls, int status)
         rc = uv_accept (ls, (uv_stream_t*) &s);
         assert (rc == 0);
         uv_close ((uv_handle_t*) &s, NULL);
-        return;
+        return; 
     }
 
     self = sock->listen;
@@ -231,4 +230,37 @@ void mill_call_tcplisten (
     rc = uv_listen((uv_stream_t*) &ls->s, backlog, listen_cb);
     assert (rc == 0);
 }
+
+static void send_handler(struct mill_base *base, event ev)
+{
+    struct mill_coroutine_send *self = (struct mill_coroutine_send*) base;
+    assert (0);
+}
+
+static void send_cb (uv_write_t* req, int status)
+{
+    struct mill_coroutine_send *self = mill_cont (req,
+        struct mill_coroutine_send, req);
+
+    assert (status == 0);
+    mill_base_emit (&self->mill_base);
+}
+
+void mill_call_send (
+    struct mill_coroutine_send *self,
+    struct tcpsocket *s,
+    const void *buf,
+    size_t len,
+    struct mill_base *parent,
+    struct mill_loop *loop)
+{
+    int rc;
+
+    mill_base_init (&self->mill_base, send_handler, parent, loop);
+    self->buf.base = (void*) buf;
+    self->buf.len = len;
+    rc = uv_write (&self->req, (uv_stream_t*) &s->s, &self->buf, 1, send_cb);
+    assert (rc == 0);
+}
+
 
