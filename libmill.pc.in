@@ -1,0 +1,13 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: Mill
+Description: Helper library for couroutine preprocessor
+URL: https://github.com/sustrik/mill
+Version: 0.1
+Requires:
+Libs: -L${libdir} -lmill
+Cflags: -I${includedir}
+
