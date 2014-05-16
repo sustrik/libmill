@@ -47,7 +47,7 @@ gcc -o example example.c mill.c -luv
 ./example
 ```
 
-Note that the first printf is executed in parallel with the wait coroutine!
+Note that the first printf is executed in parallel with the alarm coroutine!
 
 ## License
 
