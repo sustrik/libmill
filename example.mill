@@ -11,7 +11,6 @@ coroutine quux ()
     struct tcpsocket s;
     coroutine tcplisten l;
     coroutine send snd;
-    event e;
     endvars;
 
     rc = tcpsocket_init (&ls);
@@ -25,13 +24,16 @@ coroutine quux ()
     
     while (1) {
         call tcplisten (&l, &ls, 10, &s);
-        getevent e;
-        assert (e == &l);
+        wait;
+        assert (@who == &l);
         printf ("accepted\n");
-        call send (&snd, &s, "Hello, world!", 13);
-        getevent e;
-        assert (e == &snd);
-        printf ("sent\n");
+        call send (&snd, &s, "Hello, world!", 13) [1];
+        wait;
+        assert (@who == &snd);
+        if (@err != 0)
+            printf ("Error!\n");
+        if (@tag == 0)
+            printf ("sent\n");
     }
 }
 

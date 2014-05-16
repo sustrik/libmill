@@ -22,14 +22,14 @@ and runtime.
 
 coroutine quux ()
 {
-    coroutine wait w;
+    coroutine alarm a;
     event e;
     endvars;
 
-    call wait (&w, 1000);
+    call alarm (&a, 1000);
     printf ("Waiting for timeout to expire...\n");
     getevent e;
-    assert (e == &w);
+    assert (e == &a);
     printf ("Done!\n");
 }
 

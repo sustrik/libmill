@@ -35,10 +35,13 @@ void mill_base_init (
     struct mill_base *self,
     mill_handler_fn handler,
     struct mill_base *parent,
-    struct mill_loop *loop)
+    struct mill_loop *loop,
+    int tag)
 {
     self->handler = handler;
     self->state = 0;
+    self->tag = tag;
+    self->err = 0;
     self->parent = parent;
     self->next = 0;
     self->loop = loop;
@@ -49,8 +52,9 @@ void mill_base_term (struct mill_base *self)
     assert (0);
 }
 
-void mill_base_emit (struct mill_base *self)
+void mill_base_emit (struct mill_base *self, int err)
 {
+    self->err = err;
     mill_loop_emit (self->loop, self);
 }
 
@@ -106,31 +110,32 @@ void mill_loop_emit (
 }
 
 /******************************************************************************/
-/* Waiting.                                                            */
+/* Alarm.                                                                     */
 /******************************************************************************/
 
-static void wait_handler(struct mill_base *base, event ev)
+static void alarm_handler(struct mill_base *base, struct mill_base *event)
 {
-    struct mill_coroutine_wait *self = (struct mill_coroutine_wait*) base;
+    struct mill_coroutine_alarm *self = (struct mill_coroutine_alarm*) base;
     assert (0);
 }
 
-static void wait_cb (uv_timer_t *timer)
+static void alarm_cb (uv_timer_t *timer)
 {
-    struct mill_coroutine_wait *self = mill_cont (timer,
-        struct mill_coroutine_wait, timer);
-    mill_base_emit (&self->mill_base);
+    struct mill_coroutine_alarm *self = mill_cont (timer,
+        struct mill_coroutine_alarm, timer);
+    mill_base_emit (&self->mill_base, 0);
 }
 
-void mill_call_wait (
-    struct mill_coroutine_wait *self,
+void mill_call_alarm (
+    struct mill_coroutine_alarm *self,
     int milliseconds,
     struct mill_base *parent,
-    struct mill_loop *loop)
+    struct mill_loop *loop,
+    int tag)
 {
-    mill_base_init (&self->mill_base, wait_handler, parent, loop);
+    mill_base_init (&self->mill_base, alarm_handler, parent, loop, tag);
     uv_timer_init(&loop->uv_loop, &self->timer);
-    uv_timer_start(&self->timer, wait_cb, milliseconds, 0);
+    uv_timer_start(&self->timer, alarm_cb, milliseconds, 0);
 }
 
 /******************************************************************************/
@@ -149,7 +154,7 @@ void tcpsocket_term (struct tcpsocket *self)
     assert (0);
 }
 
-static void connect_handler(struct mill_base *base, event ev)
+static void connect_handler(struct mill_base *base, struct mill_base *event)
 {
     struct mill_coroutine_connect *self = (struct mill_coroutine_connect*) base;
     assert (0);
@@ -161,7 +166,7 @@ static void connect_cb (uv_connect_t* req, int status)
         struct mill_coroutine_tcpconnect, conn);
 
     assert (status == 0);
-    mill_base_emit (&self->mill_base);
+    mill_base_emit (&self->mill_base, 0);
 }
 
 void mill_call_tcpconnect (
@@ -169,11 +174,12 @@ void mill_call_tcpconnect (
     struct tcpsocket *s,
     struct sockaddr *addr,
     struct mill_base *parent,
-    struct mill_loop *loop)
+    struct mill_loop *loop,
+    int tag)
 {
     int rc;
 
-    mill_base_init (&self->mill_base, connect_handler, parent, loop);
+    mill_base_init (&self->mill_base, connect_handler, parent, loop, tag);
     rc = uv_tcp_connect (&self->conn, &s->s, addr, connect_cb);
     assert (rc == 0);
 }
@@ -183,7 +189,7 @@ int tcpbind (struct tcpsocket *s, struct sockaddr *addr, int flags)
     return uv_tcp_bind(&s->s, addr, flags);
 }
 
-static void listen_handler(struct mill_base *base, event ev)
+static void listen_handler(struct mill_base *base, struct mill_base *event)
 {
     struct mill_coroutine_listen *self = (struct mill_coroutine_listen*) base;
     assert (0);
@@ -210,7 +216,7 @@ static void listen_cb (uv_stream_t *ls, int status)
     rc = uv_accept (ls, (uv_stream_t*) &self->s->s);
     assert (rc == 0);
     sock->listen = 0;
-    mill_base_emit (&self->mill_base);
+    mill_base_emit (&self->mill_base, 0);
 }
 
 
@@ -220,18 +226,19 @@ void mill_call_tcplisten (
     int backlog,
     struct tcpsocket *s,
     struct mill_base *parent,
-    struct mill_loop *loop)
+    struct mill_loop *loop,
+    int tag)
 {
     int rc;
 
-    mill_base_init (&self->mill_base, listen_handler, parent, loop);
+    mill_base_init (&self->mill_base, listen_handler, parent, loop, tag);
     self->s = s;
     ls->listen = self;
     rc = uv_listen((uv_stream_t*) &ls->s, backlog, listen_cb);
     assert (rc == 0);
 }
 
-static void send_handler(struct mill_base *base, event ev)
+static void send_handler(struct mill_base *base, struct mill_base *event)
 {
     struct mill_coroutine_send *self = (struct mill_coroutine_send*) base;
     assert (0);
@@ -243,7 +250,7 @@ static void send_cb (uv_write_t* req, int status)
         struct mill_coroutine_send, req);
 
     assert (status == 0);
-    mill_base_emit (&self->mill_base);
+    mill_base_emit (&self->mill_base, 0);
 }
 
 void mill_call_send (
@@ -252,15 +259,15 @@ void mill_call_send (
     const void *buf,
     size_t len,
     struct mill_base *parent,
-    struct mill_loop *loop)
+    struct mill_loop *loop,
+    int tag)
 {
     int rc;
 
-    mill_base_init (&self->mill_base, send_handler, parent, loop);
+    mill_base_init (&self->mill_base, send_handler, parent, loop, tag);
     self->buf.base = (void*) buf;
     self->buf.len = len;
     rc = uv_write (&self->req, (uv_stream_t*) &s->s, &self->buf, 1, send_cb);
     assert (rc == 0);
 }
-
 

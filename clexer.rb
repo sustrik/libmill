@@ -2,7 +2,7 @@
 # line 1 "clexer.rl"
 
 
-# line 138 "clexer.rl"
+# line 144 "clexer.rl"
 
 
 
@@ -13,11 +13,12 @@ class << self
 end
 self._c_actions = [
 	0, 1, 0, 1, 1, 1, 2, 1, 
-	3, 1, 4, 1, 5, 1, 6, 1, 
-	7, 1, 8, 1, 11, 1, 12, 1, 
-	13, 1, 14, 1, 15, 1, 16, 1, 
-	17, 1, 18, 2, 0, 8, 2, 0, 
-	9, 2, 0, 10
+	3, 1, 4, 1, 7, 1, 8, 1, 
+	9, 1, 10, 1, 13, 1, 14, 1, 
+	15, 1, 16, 1, 17, 1, 18, 1, 
+	19, 1, 20, 2, 0, 10, 2, 0, 
+	11, 2, 0, 12, 2, 4, 5, 2, 
+	4, 6
 ]
 
 class << self
@@ -26,8 +27,8 @@ class << self
 end
 self._c_key_offsets = [
 	0, 0, 3, 4, 5, 8, 9, 10, 
-	12, 18, 20, 23, 44, 45, 47, 51, 
-	53, 56, 62, 69
+	12, 18, 20, 23, 45, 46, 48, 52, 
+	54, 57, 63, 70
 ]
 
 class << self
@@ -38,12 +39,12 @@ self._c_trans_keys = [
 	10, 34, 92, 10, 10, 10, 39, 92, 
 	10, 10, 48, 57, 48, 57, 65, 70, 
 	97, 102, 10, 42, 10, 42, 47, 10, 
-	34, 35, 39, 47, 48, 95, 33, 46, 
-	49, 57, 58, 64, 65, 90, 91, 96, 
-	97, 122, 123, 126, 10, 42, 47, 46, 
-	120, 48, 57, 48, 57, 46, 48, 57, 
-	48, 57, 65, 70, 97, 102, 95, 48, 
-	57, 65, 90, 97, 122, 0
+	34, 35, 39, 47, 48, 64, 95, 33, 
+	46, 49, 57, 58, 63, 65, 90, 91, 
+	96, 97, 122, 123, 126, 10, 42, 47, 
+	46, 120, 48, 57, 48, 57, 46, 48, 
+	57, 48, 57, 65, 70, 97, 102, 95, 
+	48, 57, 65, 90, 97, 122, 0
 ]
 
 class << self
@@ -52,7 +53,7 @@ class << self
 end
 self._c_single_lengths = [
 	0, 3, 1, 1, 3, 1, 1, 0, 
-	0, 2, 3, 7, 1, 2, 2, 0, 
+	0, 2, 3, 8, 1, 2, 2, 0, 
 	1, 0, 1, 0
 ]
 
@@ -72,8 +73,8 @@ class << self
 end
 self._c_index_offsets = [
 	0, 0, 4, 6, 8, 12, 14, 16, 
-	18, 22, 25, 29, 44, 46, 49, 53, 
-	55, 58, 62, 67
+	18, 22, 25, 29, 45, 47, 50, 54, 
+	56, 59, 63, 68
 ]
 
 class << self
@@ -85,12 +86,13 @@ self._c_trans_targs = [
 	4, 11, 5, 4, 4, 4, 11, 6, 
 	15, 11, 17, 17, 17, 11, 9, 10, 
 	9, 9, 10, 19, 9, 11, 1, 12, 
-	4, 13, 14, 18, 11, 16, 11, 18, 
-	11, 18, 11, 11, 11, 3, 11, 6, 
-	11, 7, 8, 16, 11, 15, 11, 7, 
-	16, 11, 17, 17, 17, 11, 18, 18, 
-	18, 18, 11, 0, 11, 11, 11, 11, 
-	11, 11, 11, 11, 11, 11, 11, 0
+	4, 13, 14, 18, 18, 11, 16, 11, 
+	18, 11, 18, 11, 11, 11, 3, 11, 
+	6, 11, 7, 8, 16, 11, 15, 11, 
+	7, 16, 11, 17, 17, 17, 11, 18, 
+	18, 18, 18, 11, 0, 11, 11, 11, 
+	11, 11, 11, 11, 11, 11, 11, 11, 
+	0
 ]
 
 class << self
@@ -100,14 +102,15 @@ end
 self._c_trans_actions = [
 	1, 15, 0, 0, 1, 0, 38, 0, 
 	1, 13, 0, 0, 1, 0, 41, 0, 
-	0, 33, 0, 0, 0, 33, 1, 0, 
+	0, 31, 0, 0, 0, 31, 1, 0, 
 	0, 1, 0, 3, 0, 35, 0, 9, 
-	0, 9, 9, 0, 11, 9, 11, 0, 
-	11, 0, 11, 17, 38, 0, 19, 0, 
-	21, 0, 0, 9, 25, 0, 27, 0, 
-	9, 25, 0, 0, 0, 29, 0, 0, 
-	0, 0, 23, 0, 31, 31, 33, 33, 
-	21, 21, 25, 27, 25, 29, 23, 0
+	0, 9, 9, 44, 47, 11, 9, 11, 
+	47, 11, 47, 11, 17, 38, 0, 19, 
+	0, 21, 0, 0, 9, 23, 0, 25, 
+	0, 9, 23, 0, 0, 0, 27, 47, 
+	47, 47, 47, 33, 0, 29, 29, 31, 
+	31, 21, 21, 23, 25, 23, 27, 33, 
+	0
 ]
 
 class << self
@@ -135,9 +138,9 @@ class << self
 	private :_c_eof_trans, :_c_eof_trans=
 end
 self._c_eof_trans = [
-	0, 0, 0, 70, 0, 0, 70, 72, 
-	72, 0, 0, 0, 74, 74, 77, 76, 
-	77, 78, 79, 0
+	0, 0, 0, 71, 0, 0, 71, 73, 
+	73, 0, 0, 0, 75, 75, 78, 77, 
+	78, 79, 80, 0
 ]
 
 class << self
@@ -159,7 +162,7 @@ end
 self.c_en_main = 11;
 
 
-# line 141 "clexer.rl"
+# line 147 "clexer.rl"
 
 def parse(data)
 
@@ -170,7 +173,7 @@ def parse(data)
     stack = [[]]
 
 	
-# line 174 "clexer.rb"
+# line 177 "clexer.rb"
 begin
 	p ||= 0
 	pe ||= data.length
@@ -180,9 +183,9 @@ begin
 	act = 0
 end
 
-# line 151 "clexer.rl"
+# line 157 "clexer.rl"
     
-# line 186 "clexer.rb"
+# line 189 "clexer.rb"
 begin
 	_klen, _trans, _keys, _acts, _nacts = nil
 	_goto_level = 0
@@ -216,7 +219,7 @@ begin
 		begin
 ts = p
 		end
-# line 220 "clexer.rb"
+# line 223 "clexer.rb"
 		end # from state action switch
 	end
 	if _trigger_goto
@@ -304,6 +307,14 @@ te = p+1
 when 5 then
 # line 21 "clexer.rl"
 		begin
+act = 1;		end
+when 6 then
+# line 66 "clexer.rl"
+		begin
+act = 2;		end
+when 7 then
+# line 21 "clexer.rl"
+		begin
 te = p+1
  begin 
         token = data[ts..te-1].pack("c*")
@@ -348,15 +359,7 @@ te = p+1
         end
 	 end
 		end
-when 6 then
-# line 89 "clexer.rl"
-		begin
-te = p+1
- begin 
-        stack.last << [:cruft, ts, te - 1]
-     end
-		end
-when 7 then
+when 8 then
 # line 95 "clexer.rl"
 		begin
 te = p+1
@@ -364,13 +367,21 @@ te = p+1
         stack.last << [:cruft, ts, te - 1]
      end
 		end
-when 8 then
-# line 100 "clexer.rl"
+when 9 then
+# line 101 "clexer.rl"
+		begin
+te = p+1
+ begin 
+        stack.last << [:cruft, ts, te - 1]
+     end
+		end
+when 10 then
+# line 106 "clexer.rl"
 		begin
 te = p+1
 		end
-when 9 then
-# line 103 "clexer.rl"
+when 11 then
+# line 109 "clexer.rl"
 		begin
 te = p+1
  begin 
@@ -382,13 +393,13 @@ te = p+1
         end
      end
 		end
-when 10 then
-# line 115 "clexer.rl"
+when 12 then
+# line 121 "clexer.rl"
 		begin
 te = p+1
 		end
-when 11 then
-# line 117 "clexer.rl"
+when 13 then
+# line 123 "clexer.rl"
 		begin
 te = p+1
  begin  	begin
@@ -399,7 +410,7 @@ te = p+1
 	end
   end
 		end
-when 12 then
+when 14 then
 # line 21 "clexer.rl"
 		begin
 te = p
@@ -445,39 +456,6 @@ p = p - 1; begin
             stack.last << [:cruft, ts, te - 1]
         end
 	 end
-		end
-when 13 then
-# line 66 "clexer.rl"
-		begin
-te = p
-p = p - 1; begin 
-        token = data[ts..te-1].pack("c*")
-        if token == "coroutine"
-            stack.last << [:coroutine, ts, te - 1]
-        elsif token == "endvars"
-            stack.last << [:endvars, ts, te - 1]
-        elsif token == "call"
-            stack.last << [:call, ts, te - 1]
-        elsif token == "getevent"
-            stack.last << [:getevent, ts, te - 1]
-        elsif token == "return"
-            stack.last << [:return, ts, te - 1]
-        elsif token == "struct"
-            stack.last << [:struct, ts, te - 1]
-        elsif token == "tcpsocket_init"
-            stack.last << [:tcpsocket_init, ts, te - 1]
-        else
-            stack.last << [:identifier, ts, te - 1]
-        end
-	 end
-		end
-when 14 then
-# line 121 "clexer.rl"
-		begin
-te = p
-p = p - 1; begin 
-        stack.last << [:cruft, ts, te - 1]
-     end
 		end
 when 15 then
 # line 127 "clexer.rl"
@@ -496,6 +474,14 @@ p = p - 1; begin
      end
 		end
 when 17 then
+# line 139 "clexer.rl"
+		begin
+te = p
+p = p - 1; begin 
+        stack.last << [:cruft, ts, te - 1]
+     end
+		end
+when 18 then
 # line 21 "clexer.rl"
 		begin
  begin p = ((te))-1; end
@@ -542,15 +528,93 @@ when 17 then
         end
 	 end
 		end
-when 18 then
-# line 121 "clexer.rl"
+when 19 then
+# line 127 "clexer.rl"
 		begin
  begin p = ((te))-1; end
  begin 
         stack.last << [:cruft, ts, te - 1]
      end
 		end
-# line 554 "clexer.rb"
+when 20 then
+# line 1 "NONE"
+		begin
+	case act
+	when 1 then
+	begin begin p = ((te))-1; end
+
+        token = data[ts..te-1].pack("c*")
+        if token == "("
+            stack << [[:lbrace, ts, ts]]
+        elsif token == ")"
+            last = stack.pop
+            last << [:end, ts, ts]
+            if last[0][0] != :lbrace
+                $stderr.write "#{curline}: Mismatched braces!\n"
+                exit
+            end
+            stack.last << [:braces, last[0][1], ts, last[1..-1]]
+        elsif token == "{"
+            stack << [[:lcbrace, ts, ts]]
+        elsif token == "}"
+            last = stack.pop
+            last << [:end, ts, ts]
+            if last[0][0] != :lcbrace
+                $stderr.write "#{curline}: Mismatched braces!\n"
+                exit
+            end
+            stack.last << [:cbraces, last[0][1], ts, last[1..-1]]
+        elsif token == "["
+            stack << [[:lsbrace, ts, ts]]
+        elsif token == "]"
+            last = stack.pop
+            last << [:end, ts, ts]
+            if last[0][0] != :lsbrace
+                $stderr.write "#{curline}: Mismatched braces!\n"
+                exit
+            end
+            stack.last << [:sbraces, last[0][1], ts, last[1..-1]]
+        elsif token == ":"
+            stack.last << [:colon, ts, te - 1]
+        elsif token == ";"
+            stack.last << [:semicolon, ts, te - 1]
+        elsif token == ","
+            stack.last << [:comma, ts, te - 1]
+        else
+            stack.last << [:cruft, ts, te - 1]
+        end
+	end
+	when 2 then
+	begin begin p = ((te))-1; end
+
+        token = data[ts..te-1].pack("c*")
+        if token == "coroutine"
+            stack.last << [:coroutine, ts, te - 1]
+        elsif token == "endvars"
+            stack.last << [:endvars, ts, te - 1]
+        elsif token == "call"
+            stack.last << [:call, ts, te - 1]
+        elsif token == "wait"
+            stack.last << [:wait, ts, te - 1]
+        elsif token == "@who"
+            stack.last << [:who, ts, te - 1]
+        elsif token == "@tag"
+            stack.last << [:tag, ts, te - 1]
+        elsif token == "@err"
+            stack.last << [:err, ts, te - 1]
+        elsif token == "return"
+            stack.last << [:return, ts, te - 1]
+        elsif token == "struct"
+            stack.last << [:struct, ts, te - 1]
+        elsif token == "tcpsocket_init"
+            stack.last << [:tcpsocket_init, ts, te - 1]
+        else
+            stack.last << [:identifier, ts, te - 1]
+        end
+	end
+end 
+			end
+# line 618 "clexer.rb"
 			end # action switch
 		end
 	end
@@ -570,7 +634,7 @@ when 2 then
 # line 1 "NONE"
 		begin
 ts = nil;		end
-# line 574 "clexer.rb"
+# line 638 "clexer.rb"
 		end # to state action switch
 	end
 	if _trigger_goto
@@ -601,7 +665,7 @@ end
 	end
 	end
 
-# line 152 "clexer.rl"
+# line 158 "clexer.rl"
 
     stack.last << [:end, data.length - 1, data.length - 1]
 

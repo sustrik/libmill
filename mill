@@ -24,6 +24,10 @@
 
 require "clexer"
 
+if input == nil
+    $stderr.write "Input file missing.\n"
+    exit
+end
 if input.size < 6 || input[-5..-1] != ".mill"
     $stderr.write "The input file must be a mill file.\n"
     exit
@@ -299,17 +303,9 @@ begin
             def expand_keywords(body, alltokens, tokens, state)
                 for i in 0..tokens.size - 1
 
-                    if tokens[i][0] == :getevent
-                        for j in i + 1..tokens.size - 1
-                            break if [:semicolon, :end].include? tokens[j][0]
-                        end
-                        if tokens[j][0] != :semicolon
-                            $stderr.write "'getevent' statement should be terminated by semicolon.\n"
-                            exit
-                        end
+                    if tokens[i][0] == :wait
                         state += 1
-                        replace(body, alltokens, tokens[i], "mill_getevent (#{state},")
-                        replace(body, alltokens, tokens[j], ");")
+                        replace(body, alltokens, tokens[i], "mill_wait (#{state})")
                     end
 
                     if tokens[i][0] == :return
@@ -320,7 +316,9 @@ begin
                             $stderr.write "'return' statement should be terminated by semicolon.\n"
                             exit
                         end
-                        replace(body, alltokens, tokens[i], "mill_return (");
+                        s = "mill_return ("
+                        s += "0" if j = i + 1
+                        replace(body, alltokens, tokens[i], s)
                         replace(body, alltokens, tokens[j], ");")
                     end
 
@@ -333,15 +331,37 @@ begin
                             $stderr.write "'call' should be followed by a list of arguments.\n"
                             exit
                         end
+                        if ![:semicolon, :sbraces].include? tokens[i + 3][0]
+                            $stderr.write "'call' should be terminated by a semicolon.\n"
+                            exit
+                        end
                         replace(body, alltokens, tokens[i], "mill_call_#{body[tokens[i + 1][1]..tokens[i+1][2]]}");
                         replace(body, alltokens, tokens[i + 1], "")
-                        insert(body, alltokens, tokens[i + 2][2], ", &self->mill_base, self->mill_base.loop")
+                        s = ", &self->mill_base, self->mill_base.loop, "
+                        if tokens[i + 3][0] == :sbraces
+                            s += body[tokens[i + 3][1] + 1..tokens[i + 3][2] - 1]
+                            replace(body, alltokens, tokens[i + 3], "")
+                        else
+                            s += "0"
+                        end
+                        insert(body, alltokens, tokens[i + 2][2], s)
+                    end
+
+                    if tokens[i][0] == :who
+                        replace(body, alltokens, tokens[i], "((void*) event)")
+                    end
+
+                    if tokens[i][0] == :tag
+                        replace(body, alltokens, tokens[i], "(event->tag)")
+                    end
+
+                    if tokens[i][0] == :err
+                        replace(body, alltokens, tokens[i], "(event->err)")
                     end
  
                     if tokens[i][0] == :tcpsocket_init && tokens[i + 1][0] == :braces
                         insert(body, alltokens, tokens[i + 1][2], ", self->mill_base.loop")
                     end
-                    
 
                     if tokens[i][3] != nil
                         state = expand_keywords(body, alltokens, tokens[i][3], state)
@@ -393,7 +413,8 @@ for a in c[:args]
 end
 .    /+,
 .    struct mill_base *parent,
-.    struct mill_loop *loop);
+.    struct mill_loop *loop,
+.    int tag);
 .
 .void @{c[:name]} (
 ./!separate ", "
@@ -422,7 +443,7 @@ for s in sections
 .
     elsif s[0] == :coroutine
         c = s[1]
-.static void @{c[:name]}_handler(struct mill_base *base, event ev)
+.static void @{c[:name]}_handler(struct mill_base *base, struct mill_base *event)
 .{
 .    struct mill_coroutine_@{c[:name]} *self = (struct mill_coroutine_@{c[:name]}*) base;
 .
@@ -439,7 +460,7 @@ end
 .
 .    @{c[:body]}
 .
-.    mill_base_emit (&self->mill_base);
+.    mill_base_emit (&self->mill_base, 0);
 .}
 .
 .void mill_call_@{c[:name]} (
@@ -450,9 +471,10 @@ for a in c[:args]
 end
 .    /+,
 .    struct mill_base *parent,
-.    struct mill_loop *loop)
+.    struct mill_loop *loop,
+.    int tag)
 .{
-.    mill_base_init (&self->mill_base, @{c[:name]}_handler, parent, loop);
+.    mill_base_init (&self->mill_base, @{c[:name]}_handler, parent, loop, tag);
 for a in c[:args]
 .    self->@{a[:name]} = @{a[:name]};
 end
@@ -474,7 +496,7 @@ end
 for a in c[:args]
 .    /+, @{a[:name]}
 end
-./+, 0, &mill_loop);
+./+, 0, &mill_loop, 0);
 .    mill_loop_run (&mill_loop);
 .    mill_loop_term (&mill_loop);
 .}

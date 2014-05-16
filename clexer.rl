@@ -13,8 +13,8 @@
 	# Alpha numberic characters or underscore.
 	alnum_u = alnum | '_';
 
-	# Alpha charactres or underscore.
-	alpha_u = alpha | '_';
+	# Alpha charactres ,underscore or at sign.
+	alpha_ua = alpha | '_' | '@';
 
 	# Symbols. Upon entering clear the buffer. On all transitions
 	# buffer a character. Upon leaving dump the symbol.
@@ -63,7 +63,7 @@
 
 	# Identifier. Upon entering clear the buffer. On all transitions
 	# buffer a character. Upon leaving, dump the identifier.
-	alpha_u alnum_u* {
+	alpha_ua alnum_u* {
         token = data[ts..te-1].pack("c*")
         if token == "coroutine"
             stack.last << [:coroutine, ts, te - 1]
@@ -71,8 +71,14 @@
             stack.last << [:endvars, ts, te - 1]
         elsif token == "call"
             stack.last << [:call, ts, te - 1]
-        elsif token == "getevent"
-            stack.last << [:getevent, ts, te - 1]
+        elsif token == "wait"
+            stack.last << [:wait, ts, te - 1]
+        elsif token == "@who"
+            stack.last << [:who, ts, te - 1]
+        elsif token == "@tag"
+            stack.last << [:tag, ts, te - 1]
+        elsif token == "@err"
+            stack.last << [:err, ts, te - 1]
         elsif token == "return"
             stack.last << [:return, ts, te - 1]
         elsif token == "struct"

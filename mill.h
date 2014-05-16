@@ -31,16 +31,18 @@
 /* Generic stuff.                                                             */
 /******************************************************************************/
 
-typedef void* event;
-
 struct mill_base;
 struct mill_loop;
 
-typedef void (*mill_handler_fn) (struct mill_base *self, event ev);
+typedef void (*mill_handler_fn) (
+    struct mill_base *self,
+    struct mill_base* ev);
 
 struct mill_base {
     mill_handler_fn handler; 
     int state;
+    int tag;
+    int err;
     struct mill_base *parent;
     struct mill_base *next;
     struct mill_loop *loop;
@@ -50,22 +52,24 @@ void mill_base_init (
     struct mill_base *self,
     mill_handler_fn handler,
     struct mill_base *parent,
-    struct mill_loop *loop);
+    struct mill_loop *loop,
+    int tag);
 
 void mill_base_term (struct mill_base *self);
 
-void mill_base_emit (struct mill_base *self);
+void mill_base_emit (struct mill_base *self, int err);
 
-#define mill_getevent(statearg, eventarg)\
+#define mill_wait(statearg)\
     do {\
         self->mill_base.state = (statearg);\
         return;\
         state##statearg:\
-        (eventarg) = ev;\
+        ;\
     } while (0)
 
-#define mill_return\
+#define mill_return(errarg)\
     do {\
+        self->mill_base.err = (arrarg);\
         mill_base_emit (&self->mill_base);\
         return;\
     } while (0)
@@ -90,19 +94,20 @@ void mill_loop_run (struct mill_loop *self);
 void mill_loop_emit (struct mill_loop *self, struct mill_base *base);
 
 /******************************************************************************/
-/* Waiting.                                                                   */
+/* Alarm.                                                                     */
 /******************************************************************************/
 
-struct mill_coroutine_wait {
+struct mill_coroutine_alarm {
     struct mill_base mill_base;
     uv_timer_t timer;
 };
 
-void mill_call_wait (
-    struct mill_coroutine_wait *self,
+void mill_call_alarm (
+    struct mill_coroutine_alarm *self,
     int milliseconds,
     struct mill_base *parent,
-    struct mill_loop *loop);
+    struct mill_loop *loop,
+    int tag);
 
 /******************************************************************************/
 /* TCP socket.                                                                */
@@ -131,7 +136,8 @@ void mill_call_tcpconnect (
     struct tcpsocket *s,
     struct sockaddr *addr,
     struct mill_base *parent,
-    struct mill_loop *loop);
+    struct mill_loop *loop,
+    int tag);
 
 struct mill_coroutine_tcplisten {
     struct mill_base mill_base;
@@ -144,7 +150,8 @@ void mill_call_tcplisten (
     int backlog,
     struct tcpsocket *s,
     struct mill_base *parent,
-    struct mill_loop *loop);
+    struct mill_loop *loop,
+    int tag);
 
 struct mill_coroutine_send {
     struct mill_base mill_base;
@@ -158,7 +165,8 @@ void mill_call_send (
     const void *buf,
     size_t len,
     struct mill_base *parent,
-    struct mill_loop *loop);
+    struct mill_loop *loop,
+    int tag);
 
 #endif
 
