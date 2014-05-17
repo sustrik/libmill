@@ -142,35 +142,42 @@ void mill_call_alarm (
 /* TCP socket.                                                                */
 /******************************************************************************/
 
-int tcpsocket_init (struct tcpsocket *self, struct mill_loop *loop)
+int tcpsocket_init (
+    struct tcpsocket *self,
+    struct mill_loop *loop)
 {
     self->loop = &loop->uv_loop;
-    self->listen = 0;
+    self->accept = 0;
     return uv_tcp_init (&loop->uv_loop, &self->s);
 }
 
-void tcpsocket_term (struct tcpsocket *self)
+void tcpsocket_term (
+    struct tcpsocket *self)
 {
     assert (0);
 }
 
-static void connect_handler(struct mill_base *base, struct mill_base *event)
+static void connect_handler (
+    struct mill_base *base,
+    struct mill_base *event)
 {
     struct mill_coroutine_connect *self = (struct mill_coroutine_connect*) base;
     assert (0);
 }
 
-static void connect_cb (uv_connect_t* req, int status)
+static void tcpsocket_connect_cb (
+    uv_connect_t* req,
+    int status)
 {
-    struct mill_coroutine_tcpconnect *self = mill_cont (req,
-        struct mill_coroutine_tcpconnect, conn);
+    struct mill_coroutine_tcpsocket_connect *self = mill_cont (req,
+        struct mill_coroutine_tcpsocket_connect, conn);
 
     assert (status == 0);
     mill_base_emit (&self->mill_base, 0);
 }
 
-void mill_call_tcpconnect (
-    struct mill_coroutine_tcpconnect *self,
+void mill_call_tcpsocket_connect (
+    struct mill_coroutine_tcpsocket_connect *self,
     struct tcpsocket *s,
     struct sockaddr *addr,
     struct mill_base *parent,
@@ -180,50 +187,69 @@ void mill_call_tcpconnect (
     int rc;
 
     mill_base_init (&self->mill_base, connect_handler, parent, loop, tag);
-    rc = uv_tcp_connect (&self->conn, &s->s, addr, connect_cb);
+    rc = uv_tcp_connect (&self->conn, &s->s, addr, tcpsocket_connect_cb);
     assert (rc == 0);
 }
 
-int tcpbind (struct tcpsocket *s, struct sockaddr *addr, int flags)
+int tcpsocket_bind (
+    struct tcpsocket *s,
+    struct sockaddr *addr,
+    int flags)
 {
     return uv_tcp_bind(&s->s, addr, flags);
 }
 
-static void listen_handler(struct mill_base *base, struct mill_base *event)
-{
-    struct mill_coroutine_listen *self = (struct mill_coroutine_listen*) base;
-    assert (0);
-}
-
-static void listen_cb (uv_stream_t *ls, int status)
+static void tcpsocket_listen_cb (
+    uv_stream_t *s,
+    int status)
 {
     int rc;
-    struct tcpsocket *sock = mill_cont (ls, struct tcpsocket, s);
-    struct mill_coroutine_tcplisten *self;
-    uv_tcp_t s;
+    struct tcpsocket *self;
+    uv_tcp_t uvs;
 
-    /* If nobody is listening we'll drop the incoming connections. */
-    if (!sock->listen) {
-        rc = uv_tcp_init (ls->loop, &s);
+    self = mill_cont (s, struct tcpsocket, s);
+
+    /* If nobody is accepting connections at the moment
+       we'll simply drop them. */
+    if (!self->accept) {
+        rc = uv_tcp_init (s->loop, &uvs);
         assert (rc == 0);
-        rc = uv_accept (ls, (uv_stream_t*) &s);
+        rc = uv_accept (s, (uv_stream_t*) &uvs);
         assert (rc == 0);
-        uv_close ((uv_handle_t*) &s, NULL);
+        uv_close ((uv_handle_t*) &s, NULL); // TODO: This is an async op!
         return; 
     }
 
-    self = sock->listen;
-    rc = uv_accept (ls, (uv_stream_t*) &self->s->s);
+    /* Actual accept. */
+    rc = uv_accept (s, (uv_stream_t*) &self->accept->s->s);
     assert (rc == 0);
-    sock->listen = 0;
-    mill_base_emit (&self->mill_base, 0);
+    mill_base_emit (&self->accept->mill_base, 0);
+    self->accept = 0;
 }
 
-
-void mill_call_tcplisten (
-    struct mill_coroutine_tcplisten *self,
-    struct tcpsocket *ls,
+int tcpsocket_listen (
+    struct tcpsocket *self,
     int backlog,
+    struct mill_loop *loop)
+{
+    int rc;
+
+    rc = uv_listen((uv_stream_t*) &self->s, backlog, tcpsocket_listen_cb);
+    assert (rc == 0);
+}
+
+static void tcpsocket_accept_handler (
+    struct mill_base *base,
+    struct mill_base *event)
+{
+    struct mill_coroutine_tcpsocket_accept *self =
+        (struct mill_coroutine_tcpsocket_accept*) base;
+    assert (0);
+}
+
+void mill_call_tcpsocket_accept (
+    struct mill_coroutine_tcpsocket_accept *self,
+    struct tcpsocket *ls,
     struct tcpsocket *s,
     struct mill_base *parent,
     struct mill_loop *loop,
@@ -231,30 +257,34 @@ void mill_call_tcplisten (
 {
     int rc;
 
-    mill_base_init (&self->mill_base, listen_handler, parent, loop, tag);
+    mill_base_init (&self->mill_base, tcpsocket_accept_handler,
+        parent, loop, tag);
     self->s = s;
-    ls->listen = self;
-    rc = uv_listen((uv_stream_t*) &ls->s, backlog, listen_cb);
-    assert (rc == 0);
+    ls->accept = self;
 }
 
-static void send_handler(struct mill_base *base, struct mill_base *event)
+static void tcpsocket_send_handler(
+    struct mill_base *base,
+    struct mill_base *event)
 {
-    struct mill_coroutine_send *self = (struct mill_coroutine_send*) base;
+    struct mill_coroutine_tcpsocket_send *self =
+        (struct mill_coroutine_tcpsocket_send*) base;
     assert (0);
 }
 
-static void send_cb (uv_write_t* req, int status)
+static void tcpsocket_send_cb (
+    uv_write_t* req,
+    int status)
 {
-    struct mill_coroutine_send *self = mill_cont (req,
-        struct mill_coroutine_send, req);
+    struct mill_coroutine_tcpsocket_send *self = mill_cont (req,
+        struct mill_coroutine_tcpsocket_send, req);
 
     assert (status == 0);
     mill_base_emit (&self->mill_base, 0);
 }
 
-void mill_call_send (
-    struct mill_coroutine_send *self,
+void mill_call_tcpsocket_send (
+    struct mill_coroutine_tcpsocket_send *self,
     struct tcpsocket *s,
     const void *buf,
     size_t len,
@@ -264,10 +294,12 @@ void mill_call_send (
 {
     int rc;
 
-    mill_base_init (&self->mill_base, send_handler, parent, loop, tag);
+    mill_base_init (&self->mill_base, tcpsocket_send_handler,
+        parent, loop, tag);
     self->buf.base = (void*) buf;
     self->buf.len = len;
-    rc = uv_write (&self->req, (uv_stream_t*) &s->s, &self->buf, 1, send_cb);
+    rc = uv_write (&self->req, (uv_stream_t*) &s->s, &self->buf, 1,
+        tcpsocket_send_cb);
     assert (rc == 0);
 }
 

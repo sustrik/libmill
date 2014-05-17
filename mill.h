@@ -117,51 +117,82 @@ struct tcpsocket {
     uv_tcp_t s;
     uv_loop_t *loop;
 
-    /*  When this socket is listening for new connection, here's the pointer
-        to the associated coroutine. */
-    struct mill_coroutine_tcplisten *listen;
+    /*  When this socket is listening for new connection, this pointer
+        point to the associated coroutine. */
+    struct mill_coroutine_tcpsocket_accept *accept;
 };
 
-int tcpsocket_init (struct tcpsocket *self, struct mill_loop *loop);
-void tcpsocket_term (struct tcpsocket *self);
-int tcpbind (struct tcpsocket *s, struct sockaddr *addr, int flags);
+int tcpsocket_init (
+    struct tcpsocket *self,
+    struct mill_loop *loop);
 
-struct mill_coroutine_tcpconnect {
+void tcpsocket_term (
+    struct tcpsocket *self);
+
+int tcpsocket_bind (
+    struct tcpsocket *s,
+    struct sockaddr *addr,
+    int flags);
+
+/*
+    coroutine tcpsocket_connect (
+        struct tcpsocket *s,
+        struct sockaddr *addr);
+*/
+
+struct mill_coroutine_tcpsocket_connect {
     struct mill_base mill_base;
     uv_connect_t conn;
 };
 
-void mill_call_tcpconnect (
-    struct mill_coroutine_tcpconnect *self,
+void mill_call_tcpsocket_connect (
+    struct mill_coroutine_tcpsocket_connect *self,
     struct tcpsocket *s,
     struct sockaddr *addr,
     struct mill_base *parent,
     struct mill_loop *loop,
     int tag);
 
-struct mill_coroutine_tcplisten {
+int tcpsocket_listen (
+    struct tcpsocket *s,
+    int backlog,
+    struct mill_loop *loop);
+
+/*
+    coroutine tcpsocket_accept (
+        struct tcpsocket *s,
+        struct tcpsocket *newsock);
+*/
+
+struct mill_coroutine_tcpsocket_accept {
     struct mill_base mill_base;
     struct tcpsocket *s;
 };
 
-void mill_call_tcplisten (
-    struct mill_coroutine_tcplisten *self,
+void mill_call_tcpsocket_accept (
+    struct mill_coroutine_tcpsocket_accept *self,
     struct tcpsocket *ls,
-    int backlog,
     struct tcpsocket *s,
     struct mill_base *parent,
     struct mill_loop *loop,
     int tag);
 
-struct mill_coroutine_send {
+/*
+    coroutine tcpsocket_send (
+        struct tcpsocket *s,
+        const void *buf,
+        size_t len);
+*/
+
+struct mill_coroutine_tcpsocket_send {
     struct mill_base mill_base;
     uv_write_t req;
     uv_buf_t buf;
 };
 
-void mill_call_send (
-    struct mill_coroutine_send *self,
-    struct tcpsocket *ls,
+void mill_call_tcpsocket_send (
+    struct mill_coroutine_tcpsocket_send *self,
+    struct tcpsocket *s,
     const void *buf,
     size_t len,
     struct mill_base *parent,

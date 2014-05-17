@@ -359,7 +359,9 @@ begin
                         replace(body, alltokens, tokens[i], "(event->err)")
                     end
  
-                    if tokens[i][0] == :tcpsocket_init && tokens[i + 1][0] == :braces
+                    if(tokens[i][0] == :identifier &&
+                            ["tcpsocket_init", "tcpsocket_listen"].include?(body[tokens[i][1]..tokens[i][2]]) &&
+                            tokens[i + 1][0] == :braces)
                         insert(body, alltokens, tokens[i + 1][2], ", self->mill_base.loop")
                     end
 

@@ -3,14 +3,14 @@
 #include <assert.h>
 #include <uv.h>
 
-coroutine quux ()
+coroutine hello ()
 {
     int rc;
     struct sockaddr_in addr;
     struct tcpsocket ls;
     struct tcpsocket s;
-    coroutine tcplisten l;
-    coroutine send snd;
+    coroutine tcpsocket_accept acc;
+    coroutine tcpsocket_send snd;
     endvars;
 
     rc = tcpsocket_init (&ls);
@@ -19,27 +19,26 @@ coroutine quux ()
     assert (rc == 0);
     rc = uv_ip4_addr ("127.0.0.1", 7000, &addr);
     assert (rc == 0);
-    rc = tcpbind (&ls, (struct sockaddr*) &addr, 0);
+    rc = tcpsocket_bind (&ls, (struct sockaddr*) &addr, 0);
+    assert (rc == 0);
+    rc = tcpsocket_listen (&ls, 10);
     assert (rc == 0);
     
     while (1) {
-        call tcplisten (&l, &ls, 10, &s);
+        call tcpsocket_accept (&acc, &ls, &s);
         wait;
-        assert (@who == &l);
-        printf ("accepted\n");
-        call send (&snd, &s, "Hello, world!", 13) [1];
+        assert (@who == &acc);
+        assert (@err == 0);
+        call tcpsocket_send (&snd, &s, "Hello, world!", 13);
         wait;
         assert (@who == &snd);
-        if (@err != 0)
-            printf ("Error!\n");
-        if (@tag == 0)
-            printf ("sent\n");
+        assert (@err == 0);
     }
 }
 
 int main ()
 {
-    quux ();
+    hello ();
     return 0;
 }
 
