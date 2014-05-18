@@ -118,16 +118,34 @@ struct tcpsocket {
     uv_loop_t *loop;
 
     /*  When this socket is listening for new connection, this pointer
-        point to the associated coroutine. */
+        points to the associated coroutine. */
     struct mill_coroutine_tcpsocket_accept *accept;
+
+    /*  When this socket is being closed, this pointer points to the associated
+        coroutine. */
+    struct mill_coroutine_tcpsocket_term *term;
 };
 
 int tcpsocket_init (
     struct tcpsocket *self,
     struct mill_loop *loop);
 
-void tcpsocket_term (
-    struct tcpsocket *self);
+/*
+    coroutine tcpsocket_term (
+        struct tcpsocket *s);
+*/
+
+struct mill_coroutine_tcpsocket_term {
+    struct mill_base mill_base;
+    struct tcpsocket *s;
+};
+
+void mill_call_tcpsocket_term (
+    struct mill_coroutine_tcpsocket_term *self,
+    struct tcpsocket *s,
+    struct mill_base *parent,
+    struct mill_loop *loop,
+    int tag);
 
 int tcpsocket_bind (
     struct tcpsocket *s,

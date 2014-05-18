@@ -11,6 +11,7 @@ coroutine hello ()
     struct tcpsocket s;
     coroutine tcpsocket_accept acc;
     coroutine tcpsocket_send snd;
+    coroutine tcpsocket_term trm;
     endvars;
 
     rc = tcpsocket_init (&ls);
@@ -29,10 +30,17 @@ coroutine hello ()
         wait;
         assert (@who == &acc);
         assert (@err == 0);
+        printf ("accepted\n");
         call tcpsocket_send (&snd, &s, "Hello, world!", 13);
         wait;
         assert (@who == &snd);
         assert (@err == 0);
+        printf ("sent\n");
+        call tcpsocket_term (&trm, &s);
+        wait;
+        assert (@who == &trm);
+        assert (@err == 0);
+        printf ("terminated\n");
     }
 }
 

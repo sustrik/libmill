@@ -148,20 +148,48 @@ int tcpsocket_init (
 {
     self->loop = &loop->uv_loop;
     self->accept = 0;
+    self->term = 0;
     return uv_tcp_init (&loop->uv_loop, &self->s);
 }
 
-void tcpsocket_term (
-    struct tcpsocket *self)
-{
-    assert (0);
-}
-
-static void connect_handler (
+static void tcpsocket_term_handler (
     struct mill_base *base,
     struct mill_base *event)
 {
-    struct mill_coroutine_connect *self = (struct mill_coroutine_connect*) base;
+    struct mill_coroutine_tcpsocket_term *self =
+        (struct mill_coroutine_tcpsocket_term*) base;
+    assert (0);
+}
+
+static void tcpsocket_term_cb (
+    uv_handle_t* handle)
+{
+    struct tcpsocket *self = mill_cont (handle, struct tcpsocket, s);
+
+    assert (self->term);
+    mill_base_emit (&self->term->mill_base, 0);
+    self->term = 0;
+}
+
+void mill_call_tcpsocket_term (
+    struct mill_coroutine_tcpsocket_term *self,
+    struct tcpsocket *s,
+    struct mill_base *parent,
+    struct mill_loop *loop,
+    int tag)
+{
+    mill_base_init (&self->mill_base, tcpsocket_term_handler,
+        parent, loop, tag);
+    self->s = s;
+    uv_close ((uv_handle_t*) &s->s, tcpsocket_term_cb);
+}
+
+static void tcpsocket_connect_handler (
+    struct mill_base *base,
+    struct mill_base *event)
+{
+    struct mill_coroutine_tcpsocket_connect *self =
+        (struct mill_coroutine_tcpsocket_connect*) base;
     assert (0);
 }
 
@@ -186,7 +214,8 @@ void mill_call_tcpsocket_connect (
 {
     int rc;
 
-    mill_base_init (&self->mill_base, connect_handler, parent, loop, tag);
+    mill_base_init (&self->mill_base, tcpsocket_connect_handler,
+        parent, loop, tag);
     rc = uv_tcp_connect (&self->conn, &s->s, addr, tcpsocket_connect_cb);
     assert (rc == 0);
 }
@@ -255,8 +284,6 @@ void mill_call_tcpsocket_accept (
     struct mill_loop *loop,
     int tag)
 {
-    int rc;
-
     mill_base_init (&self->mill_base, tcpsocket_accept_handler,
         parent, loop, tag);
     self->s = s;
@@ -276,6 +303,7 @@ static void tcpsocket_send_cb (
     uv_write_t* req,
     int status)
 {
+printf ("send_cb\n");
     struct mill_coroutine_tcpsocket_send *self = mill_cont (req,
         struct mill_coroutine_tcpsocket_send, req);
 
