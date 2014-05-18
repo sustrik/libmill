@@ -337,7 +337,7 @@ begin
                         end
                         replace(body, alltokens, tokens[i], "mill_call_#{body[tokens[i + 1][1]..tokens[i+1][2]]}");
                         replace(body, alltokens, tokens[i + 1], "")
-                        s = ", &self->mill_base, self->mill_base.loop, "
+                        s = ", &self->mill_cfhead, self->mill_cfhead.loop, "
                         if tokens[i + 3][0] == :sbraces
                             s += body[tokens[i + 3][1] + 1..tokens[i + 3][2] - 1]
                             replace(body, alltokens, tokens[i + 3], "")
@@ -362,7 +362,7 @@ begin
                     if(tokens[i][0] == :identifier &&
                             ["tcpsocket_init", "tcpsocket_listen"].include?(body[tokens[i][1]..tokens[i][2]]) &&
                             tokens[i + 1][0] == :braces)
-                        insert(body, alltokens, tokens[i + 1][2], ", self->mill_base.loop")
+                        insert(body, alltokens, tokens[i + 1][2], ", self->mill_cfhead.loop")
                     end
 
                     if tokens[i][3] != nil
@@ -398,7 +398,7 @@ for s in sections
     if s[0] == :coroutine
         c = s[1]
 .struct mill_coroutine_@{c[:name]} {
-.    struct mill_base mill_base;
+.    struct mill_cfhead mill_cfhead;
 for a in c[:args]
 .    @{a[:type]} @{a[:name]};
 end
@@ -414,7 +414,7 @@ for a in c[:args]
 .    @{a[:type]} @{a[:name]}
 end
 .    /+,
-.    struct mill_base *parent,
+.    struct mill_cfhead *parent,
 .    struct mill_loop *loop,
 .    int tag);
 .
@@ -445,11 +445,11 @@ for s in sections
 .
     elsif s[0] == :coroutine
         c = s[1]
-.static void @{c[:name]}_handler(struct mill_base *base, struct mill_base *event)
+.static void @{c[:name]}_handler(struct mill_cfhead *base, struct mill_cfhead *event)
 .{
 .    struct mill_coroutine_@{c[:name]} *self = (struct mill_coroutine_@{c[:name]}*) base;
 .
-.    switch (self->mill_base.state) {
+.    switch (self->mill_cfhead.state) {
 .    case 0:
 .        break;
 for i in 1..c[:laststate]
@@ -462,7 +462,7 @@ end
 .
 .    @{c[:body]}
 .
-.    mill_base_emit (&self->mill_base, 0);
+.    mill_cfhead_emit (&self->mill_cfhead, 0);
 .}
 .
 .void mill_call_@{c[:name]} (
@@ -472,15 +472,15 @@ for a in c[:args]
 .    @{a[:type]} @{a[:name]}
 end
 .    /+,
-.    struct mill_base *parent,
+.    struct mill_cfhead *parent,
 .    struct mill_loop *loop,
 .    int tag)
 .{
-.    mill_base_init (&self->mill_base, @{c[:name]}_handler, parent, loop, tag);
+.    mill_cfhead_init (&self->mill_cfhead, @{c[:name]}_handler, parent, loop, tag);
 for a in c[:args]
 .    self->@{a[:name]} = @{a[:name]};
 end
-.    @{c[:name]}_handler(&self->mill_base, 0);
+.    @{c[:name]}_handler(&self->mill_cfhead, 0);
 .}
 .
 .void @{c[:name]} (

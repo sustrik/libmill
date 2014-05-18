@@ -31,37 +31,37 @@
 /* Generic stuff.                                                             */
 /******************************************************************************/
 
-struct mill_base;
+struct mill_cfhead;
 struct mill_loop;
 
 typedef void (*mill_handler_fn) (
-    struct mill_base *self,
-    struct mill_base* ev);
+    struct mill_cfhead *self,
+    struct mill_cfhead* ev);
 
-struct mill_base {
+struct mill_cfhead {
     mill_handler_fn handler; 
     int state;
     int tag;
     int err;
-    struct mill_base *parent;
-    struct mill_base *next;
+    struct mill_cfhead *parent;
+    struct mill_cfhead *next;
     struct mill_loop *loop;
 };
 
-void mill_base_init (
-    struct mill_base *self,
+void mill_cfhead_init (
+    struct mill_cfhead *self,
     mill_handler_fn handler,
-    struct mill_base *parent,
+    struct mill_cfhead *parent,
     struct mill_loop *loop,
     int tag);
 
-void mill_base_term (struct mill_base *self);
+void mill_cfhead_term (struct mill_cfhead *self);
 
-void mill_base_emit (struct mill_base *self, int err);
+void mill_cfhead_emit (struct mill_cfhead *self, int err);
 
 #define mill_wait(statearg)\
     do {\
-        self->mill_base.state = (statearg);\
+        self->mill_cfhead.state = (statearg);\
         return;\
         state##statearg:\
         ;\
@@ -69,8 +69,8 @@ void mill_base_emit (struct mill_base *self, int err);
 
 #define mill_return(errarg)\
     do {\
-        self->mill_base.err = (arrarg);\
-        mill_base_emit (&self->mill_base);\
+        self->mill_cfhead.err = (arrarg);\
+        mill_cfhead_emit (&self->mill_cfhead);\
         return;\
     } while (0)
 
@@ -84,28 +84,28 @@ struct mill_loop
 
     /* Local event queue. Items in this list are processed immediately,
        before control is returned to libuv. */
-    struct mill_base *first;
-    struct mill_base *last;
+    struct mill_cfhead *first;
+    struct mill_cfhead *last;
 };
 
 void mill_loop_init (struct mill_loop *self);
 void mill_loop_term (struct mill_loop *self);
 void mill_loop_run (struct mill_loop *self);
-void mill_loop_emit (struct mill_loop *self, struct mill_base *base);
+void mill_loop_emit (struct mill_loop *self, struct mill_cfhead *base);
 
 /******************************************************************************/
 /* Alarm.                                                                     */
 /******************************************************************************/
 
 struct mill_coroutine_alarm {
-    struct mill_base mill_base;
+    struct mill_cfhead mill_cfhead;
     uv_timer_t timer;
 };
 
 void mill_call_alarm (
-    struct mill_coroutine_alarm *self,
+    struct mill_coroutine_alarm *cf,
     int milliseconds,
-    struct mill_base *parent,
+    struct mill_cfhead *parent,
     struct mill_loop *loop,
     int tag);
 
@@ -116,14 +116,9 @@ void mill_call_alarm (
 struct tcpsocket {
     uv_tcp_t s;
     uv_loop_t *loop;
-
-    /*  When this socket is listening for new connection, this pointer
-        points to the associated coroutine. */
-    struct mill_coroutine_tcpsocket_accept *accept;
-
-    /*  When this socket is being closed, this pointer points to the associated
-        coroutine. */
-    struct mill_coroutine_tcpsocket_term *term;
+    int state;
+    struct mill_cfhead *recvop;
+    struct mill_cfhead *sendop;
 };
 
 int tcpsocket_init (
@@ -132,88 +127,88 @@ int tcpsocket_init (
 
 /*
     coroutine tcpsocket_term (
-        struct tcpsocket *s);
+        struct tcpsocket *self);
 */
 
 struct mill_coroutine_tcpsocket_term {
-    struct mill_base mill_base;
-    struct tcpsocket *s;
+    struct mill_cfhead mill_cfhead;
 };
 
 void mill_call_tcpsocket_term (
-    struct mill_coroutine_tcpsocket_term *self,
-    struct tcpsocket *s,
-    struct mill_base *parent,
+    struct mill_coroutine_tcpsocket_term *cf,
+    struct tcpsocket *self,
+    struct mill_cfhead *parent,
     struct mill_loop *loop,
     int tag);
 
 int tcpsocket_bind (
-    struct tcpsocket *s,
+    struct tcpsocket *self,
     struct sockaddr *addr,
     int flags);
 
 /*
     coroutine tcpsocket_connect (
-        struct tcpsocket *s,
+        struct tcpsocket *self,
         struct sockaddr *addr);
 */
 
 struct mill_coroutine_tcpsocket_connect {
-    struct mill_base mill_base;
-    uv_connect_t conn;
+    struct mill_cfhead mill_cfhead;
+    struct tcpsocket *self;
+    uv_connect_t req;
 };
 
 void mill_call_tcpsocket_connect (
-    struct mill_coroutine_tcpsocket_connect *self,
-    struct tcpsocket *s,
+    struct mill_coroutine_tcpsocket_connect *cf,
+    struct tcpsocket *self,
     struct sockaddr *addr,
-    struct mill_base *parent,
+    struct mill_cfhead *parent,
     struct mill_loop *loop,
     int tag);
 
 int tcpsocket_listen (
-    struct tcpsocket *s,
+    struct tcpsocket *self,
     int backlog,
     struct mill_loop *loop);
 
 /*
     coroutine tcpsocket_accept (
-        struct tcpsocket *s,
+        struct tcpsocket *self,
         struct tcpsocket *newsock);
 */
 
 struct mill_coroutine_tcpsocket_accept {
-    struct mill_base mill_base;
-    struct tcpsocket *s;
+    struct mill_cfhead mill_cfhead;
+    struct tcpsocket *newsock;
 };
 
 void mill_call_tcpsocket_accept (
-    struct mill_coroutine_tcpsocket_accept *self,
-    struct tcpsocket *ls,
-    struct tcpsocket *s,
-    struct mill_base *parent,
+    struct mill_coroutine_tcpsocket_accept *cf,
+    struct tcpsocket *self,
+    struct tcpsocket *newsock,
+    struct mill_cfhead *parent,
     struct mill_loop *loop,
     int tag);
 
 /*
     coroutine tcpsocket_send (
-        struct tcpsocket *s,
+        struct tcpsocket *self,
         const void *buf,
         size_t len);
 */
 
 struct mill_coroutine_tcpsocket_send {
-    struct mill_base mill_base;
+    struct mill_cfhead mill_cfhead;
     uv_write_t req;
     uv_buf_t buf;
 };
 
 void mill_call_tcpsocket_send (
-    struct mill_coroutine_tcpsocket_send *self,
-    struct tcpsocket *s,
+    struct mill_coroutine_tcpsocket_send *cf,
+    struct tcpsocket *self,
     const void *buf,
     size_t len,
-    struct mill_base *parent,
+    struct mill_cfhead *parent,
     struct mill_loop *loop,
     int tag);
 
