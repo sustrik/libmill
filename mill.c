@@ -289,7 +289,7 @@ static void tcpsocket_listen_cb (
 
     /* If nobody is accepting connections at the moment
        we'll simply drop them. */
-    if (!self->state != TCPSOCKET_STATE_ACCEPTING) {
+    if (self->state != TCPSOCKET_STATE_ACCEPTING) {
         rc = uv_tcp_init (s->loop, &uvs);
         assert (rc == 0);
         rc = uv_accept (s, (uv_stream_t*) &uvs);
@@ -304,7 +304,9 @@ static void tcpsocket_listen_cb (
         mill_cfhead);
     rc = uv_accept (s, (uv_stream_t*) &cf->newsock->s);
     assert (rc == 0);
+    cf->newsock->state = TCPSOCKET_STATE_ACTIVE;
     mill_cfhead_emit (&cf->mill_cfhead, 0);
+
     self->recvop = 0;
 }
 
