@@ -16,8 +16,6 @@ coroutine hello ()
 
     rc = tcpsocket_init (&ls);
     assert (rc == 0);
-    rc = tcpsocket_init (&s);
-    assert (rc == 0);
     rc = uv_ip4_addr ("127.0.0.1", 7000, &addr);
     assert (rc == 0);
     rc = tcpsocket_bind (&ls, (struct sockaddr*) &addr, 0);
@@ -26,6 +24,8 @@ coroutine hello ()
     assert (rc == 0);
     
     while (1) {
+        rc = tcpsocket_init (&s);
+        assert (rc == 0);
         call tcpsocket_accept (&acc, &ls, &s);
         wait;
         assert (@who == &acc);

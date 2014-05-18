@@ -81,6 +81,7 @@ void mill_cfhead_emit (struct mill_cfhead *self, int err);
 struct mill_loop
 {
     uv_loop_t uv_loop;
+    uv_idle_t idle;
 
     /* Local event queue. Items in this list are processed immediately,
        before control is returned to libuv. */
@@ -179,6 +180,7 @@ int tcpsocket_listen (
 
 struct mill_coroutine_tcpsocket_accept {
     struct mill_cfhead mill_cfhead;
+    struct tcpsocket *self;
     struct tcpsocket *newsock;
 };
 
@@ -199,6 +201,7 @@ void mill_call_tcpsocket_accept (
 
 struct mill_coroutine_tcpsocket_send {
     struct mill_cfhead mill_cfhead;
+    struct tcpsocket *self;
     uv_write_t req;
     uv_buf_t buf;
 };

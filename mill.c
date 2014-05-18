@@ -65,12 +65,33 @@ void mill_cfhead_emit (
 /* The event loop.                                                            */
 /******************************************************************************/
 
+static void loop_cb (uv_idle_t* handle)
+{
+    struct mill_loop *self;
+
+    self = mill_cont (handle, struct mill_loop, idle);
+
+    while (self->first) {
+        if (!self->first->parent) {
+            uv_stop (&self->uv_loop);
+            return;
+        }
+        self->first->parent->handler (self->first->parent, self->first);
+        self->first = self->first->next;
+    }
+    self->last = 0;
+}
+
 void mill_loop_init (
     struct mill_loop *self)
 {
     int rc;
 
     rc = uv_loop_init (&self->uv_loop);
+    assert (rc == 0);
+    rc = uv_idle_init (&self->uv_loop, &self->idle);
+    assert (rc == 0);
+    rc = uv_idle_start (&self->idle, loop_cb);
     assert (rc == 0);
     self->first = 0;
     self->last = 0;
@@ -79,10 +100,7 @@ void mill_loop_init (
 void mill_loop_term (
     struct mill_loop *self)
 {
-    //int rc;
-    //
-    //rc = uv_loop_close (&self->uv_loop);
-    //assert (rc == 0);
+    assert (0);
 }
 
 void mill_loop_run (
@@ -90,17 +108,8 @@ void mill_loop_run (
 {
     int rc;
 
-    while (1) {
-        rc = uv_run (&self->uv_loop, UV_RUN_ONCE);
-        assert (rc >= 0);
-        while (self->first) {
-            if (!self->first->parent)
-                return;
-            self->first->parent->handler (self->first->parent, self->first);
-            self->first = self->first->next;
-        }
-        self->last = 0;
-    }
+    rc = uv_run (&self->uv_loop, UV_RUN_DEFAULT);
+    assert (rc >= 0);
 }
 
 void mill_loop_emit (
@@ -306,6 +315,7 @@ static void tcpsocket_listen_cb (
     assert (rc == 0);
     cf->newsock->state = TCPSOCKET_STATE_ACTIVE;
     mill_cfhead_emit (&cf->mill_cfhead, 0);
+    cf->self->state = TCPSOCKET_STATE_LISTENING;
 
     self->recvop = 0;
 }
@@ -347,6 +357,7 @@ void mill_call_tcpsocket_accept (
 
     mill_cfhead_init (&cf->mill_cfhead, tcpsocket_accept_handler,
         parent, loop, tag);
+    cf->self = self;
     cf->newsock = newsock;
 
     self->state = TCPSOCKET_STATE_ACCEPTING;
@@ -372,6 +383,7 @@ static void tcpsocket_send_cb (
     cf = mill_cont (req, struct mill_coroutine_tcpsocket_send, req);
 
     assert (status == 0);
+    cf->self->sendop = 0;
     mill_cfhead_emit (&cf->mill_cfhead, 0);
 }
 
@@ -391,6 +403,7 @@ void mill_call_tcpsocket_send (
 
     mill_cfhead_init (&cf->mill_cfhead, tcpsocket_send_handler,
         parent, loop, tag);
+    cf->self = self;
     cf->buf.base = (void*) buf;
     cf->buf.len = len;
 
