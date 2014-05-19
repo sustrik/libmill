@@ -197,11 +197,14 @@ static void tcpsocket_term_cb (
 {
     struct tcpsocket *self = mill_cont (handle, struct tcpsocket, s);
 
+    /* Double check that the socket is in the correct state. */
     assert (self->state == TCPSOCKET_STATE_TERMINATING);
     assert (self->recvop != 0);
 
+    /* The coroutine is done. */
     mill_coframe_head_emit (self->recvop, 0);
 
+    /* Flip the state. */
     self->state = 0;
     self->recvop = 0;
 }
@@ -249,13 +252,17 @@ static void tcpsocket_connect_cb (
 
     cf = mill_cont (req, struct mill_coframe_tcpsocket_connect, req);
 
-    assert (status == 0);
-
+    /* Double-check that the socket is in the correct state. */
     assert (cf->self->state == TCPSOCKET_STATE_CONNECTING);
-    mill_coframe_head_emit (&cf->mill_cfh, 0);
-
-    cf->self->state = TCPSOCKET_STATE_ACTIVE;
+    
+    /* Flip the state. */
+    cf->self->state = (status == 0) ?
+        TCPSOCKET_STATE_ACTIVE :
+        TCPSOCKET_STATE_INIT;
     cf->self->recvop = 0;
+
+    /* The coroutine is done. */
+    mill_coframe_head_emit (&cf->mill_cfh, status);
 }
 
 void mill_call_tcpsocket_connect (
@@ -292,10 +299,10 @@ int tcpsocket_bind (
     struct sockaddr *addr,
     int flags)
 {
+    /* Socket can be bound only before it is listening or connected. */
     assert (self->state == TCPSOCKET_STATE_INIT);
-    return uv_tcp_bind(&self->s, addr, flags);
 
-    return 0;
+    return uv_tcp_bind (&self->s, addr, flags);
 }
 
 static void tcpsocket_listen_cb (
@@ -309,6 +316,10 @@ static void tcpsocket_listen_cb (
 
     self = mill_cont (s, struct tcpsocket, s);
 
+    /* Double-check that the socket is in the correct state. */
+    assert (self->state == TCPSOCKET_STATE_LISTENING ||
+        self->state == TCPSOCKET_STATE_ACCEPTING);
+
     /* If nobody is accepting connections at the moment
        we'll simply drop them. */
     if (self->state != TCPSOCKET_STATE_ACCEPTING) {
@@ -317,20 +328,38 @@ static void tcpsocket_listen_cb (
         rc = uv_accept (s, (uv_stream_t*) &uvs);
         assert (rc == 0);
         uv_close ((uv_handle_t*) &s, NULL); // TODO: This is an async op!
+
+        /* The coroutine goes on. No need to notify the parent. */
         return; 
     }
+
+    if (status != 0)
+        goto error;
 
     /* Actual accept. */
     assert (self->recvop != 0);
     cf = mill_cont (self->recvop, struct mill_coframe_tcpsocket_accept,
         mill_cfh);
-    rc = uv_accept (s, (uv_stream_t*) &cf->newsock->s);
-    assert (rc == 0);
-    cf->newsock->state = TCPSOCKET_STATE_ACTIVE;
-    mill_coframe_head_emit (&cf->mill_cfh, 0);
-    cf->self->state = TCPSOCKET_STATE_LISTENING;
+    status = uv_accept (s, (uv_stream_t*) &cf->newsock->s);
+    if (status != 0)
+        goto error;
 
+    /* Flip both listening and accepted socket to new states. */
+    cf->newsock->state = TCPSOCKET_STATE_ACTIVE;
+    cf->self->state = TCPSOCKET_STATE_LISTENING;
     self->recvop = 0;
+
+    /* The coroutine is done. */
+    mill_coframe_head_emit (&cf->mill_cfh, 0);
+    return;
+
+error:
+
+    /* End the coroutine. Report the error. */
+    cf->newsock->state = TCPSOCKET_STATE_INIT;
+    cf->self->state = TCPSOCKET_STATE_LISTENING;
+    self->recvop = 0;
+    mill_coframe_head_emit (&cf->mill_cfh, status);
 }
 
 int tcpsocket_listen (
@@ -340,11 +369,15 @@ int tcpsocket_listen (
 {
     int rc;
 
+    /* Listen cannot be called on socket that is already listening or
+       connected. */
     assert (self->state == TCPSOCKET_STATE_INIT);
-    rc = uv_listen((uv_stream_t*) &self->s, backlog, tcpsocket_listen_cb);
-    assert (rc == 0);
-    self->state = TCPSOCKET_STATE_LISTENING;
 
+    /* Start listening. */
+    rc = uv_listen((uv_stream_t*) &self->s, backlog, tcpsocket_listen_cb);
+    if (rc != 0)
+        return rc;
+    self->state = TCPSOCKET_STATE_LISTENING;
     return 0;
 }
 
@@ -383,7 +416,7 @@ void mill_call_tcpsocket_accept (
        was already registered in tcpsocket_listen function. */
 }
 
-static void tcpsocket_send_handler(
+static void tcpsocket_send_handler (
     struct mill_coframe_head *cfh,
     struct mill_coframe_head *event)
 {
@@ -401,9 +434,9 @@ static void tcpsocket_send_cb (
 
     cf = mill_cont (req, struct mill_coframe_tcpsocket_send, req);
 
-    assert (status == 0);
+    /* Notify the parent coroutine that the operation is finished. */
     cf->self->sendop = 0;
-    mill_coframe_head_emit (&cf->mill_cfh, 0);
+    mill_coframe_head_emit (&cf->mill_cfh, status);
 }
 
 void mill_call_tcpsocket_send (
