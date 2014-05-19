@@ -130,7 +130,7 @@ begin
         for k in 0..tokens.size - 1
             if tokens[k][0] == :coroutine
                 type += text[last..tokens[k][1] - 1]
-                type += "struct mill_coroutine_#{text[tokens[k+1][1]..tokens[k+1][2]]}"
+                type += "struct mill_coframe_#{text[tokens[k+1][1]..tokens[k+1][2]]}"
                 last = tokens[k + 1][2] + 1
             end
         end
@@ -290,7 +290,7 @@ begin
                     if tokens[i][0] == :identifier && (i == 0 || tokens[i - 1][0] != :struct)
                         idname = body[tokens[i][1]..tokens[i][2]]
                         if locals.include? idname
-                            replace(body, alltokens, tokens[i], "(self->#{idname})")
+                            replace(body, alltokens, tokens[i], "(cf->#{idname})")
                         end
                     elsif [:braces, :cbraces, :sbraces].include? tokens[i][0]
                         expand_vars(body, alltokens, tokens[i][3], locals)
@@ -337,7 +337,7 @@ begin
                         end
                         replace(body, alltokens, tokens[i], "mill_call_#{body[tokens[i + 1][1]..tokens[i+1][2]]}");
                         replace(body, alltokens, tokens[i + 1], "")
-                        s = ", &self->mill_cfhead, self->mill_cfhead.loop, "
+                        s = ", &cf->mill_cfh, cf->mill_cfh.loop, "
                         if tokens[i + 3][0] == :sbraces
                             s += body[tokens[i + 3][1] + 1..tokens[i + 3][2] - 1]
                             replace(body, alltokens, tokens[i + 3], "")
@@ -362,7 +362,7 @@ begin
                     if(tokens[i][0] == :identifier &&
                             ["tcpsocket_init", "tcpsocket_listen"].include?(body[tokens[i][1]..tokens[i][2]]) &&
                             tokens[i + 1][0] == :braces)
-                        insert(body, alltokens, tokens[i + 1][2], ", self->mill_cfhead.loop")
+                        insert(body, alltokens, tokens[i + 1][2], ", cf->mill_cfh.loop")
                     end
 
                     if tokens[i][3] != nil
@@ -397,10 +397,21 @@ end
 for s in sections
     if s[0] == :coroutine
         c = s[1]
-.struct mill_coroutine_@{c[:name]} {
-.    struct mill_cfhead mill_cfhead;
+./* Coframe for coroutine @{c[:name]}. */
+.struct mill_coframe_@{c[:name]} {
+.
+.    /* Generic coframe header. */
+.    struct mill_coframe_head mill_cfh;
+if !c[:args].empty?
+.
+.    /* Coroutine arguments. */
+end
 for a in c[:args]
 .    @{a[:type]} @{a[:name]};
+end
+if !c[:vars].empty?
+.
+.    /* Local variables. */
 end
 for v in c[:vars]
 .    @{v[:type]} @{v[:name]};
@@ -408,13 +419,13 @@ end
 .};
 .
 .void mill_call_@{c[:name]} (
-.    struct mill_coroutine_@{c[:name]} *self
+.    struct mill_coframe_@{c[:name]} *self
 for a in c[:args]
 .    /+,
 .    @{a[:type]} @{a[:name]}
 end
 .    /+,
-.    struct mill_cfhead *parent,
+.    struct mill_coframe_head *parent,
 .    struct mill_loop *loop,
 .    int tag);
 .
@@ -445,11 +456,13 @@ for s in sections
 .
     elsif s[0] == :coroutine
         c = s[1]
-.static void @{c[:name]}_handler(struct mill_cfhead *base, struct mill_cfhead *event)
+.static void @{c[:name]}_handler(struct mill_coframe_head *cfh, struct mill_coframe_head *event)
 .{
-.    struct mill_coroutine_@{c[:name]} *self = (struct mill_coroutine_@{c[:name]}*) base;
+.    struct mill_coframe_@{c[:name]} *cf;
 .
-.    switch (self->mill_cfhead.state) {
+.    cf = mill_cont (cfh, struct mill_coframe_@{c[:name]}, mill_cfh);
+.
+.    switch (cf->mill_cfh.state) {
 .    case 0:
 .        break;
 for i in 1..c[:laststate]
@@ -462,25 +475,28 @@ end
 .
 .    @{c[:body]}
 .
-.    mill_cfhead_emit (&self->mill_cfhead, 0);
+.    mill_coframe_head_emit (&cf->mill_cfh, 0);
 .}
 .
 .void mill_call_@{c[:name]} (
-.    struct mill_coroutine_@{c[:name]} *self
+.    struct mill_coframe_@{c[:name]} *self
 for a in c[:args]
 .    /+,
 .    @{a[:type]} @{a[:name]}
 end
 .    /+,
-.    struct mill_cfhead *parent,
+.    struct mill_coframe_head *parent,
 .    struct mill_loop *loop,
 .    int tag)
 .{
-.    mill_cfhead_init (&self->mill_cfhead, @{c[:name]}_handler, parent, loop, tag);
+.    /* Fill in the coframe. */
+.    mill_coframe_head_init (&self->mill_cfh, @{c[:name]}_handler, parent, loop, tag);
 for a in c[:args]
 .    self->@{a[:name]} = @{a[:name]};
 end
-.    @{c[:name]}_handler(&self->mill_cfhead, 0);
+.
+.    /* Execute the initial part of the coroutine. */
+.    @{c[:name]}_handler(&self->mill_cfh, 0);
 .}
 .
 .void @{c[:name]} (
@@ -491,10 +507,10 @@ end
 ./+)
 .{
 .    struct mill_loop mill_loop;
-.    struct mill_coroutine_@{c[:name]} mill_coroutine;
+.    struct mill_coframe_@{c[:name]} mill_coframe;
 .
 .    mill_loop_init (&mill_loop);
-.    mill_call_@{c[:name]} (&mill_coroutine
+.    mill_call_@{c[:name]} (&mill_coframe
 for a in c[:args]
 .    /+, @{a[:name]}
 end

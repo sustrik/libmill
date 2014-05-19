@@ -31,37 +31,40 @@
 /* Generic stuff.                                                             */
 /******************************************************************************/
 
-struct mill_cfhead;
+#define mill_cont(ptr, type, member) \
+    (ptr ? ((type*) (((char*) ptr) - offsetof(type, member))) : NULL)
+
+struct mill_coframe_head;
 struct mill_loop;
 
 typedef void (*mill_handler_fn) (
-    struct mill_cfhead *self,
-    struct mill_cfhead* ev);
+    struct mill_coframe_head *self,
+    struct mill_coframe_head* ev);
 
-struct mill_cfhead {
+struct mill_coframe_head {
     mill_handler_fn handler; 
     int state;
     int tag;
     int err;
-    struct mill_cfhead *parent;
-    struct mill_cfhead *next;
+    struct mill_coframe_head *parent;
+    struct mill_coframe_head *next;
     struct mill_loop *loop;
 };
 
-void mill_cfhead_init (
-    struct mill_cfhead *self,
+void mill_coframe_head_init (
+    struct mill_coframe_head *self,
     mill_handler_fn handler,
-    struct mill_cfhead *parent,
+    struct mill_coframe_head *parent,
     struct mill_loop *loop,
     int tag);
 
-void mill_cfhead_term (struct mill_cfhead *self);
+void mill_coframe_head_term (struct mill_coframe_head *self);
 
-void mill_cfhead_emit (struct mill_cfhead *self, int err);
+void mill_coframe_head_emit (struct mill_coframe_head *self, int err);
 
 #define mill_wait(statearg)\
     do {\
-        self->mill_cfhead.state = (statearg);\
+        cf->mill_cfh.state = (statearg);\
         return;\
         state##statearg:\
         ;\
@@ -69,8 +72,8 @@ void mill_cfhead_emit (struct mill_cfhead *self, int err);
 
 #define mill_return(errarg)\
     do {\
-        self->mill_cfhead.err = (arrarg);\
-        mill_cfhead_emit (&self->mill_cfhead);\
+        cf->mill_cfh.err = (arrarg);\
+        mill_coframe_head_emit (&cf->mill_cfh);\
         return;\
     } while (0)
 
@@ -85,28 +88,33 @@ struct mill_loop
 
     /* Local event queue. Items in this list are processed immediately,
        before control is returned to libuv. */
-    struct mill_cfhead *first;
-    struct mill_cfhead *last;
+    struct mill_coframe_head *first;
+    struct mill_coframe_head *last;
 };
 
 void mill_loop_init (struct mill_loop *self);
 void mill_loop_term (struct mill_loop *self);
 void mill_loop_run (struct mill_loop *self);
-void mill_loop_emit (struct mill_loop *self, struct mill_cfhead *base);
+void mill_loop_emit (struct mill_loop *self, struct mill_coframe_head *base);
 
 /******************************************************************************/
 /* Alarm.                                                                     */
 /******************************************************************************/
 
-struct mill_coroutine_alarm {
-    struct mill_cfhead mill_cfhead;
+/* Coframe for coroutine alarm. */
+struct mill_coframe_alarm {
+
+    /* Generic coframe header. */
+    struct mill_coframe_head mill_cfh;
+
+    /* Local variables. */
     uv_timer_t timer;
 };
 
 void mill_call_alarm (
-    struct mill_coroutine_alarm *cf,
+    struct mill_coframe_alarm *cf,
     int milliseconds,
-    struct mill_cfhead *parent,
+    struct mill_coframe_head *parent,
     struct mill_loop *loop,
     int tag);
 
@@ -118,8 +126,8 @@ struct tcpsocket {
     uv_tcp_t s;
     uv_loop_t *loop;
     int state;
-    struct mill_cfhead *recvop;
-    struct mill_cfhead *sendop;
+    struct mill_coframe_head *recvop;
+    struct mill_coframe_head *sendop;
 };
 
 int tcpsocket_init (
@@ -131,14 +139,20 @@ int tcpsocket_init (
         struct tcpsocket *self);
 */
 
-struct mill_coroutine_tcpsocket_term {
-    struct mill_cfhead mill_cfhead;
+/* Coframe for coroutine tcpsocket_term. */
+struct mill_coframe_tcpsocket_term {
+
+    /* Generic coframe header. */
+    struct mill_coframe_head mill_cfh;
+
+    /* Coroutine arguments. */
+    struct tcpsocket *self;
 };
 
 void mill_call_tcpsocket_term (
-    struct mill_coroutine_tcpsocket_term *cf,
+    struct mill_coframe_tcpsocket_term *cf,
     struct tcpsocket *self,
-    struct mill_cfhead *parent,
+    struct mill_coframe_head *parent,
     struct mill_loop *loop,
     int tag);
 
@@ -153,17 +167,24 @@ int tcpsocket_bind (
         struct sockaddr *addr);
 */
 
-struct mill_coroutine_tcpsocket_connect {
-    struct mill_cfhead mill_cfhead;
+/* Coframe for coroutine tcpsocket_connect. */
+struct mill_coframe_tcpsocket_connect {
+
+    /* Generic coframe header. */
+    struct mill_coframe_head mill_cfh;
+
+    /* Coroutine arguments. */
     struct tcpsocket *self;
+
+    /* Local variables. */
     uv_connect_t req;
 };
 
 void mill_call_tcpsocket_connect (
-    struct mill_coroutine_tcpsocket_connect *cf,
+    struct mill_coframe_tcpsocket_connect *cf,
     struct tcpsocket *self,
     struct sockaddr *addr,
-    struct mill_cfhead *parent,
+    struct mill_coframe_head *parent,
     struct mill_loop *loop,
     int tag);
 
@@ -178,17 +199,22 @@ int tcpsocket_listen (
         struct tcpsocket *newsock);
 */
 
-struct mill_coroutine_tcpsocket_accept {
-    struct mill_cfhead mill_cfhead;
+/* Coframe for coroutine tcpsocket_accept. */
+struct mill_coframe_tcpsocket_accept {
+
+    /* Generic coframe header. */
+    struct mill_coframe_head mill_cfh;
+
+    /* Coroutine arguments. */
     struct tcpsocket *self;
     struct tcpsocket *newsock;
 };
 
 void mill_call_tcpsocket_accept (
-    struct mill_coroutine_tcpsocket_accept *cf,
+    struct mill_coframe_tcpsocket_accept *cf,
     struct tcpsocket *self,
     struct tcpsocket *newsock,
-    struct mill_cfhead *parent,
+    struct mill_coframe_head *parent,
     struct mill_loop *loop,
     int tag);
 
@@ -199,19 +225,26 @@ void mill_call_tcpsocket_accept (
         size_t len);
 */
 
-struct mill_coroutine_tcpsocket_send {
-    struct mill_cfhead mill_cfhead;
+/* Coframe for coroutine tcpsocket_send. */
+struct mill_coframe_tcpsocket_send {
+
+    /* Generic coframe header. */
+    struct mill_coframe_head mill_cfh;
+
+    /* Coroutine arguments. */
     struct tcpsocket *self;
+
+    /* Local variables. */
     uv_write_t req;
-    uv_buf_t buf;
+    uv_buf_t buffer;
 };
 
 void mill_call_tcpsocket_send (
-    struct mill_coroutine_tcpsocket_send *cf,
+    struct mill_coframe_tcpsocket_send *cf,
     struct tcpsocket *self,
     const void *buf,
     size_t len,
-    struct mill_cfhead *parent,
+    struct mill_coframe_head *parent,
     struct mill_loop *loop,
     int tag);
 

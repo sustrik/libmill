@@ -28,13 +28,10 @@
 /* Generic stuff.                                                             */
 /******************************************************************************/
 
-#define mill_cont(ptr, type, member) \
-    (ptr ? ((type*) (((char*) ptr) - offsetof(type, member))) : NULL)
-
-void mill_cfhead_init (
-    struct mill_cfhead *self,
+void mill_coframe_head_init (
+    struct mill_coframe_head *self,
     mill_handler_fn handler,
-    struct mill_cfhead *parent,
+    struct mill_coframe_head *parent,
     struct mill_loop *loop,
     int tag)
 {
@@ -47,14 +44,14 @@ void mill_cfhead_init (
     self->loop = loop;
 }
 
-void mill_cfhead_term (
-    struct mill_cfhead *self)
+void mill_coframe_head_term (
+    struct mill_coframe_head *self)
 {
     assert (0);
 }
 
-void mill_cfhead_emit (
-    struct mill_cfhead *self,
+void mill_coframe_head_emit (
+    struct mill_coframe_head *self,
     int err)
 {
     self->err = err;
@@ -114,7 +111,7 @@ void mill_loop_run (
 
 void mill_loop_emit (
     struct mill_loop *self,
-    struct mill_cfhead *ev)
+    struct mill_coframe_head *ev)
 {
     if (self->first == 0)
         self->first = ev;
@@ -129,32 +126,36 @@ void mill_loop_emit (
 /******************************************************************************/
 
 static void alarm_handler(
-    struct mill_cfhead *base,
-    struct mill_cfhead *event)
+    struct mill_coframe_head *cfh,
+    struct mill_coframe_head *event)
 {
-    struct mill_coroutine_alarm *cf;
+    struct mill_coframe_alarm *cf;
 
-    cf = mill_cont (base, struct mill_coroutine_alarm, mill_cfhead);
+    cf = mill_cont (cfh, struct mill_coframe_alarm, mill_cfh);
     assert (0);
 }
 
 static void alarm_cb (
     uv_timer_t *timer)
 {
-    struct mill_coroutine_alarm *cf;
+    struct mill_coframe_alarm *cf;
 
-    cf = mill_cont (timer, struct mill_coroutine_alarm, timer);
-    mill_cfhead_emit (&cf->mill_cfhead, 0);
+    cf = mill_cont (timer, struct mill_coframe_alarm, timer);
+
+    /* The coroutine is done. */
+    mill_coframe_head_emit (&cf->mill_cfh, 0);
 }
 
 void mill_call_alarm (
-    struct mill_coroutine_alarm *cf,
+    struct mill_coframe_alarm *cf,
     int milliseconds,
-    struct mill_cfhead *parent,
+    struct mill_coframe_head *parent,
     struct mill_loop *loop,
     int tag)
 {
-    mill_cfhead_init (&cf->mill_cfhead, alarm_handler, parent, loop, tag);
+    /* Fill in the coframe. */
+    mill_coframe_head_init (&cf->mill_cfh, alarm_handler, parent, loop, tag);
+
     uv_timer_init(&loop->uv_loop, &cf->timer);
     uv_timer_start(&cf->timer, alarm_cb, milliseconds, 0);
 }
@@ -182,12 +183,12 @@ int tcpsocket_init (
 }
 
 static void tcpsocket_term_handler (
-    struct mill_cfhead *base,
-    struct mill_cfhead *event)
+    struct mill_coframe_head *cfh,
+    struct mill_coframe_head *event)
 {
-    struct mill_coroutine_tcpsocket_term *cf;
+    struct mill_coframe_tcpsocket_term *cf;
 
-    cf = mill_cont(base, struct mill_coroutine_tcpsocket_term, mill_cfhead);
+    cf = mill_cont(cfh, struct mill_coframe_tcpsocket_term, mill_cfh);
     assert (0);
 }
 
@@ -199,39 +200,44 @@ static void tcpsocket_term_cb (
     assert (self->state == TCPSOCKET_STATE_TERMINATING);
     assert (self->recvop != 0);
 
-    mill_cfhead_emit (self->recvop, 0);
+    mill_coframe_head_emit (self->recvop, 0);
 
     self->state = 0;
     self->recvop = 0;
 }
 
 void mill_call_tcpsocket_term (
-    struct mill_coroutine_tcpsocket_term *cf,
+    struct mill_coframe_tcpsocket_term *cf,
     struct tcpsocket *self,
-    struct mill_cfhead *parent,
+    struct mill_coframe_head *parent,
     struct mill_loop *loop,
     int tag)
 {
-    assert (self->state != TCPSOCKET_STATE_TERMINATING);
-    assert (self->recvop == 0);
-    assert (self->sendop == 0);
-
-    mill_cfhead_init (&cf->mill_cfhead, tcpsocket_term_handler,
+    /* Fill in the coframe. */
+    mill_coframe_head_init (&cf->mill_cfh, tcpsocket_term_handler,
         parent, loop, tag);
+    cf->self = self;
 
-    self->state = TCPSOCKET_STATE_TERMINATING;
-    self->recvop = &cf->mill_cfhead;
-    uv_close ((uv_handle_t*) &self->s, tcpsocket_term_cb);
+    /* Make sure that no async operations are going on on the socket. */
+    assert (cf->self->state != TCPSOCKET_STATE_TERMINATING);
+    assert (cf->self->recvop == 0);
+    assert (cf->self->sendop == 0);
+
+    /* Mark the socket as being in process of being terminated. */
+    cf->self->state = TCPSOCKET_STATE_TERMINATING;
+    cf->self->recvop = &cf->mill_cfh;
+
+    /* Initiate the termination. */
+    uv_close ((uv_handle_t*) &cf->self->s, tcpsocket_term_cb);
 }
 
 static void tcpsocket_connect_handler (
-    struct mill_cfhead *base,
-    struct mill_cfhead *event)
+    struct mill_coframe_head *cfh,
+    struct mill_coframe_head *event)
 {
-    struct mill_coroutine_tcpsocket_connect *cf;
+    struct mill_coframe_tcpsocket_connect *cf;
 
-    cf = mill_cont (base, struct mill_coroutine_tcpsocket_connect,
-        mill_cfhead);
+    cf = mill_cont (cfh, struct mill_coframe_tcpsocket_connect, mill_cfh);
     assert (0);
 }
 
@@ -239,40 +245,47 @@ static void tcpsocket_connect_cb (
     uv_connect_t* req,
     int status)
 {
-    struct mill_coroutine_tcpsocket_connect *cf;
+    struct mill_coframe_tcpsocket_connect *cf;
 
-    cf = mill_cont (req, struct mill_coroutine_tcpsocket_connect, req);
+    cf = mill_cont (req, struct mill_coframe_tcpsocket_connect, req);
 
     assert (status == 0);
 
     assert (cf->self->state == TCPSOCKET_STATE_CONNECTING);
-    mill_cfhead_emit (&cf->mill_cfhead, 0);
+    mill_coframe_head_emit (&cf->mill_cfh, 0);
 
     cf->self->state = TCPSOCKET_STATE_ACTIVE;
     cf->self->recvop = 0;
 }
 
 void mill_call_tcpsocket_connect (
-    struct mill_coroutine_tcpsocket_connect *cf,
+    struct mill_coframe_tcpsocket_connect *cf,
     struct tcpsocket *self,
     struct sockaddr *addr,
-    struct mill_cfhead *parent,
+    struct mill_coframe_head *parent,
     struct mill_loop *loop,
     int tag)
 {
     int rc;
 
-    assert (self->state == TCPSOCKET_STATE_INIT);
-
-    mill_cfhead_init (&cf->mill_cfhead, tcpsocket_connect_handler,
+    /* Fill in the coframe. */
+    mill_coframe_head_init (&cf->mill_cfh, tcpsocket_connect_handler,
         parent, loop, tag);
     cf->self = self;
-    rc = uv_tcp_connect (&cf->req, &self->s, addr, tcpsocket_connect_cb);
-    assert (rc == 0);
 
-    self->state = TCPSOCKET_STATE_CONNECTING;
-    self->recvop = &cf->mill_cfhead;
+    /* Connect can be done only on a fresh socket. */
+    assert (cf->self->state == TCPSOCKET_STATE_INIT);
+
+    /* Mark the socket as being in process of connecting. */
+    cf->self->state = TCPSOCKET_STATE_CONNECTING;
+    cf->self->recvop = &cf->mill_cfh;
+    
+    /* Initiate the connecting. */
+    rc = uv_tcp_connect (&cf->req, &cf->self->s, addr, tcpsocket_connect_cb);
+    assert (rc == 0);
 }
+
+
 
 int tcpsocket_bind (
     struct tcpsocket *self,
@@ -291,7 +304,7 @@ static void tcpsocket_listen_cb (
 {
     int rc;
     struct tcpsocket *self;
-    struct mill_coroutine_tcpsocket_accept *cf;
+    struct mill_coframe_tcpsocket_accept *cf;
     uv_tcp_t uvs;
 
     self = mill_cont (s, struct tcpsocket, s);
@@ -309,12 +322,12 @@ static void tcpsocket_listen_cb (
 
     /* Actual accept. */
     assert (self->recvop != 0);
-    cf = mill_cont (self->recvop, struct mill_coroutine_tcpsocket_accept,
-        mill_cfhead);
+    cf = mill_cont (self->recvop, struct mill_coframe_tcpsocket_accept,
+        mill_cfh);
     rc = uv_accept (s, (uv_stream_t*) &cf->newsock->s);
     assert (rc == 0);
     cf->newsock->state = TCPSOCKET_STATE_ACTIVE;
-    mill_cfhead_emit (&cf->mill_cfhead, 0);
+    mill_coframe_head_emit (&cf->mill_cfh, 0);
     cf->self->state = TCPSOCKET_STATE_LISTENING;
 
     self->recvop = 0;
@@ -336,41 +349,47 @@ int tcpsocket_listen (
 }
 
 static void tcpsocket_accept_handler (
-    struct mill_cfhead *base,
-    struct mill_cfhead *event)
+    struct mill_coframe_head *cfh,
+    struct mill_coframe_head *event)
 {
-    struct mill_coroutine_tcpsocket_accept *cf;
+    struct mill_coframe_tcpsocket_accept *cf;
 
-    cf = mill_cont (base, struct mill_coroutine_tcpsocket_accept, mill_cfhead);
+    cf = mill_cont (cfh, struct mill_coframe_tcpsocket_accept, mill_cfh);
     assert (0);
 }
 
 void mill_call_tcpsocket_accept (
-    struct mill_coroutine_tcpsocket_accept *cf,
+    struct mill_coframe_tcpsocket_accept *cf,
     struct tcpsocket *self,
     struct tcpsocket *newsock,
-    struct mill_cfhead *parent,
+    struct mill_coframe_head *parent,
     struct mill_loop *loop,
     int tag)
 {
-    assert (self->state == TCPSOCKET_STATE_LISTENING);
-
-    mill_cfhead_init (&cf->mill_cfhead, tcpsocket_accept_handler,
+    /* Fill in the coframe. */
+    mill_coframe_head_init (&cf->mill_cfh, tcpsocket_accept_handler,
         parent, loop, tag);
     cf->self = self;
     cf->newsock = newsock;
 
-    self->state = TCPSOCKET_STATE_ACCEPTING;
-    self->recvop = &cf->mill_cfhead;
+    /* Only sockets that are already listening can accept new connections. */
+    assert (cf->self->state == TCPSOCKET_STATE_LISTENING);
+
+    /* Mark the socket as being in process of being accepted. */
+    cf->self->state = TCPSOCKET_STATE_ACCEPTING;
+    cf->self->recvop = &cf->mill_cfh;
+
+    /* There's no need for any action here as callback for incoming connections
+       was already registered in tcpsocket_listen function. */
 }
 
 static void tcpsocket_send_handler(
-    struct mill_cfhead *base,
-    struct mill_cfhead *event)
+    struct mill_coframe_head *cfh,
+    struct mill_coframe_head *event)
 {
-    struct mill_coroutine_tcpsocket_send *cf;
+    struct mill_coframe_tcpsocket_send *cf;
 
-    cf = mill_cont (base, struct mill_coroutine_tcpsocket_send, mill_cfhead);
+    cf = mill_cont (cfh, struct mill_coframe_tcpsocket_send, mill_cfh);
     assert (0);
 }
 
@@ -378,38 +397,44 @@ static void tcpsocket_send_cb (
     uv_write_t* req,
     int status)
 {
-    struct mill_coroutine_tcpsocket_send *cf;
+    struct mill_coframe_tcpsocket_send *cf;
 
-    cf = mill_cont (req, struct mill_coroutine_tcpsocket_send, req);
+    cf = mill_cont (req, struct mill_coframe_tcpsocket_send, req);
 
     assert (status == 0);
     cf->self->sendop = 0;
-    mill_cfhead_emit (&cf->mill_cfhead, 0);
+    mill_coframe_head_emit (&cf->mill_cfh, 0);
 }
 
 void mill_call_tcpsocket_send (
-    struct mill_coroutine_tcpsocket_send *cf,
+    struct mill_coframe_tcpsocket_send *cf,
     struct tcpsocket *self,
     const void *buf,
     size_t len,
-    struct mill_cfhead *parent,
+    struct mill_coframe_head *parent,
     struct mill_loop *loop,
     int tag)
 {
     int rc;
 
+    /* Fill in the coframe. */
+    mill_coframe_head_init (&cf->mill_cfh, tcpsocket_send_handler,
+        parent, loop, tag);
+    cf->self = self;
+
+    /* Make sure that the socket is properly connected and that no other send
+       operation is in progress. */
     assert (self->state == TCPSOCKET_STATE_ACTIVE);
     assert (self->sendop == 0);
 
-    mill_cfhead_init (&cf->mill_cfhead, tcpsocket_send_handler,
-        parent, loop, tag);
-    cf->self = self;
-    cf->buf.base = (void*) buf;
-    cf->buf.len = len;
+    /* Mark the socket as being in process of sending. */
+    cf->self->sendop = &cf->mill_cfh;
 
-    rc = uv_write (&cf->req, (uv_stream_t*) &self->s, &cf->buf, 1,
+    /* Initiate the sending. */
+    cf->buffer.base = (void*) buf;
+    cf->buffer.len = len;
+    rc = uv_write (&cf->req, (uv_stream_t*) &cf->self->s, &cf->buffer, 1,
         tcpsocket_send_cb);
     assert (rc == 0);
-    self->sendop = &cf->mill_cfhead;
 }
 

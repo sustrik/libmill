@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <uv.h>
 
-coroutine hello ()
+coroutine hello (int i)
 {
     int rc;
     struct sockaddr_in addr;
@@ -46,7 +46,7 @@ coroutine hello ()
 
 int main ()
 {
-    hello ();
+    hello (1);
     return 0;
 }
 
