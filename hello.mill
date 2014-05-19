@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <uv.h>
 
-char buf [4];
+char buf [6];
 
 coroutine hello (int i)
 {

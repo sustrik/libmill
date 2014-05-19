@@ -513,9 +513,9 @@ static void tcpsocket_recv_cb (
 
     /* Adjust the input buffer to not cover the data already received. */
     assert (buf->base == cf->buf);
-    assert (buf->len <= cf->len);
-    cf->buf = ((char*) cf->buf) + buf->len;
-    cf->len -= buf->len;
+    assert (nread <= cf->len);
+    cf->buf = ((char*) cf->buf) + nread;
+    cf->len -= nread;
 
     /* If there are no more data to be read, stop reading and notify the parent
        coroutine that the operation is finished. */
