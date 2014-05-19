@@ -471,3 +471,90 @@ void mill_call_tcpsocket_send (
     assert (rc == 0);
 }
 
+static void tcpsocket_recv_handler (
+    struct mill_coframe_head *cfh,
+    struct mill_coframe_head *event)
+{
+    struct mill_coframe_tcpsocket_recv *cf;
+
+    cf = mill_cont (cfh, struct mill_coframe_tcpsocket_recv, mill_cfh);
+    assert (0);
+}
+
+static void tcpsocket_alloc_cb (
+    uv_handle_t* handle,
+    size_t suggested_size,
+    uv_buf_t* buf)
+{
+    struct mill_coframe_tcpsocket_recv *cf;
+    struct tcpsocket *self;
+
+    self = mill_cont (handle, struct tcpsocket, s);
+    assert (self->recvop);
+    cf = mill_cont (self->recvop, struct mill_coframe_tcpsocket_recv,
+        mill_cfh);
+
+    buf->base = cf->buf;
+    buf->len = cf->len;
+}
+
+static void tcpsocket_recv_cb (
+    uv_stream_t* stream,
+    ssize_t nread,
+    const uv_buf_t* buf)
+{
+    struct mill_coframe_tcpsocket_recv *cf;
+    struct tcpsocket *self;
+
+    self = mill_cont (stream, struct tcpsocket, s);
+    assert (self->recvop);
+    cf = mill_cont (self->recvop, struct mill_coframe_tcpsocket_recv,
+        mill_cfh);
+
+    /* Adjust the input buffer to not cover the data already received. */
+    assert (buf->base == cf->buf);
+    assert (buf->len <= cf->len);
+    cf->buf = ((char*) cf->buf) + buf->len;
+    cf->len -= buf->len;
+
+    /* If there are no more data to be read, stop reading and notify the parent
+       coroutine that the operation is finished. */
+    if (!cf->len) {
+        uv_read_stop (stream);
+        self->recvop = 0;
+        mill_coframe_head_emit (&cf->mill_cfh, 0);
+    }
+}
+
+void mill_call_tcpsocket_recv (
+    struct mill_coframe_tcpsocket_recv *cf,
+    struct tcpsocket *self,
+    void *buf,
+    size_t len,
+    struct mill_coframe_head *parent,
+    struct mill_loop *loop,
+    int tag)
+{
+    int rc;
+
+    /* Fill in the coframe. */
+    mill_coframe_head_init (&cf->mill_cfh, tcpsocket_send_handler,
+        parent, loop, tag);
+    cf->self = self;
+    cf->buf = buf;
+    cf->len = len;
+
+    /* Make sure that the socket is properly connected and that no other recv
+       operation is in progress. */
+    assert (self->state == TCPSOCKET_STATE_ACTIVE);
+    assert (self->recvop == 0);
+
+    /* Mark the socket as being in process of receiving. */
+    cf->self->recvop = &cf->mill_cfh;
+
+    /* Initiate the receiving. */
+    rc = uv_read_start ((uv_stream_t*) &cf->self->s,
+        tcpsocket_alloc_cb, tcpsocket_recv_cb);
+    assert (rc == 0);
+}
+

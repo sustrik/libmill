@@ -3,6 +3,8 @@
 #include <assert.h>
 #include <uv.h>
 
+char buf [4];
+
 coroutine hello (int i)
 {
     int rc;
@@ -12,6 +14,7 @@ coroutine hello (int i)
     coroutine tcpsocket_accept acc;
     coroutine tcpsocket_send snd;
     coroutine tcpsocket_term trm;
+    coroutine tcpsocket_recv rcv;
     endvars;
 
     rc = tcpsocket_init (&ls);
@@ -36,6 +39,11 @@ coroutine hello (int i)
         assert (@who == &snd);
         assert (@err == 0);
         printf ("sent\n");
+        call tcpsocket_recv (&rcv, &s, buf, sizeof (buf));
+        wait;
+        assert (@who == &rcv);
+        assert (@err == 0);
+        printf ("received\n");
         call tcpsocket_term (&trm, &s);
         wait;
         assert (@who == &trm);

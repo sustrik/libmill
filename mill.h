@@ -248,5 +248,35 @@ void mill_call_tcpsocket_send (
     struct mill_loop *loop,
     int tag);
 
+/*
+    coroutine tcpsocket_recv (
+        struct tcpsocket *self,
+        void *buf,
+        size_t len);
+*/
+
+/* Coframe for coroutine tcpsocket_recv. */
+struct mill_coframe_tcpsocket_recv {
+
+    /* Generic coframe header. */
+    struct mill_coframe_head mill_cfh;
+
+    /* Coroutine arguments. */
+    struct tcpsocket *self;
+
+    /* Local variables. */
+    void *buf;
+    size_t len;
+};
+
+void mill_call_tcpsocket_recv (
+    struct mill_coframe_tcpsocket_recv *cf,
+    struct tcpsocket *self,
+    void *buf,
+    size_t len,
+    struct mill_coframe_head *parent,
+    struct mill_loop *loop,
+    int tag);
+
 #endif
 
