@@ -22,7 +22,7 @@ and runtime.
 
 coroutine quux ()
 {
-    coroutine alarm a;
+    coframe alarm a;
     endvars;
 
     call alarm (&a, 1000);
