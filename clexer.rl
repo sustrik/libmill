@@ -67,6 +67,8 @@
         token = data[ts..te-1].pack("c*")
         if token == "coroutine"
             stack.last << [:coroutine, ts, te - 1]
+        elsif token == "coframe"
+            stack.last << [:coframe, ts, te - 1]
         elsif token == "endvars"
             stack.last << [:endvars, ts, te - 1]
         elsif token == "call"

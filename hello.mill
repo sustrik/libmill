@@ -11,10 +11,10 @@ coroutine hello (int i)
     struct sockaddr_in addr;
     struct tcpsocket ls;
     struct tcpsocket s;
-    coroutine tcpsocket_accept acc;
-    coroutine tcpsocket_send snd;
-    coroutine tcpsocket_term trm;
-    coroutine tcpsocket_recv rcv;
+    coframe tcpsocket_accept acc;
+    coframe tcpsocket_send snd;
+    coframe tcpsocket_term trm;
+    coframe tcpsocket_recv rcv;
     endvars;
 
     rc = tcpsocket_init (&ls);

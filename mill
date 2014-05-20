@@ -128,7 +128,7 @@ begin
         type = ""
         last = tokens[0][1]
         for k in 0..tokens.size - 1
-            if tokens[k][0] == :coroutine
+            if tokens[k][0] == :coframe
                 type += text[last..tokens[k][1] - 1]
                 type += "struct mill_coframe_#{text[tokens[k+1][1]..tokens[k+1][2]]}"
                 last = tokens[k + 1][2] + 1
