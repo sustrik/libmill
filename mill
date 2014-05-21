@@ -323,28 +323,35 @@ begin
                     end
 
                     if tokens[i][0] == :call
-                        if tokens[i + 1][0] != :identifier
+
+                        # First parse the statement.
+                        tag = "0"
+                        frame = "0"
+                        k = i + 1;
+                        if tokens[k][0] != :identifier
                             $stderr.write "'call' keyword should be followed by coroutine name.\n"
                             exit
                         end
-                        if tokens[i + 2][0] != :braces
+                        k += 1
+                        if tokens[k][0] == :sbraces
+                            k += 1
+                        end
+                        if tokens[k][0] != :braces
                             $stderr.write "'call' should be followed by a list of arguments.\n"
                             exit
                         end
-                        if ![:semicolon, :sbraces].include? tokens[i + 3][0]
+                        k += 1
+                        if tokens[k][0] != :semicolon
                             $stderr.write "'call' should be terminated by a semicolon.\n"
                             exit
                         end
-                        replace(body, alltokens, tokens[i], "mill_call_#{body[tokens[i + 1][1]..tokens[i+1][2]]}");
+
+                        # Expand the call statement to an actuall C call.
+                        func = "mill_call_#{body[tokens[i + 1][1]..tokens[i+1][2]]}"
+                        stdargs = "#{frame}, cf->mill_cfh.loop, &cf->mill_cfh, #{tag}, "
+                        replace(body, alltokens, tokens[i], func);
                         replace(body, alltokens, tokens[i + 1], "")
-                        s = ", &cf->mill_cfh, cf->mill_cfh.loop, "
-                        if tokens[i + 3][0] == :sbraces
-                            s += body[tokens[i + 3][1] + 1..tokens[i + 3][2] - 1]
-                            replace(body, alltokens, tokens[i + 3], "")
-                        else
-                            s += "0"
-                        end
-                        insert(body, alltokens, tokens[i + 2][2], s)
+                        insert(body, alltokens, tokens[k - 1][1] + 1, stdargs)
                     end
 
                     if tokens[i][0] == :who
@@ -397,7 +404,6 @@ end
 for s in sections
     if s[0] == :coroutine
         c = s[1]
-./* Coframe for coroutine @{c[:name]}. */
 .struct mill_coframe_@{c[:name]} {
 .
 .    /* Generic coframe header. */
@@ -418,16 +424,16 @@ for v in c[:vars]
 end
 .};
 .
-.void mill_call_@{c[:name]} (
-.    struct mill_coframe_@{c[:name]} *self
+.void *mill_call_@{c[:name]} (
+.    struct mill_coframe_@{c[:name]} *cf,
+.    struct mill_loop *loop,
+.    struct mill_coframe_head *parent,
+.    int tag
 for a in c[:args]
 .    /+,
 .    @{a[:type]} @{a[:name]}
 end
-.    /+,
-.    struct mill_coframe_head *parent,
-.    struct mill_loop *loop,
-.    int tag);
+./+);
 .
 .void @{c[:name]} (
 ./!separate ", "
@@ -478,25 +484,33 @@ end
 .    mill_coframe_head_emit (&cf->mill_cfh, 0);
 .}
 .
-.void mill_call_@{c[:name]} (
-.    struct mill_coframe_@{c[:name]} *self
+.void *mill_call_@{c[:name]} (
+.    struct mill_coframe_@{c[:name]} *cf,
+.    struct mill_loop *loop,
+.    struct mill_coframe_head *parent,
+.    int tag
 for a in c[:args]
 .    /+,
 .    @{a[:type]} @{a[:name]}
 end
-.    /+,
-.    struct mill_coframe_head *parent,
-.    struct mill_loop *loop,
-.    int tag)
+./+)
 .{
+.    /* If needed, allocate the coframe for the coroutine. */
+.    if (!cf) {
+.        cf = malloc (sizeof (struct mill_coframe_@{c[:name]}));
+.        assert (cf);
+.    }
+.
 .    /* Fill in the coframe. */
-.    mill_coframe_head_init (&self->mill_cfh, @{c[:name]}_handler, parent, loop, tag);
+.    mill_coframe_head_init (&cf->mill_cfh, @{c[:name]}_handler, parent, loop, tag);
 for a in c[:args]
-.    self->@{a[:name]} = @{a[:name]};
+.    cf->@{a[:name]} = @{a[:name]};
 end
 .
 .    /* Execute the initial part of the coroutine. */
-.    @{c[:name]}_handler(&self->mill_cfh, 0);
+.    @{c[:name]}_handler(&cf->mill_cfh, 0);
+.
+.    return (void*) cf;
 .}
 .
 .void @{c[:name]} (
@@ -510,11 +524,11 @@ end
 .    struct mill_coframe_@{c[:name]} mill_coframe;
 .
 .    mill_loop_init (&mill_loop);
-.    mill_call_@{c[:name]} (&mill_coframe
+.    mill_call_@{c[:name]} (&mill_coframe, &mill_loop, 0, 0
 for a in c[:args]
 .    /+, @{a[:name]}
 end
-./+, 0, &mill_loop, 0);
+./+);
 .    mill_loop_run (&mill_loop);
 .    mill_loop_term (&mill_loop);
 .}

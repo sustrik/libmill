@@ -148,11 +148,17 @@ static void alarm_cb (
 
 void mill_call_alarm (
     struct mill_coframe_alarm *cf,
-    int milliseconds,
-    struct mill_coframe_head *parent,
     struct mill_loop *loop,
-    int tag)
+    struct mill_coframe_head *parent,
+    int tag,
+    int milliseconds)
 {
+    /* If needed, allocate the coframe for the coroutine. */
+    if (!cf) {
+        cf = malloc (sizeof (struct mill_coframe_alarm));
+        assert (cf);
+    }
+
     /* Fill in the coframe. */
     mill_coframe_head_init (&cf->mill_cfh, alarm_handler, parent, loop, tag);
 
@@ -209,13 +215,19 @@ static void tcpsocket_term_cb (
     self->recvop = 0;
 }
 
-void mill_call_tcpsocket_term (
+void *mill_call_tcpsocket_term (
     struct mill_coframe_tcpsocket_term *cf,
-    struct tcpsocket *self,
-    struct mill_coframe_head *parent,
     struct mill_loop *loop,
-    int tag)
+    struct mill_coframe_head *parent,
+    int tag,
+    struct tcpsocket *self)
 {
+    /* If needed, allocate the coframe for the coroutine. */
+    if (!cf) {
+        cf = malloc (sizeof (struct mill_coframe_tcpsocket_term));
+        assert (cf);
+    }
+
     /* Fill in the coframe. */
     mill_coframe_head_init (&cf->mill_cfh, tcpsocket_term_handler,
         parent, loop, tag);
@@ -232,6 +244,8 @@ void mill_call_tcpsocket_term (
 
     /* Initiate the termination. */
     uv_close ((uv_handle_t*) &cf->self->s, tcpsocket_term_cb);
+
+    return (void*) cf;
 }
 
 static void tcpsocket_connect_handler (
@@ -265,15 +279,21 @@ static void tcpsocket_connect_cb (
     mill_coframe_head_emit (&cf->mill_cfh, status);
 }
 
-void mill_call_tcpsocket_connect (
+void *mill_call_tcpsocket_connect (
     struct mill_coframe_tcpsocket_connect *cf,
-    struct tcpsocket *self,
-    struct sockaddr *addr,
-    struct mill_coframe_head *parent,
     struct mill_loop *loop,
-    int tag)
+    struct mill_coframe_head *parent,
+    int tag,
+    struct tcpsocket *self,
+    struct sockaddr *addr)
 {
     int rc;
+
+    /* If needed, allocate the coframe for the coroutine. */
+    if (!cf) {
+        cf = malloc (sizeof (struct mill_coframe_tcpsocket_connect));
+        assert (cf);
+    }
 
     /* Fill in the coframe. */
     mill_coframe_head_init (&cf->mill_cfh, tcpsocket_connect_handler,
@@ -290,9 +310,9 @@ void mill_call_tcpsocket_connect (
     /* Initiate the connecting. */
     rc = uv_tcp_connect (&cf->req, &cf->self->s, addr, tcpsocket_connect_cb);
     assert (rc == 0);
+
+    return (void*) cf;
 }
-
-
 
 int tcpsocket_bind (
     struct tcpsocket *self,
@@ -391,14 +411,20 @@ static void tcpsocket_accept_handler (
     assert (0);
 }
 
-void mill_call_tcpsocket_accept (
+void *mill_call_tcpsocket_accept (
     struct mill_coframe_tcpsocket_accept *cf,
-    struct tcpsocket *self,
-    struct tcpsocket *newsock,
-    struct mill_coframe_head *parent,
     struct mill_loop *loop,
-    int tag)
+    struct mill_coframe_head *parent,
+    int tag,
+    struct tcpsocket *self,
+    struct tcpsocket *newsock)
 {
+    /* If needed, allocate the coframe for the coroutine. */
+    if (!cf) {
+        cf = malloc (sizeof (struct mill_coframe_tcpsocket_accept));
+        assert (cf);
+    }
+
     /* Fill in the coframe. */
     mill_coframe_head_init (&cf->mill_cfh, tcpsocket_accept_handler,
         parent, loop, tag);
@@ -414,6 +440,8 @@ void mill_call_tcpsocket_accept (
 
     /* There's no need for any action here as callback for incoming connections
        was already registered in tcpsocket_listen function. */
+
+    return (void*) cf;
 }
 
 static void tcpsocket_send_handler (
@@ -439,16 +467,22 @@ static void tcpsocket_send_cb (
     mill_coframe_head_emit (&cf->mill_cfh, status);
 }
 
-void mill_call_tcpsocket_send (
+void *mill_call_tcpsocket_send (
     struct mill_coframe_tcpsocket_send *cf,
+    struct mill_loop *loop,
+    struct mill_coframe_head *parent,
+    int tag,
     struct tcpsocket *self,
     const void *buf,
-    size_t len,
-    struct mill_coframe_head *parent,
-    struct mill_loop *loop,
-    int tag)
+    size_t len)
 {
     int rc;
+
+    /* If needed, allocate the coframe for the coroutine. */
+    if (!cf) {
+        cf = malloc (sizeof (struct mill_coframe_tcpsocket_send));
+        assert (cf);
+    }
 
     /* Fill in the coframe. */
     mill_coframe_head_init (&cf->mill_cfh, tcpsocket_send_handler,
@@ -469,6 +503,8 @@ void mill_call_tcpsocket_send (
     rc = uv_write (&cf->req, (uv_stream_t*) &cf->self->s, &cf->buffer, 1,
         tcpsocket_send_cb);
     assert (rc == 0);
+
+    return (void*) cf;
 }
 
 static void tcpsocket_recv_handler (
@@ -526,16 +562,22 @@ static void tcpsocket_recv_cb (
     }
 }
 
-void mill_call_tcpsocket_recv (
+void *mill_call_tcpsocket_recv (
     struct mill_coframe_tcpsocket_recv *cf,
+    struct mill_loop *loop,
+    struct mill_coframe_head *parent,
+    int tag,
     struct tcpsocket *self,
     void *buf,
-    size_t len,
-    struct mill_coframe_head *parent,
-    struct mill_loop *loop,
-    int tag)
+    size_t len)
 {
     int rc;
+
+    /* If needed, allocate the coframe for the coroutine. */
+    if (!cf) {
+        cf = malloc (sizeof (struct mill_coframe_tcpsocket_recv));
+        assert (cf);
+    }
 
     /* Fill in the coframe. */
     mill_coframe_head_init (&cf->mill_cfh, tcpsocket_send_handler,
@@ -556,5 +598,7 @@ void mill_call_tcpsocket_recv (
     rc = uv_read_start ((uv_stream_t*) &cf->self->s,
         tcpsocket_alloc_cb, tcpsocket_recv_cb);
     assert (rc == 0);
+
+    return (void*) cf;
 }
 
