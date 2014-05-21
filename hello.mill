@@ -3,6 +3,8 @@
 #include <assert.h>
 #include <uv.h>
 
+#include "tcpsocket.h"
+
 char buf [6];
 
 coroutine hello (int i)

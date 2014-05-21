@@ -21,6 +21,8 @@
 */
 
 #include "mill.h"
+#include "alarm.h"
+#include "tcpsocket.h"
 
 #include <stdio.h>
 

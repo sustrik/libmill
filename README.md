@@ -18,6 +18,7 @@ and runtime.
 
 ```
 #include <stdio.h>
+#include <alarm.h>
 
 coroutine quux ()
 {
