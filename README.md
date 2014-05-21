@@ -1,8 +1,8 @@
 Mill
 ====
 
-Mill is a C preprocessor to create coroutines from what looks like an
-ordinary C code.
+Mill is a C preprocessor to create coroutines from what looks more or less
+like an ordinary C code.
 
 WARNING: This project is under development. Do not use!
 
@@ -18,17 +18,12 @@ and runtime.
 
 ```
 #include <stdio.h>
-#include <assert.h>
 
 coroutine quux ()
 {
-    coframe alarm a;
-    endvars;
-
-    call alarm (&a, 1000);
+    call alarm (1000);
     printf ("Waiting for timeout to expire...\n");
     wait;
-    assert (@who == &a);
     printf ("Done!\n");
 }
 
@@ -39,6 +34,8 @@ int main ()
 }
 ```
 
+Note that the printf will be executed in parallel with the alarm coroutine!
+
 ## Usage
 
 ```
@@ -46,8 +43,6 @@ int main ()
 gcc -o example example.c mill.c -luv
 ./example
 ```
-
-Note that the first printf is executed in parallel with the alarm coroutine!
 
 ## License
 

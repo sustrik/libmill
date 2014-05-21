@@ -462,12 +462,15 @@ for s in sections
 .
     elsif s[0] == :coroutine
         c = s[1]
-.static void @{c[:name]}_handler(struct mill_coframe_head *cfh, struct mill_coframe_head *event)
+.static void @{c[:name]}_handler (
+.    struct mill_coframe_head *cfh,
+.    struct mill_coframe_head *event)
 .{
 .    struct mill_coframe_@{c[:name]} *cf;
 .
 .    cf = mill_cont (cfh, struct mill_coframe_@{c[:name]}, mill_cfh);
 .
+.    /* Jump to the place where the coroutine was interrupted the last time. */
 .    switch (cf->mill_cfh.state) {
 .    case 0:
 .        break;
@@ -512,7 +515,7 @@ for a in c[:args]
 end
 .
 .    /* Execute the initial part of the coroutine. */
-.    @{c[:name]}_handler(&cf->mill_cfh, 0);
+.    @{c[:name]}_handler (&cf->mill_cfh, 0);
 .
 .    return (void*) cf;
 .}
@@ -527,6 +530,7 @@ end
 .    struct mill_loop mill_loop;
 .    struct mill_coframe_@{c[:name]} mill_coframe;
 .
+.    /* Run a new event loop to execute the coroutine in synchronous manner. */
 .    mill_loop_init (&mill_loop);
 .    mill_call_@{c[:name]} (&mill_coframe, &mill_loop, 0, 0
 for a in c[:args]
