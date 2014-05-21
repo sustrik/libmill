@@ -21,7 +21,7 @@
 */
 
 #include "mill.h"
-#include "alarm.h"
+#include "msleep.h"
 #include "tcpsocket.h"
 
 #include <stdio.h>
@@ -126,32 +126,32 @@ void mill_loop_emit (
 }
 
 /******************************************************************************/
-/* Alarm.                                                                     */
+/* Sleeping.                                                                  */
 /******************************************************************************/
 
-static void alarm_handler(
+static void msleep_handler(
     struct mill_coframe_head *cfh,
     struct mill_coframe_head *event)
 {
-    struct mill_coframe_alarm *cf;
+    struct mill_coframe_msleep *cf;
 
-    cf = mill_cont (cfh, struct mill_coframe_alarm, mill_cfh);
+    cf = mill_cont (cfh, struct mill_coframe_msleep, mill_cfh);
     assert (0);
 }
 
-static void alarm_cb (
+static void msleep_cb (
     uv_timer_t *timer)
 {
-    struct mill_coframe_alarm *cf;
+    struct mill_coframe_msleep *cf;
 
-    cf = mill_cont (timer, struct mill_coframe_alarm, timer);
+    cf = mill_cont (timer, struct mill_coframe_msleep, timer);
 
     /* The coroutine is done. */
     mill_coframe_head_emit (&cf->mill_cfh, 0);
 }
 
-void mill_call_alarm (
-    struct mill_coframe_alarm *cf,
+void mill_call_msleep (
+    struct mill_coframe_msleep *cf,
     struct mill_loop *loop,
     struct mill_coframe_head *parent,
     int tag,
@@ -162,16 +162,16 @@ void mill_call_alarm (
     /* If needed, allocate the coframe for the coroutine. */
     if (!cf) {
         flags |= MILL_FLAG_DEALLOCATE;
-        cf = malloc (sizeof (struct mill_coframe_alarm));
+        cf = malloc (sizeof (struct mill_coframe_msleep));
         assert (cf);
     }
 
     /* Fill in the coframe. */
-    mill_coframe_head_init (&cf->mill_cfh, alarm_handler,
+    mill_coframe_head_init (&cf->mill_cfh, msleep_handler,
         parent, loop, flags, tag);
 
     uv_timer_init(&loop->uv_loop, &cf->timer);
-    uv_timer_start(&cf->timer, alarm_cb, milliseconds, 0);
+    uv_timer_start(&cf->timer, msleep_cb, milliseconds, 0);
 }
 
 /******************************************************************************/

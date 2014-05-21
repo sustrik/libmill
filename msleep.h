@@ -20,12 +20,12 @@
     IN THE SOFTWARE.
 */
 
-#ifndef ALARM_H_INCLUDED
-#define ALARM_H_INCLUDED
+#ifndef MSLEEP_H_INCLUDED
+#define MSLEEP_H_INCLUDED
 
 #include "mill.h"
 
-struct mill_coframe_alarm {
+struct mill_coframe_msleep {
 
     /* Generic coframe header. */
     struct mill_coframe_head mill_cfh;
@@ -34,8 +34,8 @@ struct mill_coframe_alarm {
     uv_timer_t timer;
 };
 
-void mill_call_alarm (
-    struct mill_coframe_alarm *cf,
+void mill_call_msleep (
+    struct mill_coframe_msleep *cf,
     struct mill_loop *loop,
     struct mill_coframe_head *parent,    
     int tag,
