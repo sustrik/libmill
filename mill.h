@@ -31,6 +31,10 @@
 /* Generic stuff.                                                             */
 /******************************************************************************/
 
+/* These flags are used to construct 'flags' member in mill_coframe_head. */
+#define MILL_FLAG_DEALLOCATE 1
+#define MILL_FLAG_CANCELED 2
+
 #define mill_cont(ptr, type, member) \
     (ptr ? ((type*) (((char*) ptr) - offsetof(type, member))) : NULL)
 
@@ -44,6 +48,7 @@ typedef void (*mill_handler_fn) (
 struct mill_coframe_head {
     mill_handler_fn handler; 
     int state;
+    int flags;
     int tag;
     int err;
     struct mill_coframe_head *parent;
@@ -56,6 +61,7 @@ void mill_coframe_head_init (
     mill_handler_fn handler,
     struct mill_coframe_head *parent,
     struct mill_loop *loop,
+    int flags,
     int tag);
 
 void mill_coframe_head_term (struct mill_coframe_head *self);

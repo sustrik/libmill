@@ -495,14 +495,18 @@ for a in c[:args]
 end
 ./+)
 .{
+.    int flags = 0;
+.
 .    /* If needed, allocate the coframe for the coroutine. */
 .    if (!cf) {
+.        flags |= MILL_FLAG_DEALLOCATE;
 .        cf = malloc (sizeof (struct mill_coframe_@{c[:name]}));
 .        assert (cf);
 .    }
 .
 .    /* Fill in the coframe. */
-.    mill_coframe_head_init (&cf->mill_cfh, @{c[:name]}_handler, parent, loop, tag);
+.    mill_coframe_head_init (&cf->mill_cfh, @{c[:name]}_handler,
+.        parent, loop, flags, tag);
 for a in c[:args]
 .    cf->@{a[:name]} = @{a[:name]};
 end
