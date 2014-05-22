@@ -13,7 +13,6 @@ coroutine hello (int i)
     struct sockaddr_in addr;
     struct tcpsocket ls;
     struct tcpsocket s;
-    void *hnd;
     endvars;
 
     rc = tcpsocket_init (&ls);
@@ -28,22 +27,18 @@ coroutine hello (int i)
     while (1) {
         rc = tcpsocket_init (&s);
         assert (rc == 0);
-        hnd = call tcpsocket_accept (&ls, &s);
+        call tcpsocket_accept (&ls, &s);
         wait;
-        assert (@who == hnd && @err == 0);
-        printf ("accepted\n");
-        hnd = call tcpsocket_send (&s, "Hello, world!", 13);
+        assert (@err == 0);
+        call tcpsocket_send (&s, "Hello, world!", 13);
         wait;
-        assert (@who == hnd && @err == 0);
-        printf ("sent\n");
-        hnd = call tcpsocket_recv (&s, buf, sizeof (buf));
+        assert (@err == 0);
+        call tcpsocket_recv (&s, buf, sizeof (buf));
         wait;
-        assert (@who == hnd && @err == 0);
-        printf ("received\n");
-        hnd = call tcpsocket_term (&s);
+        assert (@err == 0);
+        call tcpsocket_term (&s);
         wait;
-        assert (@who == hnd && @err == 0);
-        printf ("terminated\n");
+        assert (@err == 0);
     }
 }
 

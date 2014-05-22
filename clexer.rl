@@ -77,6 +77,10 @@
             stack.last << [:call, ts, te - 1]
         elsif token == "wait"
             stack.last << [:wait, ts, te - 1]
+        elsif token == "cancel"
+            stack.last << [:cancel, ts, te - 1]
+        elsif token == "cancelall"
+            stack.last << [:cancelall, ts, te - 1]
         elsif token == "@who"
             stack.last << [:who, ts, te - 1]
         elsif token == "@tag"

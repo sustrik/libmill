@@ -62,6 +62,14 @@ void mill_coframe_head_emit (
     mill_loop_emit (self->loop, self);
 }
 
+void mill_cancel (void *cf)
+{
+    struct mill_coframe_head *self;
+
+    self = (struct mill_coframe_head*) cf;
+    self->handler (self, (struct mill_coframe_head*) -1);
+}
+
 /******************************************************************************/
 /* The event loop.                                                            */
 /******************************************************************************/
@@ -421,7 +429,13 @@ static void tcpsocket_accept_handler (
     struct mill_coframe_tcpsocket_accept *cf;
 
     cf = mill_cont (cfh, struct mill_coframe_tcpsocket_accept, mill_cfh);
-    assert (0);
+    assert (event == (struct mill_coframe_head*) -1);
+
+    /* End the coroutine. Report the error. */
+    cf->newsock->state = TCPSOCKET_STATE_INIT;
+    cf->self->state = TCPSOCKET_STATE_LISTENING;
+    cf->self->recvop = 0;
+    mill_coframe_head_emit (&cf->mill_cfh, ECANCELED);
 }
 
 void *mill_call_tcpsocket_accept (

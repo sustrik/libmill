@@ -68,6 +68,8 @@ void mill_coframe_head_term (struct mill_coframe_head *self);
 
 void mill_coframe_head_emit (struct mill_coframe_head *self, int err);
 
+void mill_cancel (void *cf);
+
 #define mill_wait(statearg)\
     do {\
         cf->mill_cfh.state = (statearg);\
