@@ -323,19 +323,34 @@ begin
                     end
 
                     if tokens[i][0] == :call
-
+                        
                         # First parse the statement.
                         tag = "0"
                         frame = "0"
                         k = i + 1;
+                        if tokens[k][0] == :sbraces
+                            replace(body, alltokens, tokens[k - 1], "")
+                            last = 0
+                            for m in 1..tokens[k][3].size - 1
+                                 if [:comma, :end].include? tokens[k][3][m][0]
+                                     if tokens[k][3][last][0] != :identifier || tokens[k][3][last + 1][0] != :eq
+                                         $stderr.write "annotations should start with an identifier followed by '='\n"
+                                         exit
+                                     end
+                                     nm = body[tokens[k][3][last][1]..tokens[k][3][last][2]]
+                                     val = body[tokens[k][3][last + 2][1]..tokens[k][3][m - 1][2]]
+                                     frame = val if nm == "frame"
+                                     tag = val if nm == "tag"
+                                     last = m + 1
+                                 end
+                            end
+                            k += 1
+                        end
                         if tokens[k][0] != :identifier
                             $stderr.write "'call' keyword should be followed by coroutine name.\n"
                             exit
                         end
                         k += 1
-                        if tokens[k][0] == :sbraces
-                            k += 1
-                        end
                         if tokens[k][0] != :braces
                             $stderr.write "'call' should be followed by a list of arguments.\n"
                             exit
@@ -347,10 +362,10 @@ begin
                         end
 
                         # Expand the call statement to an actuall C call.
-                        func = "mill_call_#{body[tokens[i + 1][1]..tokens[i+1][2]]}"
+                        func = "mill_call_#{body[tokens[k - 2][1]..tokens[k - 2][2]]}"
                         stdargs = "#{frame}, cf->mill_cfh.loop, &cf->mill_cfh, #{tag}, "
-                        replace(body, alltokens, tokens[i], func);
-                        replace(body, alltokens, tokens[i + 1], "")
+                        replace(body, alltokens, tokens[k - 3], func);
+                        replace(body, alltokens, tokens[k - 2], "")
                         insert(body, alltokens, tokens[k - 1][1] + 1, stdargs)
                     end
 

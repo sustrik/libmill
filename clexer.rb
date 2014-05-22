@@ -2,7 +2,7 @@
 # line 1 "clexer.rl"
 
 
-# line 144 "clexer.rl"
+# line 146 "clexer.rl"
 
 
 
@@ -162,7 +162,7 @@ end
 self.c_en_main = 11;
 
 
-# line 147 "clexer.rl"
+# line 149 "clexer.rl"
 
 def parse(data)
 
@@ -183,7 +183,7 @@ begin
 	act = 0
 end
 
-# line 157 "clexer.rl"
+# line 159 "clexer.rl"
     
 # line 189 "clexer.rb"
 begin
@@ -309,7 +309,7 @@ when 5 then
 		begin
 act = 1;		end
 when 6 then
-# line 66 "clexer.rl"
+# line 68 "clexer.rl"
 		begin
 act = 2;		end
 when 7 then
@@ -354,13 +354,15 @@ te = p+1
             stack.last << [:semicolon, ts, te - 1]
         elsif token == ","
             stack.last << [:comma, ts, te - 1]
+        elsif token == "="
+            stack.last << [:eq, ts, te - 1]
         else
             stack.last << [:cruft, ts, te - 1]
         end
 	 end
 		end
 when 8 then
-# line 95 "clexer.rl"
+# line 97 "clexer.rl"
 		begin
 te = p+1
  begin 
@@ -368,7 +370,7 @@ te = p+1
      end
 		end
 when 9 then
-# line 101 "clexer.rl"
+# line 103 "clexer.rl"
 		begin
 te = p+1
  begin 
@@ -376,12 +378,12 @@ te = p+1
      end
 		end
 when 10 then
-# line 106 "clexer.rl"
+# line 108 "clexer.rl"
 		begin
 te = p+1
 		end
 when 11 then
-# line 109 "clexer.rl"
+# line 111 "clexer.rl"
 		begin
 te = p+1
  begin 
@@ -394,12 +396,12 @@ te = p+1
      end
 		end
 when 12 then
-# line 121 "clexer.rl"
+# line 123 "clexer.rl"
 		begin
 te = p+1
 		end
 when 13 then
-# line 123 "clexer.rl"
+# line 125 "clexer.rl"
 		begin
 te = p+1
  begin  	begin
@@ -452,13 +454,15 @@ p = p - 1; begin
             stack.last << [:semicolon, ts, te - 1]
         elsif token == ","
             stack.last << [:comma, ts, te - 1]
+        elsif token == "="
+            stack.last << [:eq, ts, te - 1]
         else
             stack.last << [:cruft, ts, te - 1]
         end
 	 end
 		end
 when 15 then
-# line 127 "clexer.rl"
+# line 129 "clexer.rl"
 		begin
 te = p
 p = p - 1; begin 
@@ -466,7 +470,7 @@ p = p - 1; begin
      end
 		end
 when 16 then
-# line 133 "clexer.rl"
+# line 135 "clexer.rl"
 		begin
 te = p
 p = p - 1; begin 
@@ -474,7 +478,7 @@ p = p - 1; begin
      end
 		end
 when 17 then
-# line 139 "clexer.rl"
+# line 141 "clexer.rl"
 		begin
 te = p
 p = p - 1; begin 
@@ -523,13 +527,15 @@ when 18 then
             stack.last << [:semicolon, ts, te - 1]
         elsif token == ","
             stack.last << [:comma, ts, te - 1]
+        elsif token == "="
+            stack.last << [:eq, ts, te - 1]
         else
             stack.last << [:cruft, ts, te - 1]
         end
 	 end
 		end
 when 19 then
-# line 127 "clexer.rl"
+# line 129 "clexer.rl"
 		begin
  begin p = ((te))-1; end
  begin 
@@ -580,6 +586,8 @@ when 20 then
             stack.last << [:semicolon, ts, te - 1]
         elsif token == ","
             stack.last << [:comma, ts, te - 1]
+        elsif token == "="
+            stack.last << [:eq, ts, te - 1]
         else
             stack.last << [:cruft, ts, te - 1]
         end
@@ -614,7 +622,7 @@ when 20 then
 	end
 end 
 			end
-# line 618 "clexer.rb"
+# line 626 "clexer.rb"
 			end # action switch
 		end
 	end
@@ -634,7 +642,7 @@ when 2 then
 # line 1 "NONE"
 		begin
 ts = nil;		end
-# line 638 "clexer.rb"
+# line 646 "clexer.rb"
 		end # to state action switch
 	end
 	if _trigger_goto
@@ -665,7 +673,7 @@ end
 	end
 	end
 
-# line 158 "clexer.rl"
+# line 160 "clexer.rl"
 
     stack.last << [:end, data.length - 1, data.length - 1]
 

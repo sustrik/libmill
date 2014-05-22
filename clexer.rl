@@ -56,6 +56,8 @@
             stack.last << [:semicolon, ts, te - 1]
         elsif token == ","
             stack.last << [:comma, ts, te - 1]
+        elsif token == "="
+            stack.last << [:eq, ts, te - 1]
         else
             stack.last << [:cruft, ts, te - 1]
         end
