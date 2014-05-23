@@ -176,6 +176,72 @@ coroutine foo ()
 }
 ```
 
+### Wait for completion of asynchronous coroutines
+
+'wait' keyword can be used to wait for completion of any asynchronous coroutine
+invoked from the current coroutine. Following example uses standard 'msleep'
+coroutine provided by mill itself:
+
+```
+#include <msleep.h>
+
+coroutine quux ()
+{
+    call msleep (1000);
+    wait;
+}
+```
+
+Note that 'wait' although it looks like a blocking operation, is actually a
+context switch that allows other coroutines to take the control of the CPU
+in case there are no child coroutines finished.
+
+### Coroutine handles
+
+Given that in the example above there's only a single coroutine invoked,
+the 'wait' will simply wait till it finishes.
+
+However, more often than not you have multiple child coroutines running in
+parallel. In such case you need a way to find out which of them has finished.
+
+To do so, you can retrieve a coroutine handle from 'call' and later on use
+'@who' pseudo-variable to get the handle of the recently finished coroutine:
+
+```
+#include <msleep.h>
+#include <assert.h>
+
+void *handle;
+
+coroutine quux ()
+{
+    handle = call msleep (1000);
+    wait;
+    assert (@who == handle);
+}
+```
+
+### Local variables in coroutines
+
+To keep the mill preprocessor simple, there are some restrictions for using
+local variables in coroutines.
+
+First of all, all local variables should be defined at the beginning of the
+coroutine.
+
+Second, local varialbe declarations should be followed by 'endvars' statement:
+
+```
+coroutine quux (int a)
+{
+    int b;
+    endvars;
+
+    b = 3;
+    printf ("%d\n", a + b);
+}
+```
+
 ## License
 
 Mill is licensed under MIT/X11 license.
