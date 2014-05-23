@@ -1,10 +1,12 @@
 Mill
 ====
 
-Mill is a C preprocessor to create coroutines from what looks more or less
-like an ordinary C code.
+Mill is a preprocessor that adds coroutine support to C language.
 
-WARNING: This project is under development. Do not use!
+The result of preprocessing are standard C source and header files that can be
+added directly to your C projects.
+
+WARNING: THIS PROJECT IS UNDER DEVELOPMENT! DO NOT USE YET!
 
 ## Prerequisites
 
@@ -50,7 +52,7 @@ Note that the two 'msleep' coroutines are run in parallel with the main thread!
 ## Usage
 
 ```
-./mill stopwatch.mill
+mill stopwatch.mill
 gcc -o stopwatch stopwatch.c stopwatch.c -luv
 ./stopwatch
 ```
@@ -75,25 +77,23 @@ http://www.chiark.greenend.org.uk/~sgtatham/coroutines.html
 To use coroutines, it is best to choose a language that has direct support for
 the concept, such as Go.
 
-However, sometimes -- mostly when writing system-level code -- there is no other
-option but to use C. After all, C is the lingua franca of programming
-languages and every single language as well as every single OS integrates well
-with C.
+However, sometimes there is no other option but to use C. After all, C is
+the lingua franca of programming languages and every single language as well
+as every single OS integrates well with C.
 
 Writing coroutines by hand (see the link above) is an option, but once you move
 beyond the very basic functionality all the required boilerplate code is both
 annoying to write and confusing to read.
 
 Mill tries to solve this problem by defining a slightly augmented version of
-C language, one with direct support for coroutines, which compiles into
-straight C.
+C language, one with direct support for coroutines.
 
-### Defining coroutines
+### Defining a coroutine
 
 To define a new coroutine use "coroutine" keyword. The coroutine definition
 is similar to a standard C function definition. One difference to note though
-is that mill coroutines don't have a return type. From C point of view they can
-be though of as void functions:
+is that mill coroutines don't have a return types. From C point of view they
+can be though of as void functions:
 
 ```
 #include <stdio.h>
@@ -104,33 +104,42 @@ coroutine hello ()
 }
 ```
 
-Please note that coroutines should not perform any blocking operations.
+It is important for coroutines to not perform any blocking operations.
 The nature of cooperative multitasking is such that a single blocked coroutine
-can block all the other simultaneously running coroutines. To perform
-classic blocking operations such as sleeping or reading from a socket, mill
-provides a set of pre-defined coroutines. See below.
+can block all the other simultaneously running coroutines.
 
-### Compilation
-
-To distinguish mill files from straight C, they should use .mill extension.
-Each mill file is compiled into a C header file and a straight C file.
-
-The compiler is called "mill":
+The following coroutine, for example, will block the entire program for an hour:
 
 ```
-$ ls
-hello.mill
-$ mill hello.mill
-$ ls
-hello.c hello.h hello.mill
+#include <unistd.h>
+
+coroutine foo ()
+{
+    sleep (3600);
+}
 ```
 
-The generated header file can be included by other mill files or, for what it's
-worth, by other C programs so that they are able to invoke coroutines defined
-therein:
+To perform blocking operations, such as sleeping or reading from a socket, you
+should use asynchronous coroutines rather than classic C blocking functions.
+
+Conveniently, mill provides a library of atomic coroutines to use. These will
+be discussed in detail later on in this guide.
+
+### Invoke a coroutine synchronously
+
+Coroutine can be invoked in either synchronous or asynchronous manner.
+
+In the former case the caller waits for the coroutine to finish before moving
+on with the processing. In fact, invoking a coroutine synchronously almost the
+same as invoking a classic C function and even the syntax looks the same:
 
 ```
-#include "hello.h"
+#include <stdio.h>
+
+coroutine hello ()
+{
+    printf ("Hello, world!");
+}
 
 int main ()
 {
@@ -139,32 +148,32 @@ int main ()
 }
 ```
 
-### Asynchronous execution
+One thing to keep in mind is that synchronous invocation of a coroutine is
+typically a blocking operation and thus should not be done from within
+coroutines.
 
-If coroutine is invoked as if it was a classic C function (see the example
-above) it behaves in a synchronous manner. The call returns only when the
-coroutine is fully executed.
+The main use for synchronous invocation of coroutines is integrating the
+coroutines with the raw C code. So, for example, in the code snippet above
+the coroutine is invoked synchronously from a classic C function (main).
 
-To invoke coroutine in an asynchronous manner, use "call" keyword. The keyword
-can be used only within a coroutine body. Following example shows how to
-use standard "msleep" coroutine that does nothing but waits for specified number
-of milliseconds before terminating:
+# Invoke a coroutine asynchronously
+
+Asynchronous invocation of coroutines uses 'call' keyword and can be done only
+from within another coroutine:
 
 ```
-#include <msleep.h>
+#include <stdio.h>
+
+coroutine hello ()
+{
+    printf ("Hello, world!");
+}
 
 coroutine foo ()
 {
-    call msleep (1000);
-}
-
-int main ()
-{
-    foo ();
-    return 0;
+    call hello ();
 }
 ```
-
 
 ## License
 
