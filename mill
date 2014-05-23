@@ -444,7 +444,7 @@ for s in sections
 .struct mill_coframe_@{c[:name]} {
 .
 .    /* Generic coframe header. */
-.    struct mill_coframe_head mill_cfh;
+.    struct mill_cfh mill_cfh;
 if !c[:args].empty?
 .
 .    /* Coroutine arguments. */
@@ -464,7 +464,7 @@ end
 .void *mill_call_@{c[:name]} (
 .    struct mill_coframe_@{c[:name]} *cf,
 .    struct mill_loop *loop,
-.    struct mill_coframe_head *parent,
+.    struct mill_cfh *parent,
 .    int tag
 for a in c[:args]
 .    /+,
@@ -500,8 +500,8 @@ for s in sections
     elsif s[0] == :coroutine
         c = s[1]
 .static void @{c[:name]}_handler (
-.    struct mill_coframe_head *cfh,
-.    struct mill_coframe_head *event)
+.    struct mill_cfh *cfh,
+.    struct mill_cfh *event)
 .{
 .    struct mill_coframe_@{c[:name]} *cf;
 .
@@ -523,13 +523,13 @@ end
 .
 .mill_finally:
 .    mill_cancelall (@{c[:laststate]});
-.    mill_coframe_head_emit (&cf->mill_cfh);
+.    mill_cfh_emit (&cf->mill_cfh);
 .}
 .
 .void *mill_call_@{c[:name]} (
 .    struct mill_coframe_@{c[:name]} *cf,
 .    struct mill_loop *loop,
-.    struct mill_coframe_head *parent,
+.    struct mill_cfh *parent,
 .    int tag
 for a in c[:args]
 .    /+,
@@ -547,7 +547,7 @@ end
 .    }
 .
 .    /* Fill in the coframe. */
-.    mill_coframe_head_init (&cf->mill_cfh, @{c[:name]}_handler,
+.    mill_cfh_init (&cf->mill_cfh, @{c[:name]}_handler,
 .        parent, loop, flags, tag);
 for a in c[:args]
 .    cf->@{a[:name]} = @{a[:name]};

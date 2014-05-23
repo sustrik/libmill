@@ -29,8 +29,8 @@ struct tcpsocket {
     uv_tcp_t s;
     uv_loop_t *loop;
     int state;
-    struct mill_coframe_head *recvop;
-    struct mill_coframe_head *sendop;
+    struct mill_cfh *recvop;
+    struct mill_cfh *sendop;
 };
 
 int tcpsocket_init (
@@ -45,7 +45,7 @@ int tcpsocket_init (
 struct mill_coframe_tcpsocket_term {
 
     /* Generic coframe header. */
-    struct mill_coframe_head mill_cfh;
+    struct mill_cfh mill_cfh;
 
     /* Coroutine arguments. */
     struct tcpsocket *self;
@@ -54,7 +54,7 @@ struct mill_coframe_tcpsocket_term {
 void *mill_call_tcpsocket_term (
     struct mill_coframe_tcpsocket_term *cf,
     struct mill_loop *loop,
-    struct mill_coframe_head *parent,
+    struct mill_cfh *parent,
     int tag,
     struct tcpsocket *self);
 
@@ -72,7 +72,7 @@ int tcpsocket_bind (
 struct mill_coframe_tcpsocket_connect {
 
     /* Generic coframe header. */
-    struct mill_coframe_head mill_cfh;
+    struct mill_cfh mill_cfh;
 
     /* Coroutine arguments. */
     struct tcpsocket *self;
@@ -84,7 +84,7 @@ struct mill_coframe_tcpsocket_connect {
 void *mill_call_tcpsocket_connect (
     struct mill_coframe_tcpsocket_connect *cf,
     struct mill_loop *loop,
-    struct mill_coframe_head *parent,
+    struct mill_cfh *parent,
     int tag,
     struct tcpsocket *self,
     struct sockaddr *addr);
@@ -103,7 +103,7 @@ int tcpsocket_listen (
 struct mill_coframe_tcpsocket_accept {
 
     /* Generic coframe header. */
-    struct mill_coframe_head mill_cfh;
+    struct mill_cfh mill_cfh;
 
     /* Coroutine arguments. */
     struct tcpsocket *self;
@@ -113,7 +113,7 @@ struct mill_coframe_tcpsocket_accept {
 void *mill_call_tcpsocket_accept (
     struct mill_coframe_tcpsocket_accept *cf,
     struct mill_loop *loop,
-    struct mill_coframe_head *parent,
+    struct mill_cfh *parent,
     int tag,
     struct tcpsocket *self,
     struct tcpsocket *newsock);
@@ -128,7 +128,7 @@ void *mill_call_tcpsocket_accept (
 struct mill_coframe_tcpsocket_send {
 
     /* Generic coframe header. */
-    struct mill_coframe_head mill_cfh;
+    struct mill_cfh mill_cfh;
 
     /* Coroutine arguments. */
     struct tcpsocket *self;
@@ -141,7 +141,7 @@ struct mill_coframe_tcpsocket_send {
 void *mill_call_tcpsocket_send (
     struct mill_coframe_tcpsocket_send *cf,
     struct mill_loop *loop,
-    struct mill_coframe_head *parent,
+    struct mill_cfh *parent,
     int tag,
     struct tcpsocket *self,
     const void *buf,
@@ -157,7 +157,7 @@ void *mill_call_tcpsocket_send (
 struct mill_coframe_tcpsocket_recv {
 
     /* Generic coframe header. */
-    struct mill_coframe_head mill_cfh;
+    struct mill_cfh mill_cfh;
 
     /* Coroutine arguments. */
     struct tcpsocket *self;
@@ -170,7 +170,7 @@ struct mill_coframe_tcpsocket_recv {
 void *mill_call_tcpsocket_recv (
     struct mill_coframe_tcpsocket_recv *cf,
     struct mill_loop *loop,
-    struct mill_coframe_head *parent,
+    struct mill_cfh *parent,
     int tag,
     struct tcpsocket *self,
     void *buf,

@@ -31,48 +31,48 @@
 /* Generic stuff.                                                             */
 /******************************************************************************/
 
-/* These flags are used to construct 'flags' member in mill_coframe_head. */
+/* These flags are used to construct 'flags' member in mill_cfh. */
 #define MILL_FLAG_DEALLOCATE 1
 #define MILL_FLAG_CANCELED 2
 
 #define mill_cont(ptr, type, member) \
     (ptr ? ((type*) (((char*) ptr) - offsetof(type, member))) : NULL)
 
-struct mill_coframe_head;
+struct mill_cfh;
 struct mill_loop;
 
 typedef void (*mill_handler_fn) (
-    struct mill_coframe_head *self,
-    struct mill_coframe_head* ev);
+    struct mill_cfh *self,
+    struct mill_cfh* ev);
 
-struct mill_coframe_head {
+struct mill_cfh {
     mill_handler_fn handler; 
     int state;
     int flags;
     int tag;
     int err;
-    struct mill_coframe_head *parent;
-    struct mill_coframe_head *children;
-    struct mill_coframe_head *next;
-    struct mill_coframe_head *prev;
+    struct mill_cfh *parent;
+    struct mill_cfh *children;
+    struct mill_cfh *next;
+    struct mill_cfh *prev;
     struct mill_loop *loop;
 };
 
-void mill_coframe_head_init (
-    struct mill_coframe_head *self,
+void mill_cfh_init (
+    struct mill_cfh *self,
     mill_handler_fn handler,
-    struct mill_coframe_head *parent,
+    struct mill_cfh *parent,
     struct mill_loop *loop,
     int flags,
     int tag);
 
-void mill_coframe_head_term (struct mill_coframe_head *self);
+void mill_cfh_term (struct mill_cfh *self);
 
-void mill_coframe_head_emit (struct mill_coframe_head *self);
+void mill_cfh_emit (struct mill_cfh *self);
 
-void mill_coframe_head_cancelall (struct mill_coframe_head *self);
+void mill_cfh_cancelall (struct mill_cfh *self);
 
-int mill_coframe_head_haschildren (struct mill_coframe_head *self);
+int mill_cfh_haschildren (struct mill_cfh *self);
 
 void mill_cancel (void *cf);
 
@@ -92,9 +92,9 @@ void mill_cancel (void *cf);
 
 #define mill_cancelall(statearg)\
     do {\
-        mill_coframe_head_cancelall (&cf->mill_cfh);\
+        mill_cfh_cancelall (&cf->mill_cfh);\
         while (1) {\
-            if (!mill_coframe_head_haschildren (&cf->mill_cfh))\
+            if (!mill_cfh_haschildren (&cf->mill_cfh))\
                 break;\
             cf->mill_cfh.state = (statearg);\
             return;\
@@ -114,14 +114,14 @@ struct mill_loop
 
     /* Local event queue. Items in this list are processed immediately,
        before control is returned to libuv. */
-    struct mill_coframe_head *first;
-    struct mill_coframe_head *last;
+    struct mill_cfh *first;
+    struct mill_cfh *last;
 };
 
 void mill_loop_init (struct mill_loop *self);
 void mill_loop_term (struct mill_loop *self);
 void mill_loop_run (struct mill_loop *self);
-void mill_loop_emit (struct mill_loop *self, struct mill_coframe_head *base);
+void mill_loop_emit (struct mill_loop *self, struct mill_cfh *base);
 
 #endif
 

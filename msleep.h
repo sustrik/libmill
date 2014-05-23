@@ -28,7 +28,7 @@
 struct mill_coframe_msleep {
 
     /* Generic coframe header. */
-    struct mill_coframe_head mill_cfh;
+    struct mill_cfh mill_cfh;
 
     /* Local variables. */
     uv_timer_t timer;
@@ -37,7 +37,7 @@ struct mill_coframe_msleep {
 void mill_call_msleep (
     struct mill_coframe_msleep *cf,
     struct mill_loop *loop,
-    struct mill_coframe_head *parent,    
+    struct mill_cfh *parent,    
     int tag,
     int milliseconds);
 

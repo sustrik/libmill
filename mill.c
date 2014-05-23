@@ -41,15 +41,15 @@
         }\
     } while (0)
 
-void mill_coframe_head_init (
-    struct mill_coframe_head *self,
+void mill_cfh_init (
+    struct mill_cfh *self,
     mill_handler_fn handler,
-    struct mill_coframe_head *parent,
+    struct mill_cfh *parent,
     struct mill_loop *loop,
     int flags,
     int tag)
 {
-    struct mill_coframe_head *sibling;
+    struct mill_cfh *sibling;
 
     self->handler = handler;
     self->state = 0;
@@ -72,39 +72,39 @@ void mill_coframe_head_init (
     }
 }
 
-void mill_coframe_head_term (
-    struct mill_coframe_head *self)
+void mill_cfh_term (
+    struct mill_cfh *self)
 {
     /* There's nothing specific to deallocate here, however, we'll make sure
        that there are no child coroutines still running. */
     assert (self->children == 0);
 }
 
-void mill_coframe_head_emit (
-    struct mill_coframe_head *self)
+void mill_cfh_emit (
+    struct mill_cfh *self)
 {
     mill_loop_emit (self->loop, self);
 }
 
-void mill_coframe_head_cancelall (struct mill_coframe_head *self)
+void mill_cfh_cancelall (struct mill_cfh *self)
 {
-    struct mill_coframe_head *ch;
+    struct mill_cfh *ch;
 
     for (ch = self->children; ch != 0; ch = ch->next)
-        ch->handler (ch,  (struct mill_coframe_head*) -1);
+        ch->handler (ch,  (struct mill_cfh*) -1);
 }
 
-int mill_coframe_head_haschildren (struct mill_coframe_head *self)
+int mill_cfh_haschildren (struct mill_cfh *self)
 {
     return self->children ? 1 : 0;
 }
 
 void mill_cancel (void *cf)
 {
-    struct mill_coframe_head *self;
+    struct mill_cfh *self;
 
-    self = (struct mill_coframe_head*) cf;
-    self->handler (self, (struct mill_coframe_head*) -1);
+    self = (struct mill_cfh*) cf;
+    self->handler (self, (struct mill_cfh*) -1);
 }
 
 /******************************************************************************/
@@ -114,7 +114,7 @@ void mill_cancel (void *cf)
 static void loop_cb (uv_idle_t* handle)
 {
     struct mill_loop *self;
-    struct mill_coframe_head *src;
+    struct mill_cfh *src;
 
     self = mill_cont (handle, struct mill_loop, idle);
 
@@ -127,7 +127,7 @@ static void loop_cb (uv_idle_t* handle)
         }
 
         /* Remove the child from parent's list of children. */
-        if (src != 0 && src != (struct mill_coframe_head*) -1) {
+        if (src != 0 && src != (struct mill_cfh*) -1) {
             if (src->parent->children == src)
                 src->parent->children = src->next;
             if (src->prev)
@@ -183,7 +183,7 @@ void mill_loop_run (
 
 void mill_loop_emit (
     struct mill_loop *self,
-    struct mill_coframe_head *ev)
+    struct mill_cfh *ev)
 {
     if (self->first == 0)
         self->first = ev;
@@ -198,20 +198,20 @@ void mill_loop_emit (
 /******************************************************************************/
 
 static void msleep_handler(
-    struct mill_coframe_head *cfh,
-    struct mill_coframe_head *event)
+    struct mill_cfh *cfh,
+    struct mill_cfh *event)
 {
     int rc;
     struct mill_coframe_msleep *cf;
 
     cf = mill_cont (cfh, struct mill_coframe_msleep, mill_cfh);
-    assert (event == (struct mill_coframe_head*) event);
+    assert (event == (struct mill_cfh*) event);
 
     /* Cancel the timer. */
     rc = uv_timer_stop (&cf->timer);
     uv_assert (rc);
     cf->mill_cfh.err = ECANCELED;
-    mill_coframe_head_emit (&cf->mill_cfh);
+    mill_cfh_emit (&cf->mill_cfh);
 }
 
 static void msleep_cb (
@@ -222,13 +222,13 @@ static void msleep_cb (
     cf = mill_cont (timer, struct mill_coframe_msleep, timer);
 
     /* The coroutine is done. */
-    mill_coframe_head_emit (&cf->mill_cfh);
+    mill_cfh_emit (&cf->mill_cfh);
 }
 
 void mill_call_msleep (
     struct mill_coframe_msleep *cf,
     struct mill_loop *loop,
-    struct mill_coframe_head *parent,
+    struct mill_cfh *parent,
     int tag,
     int milliseconds)
 {
@@ -242,7 +242,7 @@ void mill_call_msleep (
     }
 
     /* Fill in the coframe. */
-    mill_coframe_head_init (&cf->mill_cfh, msleep_handler,
+    mill_cfh_init (&cf->mill_cfh, msleep_handler,
         parent, loop, flags, tag);
 
     uv_timer_init(&loop->uv_loop, &cf->timer);
@@ -272,8 +272,8 @@ int tcpsocket_init (
 }
 
 static void tcpsocket_term_handler (
-    struct mill_coframe_head *cfh,
-    struct mill_coframe_head *event)
+    struct mill_cfh *cfh,
+    struct mill_cfh *event)
 {
     struct mill_coframe_tcpsocket_term *cf;
 
@@ -291,7 +291,7 @@ static void tcpsocket_term_cb (
     assert (self->recvop != 0);
 
     /* The coroutine is done. */
-    mill_coframe_head_emit (self->recvop);
+    mill_cfh_emit (self->recvop);
 
     /* Flip the state. */
     self->state = 0;
@@ -301,7 +301,7 @@ static void tcpsocket_term_cb (
 void *mill_call_tcpsocket_term (
     struct mill_coframe_tcpsocket_term *cf,
     struct mill_loop *loop,
-    struct mill_coframe_head *parent,
+    struct mill_cfh *parent,
     int tag,
     struct tcpsocket *self)
 {
@@ -315,7 +315,7 @@ void *mill_call_tcpsocket_term (
     }
 
     /* Fill in the coframe. */
-    mill_coframe_head_init (&cf->mill_cfh, tcpsocket_term_handler,
+    mill_cfh_init (&cf->mill_cfh, tcpsocket_term_handler,
         parent, loop, flags, tag);
     cf->self = self;
 
@@ -335,8 +335,8 @@ void *mill_call_tcpsocket_term (
 }
 
 static void tcpsocket_connect_handler (
-    struct mill_coframe_head *cfh,
-    struct mill_coframe_head *event)
+    struct mill_cfh *cfh,
+    struct mill_cfh *event)
 {
     struct mill_coframe_tcpsocket_connect *cf;
 
@@ -363,13 +363,13 @@ static void tcpsocket_connect_cb (
 
     /* The coroutine is done. */
     cf->mill_cfh.err = status;
-    mill_coframe_head_emit (&cf->mill_cfh);
+    mill_cfh_emit (&cf->mill_cfh);
 }
 
 void *mill_call_tcpsocket_connect (
     struct mill_coframe_tcpsocket_connect *cf,
     struct mill_loop *loop,
-    struct mill_coframe_head *parent,
+    struct mill_cfh *parent,
     int tag,
     struct tcpsocket *self,
     struct sockaddr *addr)
@@ -385,7 +385,7 @@ void *mill_call_tcpsocket_connect (
     }
 
     /* Fill in the coframe. */
-    mill_coframe_head_init (&cf->mill_cfh, tcpsocket_connect_handler,
+    mill_cfh_init (&cf->mill_cfh, tcpsocket_connect_handler,
         parent, loop, flags, tag);
     cf->self = self;
 
@@ -459,7 +459,7 @@ static void tcpsocket_listen_cb (
     self->recvop = 0;
 
     /* The coroutine is done. */
-    mill_coframe_head_emit (&cf->mill_cfh);
+    mill_cfh_emit (&cf->mill_cfh);
     return;
 
 error:
@@ -469,7 +469,7 @@ error:
     cf->self->state = TCPSOCKET_STATE_LISTENING;
     self->recvop = 0;
     cf->mill_cfh.err = status;
-    mill_coframe_head_emit (&cf->mill_cfh);
+    mill_cfh_emit (&cf->mill_cfh);
 }
 
 int tcpsocket_listen (
@@ -492,26 +492,26 @@ int tcpsocket_listen (
 }
 
 static void tcpsocket_accept_handler (
-    struct mill_coframe_head *cfh,
-    struct mill_coframe_head *event)
+    struct mill_cfh *cfh,
+    struct mill_cfh *event)
 {
     struct mill_coframe_tcpsocket_accept *cf;
 
     cf = mill_cont (cfh, struct mill_coframe_tcpsocket_accept, mill_cfh);
-    assert (event == (struct mill_coframe_head*) -1);
+    assert (event == (struct mill_cfh*) -1);
 
     /* End the coroutine. Report the error. */
     cf->newsock->state = TCPSOCKET_STATE_INIT;
     cf->self->state = TCPSOCKET_STATE_LISTENING;
     cf->self->recvop = 0;
     cf->mill_cfh.err = ECANCELED;
-    mill_coframe_head_emit (&cf->mill_cfh);
+    mill_cfh_emit (&cf->mill_cfh);
 }
 
 void *mill_call_tcpsocket_accept (
     struct mill_coframe_tcpsocket_accept *cf,
     struct mill_loop *loop,
-    struct mill_coframe_head *parent,
+    struct mill_cfh *parent,
     int tag,
     struct tcpsocket *self,
     struct tcpsocket *newsock)
@@ -526,7 +526,7 @@ void *mill_call_tcpsocket_accept (
     }
 
     /* Fill in the coframe. */
-    mill_coframe_head_init (&cf->mill_cfh, tcpsocket_accept_handler,
+    mill_cfh_init (&cf->mill_cfh, tcpsocket_accept_handler,
         parent, loop, flags, tag);
     cf->self = self;
     cf->newsock = newsock;
@@ -545,8 +545,8 @@ void *mill_call_tcpsocket_accept (
 }
 
 static void tcpsocket_send_handler (
-    struct mill_coframe_head *cfh,
-    struct mill_coframe_head *event)
+    struct mill_cfh *cfh,
+    struct mill_cfh *event)
 {
     struct mill_coframe_tcpsocket_send *cf;
 
@@ -565,13 +565,13 @@ static void tcpsocket_send_cb (
     /* Notify the parent coroutine that the operation is finished. */
     cf->self->sendop = 0;
     cf->mill_cfh.err = status;
-    mill_coframe_head_emit (&cf->mill_cfh);
+    mill_cfh_emit (&cf->mill_cfh);
 }
 
 void *mill_call_tcpsocket_send (
     struct mill_coframe_tcpsocket_send *cf,
     struct mill_loop *loop,
-    struct mill_coframe_head *parent,
+    struct mill_cfh *parent,
     int tag,
     struct tcpsocket *self,
     const void *buf,
@@ -588,7 +588,7 @@ void *mill_call_tcpsocket_send (
     }
 
     /* Fill in the coframe. */
-    mill_coframe_head_init (&cf->mill_cfh, tcpsocket_send_handler,
+    mill_cfh_init (&cf->mill_cfh, tcpsocket_send_handler,
         parent, loop, flags, tag);
     cf->self = self;
 
@@ -611,21 +611,21 @@ void *mill_call_tcpsocket_send (
 }
 
 static void tcpsocket_recv_handler (
-    struct mill_coframe_head *cfh,
-    struct mill_coframe_head *event)
+    struct mill_cfh *cfh,
+    struct mill_cfh *event)
 {
     int rc;
     struct mill_coframe_tcpsocket_recv *cf;
 
     cf = mill_cont (cfh, struct mill_coframe_tcpsocket_recv, mill_cfh);
-    assert (event == (struct mill_coframe_head*) -1);
+    assert (event == (struct mill_cfh*) -1);
 
     /* End the coroutine. Report the error. */
     rc = uv_read_stop ((uv_stream_t*) &cf->self->s);
     assert (rc == 0);
     cf->self->recvop = 0;
     cf->mill_cfh.err = ECANCELED;
-    mill_coframe_head_emit (&cf->mill_cfh);
+    mill_cfh_emit (&cf->mill_cfh);
 }
 
 static void tcpsocket_alloc_cb (
@@ -669,14 +669,14 @@ static void tcpsocket_recv_cb (
     if (!cf->len) {
         uv_read_stop (stream);
         self->recvop = 0;
-        mill_coframe_head_emit (&cf->mill_cfh);
+        mill_cfh_emit (&cf->mill_cfh);
     }
 }
 
 void *mill_call_tcpsocket_recv (
     struct mill_coframe_tcpsocket_recv *cf,
     struct mill_loop *loop,
-    struct mill_coframe_head *parent,
+    struct mill_cfh *parent,
     int tag,
     struct tcpsocket *self,
     void *buf,
@@ -693,7 +693,7 @@ void *mill_call_tcpsocket_recv (
     }
 
     /* Fill in the coframe. */
-    mill_coframe_head_init (&cf->mill_cfh, tcpsocket_send_handler,
+    mill_cfh_init (&cf->mill_cfh, tcpsocket_send_handler,
         parent, loop, flags, tag);
     cf->self = self;
     cf->buf = buf;
