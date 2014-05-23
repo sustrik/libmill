@@ -47,7 +47,8 @@ int main ()
 }
 ```
 
-Note that the two 'msleep' coroutines are run in parallel with the main thread!
+Note that the two 'msleep' coroutines are running in parallel with the main
+thread!
 
 ## Usage
 
