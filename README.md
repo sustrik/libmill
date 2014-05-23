@@ -4,7 +4,7 @@ Mill
 Mill is a preprocessor that adds coroutine support to C language.
 
 The result of preprocessing are standard C source and header files that can be
-added directly to your C projects.
+added directly to your C project.
 
 WARNING: THIS PROJECT IS UNDER DEVELOPMENT! DO NOT USE YET!
 
@@ -157,7 +157,7 @@ The main use for synchronous invocation of coroutines is integrating the
 coroutines with the raw C code. So, for example, in the code snippet above
 the coroutine is invoked synchronously from a classic C function (main).
 
-# Invoke a coroutine asynchronously
+### Invoke a coroutine asynchronously
 
 Asynchronous invocation of a coroutine uses 'call' keyword and can be done only
 from within another coroutine:
