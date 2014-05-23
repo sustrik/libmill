@@ -386,6 +386,11 @@ begin
                         replace(body, alltokens, tokens[k], ");")
                     end
 
+                    if tokens[i][0] == :cancelall
+                        state += 1
+                        replace(body, alltokens, tokens[i], "mill_cancelall (#{state})")
+                    end
+
                     if tokens[i][0] == :who
                         replace(body, alltokens, tokens[i], "((void*) event)")
                     end
@@ -412,7 +417,7 @@ begin
 
                 return state
             end
-            c[:laststate] = expand_keywords(body, tokens, tokens, 0)
+            c[:laststate] = expand_keywords(body, tokens, tokens, 0) + 1
 
         end
     end
@@ -516,7 +521,9 @@ end
 .
 .    @{c[:body]}
 .
-.    mill_coframe_head_emit (&cf->mill_cfh, 0);
+.mill_finally:
+.    mill_cancelall (@{c[:laststate]});
+.    mill_coframe_head_emit (&cf->mill_cfh);
 .}
 .
 .void *mill_call_@{c[:name]} (

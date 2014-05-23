@@ -52,7 +52,9 @@ struct mill_coframe_head {
     int tag;
     int err;
     struct mill_coframe_head *parent;
+    struct mill_coframe_head *children;
     struct mill_coframe_head *next;
+    struct mill_coframe_head *prev;
     struct mill_loop *loop;
 };
 
@@ -66,7 +68,11 @@ void mill_coframe_head_init (
 
 void mill_coframe_head_term (struct mill_coframe_head *self);
 
-void mill_coframe_head_emit (struct mill_coframe_head *self, int err);
+void mill_coframe_head_emit (struct mill_coframe_head *self);
+
+void mill_coframe_head_cancelall (struct mill_coframe_head *self);
+
+int mill_coframe_head_haschildren (struct mill_coframe_head *self);
 
 void mill_cancel (void *cf);
 
@@ -80,9 +86,21 @@ void mill_cancel (void *cf);
 
 #define mill_return(errarg)\
     do {\
-        cf->mill_cfh.err = (arrarg);\
-        mill_coframe_head_emit (&cf->mill_cfh);\
-        return;\
+        cf->mill_cfh.err = (errarg);\
+        goto mill_finally;\
+    } while (0)
+
+#define mill_cancelall(statearg)\
+    do {\
+        mill_coframe_head_cancelall (&cf->mill_cfh);\
+        while (1) {\
+            if (!mill_coframe_head_haschildren (&cf->mill_cfh))\
+                break;\
+            cf->mill_cfh.state = (statearg);\
+            return;\
+            state##statearg:\
+            ;\
+        }\
     } while (0)
 
 /******************************************************************************/

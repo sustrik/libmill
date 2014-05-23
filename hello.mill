@@ -23,6 +23,7 @@ coroutine hello (int i)
     assert (rc == 0);
     rc = tcpsocket_listen (&ls, 10);
     assert (rc == 0);
+    cancelall;
     
     while (1) {
         rc = tcpsocket_init (&s);

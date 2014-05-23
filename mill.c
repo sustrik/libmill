@@ -38,14 +38,27 @@ void mill_coframe_head_init (
     int flags,
     int tag)
 {
+    struct mill_coframe_head *sibling;
+
     self->handler = handler;
     self->state = 0;
     self->flags = flags;
     self->tag = tag;
     self->err = 0;
     self->parent = parent;
+    self->children = 0;
     self->next = 0;
+    self->prev = 0;
     self->loop = loop;
+
+    /* Add this coroutine to the paren't list of children. */
+    if (self->parent) {
+        sibling = self->parent->children;
+        self->next = sibling;
+        if (sibling)
+            sibling->prev = self;
+        self->parent->children = self;
+    }
 }
 
 void mill_coframe_head_term (
@@ -55,11 +68,22 @@ void mill_coframe_head_term (
 }
 
 void mill_coframe_head_emit (
-    struct mill_coframe_head *self,
-    int err)
+    struct mill_coframe_head *self)
 {
-    self->err = err;
     mill_loop_emit (self->loop, self);
+}
+
+void mill_coframe_head_cancelall (struct mill_coframe_head *self)
+{
+    struct mill_coframe_head *ch;
+
+    for (ch = self->children; ch != 0; ch = ch->next)
+        ch->handler (ch,  (struct mill_coframe_head*) -1);
+}
+
+int mill_coframe_head_haschildren (struct mill_coframe_head *self)
+{
+    return self->children ? 1 : 0;
 }
 
 void mill_cancel (void *cf)
@@ -77,16 +101,34 @@ void mill_cancel (void *cf)
 static void loop_cb (uv_idle_t* handle)
 {
     struct mill_loop *self;
+    struct mill_coframe_head *src;
 
     self = mill_cont (handle, struct mill_loop, idle);
 
     while (self->first) {
-        if (!self->first->parent) {
+        src = self->first;
+
+        if (!src->parent) {
             uv_stop (&self->uv_loop);
             return;
         }
-        self->first->parent->handler (self->first->parent, self->first);
-        self->first = self->first->next;
+
+        /* Remove the child from parent's list of children. */
+        if (src != 0 && src != (struct mill_coframe_head*) -1) {
+            if (src->parent->children == src)
+                src->parent->children = src->next;
+            if (src->prev)
+                src->prev->next = src->next;
+            if (src->next)
+                src->next->prev = src->prev;
+        }
+
+        src->parent->handler (src->parent, src);
+        self->first = src->next;
+
+        /* Deallocate auto-allocated coframes. */
+        if (src->flags & MILL_FLAG_DEALLOCATE)
+            free (src);
     }
     self->last = 0;
 }
@@ -155,7 +197,7 @@ static void msleep_cb (
     cf = mill_cont (timer, struct mill_coframe_msleep, timer);
 
     /* The coroutine is done. */
-    mill_coframe_head_emit (&cf->mill_cfh, 0);
+    mill_coframe_head_emit (&cf->mill_cfh);
 }
 
 void mill_call_msleep (
@@ -224,7 +266,7 @@ static void tcpsocket_term_cb (
     assert (self->recvop != 0);
 
     /* The coroutine is done. */
-    mill_coframe_head_emit (self->recvop, 0);
+    mill_coframe_head_emit (self->recvop);
 
     /* Flip the state. */
     self->state = 0;
@@ -295,7 +337,8 @@ static void tcpsocket_connect_cb (
     cf->self->recvop = 0;
 
     /* The coroutine is done. */
-    mill_coframe_head_emit (&cf->mill_cfh, status);
+    cf->mill_cfh.err = status;
+    mill_coframe_head_emit (&cf->mill_cfh);
 }
 
 void *mill_call_tcpsocket_connect (
@@ -391,7 +434,7 @@ static void tcpsocket_listen_cb (
     self->recvop = 0;
 
     /* The coroutine is done. */
-    mill_coframe_head_emit (&cf->mill_cfh, 0);
+    mill_coframe_head_emit (&cf->mill_cfh);
     return;
 
 error:
@@ -400,7 +443,8 @@ error:
     cf->newsock->state = TCPSOCKET_STATE_INIT;
     cf->self->state = TCPSOCKET_STATE_LISTENING;
     self->recvop = 0;
-    mill_coframe_head_emit (&cf->mill_cfh, status);
+    cf->mill_cfh.err = status;
+    mill_coframe_head_emit (&cf->mill_cfh);
 }
 
 int tcpsocket_listen (
@@ -435,7 +479,8 @@ static void tcpsocket_accept_handler (
     cf->newsock->state = TCPSOCKET_STATE_INIT;
     cf->self->state = TCPSOCKET_STATE_LISTENING;
     cf->self->recvop = 0;
-    mill_coframe_head_emit (&cf->mill_cfh, ECANCELED);
+    cf->mill_cfh.err = ECANCELED;
+    mill_coframe_head_emit (&cf->mill_cfh);
 }
 
 void *mill_call_tcpsocket_accept (
@@ -494,7 +539,8 @@ static void tcpsocket_send_cb (
 
     /* Notify the parent coroutine that the operation is finished. */
     cf->self->sendop = 0;
-    mill_coframe_head_emit (&cf->mill_cfh, status);
+    cf->mill_cfh.err = status;
+    mill_coframe_head_emit (&cf->mill_cfh);
 }
 
 void *mill_call_tcpsocket_send (
@@ -543,10 +589,18 @@ static void tcpsocket_recv_handler (
     struct mill_coframe_head *cfh,
     struct mill_coframe_head *event)
 {
+    int rc;
     struct mill_coframe_tcpsocket_recv *cf;
 
     cf = mill_cont (cfh, struct mill_coframe_tcpsocket_recv, mill_cfh);
-    assert (0);
+    assert (event == (struct mill_coframe_head*) -1);
+
+    /* End the coroutine. Report the error. */
+    rc = uv_read_stop ((uv_stream_t*) &cf->self->s);
+    assert (rc == 0);
+    cf->self->recvop = 0;
+    cf->mill_cfh.err = ECANCELED;
+    mill_coframe_head_emit (&cf->mill_cfh);
 }
 
 static void tcpsocket_alloc_cb (
@@ -590,7 +644,7 @@ static void tcpsocket_recv_cb (
     if (!cf->len) {
         uv_read_stop (stream);
         self->recvop = 0;
-        mill_coframe_head_emit (&cf->mill_cfh, 0);
+        mill_coframe_head_emit (&cf->mill_cfh);
     }
 }
 
