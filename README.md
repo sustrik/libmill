@@ -54,7 +54,7 @@ thread!
 
 ```
 mill stopwatch.mill
-gcc -o stopwatch stopwatch.c stopwatch.c -luv
+gcc -o stopwatch stopwatch.c mill.c -luv
 ./stopwatch
 ```
 
@@ -180,7 +180,7 @@ coroutine foo ()
 
 'wait' keyword can be used to wait for completion of any asynchronous coroutine
 invoked from the current coroutine. Following example uses standard 'msleep'
-coroutine provided by mill itself:
+coroutine provided by mill:
 
 ```
 #include <msleep.h>
@@ -226,10 +226,10 @@ coroutine quux ()
 To keep the mill preprocessor simple, there are some restrictions for using
 local variables in coroutines.
 
-First of all, all local variables should be defined at the beginning of the
+First , all local variables should be defined at the beginning of the
 coroutine.
 
-Second, local varialbe declarations should be followed by 'endvars' statement:
+Second, local variable declarations should be followed by 'endvars' statement:
 
 ```
 coroutine quux (int a)
