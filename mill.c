@@ -225,7 +225,7 @@ static void msleep_cb (
     mill_cfh_emit (&cf->mill_cfh);
 }
 
-void mill_call_msleep (
+void *mill_call_msleep (
     struct mill_coframe_msleep *cf,
     struct mill_loop *loop,
     struct mill_cfh *parent,
@@ -247,6 +247,8 @@ void mill_call_msleep (
 
     uv_timer_init(&loop->uv_loop, &cf->timer);
     uv_timer_start(&cf->timer, msleep_cb, milliseconds, 0);
+
+    return (void*) cf;
 }
 
 /******************************************************************************/

@@ -34,7 +34,7 @@ struct mill_coframe_msleep {
     uv_timer_t timer;
 };
 
-void mill_call_msleep (
+void *mill_call_msleep (
     struct mill_coframe_msleep *cf,
     struct mill_loop *loop,
     struct mill_cfh *parent,    

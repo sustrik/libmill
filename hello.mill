@@ -3,49 +3,29 @@
 #include <assert.h>
 #include <uv.h>
 
-#include "tcpsocket.h"
+#include "msleep.h"
 
-char buf [6];
-
-coroutine hello (int i)
+coroutine stopwatch ()
 {
-    int rc;
-    struct sockaddr_in addr;
-    struct tcpsocket ls;
-    struct tcpsocket s;
+    void *s1;
+    void *s2;
     endvars;
 
-    rc = tcpsocket_init (&ls);
-    assert (rc == 0);
-    rc = uv_ip4_addr ("127.0.0.1", 7000, &addr);
-    assert (rc == 0);
-    rc = tcpsocket_bind (&ls, (struct sockaddr*) &addr, 0);
-    assert (rc == 0);
-    rc = tcpsocket_listen (&ls, 10);
-    assert (rc == 0);
-    cancelall;
-    
+    s1 = call msleep (1000);
+    s2 = call msleep (2000);
+
     while (1) {
-        rc = tcpsocket_init (&s);
-        assert (rc == 0);
-        call tcpsocket_accept (&ls, &s);
         wait;
-        assert (@err == 0);
-        call tcpsocket_send (&s, "Hello, world!", 13);
-        wait;
-        assert (@err == 0);
-        call tcpsocket_recv (&s, buf, sizeof (buf));
-        wait;
-        assert (@err == 0);
-        call tcpsocket_term (&s);
-        wait;
-        assert (@err == 0);
+        if (@who == s1)
+            printf ("1 second elapsed!\n");
+        if (@who == s2)
+            printf ("2 seconds elapsed!\n");
     }
 }
 
 int main ()
 {
-    hello (1);
+    stopwatch (1);
     return 0;
 }
 

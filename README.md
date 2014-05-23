@@ -20,29 +20,39 @@ and runtime.
 #include <stdio.h>
 #include <msleep.h>
 
-coroutine quux ()
+coroutine stopwatch ()
 {
-    call msleep (1000);
-    printf ("Waiting for timeout to expire...\n");
-    wait;
-    printf ("Done!\n");
+    void *s1;
+    void *s2;
+    endvars;
+
+    s1 = call msleep (1000);
+    s2 = call msleep (2000);
+
+    while (1) {
+        wait;
+        if (@who == s1)
+            printf ("1 second elapsed!\n");
+        if (@who == s2)
+            printf ("2 seconds elapsed!\n");
+    }
 }
 
 int main ()
 {
-    quux ();
+    stopwatch (1);
     return 0;
 }
 ```
 
-Note that the printf will be executed in parallel with the alarm coroutine!
+Note that the two 'msleep' coroutines are run in parallel with the main thread!
 
 ## Usage
 
 ```
-./mill example.mill
-gcc -o example example.c mill.c -luv
-./example
+./mill stopwatch.mill
+gcc -o stopwatch stopwatch.c stopwatch.c -luv
+./stopwatch
 ```
 
 ## Documentation
