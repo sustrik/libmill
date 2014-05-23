@@ -130,9 +130,9 @@ be discussed in detail later on in this guide.
 
 Coroutine can be invoked in either synchronous or asynchronous manner.
 
-In the former case the caller waits for the coroutine to finish before moving
-on with the processing. In fact, invoking a coroutine synchronously almost the
-same as invoking a classic C function and even the syntax looks the same:
+In the former case the caller waits for the coroutine to finish before moving.
+In fact, invoking a coroutine synchronously almost the same as invoking
+a classic C function and even the syntax looks the same:
 
 ```
 #include <stdio.h>
@@ -159,7 +159,7 @@ the coroutine is invoked synchronously from a classic C function (main).
 
 # Invoke a coroutine asynchronously
 
-Asynchronous invocation of coroutines uses 'call' keyword and can be done only
+Asynchronous invocation of a coroutine uses 'call' keyword and can be done only
 from within another coroutine:
 
 ```
