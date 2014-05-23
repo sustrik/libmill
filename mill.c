@@ -25,10 +25,21 @@
 #include "tcpsocket.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 
 /******************************************************************************/
 /* Generic stuff.                                                             */
 /******************************************************************************/
+
+#define uv_assert(x)\
+    do {\
+        if (x < 0) {\
+            fprintf (stderr, "%s: %s (%s:%d)\n", uv_err_name (x),\
+                uv_strerror (x), __FILE__, __LINE__);\
+            fflush (stderr);\
+            abort ();\
+        }\
+    } while (0)
 
 void mill_coframe_head_init (
     struct mill_coframe_head *self,
@@ -64,7 +75,9 @@ void mill_coframe_head_init (
 void mill_coframe_head_term (
     struct mill_coframe_head *self)
 {
-    assert (0);
+    /* There's nothing specific to deallocate here, however, we'll make sure
+       that there are no child coroutines still running. */
+    assert (self->children == 0);
 }
 
 void mill_coframe_head_emit (
@@ -139,11 +152,11 @@ void mill_loop_init (
     int rc;
 
     rc = uv_loop_init (&self->uv_loop);
-    assert (rc == 0);
+    uv_assert (rc);
     rc = uv_idle_init (&self->uv_loop, &self->idle);
-    assert (rc == 0);
+    uv_assert (rc);
     rc = uv_idle_start (&self->idle, loop_cb);
-    assert (rc == 0);
+    uv_assert (rc);
     self->first = 0;
     self->last = 0;
 }
@@ -151,7 +164,12 @@ void mill_loop_init (
 void mill_loop_term (
     struct mill_loop *self)
 {
-    assert (0);
+    int rc;
+
+    rc = uv_idle_stop (&self->idle);
+    uv_assert (rc);
+    rc = uv_loop_close (&self->uv_loop);
+    uv_assert (rc);
 }
 
 void mill_loop_run (
@@ -160,7 +178,7 @@ void mill_loop_run (
     int rc;
 
     rc = uv_run (&self->uv_loop, UV_RUN_DEFAULT);
-    assert (rc >= 0);
+    uv_assert (rc);
 }
 
 void mill_loop_emit (
@@ -183,10 +201,17 @@ static void msleep_handler(
     struct mill_coframe_head *cfh,
     struct mill_coframe_head *event)
 {
+    int rc;
     struct mill_coframe_msleep *cf;
 
     cf = mill_cont (cfh, struct mill_coframe_msleep, mill_cfh);
-    assert (0);
+    assert (event == (struct mill_coframe_head*) event);
+
+    /* Cancel the timer. */
+    rc = uv_timer_stop (&cf->timer);
+    uv_assert (rc);
+    cf->mill_cfh.err = ECANCELED;
+    mill_coframe_head_emit (&cf->mill_cfh);
 }
 
 static void msleep_cb (
@@ -373,7 +398,7 @@ void *mill_call_tcpsocket_connect (
     
     /* Initiate the connecting. */
     rc = uv_tcp_connect (&cf->req, &cf->self->s, addr, tcpsocket_connect_cb);
-    assert (rc == 0);
+    uv_assert (rc);
 
     return (void*) cf;
 }
@@ -408,9 +433,9 @@ static void tcpsocket_listen_cb (
        we'll simply drop them. */
     if (self->state != TCPSOCKET_STATE_ACCEPTING) {
         rc = uv_tcp_init (s->loop, &uvs);
-        assert (rc == 0);
+        uv_assert (rc);
         rc = uv_accept (s, (uv_stream_t*) &uvs);
-        assert (rc == 0);
+        uv_assert (rc);
         uv_close ((uv_handle_t*) &s, NULL); // TODO: This is an async op!
 
         /* The coroutine goes on. No need to notify the parent. */
@@ -685,7 +710,7 @@ void *mill_call_tcpsocket_recv (
     /* Initiate the receiving. */
     rc = uv_read_start ((uv_stream_t*) &cf->self->s,
         tcpsocket_alloc_cb, tcpsocket_recv_cb);
-    assert (rc == 0);
+    uv_assert (rc);
 
     return (void*) cf;
 }
