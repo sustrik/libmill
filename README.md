@@ -42,7 +42,7 @@ coroutine stopwatch ()
 
 int main ()
 {
-    stopwatch (1);
+    stopwatch ();
     return 0;
 }
 ```
