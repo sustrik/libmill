@@ -360,6 +360,7 @@ begin
                             $stderr.write "'call' should be followed by a list of arguments.\n"
                             exit
                         end
+                        hasargs = tokens[k][3].size == 1 ? false : true;
                         k += 1
                         if tokens[k][0] != :semicolon
                             $stderr.write "'call' should be terminated by a semicolon.\n"
@@ -368,7 +369,7 @@ begin
 
                         # Expand the call statement to an actuall C call.
                         func = "mill_call_#{body[tokens[k - 2][1]..tokens[k - 2][2]]}"
-                        stdargs = "#{frame}, cf->mill_cfh.loop, &cf->mill_cfh, #{tag}, "
+                        stdargs = "#{frame}, cf->mill_cfh.loop, &cf->mill_cfh, #{tag}#{hasargs ? ", " : ""}"
                         replace(body, alltokens, tokens[k - 3], func);
                         replace(body, alltokens, tokens[k - 2], "")
                         insert(body, alltokens, tokens[k - 1][1] + 1, stdargs)
@@ -506,6 +507,10 @@ for s in sections
 .    struct mill_coframe_@{c[:name]} *cf;
 .
 .    cf = mill_cont (cfh, struct mill_coframe_@{c[:name]}, mill_cfh);
+.
+.    /* In case of shutdown request jump straight to 'finally' section. */
+.    if (event == (struct mill_cfh*) -1)
+.        goto mill_finally;
 .
 .    /* Jump to the place where the coroutine was interrupted the last time. */
 .    switch (cf->mill_cfh.state) {

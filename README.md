@@ -105,7 +105,7 @@ coroutine hello ()
 }
 ```
 
-It is important for coroutines to not perform any blocking operations.
+It is important for coroutines not to perform any blocking operations.
 The nature of cooperative multitasking is such that a single blocked coroutine
 can block all the other simultaneously running coroutines.
 
@@ -130,8 +130,8 @@ be discussed in detail later on in this guide.
 
 Coroutine can be invoked in either synchronous or asynchronous manner.
 
-In the former case the caller waits for the coroutine to finish before moving.
-In fact, invoking a coroutine synchronously almost the same as invoking
+In the former case the caller waits for the coroutine to finish before moving
+on. In fact, invoking a coroutine synchronously almost the same as invoking
 a classic C function and even the syntax looks the same:
 
 ```
