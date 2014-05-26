@@ -35,9 +35,10 @@ end
 base_filename = input[0..-6]
 
 ################################################################################
-# Debugging tools.                                                             #
+# Helper functions and debugging tools.                                        #
 ################################################################################
 
+# Dump the tokens to the stdout.
 def dump(text, tokens)
     for t in tokens
         puts "#{t[0]}, #{t[1]}, #{t[2]}, \"#{text[t[1]..t[2]]}\""
@@ -45,6 +46,65 @@ def dump(text, tokens)
             dump(text, t[3])
         end
     end
+end
+
+# Shift positions of all tokens beyond 'start' token by 'offset' characters.
+def apply_offset(tokens, start, offset)
+    for t in tokens
+        t[1] += offset if t[1] > start
+        t[2] += offset if t[2] > start
+        if t[3] != nil
+            apply_offset(t[3], start, offset)
+        end
+    end
+end
+
+# Replace specific token in the text by a different text.
+def replace(text, tokens, token, newtext)
+    text[token[1]..token[2]] = newtext
+    offset = newtext.size - (token[2] - token[1] + 1)
+    apply_offset(tokens, token[1], offset)
+end
+
+# Insert specified string at the give position in the text.
+def insert(text, tokens, pos, newtext)
+    text.insert(pos, newtext)
+    apply_offset(tokens, pos, newtext.size)
+end
+
+# Split variable declaration into its constituent parts.
+def parsedecl(text, tokens)
+    i = tokens.size - 1
+    loop do
+        if i <= 0
+            $stderr.write "Invalid declaration.\n"
+            exit
+        end
+        break if tokens[i][0] != :sbraces
+        i -= 1
+    end
+    if tokens[i][0] != :identifier
+        $stderr.write "Invalid declaration.\n"
+        exit
+    end
+    return {
+        :type => text[tokens[0][1]..tokens[i - 1][2]],
+        :name => text[tokens[i][1]..tokens[i][2]],
+        :postfix => (i == tokens.size - 1 ? "" :
+            text[tokens[i + 1][1]..tokens.last[2]])
+    }
+end
+
+# Split variable declaration with optional initialisation.
+def parsedeclinit (text, tokens)
+    for i in 0..tokens.size - 1
+        if tokens[i][0] == :eq
+            t = parsedecl(text, tokens[0..i - 1])
+            t[:init] = text[tokens[i + 1][1]..tokens.last[2]]
+            return t
+        end
+    end
+    return parsedecl(text, tokens)
 end
 
 ################################################################################
@@ -78,14 +138,22 @@ begin
 end
 
 ################################################################################
-#  Process includes.                                                           #
+#  Now we'll traverse the mill file and split it into different sections.      #
 ################################################################################
 
 # Current position in the token array.
 i = 0
 
-# Sections array will consist of :include, :c and :coroutine items.
+# Sections array will consist of the following items
+# :include     C includes at the beginning of the mill file
+# :rawc        Section containing raw C code
+# :coroutine   Standard mill coroutine definition
+# :extension   Coroutine extension
 sections = []
+
+################################################################################
+#  Process includes.                                                           #
+################################################################################
 
 begin
 
@@ -94,7 +162,10 @@ begin
         break if tokens[i][0] != :include
     end
     includes_end = i == tokens.size ? text.size : tokens[i][1] 
-    sections << [:includes, text[0..includes_end - 1]]
+    sections << {
+        :type => :include,
+        :text => text[0..includes_end - 1]
+    }
 
     # Make sure there are no more includes in the rest of the file.
     def no_includes(token)
@@ -112,317 +183,298 @@ begin
 end
 
 ################################################################################
-# Parse all coroutines.                                                        #
+#  Split the text into coroutine definitions and interleaved chunks of raw C.  #
 ################################################################################
 
-# Shift positions of all tokens beyond 'start' token by 'offset' characters.
-def apply_offset(tokens, start, offset)
-    for t in tokens
-        t[1] += offset if t[1] > start
-        t[2] += offset if t[2] > start
-        if t[3] != nil
-            apply_offset(t[3], start, offset)
+loop do
+
+    # Find the start of next coroutine.
+    # Treat anything that precedes it as raw C code.
+    cstart = i
+    cstop = nil
+    cotype = nil
+    cotext = nil
+    cotokens = nil
+    loop do
+
+        if tokens[i][0] == :end
+            cstop = i
+            break;
+        end
+
+        if(tokens[i][0] == :coroutine && tokens [i + 1][0] == :identifier &&
+              tokens[i + 2][0] == :braces && tokens[i + 3][0] == :cbraces)
+            cstop = i
+            cotype = :coroutine
+            cotext = text[tokens[i][1]..tokens[i + 3][2]]
+            cotokens = tokens[i..i + 3]
+            i += 4
+            break;
+        end
+
+        if(tokens[i][0] == :coroutine && tokens [i + 1][0] == :identifier &&
+              tokens[i + 2][0] == :colon && tokens[i + 3][0] == :identifier &&
+              tokens [i + 4][0] == :cbraces)
+            cstop = i
+            cotype = :extension
+            cotext = text[tokens[i][1]..tokens[i + 4][2]]
+            cotokens = tokens[i..i + 4]
+            i += 5
+            break;
+        end
+
+        i += 1;
+    end
+
+    # Chunk of raw C.
+    if cstart != cstop
+        sections << {
+            :type => :rawc,
+            :text => text[tokens[cstart][1]..tokens[cstop][1] - 1],
+            :tokens => tokens[cstart..cstop - 1]
+        }
+        apply_offset(sections.last[:tokens], 0, -sections.last[:tokens][0][1])
+    end
+
+    # End of file.
+    break if tokens[i][0] == :end
+
+    # Create the coroutine section.
+    sections << {
+        :type => cotype,
+        :text => cotext,
+        :tokens => cotokens
+    }
+    apply_offset(sections.last[:tokens], 0, -sections.last[:tokens][0][1])
+
+end
+
+################################################################################
+#  Process raw C code. There's nothing to do except replacing coroutines       #
+#  by the corresponding C structs.                                             #
+################################################################################
+
+begin
+    def expand_coroutines(text, alltokens, tokens)
+        for i in 0..tokens.size - 1
+            if tokens[i][0] == :coroutine
+                if tokens[i + 1][0] != :identifier
+                    $syserr.write "'coroutine' keyword should be followed by the coroutine name.\n"
+                    exit
+                end
+                name = text[tokens[i + 1][1]..tokens[i + 1][2]]
+                replace(text, alltokens, tokens[i], "struct mill_coroutine_#{name}")
+                replace(text, alltokens, tokens[i + 1], "")
+            end
+            if tokens[i][3] != nil
+                expand_coroutines(text, alltokens, tokens[i][3])
+            end
+        end
+    end
+
+    for s in sections
+        if s[:type] == :rawc
+            expand_coroutines(s[:text], s[:tokens], s[:tokens])
         end
     end
 end
 
-begin
+################################################################################
+#  Process coroutine sections.                                                 #
+################################################################################
 
-    # Make typestring from a list of tokens.
-    def make_type(text, tokens)
-        type = ""
-        last = tokens[0][1]
-        for k in 0..tokens.size - 1
-            if tokens[k][0] == :coframe
-                type += text[last..tokens[k][1] - 1]
-                type += "struct mill_coframe_#{text[tokens[k+1][1]..tokens[k+1][2]]}"
-                last = tokens[k + 1][2] + 1
-            end
-        end
-        type += text[last..tokens[-1][2]]
-        return type
-    end
+for i in 0..sections.size - 1
+    if sections[i][:type] == :coroutine
+        text = sections[i][:text]
+        tokens = sections[i][:tokens]
 
-    loop do
-
-        # Find the start of next coroutine.
-        # Treat anything that precedes it as raw C code.
-        start = i
-        while ![:coroutine, :end].include? tokens[i][0]
-            i += 1;
-        end
-        stop = i
-        sections << [:c, text[tokens[start][1]..tokens[stop][1] - 1]]
-
-        # End of file.
-        break if tokens[i][0] == :end
-
-        # Parse the coroutine itself.
-        # First goes coroutine name.
-        i += 1
-        if tokens[i][0] != :identifier
-            $stderr.write "Coroutine name missing.\n"
-            exit
-        end
-        name = text[tokens[i][1]..tokens[i][2]]
+        # Coroutine name.
+        name = text[tokens[1][1]..tokens[1][2]]
 
         # Coroutine argument list.
-        i += 1
-        if tokens[i][0] != :braces
-            $stderr.write "Coroutine argument list missing.\n"
-            exit
-        end
         args = []
-        locals = []
-        argtokens = tokens[i][3]
+        argtokens = tokens[2][3]
         start = 0
-        for k in 0..argtokens.size - 1
-            break if argtokens[k][0] == :end && k == start
-            if [:comma, :end].include? argtokens[k][0]
-                if argtokens[k - 1][0] != :identifier
-                    $stderr.write "Invalid coroutine argument.\n"
-                    exit
-                end
-                argname = text[argtokens[k - 1][1]..argtokens[k - 1][2]]
-                argtype = make_type(text, argtokens[start..k - 2])
-                args << {:name => argname, :type => argtype}
-                locals << argname
+        for j in 0..argtokens.size - 1
+            break if argtokens[j][0] == :end && j == start
+            if [:comma, :end].include? argtokens[j][0]
+                args << parsedecl(text, argtokens[start..j - 1])
+                start = j + 1
+            end
+        end
+
+        # Coroutine body. Split it into variables part and the executable code.
+        # 'endvars' statement is the delimiter between the two.
+        bodytokens = tokens[3][3]
+        for j in 0..bodytokens.size - 1
+            break if bodytokens[j][0] == :endvars
+        end
+        if j == bodytokens.size - 1
+            j = 0
+        else
+            if bodytokens[j + 1][0] != :semicolon
+                $stderr.write "'endvars' must be followed by a semicolon.\n"
+                exit
+            end
+        end
+
+        # Parse the local variables.
+        vars = []
+        start = 0
+        for k in 0..j
+            if bodytokens[k][0] == :semicolon
+                vars << parsedeclinit(text, bodytokens[start..k - 1])
                 start = k + 1
             end
         end
 
-        # Coroutine body.
-        i += 1
-        if tokens[i][0] != :cbraces
-            $stderr.write "Coroutine body missing.\n"
-            exit
-        end
-        bodytokens = tokens[i][3]
-        bodytokens.unshift [:whitespace, tokens [i][1] + 1, bodytokens[0][1] - 1]
-
-        # Split the body into variable declarations and executable part.
-        vartokens = []
-        for j in 0..bodytokens.size - 1
-            break if bodytokens[j][0] == :end
-            if bodytokens[j][0] == :endvars
-                if bodytokens[j + 1][0] != :semicolon
-                   $stderr.write "'endvars' must be followed by a semicolon.\n"
-                   exit
-                end
-                wsstart = bodytokens[j + 1][2] + 1
-                vartokens = bodytokens[0..j - 1]
-                bodytokens = bodytokens[j + 2..-1]
-                bodytokens.unshift [:whitespace, wsstart, bodytokens[0][1] - 1]
-                break
-            end
-        end
-        vartokens << [:end, bodytokens[0][1] - 1, bodytokens[0][1] - 1]
-
-        # Local variables.
-        vars = []
-        start = 1
-        for j in 1..vartokens.size - 1
-           if vartokens[j][0] == :end
-               break if start == j
-               $stderr.write "Invalid tokens following variable declaration.\n"
-               exit
-           end
-           if vartokens[j][0] == :semicolon
-               if vartokens[j - 1][0] != :identifier
-                   $stderr.write "Invalid variable declaration.\n"
-                   exit
-               end
-               varname = text[vartokens[j - 1][1]..vartokens[j - 1][2]]
-               vartype = make_type(text, vartokens[start..j - 2])
-               vars << {:name => varname, :type => vartype}
-               locals << varname
-               start = j + 1
-           end
-        end
-
-        # Store the executable part of the coroutine
-        # along with the corresponding tokens.
-        body = text[bodytokens[0][1]..bodytokens[-1][1] - 1]
+        # Leave only the executable code in text & tokens.
+        j += 1 if bodytokens[j][0] == :endvars
+        text = text[bodytokens[j + 1][1]..bodytokens[-2][2]]
+        bodytokens = bodytokens[j + 1..-1]
         apply_offset(bodytokens, 0, -bodytokens[0][1])
-         
-        # Create a coroutine section.
-        sections << [:coroutine, {
+
+        sections[i] = {
+            :type => :coroutine,
             :name => name,
             :args => args,
             :vars => vars,
-            :locals => locals,
-            :body => body,
+            :text => text,
             :tokens => bodytokens
-        }]
-
-        i += 1
+        }
     end
-
 end
-
-# We won't need the original source code anymore. Let's garbage-collect it!
-text = nil
-tokens = nil
 
 ################################################################################
-# Transformations within coroutine body.                                       #
+#  Process coroutine extensions sections.                                      #
 ################################################################################
 
-# Replace specific token in the text by a different text.
-def replace(text, tokens, token, newtext)
-    text[token[1]..token[2]] = newtext
-    offset = newtext.size - (token[2] - token[1] + 1)
-    apply_offset(tokens, token[1], offset)
-end
-
-# Inset specified string at the give position in the text.
-def insert(text, tokens, pos, newtext)
-    text.insert(pos, newtext)
-    apply_offset(tokens, pos, newtext.size)
-end
-
-begin
-
-    for s in sections
-        if s[0] == :coroutine
-            c = s[1]
-            body = c[:body]
-            tokens = c[:tokens]
-
-            # Expand local variables.
-            def expand_vars(body, alltokens, tokens, locals)
-                for i in 0..tokens.size - 1
-                    if tokens[i][0] == :identifier && (i == 0 || tokens[i - 1][0] != :struct)
-                        idname = body[tokens[i][1]..tokens[i][2]]
-                        if locals.include? idname
-                            replace(body, alltokens, tokens[i], "(cf->#{idname})")
-                        end
-                    elsif [:braces, :cbraces, :sbraces].include? tokens[i][0]
-                        expand_vars(body, alltokens, tokens[i][3], locals)
-                    end
-                end
+for i in 0..sections.size - 1
+    if sections[i][:type] == :extension
+        text = sections[i][:text]
+        tokens = sections[i][:tokens]
+        name = text[tokens[1][1]..tokens[1][2]]
+        base = text[tokens[3][1]..tokens[3][2]]
+        tokens = tokens[4][3]
+        vars = []
+        start = 0
+        for j in 0..tokens.size - 1
+            if tokens[j][0] == :semicolon
+                vars << parsedecl(text, tokens[start..j - 1])
+                start = j + 1
             end
-            expand_vars(body, tokens, tokens, c[:locals])
-
-            # Expand mill keywords.
-            def expand_keywords(body, alltokens, tokens, state)
-                for i in 0..tokens.size - 1
-
-                    if tokens[i][0] == :wait
-                        state += 1
-                        replace(body, alltokens, tokens[i], "mill_wait (#{state})")
-                    end
-
-                    if tokens[i][0] == :return
-                        for j in i + 1..tokens.size - 1
-                            break if [:semicolon, :end].include? tokens[j][0]
-                        end
-                        if tokens[j][0] != :semicolon
-                            $stderr.write "'return' statement should be terminated by semicolon.\n"
-                            exit
-                        end
-                        s = "mill_return ("
-                        s += "0" if j = i + 1
-                        replace(body, alltokens, tokens[i], s)
-                        replace(body, alltokens, tokens[j], ");")
-                    end
-
-                    if tokens[i][0] == :call
-                        
-                        # First parse the statement.
-                        tag = "0"
-                        frame = "0"
-                        k = i + 1;
-                        if tokens[k][0] == :sbraces
-                            replace(body, alltokens, tokens[k - 1], "")
-                            last = 0
-                            for m in 1..tokens[k][3].size - 1
-                                 if [:comma, :end].include? tokens[k][3][m][0]
-                                     if tokens[k][3][last][0] != :identifier || tokens[k][3][last + 1][0] != :eq
-                                         $stderr.write "annotations should start with an identifier followed by '='\n"
-                                         exit
-                                     end
-                                     nm = body[tokens[k][3][last][1]..tokens[k][3][last][2]]
-                                     val = body[tokens[k][3][last + 2][1]..tokens[k][3][m - 1][2]]
-                                     frame = val if nm == "frame"
-                                     tag = val if nm == "tag"
-                                     last = m + 1
-                                 end
-                            end
-                            k += 1
-                        end
-                        if tokens[k][0] != :identifier
-                            $stderr.write "'call' keyword should be followed by coroutine name.\n"
-                            exit
-                        end
-                        k += 1
-                        if tokens[k][0] != :braces
-                            $stderr.write "'call' should be followed by a list of arguments.\n"
-                            exit
-                        end
-                        hasargs = tokens[k][3].size == 1 ? false : true;
-                        k += 1
-                        if tokens[k][0] != :semicolon
-                            $stderr.write "'call' should be terminated by a semicolon.\n"
-                            exit
-                        end
-
-                        # Expand the call statement to an actuall C call.
-                        func = "mill_call_#{body[tokens[k - 2][1]..tokens[k - 2][2]]}"
-                        stdargs = "#{frame}, cf->mill_cfh.loop, &cf->mill_cfh, #{tag}#{hasargs ? ", " : ""}"
-                        replace(body, alltokens, tokens[k - 3], func);
-                        replace(body, alltokens, tokens[k - 2], "")
-                        insert(body, alltokens, tokens[k - 1][1] + 1, stdargs)
-                    end
-
-                    if tokens[i][0] == :cancel
-                        for k in i + 1..alltokens.size - 1
-                            break if tokens[k][0] == :semicolon
-                        end
-                        if tokens[k][0] != :semicolon
-                            $stderr.write "'cancel' statement should be terminated by a semicolon.\n"
-                            exit
-                        end
-                        replace(body, alltokens, tokens[i], "mill_cancel (")
-                        replace(body, alltokens, tokens[k], ");")
-                    end
-
-                    if tokens[i][0] == :cancelall
-                        state += 1
-                        replace(body, alltokens, tokens[i], "mill_cancelall (#{state})")
-                    end
-
-                    if tokens[i][0] == :who
-                        replace(body, alltokens, tokens[i], "((void*) event)")
-                    end
-
-                    if tokens[i][0] == :tag
-                        replace(body, alltokens, tokens[i], "(event->tag)")
-                    end
-
-                    if tokens[i][0] == :err
-                        replace(body, alltokens, tokens[i], "(event->err)")
-                    end
- 
-                    if(tokens[i][0] == :identifier &&
-                            ["tcpsocket_init", "tcpsocket_listen"].include?(body[tokens[i][1]..tokens[i][2]]) &&
-                            tokens[i + 1][0] == :braces)
-                        insert(body, alltokens, tokens[i + 1][2], ", cf->mill_cfh.loop")
-                    end
-
-                    if tokens[i][3] != nil
-                        state = expand_keywords(body, alltokens, tokens[i][3], state)
-                    end
-
-                end
-
-                return state
-            end
-            c[:laststate] = expand_keywords(body, tokens, tokens, 0) + 1
-
         end
+        if start != j
+            $syserr.write "Trailing tokens in coroutine body.\n"
+            exit;
+        end
+        sections[i] = {
+            :type => :extension,
+            :name => name,
+            :base => base,
+            :vars => vars
+        }
     end
+end
 
+################################################################################
+# Process the executable parts of the coroutines.                              #
+################################################################################
+
+for s in sections
+    if s[:type] == :coroutine
+
+        # Expand references to the local variables.
+        def expand_vars(text, alltokens, tokens, locals)
+            for i in 0..tokens.size - 1
+                if tokens[i][0] == :identifier && (i == 0 || tokens[i - 1][0] != :struct)
+                    idname = text[tokens[i][1]..tokens[i][2]]
+                    if locals.include? idname
+                        replace(text, alltokens, tokens[i], "(cf->#{idname})")
+                    end
+                elsif tokens[i][3] != nil
+                    expand_vars(text, alltokens, tokens[i][3], locals)
+                end
+            end
+        end
+        locals = []
+        for a in s[:args]
+            locals << a[:name]
+        end
+        for v in s[:vars]
+            locals << v[:name]
+        end
+        expand_vars(s[:text], s[:tokens], s[:tokens], locals)
+
+        # Expand mill keywords.
+        def expand_keywords(text, alltokens, tokens, state)
+            for i in 0..tokens.size - 1
+
+                if tokens[i][0] == :call
+                    start = i
+                    i += 1
+                    if tokens[i][0] == :identifier
+                        cf = "0"
+                    elsif tokens[i][0] == :braces
+                        cf = text[tokens[i][1]..tokens[i][2]]
+                        i += 1
+                    else
+                        $stderr.write "'call' keyword should be followed either by coroutine name or pointer to the coframe.\n"
+                        exit
+                    end
+                    if tokens[i][0] != :identifier
+                        $stderr.write "Coroutine name missing after 'call'.\n"
+                        exit
+                    end
+                    name = text[tokens[i][1]..tokens[i][2]]
+                    i += 1
+                    if tokens[i][0] != :braces
+                        $stderr.write "Argument list missing after 'call'.\n"
+                        exit
+                    end
+
+
+                    replace(text, alltokens, tokens[start], "mill_call_#{name}")
+                    if tokens[start + 1][0] == :braces
+                        replace(text, alltokens, tokens[start + 1], "")
+                    end
+                    replace(text, alltokens, tokens[i - 1], "")
+                    delim = tokens[i][3].size == 1 ? "" : ", ";
+                    insert(text, alltokens, tokens[i][1] + 1, "#{cf}, &mill_type_#{name}, cf->mill_cfh.loop, cf#{delim}")
+
+                elsif tokens[i][0] == :wait
+                    if tokens[i + 1][0] != :braces
+                        $stderr.write "'wait' should be followed by argument list.\n"
+                        exit
+                    end
+                    replace(text, alltokens, tokens[i], "mill_wait")
+                    state += 1
+                    insert(text, alltokens, tokens[i + 1][1] + 1, "#{state}, ")
+
+                elsif tokens[i][0] == :return
+                    replace(text, alltokens, tokens[i], "mill_return")
+
+                elsif tokens[i][0] == :raise
+                    replace(text, alltokens, tokens[i], "mill_raise")
+
+                elsif tokens[i][0] == :cancel
+                    replace(text, alltokens, tokens[i], "mill_cancel")
+
+                elsif tokens[i][0] == :cancelall
+                    replace(text, alltokens, tokens[i], "mill_cancelall")
+
+                elsif tokens[i][0] == :typeof
+                    replace(text, alltokens, tokens[i], "mill_typeof")
+
+                elsif tokens[i][3] != nil
+                    state = expand_keywords(text, alltokens, tokens[i][3], state)
+                end
+
+            end
+            return state;
+        end
+        s[:laststate] = expand_keywords(s[:text], s[:tokens], s[:tokens], 0) + 1
+    end
 end
 
 ################################################################################
@@ -436,52 +488,81 @@ end
 .
 .#include "mill.h"
 .
-# Includes.
-.@{sections[0][1]}
-.
 for s in sections
-    if s[0] == :coroutine
-        c = s[1]
-.struct mill_coframe_@{c[:name]} {
+
+    if s[:type] == :include
+.@{s[:text]}
+.
+        next
+    end
+
+    if s[:type] == :coroutine
+.extern const struct mill_type mill_type_@{s[:name]};
+.
+.struct mill_coframe_@{s[:name]} {
 .
 .    /* Generic coframe header. */
 .    struct mill_cfh mill_cfh;
-if !c[:args].empty?
+        if !s[:args].empty?
 .
 .    /* Coroutine arguments. */
-end
-for a in c[:args]
-.    @{a[:type]} @{a[:name]};
-end
-if !c[:vars].empty?
+        end
+        for a in s[:args]
+.    @{a[:type]} @{a[:name]}@{a[:postfix]};
+        end
+        if !s[:vars].empty?
 .
 .    /* Local variables. */
-end
-for v in c[:vars]
-.    @{v[:type]} @{v[:name]};
-end
+        end
+        for v in s[:vars]
+.    @{v[:type]} @{v[:name]}@{v[:postfix]};
+        end
 .};
 .
-.void *mill_call_@{c[:name]} (
-.    struct mill_coframe_@{c[:name]} *cf,
+.void *mill_call_@{s[:name]} (
+.    void *cf,
+.    struct mill_type *type,
 .    struct mill_loop *loop,
-.    struct mill_cfh *parent,
-.    int tag
-for a in c[:args]
+.    void *parent
+        for a in s[:args]
 .    /+,
-.    @{a[:type]} @{a[:name]}
-end
+.    @{a[:type]} @{a[:name]}@{a[:postfix]}
+        end
 ./+);
 .
-.void @{c[:name]} (
+.void @{s[:name]} (
 ./!separate ", "
-for a in c[:args]
-.    @{a[:type]} @{a[:name]}
-end
+        for a in s[:args]
+.    @{a[:type]} @{a[:name]}@{a[:postfix]}
+        end
 ./+);
 .
+        next
     end
+
+    if s[:type] == :extension
+.struct mill_coframe_@{s[:name]} {
+.
+.    /* Coframe of the base coroutine. */
+.    struct mill_coframe_@{s[:base]} mill_base;
+        if !s[:vars].empty?
+.
+.    /* Coroutine extension variables. */
+        end
+        for v in s[:vars]
+.    @{v[:type]} @{v[:name]}@{v[:postfix]};
+        end
+.};
+.
+.#define mill_call_@{s[:name]} mill_call_@{s[:base]}
+.
+.#define @{s[:name]} @{s[:base]}
+.
+        next
+    end
+
 end
+.
 
 ################################################################################
 # Generate the .c file.                                                        #
@@ -495,96 +576,86 @@ end
 .#include "@{base_filename}.h"
 .
 for s in sections
-    if s[0] == :c
-.@{s[1]}
+    if s[:type] == :rawc
+.@{s[:text]}
 .
-    elsif s[0] == :coroutine
-        c = s[1]
-.static void @{c[:name]}_handler (
-.    struct mill_cfh *cfh,
-.    struct mill_cfh *event)
+    elsif s[:type] == :coroutine
+.static void mill_handler_@{s[:name]} (void *coframe, void *event)
 .{
-.    struct mill_coframe_@{c[:name]} *cf;
+.    struct mill_coframe_@{s[:name]} *cf;
+.    struct mill_cfh *ev;
 .
-.    cf = mill_cont (cfh, struct mill_coframe_@{c[:name]}, mill_cfh);
+.    cf = (struct mill_coframe_@{s[:name]}*) coframe;
+.    ev = (struct mill_cfh*) event;
 .
 .    /* In case of shutdown request jump straight to 'finally' section. */
-.    if (event == (struct mill_cfh*) -1)
+.    if (event == mill_event_term)
 .        goto mill_finally;
 .
 .    /* Jump to the place where the coroutine was interrupted the last time. */
 .    switch (cf->mill_cfh.state) {
 .    case 0:
 .        break;
-for i in 1..c[:laststate]
+for i in 1..s[:laststate]
 .    case @{i}:
-.        goto state@{i};
+.        goto mill_state@{i};
 end
 .    default:
 .        assert (0);
 .    }
 .
-.    @{c[:body]}
+.    @{s[:text]}
 .
 .mill_finally:
-.    mill_cancelall (@{c[:laststate]});
+.    mill_cancelall (@{s[:laststate]});
 .    mill_cfh_emit (&cf->mill_cfh);
 .}
 .
-.void *mill_call_@{c[:name]} (
-.    struct mill_coframe_@{c[:name]} *cf,
+.const struct mill_type mill_type_@{s[:name]} = {mill_type_tag, mill_handler_@{s[:name]}};
+.
+.void *mill_call_@{s[:name]} (
+.    void *coframe,
+.    struct mill_type *type,
 .    struct mill_loop *loop,
-.    struct mill_cfh *parent,
-.    int tag
-for a in c[:args]
+.    void *parent
+for a in s[:args]
 .    /+,
-.    @{a[:type]} @{a[:name]}
+.    @{a[:type]} @{a[:name]}@{a[:postfix]}
 end
 ./+)
 .{
+.    struct mill_coframe_@{s[:name]} *cf;
 .    int flags = 0;
+.
+.    cf = (struct mill_coframe_@{s[:name]}*) coframe;
 .
 .    /* If needed, allocate the coframe for the coroutine. */
 .    if (!cf) {
-.        flags |= MILL_FLAG_DEALLOCATE;
-.        cf = malloc (sizeof (struct mill_coframe_@{c[:name]}));
+.        flags |= mill_flag_deallocate;
+.        cf = malloc (sizeof (struct mill_coframe_@{s[:name]}));
 .        assert (cf);
 .    }
 .
 .    /* Fill in the coframe. */
-.    mill_cfh_init (&cf->mill_cfh, @{c[:name]}_handler,
-.        parent, loop, flags, tag);
-for a in c[:args]
+.    mill_cfh_init (&cf->mill_cfh, type, loop, parent, flags);
+for a in s[:args]
 .    cf->@{a[:name]} = @{a[:name]};
+end
+for v in s[:vars]
+    if v[:init] != nil
+.    cf->@{v[:name]} = @{v[:init]};
+    end
 end
 .
 .    /* Execute the initial part of the coroutine. */
-.    @{c[:name]}_handler (&cf->mill_cfh, 0);
+.    mill_handler_@{s[:name]} (&cf->mill_cfh, 0);
 .
 .    return (void*) cf;
 .}
 .
-.void @{c[:name]} (
-./!separate ", "
-for a in c[:args]
-.    @{a[:type]} @{a[:name]}
-end
-./+)
-.{
-.    struct mill_loop mill_loop;
-.    struct mill_coframe_@{c[:name]} mill_coframe;
-.
-.    /* Run a new event loop to execute the coroutine in synchronous manner. */
-.    mill_loop_init (&mill_loop);
-.    mill_call_@{c[:name]} (&mill_coframe, &mill_loop, 0, 0
-for a in c[:args]
-.    /+, @{a[:name]}
-end
-./+);
-.    mill_loop_run (&mill_loop);
-.    mill_loop_term (&mill_loop);
-.}
-.
+
+    elsif s[:type] == :extension
+./* Extension @{s[:name]} */
     end
 end
 

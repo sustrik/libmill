@@ -366,7 +366,7 @@ module Ribosome
                 end
                 j -= 1
                 num = num - linemap[j][0] + linemap[j][2]
-                #l = "#{linemap[j][1]}:#{num}#{l[stop..-1]}"
+                l = "#{linemap[j][1]}:#{num}#{l[stop..-1]}"
                 e.backtrace[i] = l
             end
         end

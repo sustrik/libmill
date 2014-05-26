@@ -20,36 +20,48 @@
     IN THE SOFTWARE.
 */
 
-#ifndef MILL_H_INCLUDED
-#define MILL_H_INCLUDED
+#ifndef mill_h_included
+#define mill_h_included
 
 #include <assert.h>
 #include <stdlib.h>
 #include <uv.h>
 
 /******************************************************************************/
-/* Generic stuff.                                                             */
+/*  Coroutine metadata.                                                       */
 /******************************************************************************/
 
-/* These flags are used to construct 'flags' member in mill_cfh. */
-#define MILL_FLAG_DEALLOCATE 1
-#define MILL_FLAG_CANCELED 2
+/* Constant tag is used to make sure that the coframe is valid. If its type
+   member doesn't point to something that begins with MILL_TYPE_TAG, the
+   coframe can be considered invalid. */
+#define mill_type_tag 0x4efd36df
 
-#define mill_cont(ptr, type, member) \
-    (ptr ? ((type*) (((char*) ptr) - offsetof(type, member))) : NULL)
+/*  Special events. */
+#define mill_event_init ((void*) 0)
+#define mill_event_term ((void*) -1)
 
-struct mill_cfh;
-struct mill_loop;
+/* 'coframe' points to the coframe of the coroutine being evaluated.
+   'event' either points to the coframe of the child coroutine that have just
+   terminated or is one of the special events listed above. */
+typedef void (*mill_fn_handler) (void *coframe, void *event);
 
-typedef void (*mill_handler_fn) (
-    struct mill_cfh *self,
-    struct mill_cfh* ev);
+struct mill_type {
+    int tag;
+    mill_fn_handler handler;
+};
+
+/******************************************************************************/
+/* Coframe head -- common to all coroutines.                                  */
+/******************************************************************************/
+
+/* These flags are used to construct 'flags' member. */
+#define mill_flag_deallocate 1
+#define mill_flag_canceled 2
 
 struct mill_cfh {
-    mill_handler_fn handler; 
+    const struct mill_type *type;
     int state;
     int flags;
-    int tag;
     int err;
     struct mill_cfh *parent;
     struct mill_cfh *children;
@@ -60,35 +72,44 @@ struct mill_cfh {
 
 void mill_cfh_init (
     struct mill_cfh *self,
-    mill_handler_fn handler,
-    struct mill_cfh *parent,
+    const struct mill_type *type,
     struct mill_loop *loop,
-    int flags,
-    int tag);
+    struct mill_cfh *parent,
+    int flags);
 
-void mill_cfh_term (struct mill_cfh *self);
+/******************************************************************************/
+/*  Mill keywords.                                                            */
+/******************************************************************************/
 
-void mill_cfh_emit (struct mill_cfh *self);
+/*  wait  */
 
-void mill_cfh_cancelall (struct mill_cfh *self);
+void mill_getresult (struct mill_cfh *cfh, void **who, int *err);
 
-int mill_cfh_haschildren (struct mill_cfh *self);
-
-void mill_cancel (void *cf);
-
-#define mill_wait(statearg)\
+#define mill_wait(statearg, whoarg, errarg)\
     do {\
         cf->mill_cfh.state = (statearg);\
         return;\
-        state##statearg:\
-        ;\
+        mill_state##statearg:\
+        mill_getresult (&cf->mill_cfh, (whoarg), (errarg));\
     } while (0)
 
-#define mill_return(errarg)\
+/*  raise  */
+
+#define mill_raise(errarg)\
     do {\
         cf->mill_cfh.err = (errarg);\
         goto mill_finally;\
     } while (0)
+
+/*  return  */
+
+#define mill_return mill_raise (0)
+
+/*  cancel  */
+
+void mill_cancel (void *cf);
+
+/*  cancelall  */
 
 #define mill_cancelall(statearg)\
     do {\
@@ -98,30 +119,23 @@ void mill_cancel (void *cf);
                 break;\
             cf->mill_cfh.state = (statearg);\
             return;\
-            state##statearg:\
+            mill_state##statearg:\
             ;\
         }\
     } while (0)
 
 /******************************************************************************/
-/* The event loop.                                                            */
+/* coroutine msleep (int milliseconds)                                        */
 /******************************************************************************/
 
-struct mill_loop
-{
-    uv_loop_t uv_loop;
-    uv_idle_t idle;
+extern const struct mill_type mill_type_msleep;
 
-    /* Local event queue. Items in this list are processed immediately,
-       before control is returned to libuv. */
-    struct mill_cfh *first;
-    struct mill_cfh *last;
-};
-
-void mill_loop_init (struct mill_loop *self);
-void mill_loop_term (struct mill_loop *self);
-void mill_loop_run (struct mill_loop *self);
-void mill_loop_emit (struct mill_loop *self, struct mill_cfh *base);
+void *mill_call_msleep (
+    void *cf,
+    const struct mill_type *type,
+    struct mill_loop *loop,
+    void *parent,
+    int millseconds);
 
 #endif
 

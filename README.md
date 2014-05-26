@@ -20,22 +20,22 @@ and runtime.
 
 ```
 #include <stdio.h>
-#include <msleep.h>
 
 coroutine stopwatch ()
 {
-    void *s1;
-    void *s2;
+    void *sleep1;
+    void *sleep2;
+    void *hndl;
     endvars;
 
-    s1 = call msleep (1000);
-    s2 = call msleep (2000);
+    sleep1 = call msleep (1000);
+    sleep2 = call msleep (2000);
 
     while (1) {
-        wait;
-        if (@who == s1)
+        wait (&hndl, 0);
+        if (hndl == sleep1)
             printf ("1 second elapsed!\n");
-        if (@who == s2)
+        if (hndl == sleep2)
             printf ("2 seconds elapsed!\n");
     }
 }
@@ -188,7 +188,7 @@ coroutine provided by mill:
 coroutine quux ()
 {
     call msleep (1000);
-    wait;
+    wait (0, 0);
 }
 ```
 
@@ -205,19 +205,20 @@ However, more often than not you have multiple child coroutines running in
 parallel. In such case you need a way to find out which of them has finished.
 
 To do so, you can retrieve a coroutine handle from 'call' and later on use
-'@who' pseudo-variable to get the handle of the recently finished coroutine:
+to compare it to the handles retreived by 'wait' function:
 
 ```
 #include <msleep.h>
 #include <assert.h>
 
-void *handle;
+void *s;
+void *hndl;
 
 coroutine quux ()
 {
-    handle = call msleep (1000);
-    wait;
-    assert (@who == handle);
+    s = call msleep (1000);
+    wait (&hndl, 0);
+    assert (@hndl == handle);
 }
 ```
 
@@ -241,6 +242,32 @@ coroutine quux (int a)
     printf ("%d\n", a + b);
 }
 ```
+
+## Reference
+
+### Defining coroutines
+
+1. coroutine name { ... }
+2. coroutine name : base { ... }
+3. endvars;
+4. void raise (int err);
+5. finally
+
+### Invoking coroutines
+
+1. void *call name ( ... );
+2. void *call (void *coframe) name ( ... );
+
+### Waiting for coroutines
+
+1. wait (void **hndl, int *err);
+2. void *typeof (void *hndl);
+3. void *typeof (name)
+
+### Cancelling coroutines
+
+1. void cancel (void *hndl);
+2. void cancelall ();
 
 ## License
 

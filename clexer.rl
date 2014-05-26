@@ -13,8 +13,8 @@
 	# Alpha numberic characters or underscore.
 	alnum_u = alnum | '_';
 
-	# Alpha charactres ,underscore or at sign.
-	alpha_ua = alpha | '_' | '@';
+	# Alpha charactres or underscore.
+	alpha_u = alpha | '_';
 
 	# Symbols. Upon entering clear the buffer. On all transitions
 	# buffer a character. Upon leaving dump the symbol.
@@ -65,12 +65,10 @@
 
 	# Identifier. Upon entering clear the buffer. On all transitions
 	# buffer a character. Upon leaving, dump the identifier.
-	alpha_ua alnum_u* {
+	alpha_u alnum_u* {
         token = data[ts..te-1].pack("c*")
         if token == "coroutine"
             stack.last << [:coroutine, ts, te - 1]
-        elsif token == "coframe"
-            stack.last << [:coframe, ts, te - 1]
         elsif token == "endvars"
             stack.last << [:endvars, ts, te - 1]
         elsif token == "call"
@@ -81,16 +79,16 @@
             stack.last << [:cancel, ts, te - 1]
         elsif token == "cancelall"
             stack.last << [:cancelall, ts, te - 1]
-        elsif token == "@who"
-            stack.last << [:who, ts, te - 1]
-        elsif token == "@tag"
-            stack.last << [:tag, ts, te - 1]
-        elsif token == "@err"
-            stack.last << [:err, ts, te - 1]
         elsif token == "return"
             stack.last << [:return, ts, te - 1]
+        elsif token == "raise"
+            stack.last << [:raise, ts, te - 1]
         elsif token == "struct"
             stack.last << [:struct, ts, te - 1]
+        elsif token == "typeof"
+            stack.last << [:typeof, ts, te - 1]
+        elsif token == "finally"
+            stack.last << [:finally, ts, te - 1]
         else
             stack.last << [:identifier, ts, te - 1]
         end

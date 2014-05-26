@@ -1,31 +1,27 @@
 
 #include <stdio.h>
-#include <assert.h>
-#include <uv.h>
-
-#include "msleep.h"
 
 coroutine stopwatch ()
 {
-    void *s1;
-    void *s2;
+    void *sleep1;
+    void *sleep2;
+    void *hndl = 0;
     endvars;
 
-    s1 = call msleep (1000);
-    s2 = call msleep (2000);
+    sleep1 = call msleep (1000);
+    sleep2 = call msleep (2000);
 
     while (1) {
-        wait;
-        if (@who == s1)
+        wait (&hndl, 0);
+        if (hndl == sleep1)
             printf ("1 second elapsed!\n");
-        if (@who == s2)
+        if (hndl == sleep2)
             printf ("2 seconds elapsed!\n");
     }
 }
 
 int main ()
 {
-    stopwatch (1);
+    stopwatch ();
     return 0;
 }
-
