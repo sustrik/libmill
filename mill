@@ -306,7 +306,8 @@ for i in 0..sections.size - 1
         # Coroutine body. Split it into variables part and the executable code.
         # 'endvars' statement is the delimiter between the two.
         bodytokens = tokens[3][3]
-        for j in 0..bodytokens.size - 1
+        bodytokens.unshift [:whitespace, bodytokens [3][1] + 1, tokens[0][1] - 1]
+        for j in 1..bodytokens.size - 1
             break if bodytokens[j][0] == :endvars
         end
         if j == bodytokens.size - 1
@@ -320,8 +321,8 @@ for i in 0..sections.size - 1
 
         # Parse the local variables.
         vars = []
-        start = 0
-        for k in 0..j
+        start = 1
+        for k in 1..j
             if bodytokens[k][0] == :semicolon
                 vars << parsedeclinit(text, bodytokens[start..k - 1])
                 start = k + 1
@@ -330,8 +331,10 @@ for i in 0..sections.size - 1
 
         # Leave only the executable code in text & tokens.
         j += 1 if bodytokens[j][0] == :endvars
-        text = text[bodytokens[j + 1][1]..bodytokens[-2][2]]
+        wstoken = [:whitespace, bodytokens [j][2] + 1, bodytokens[j + 1][1] - 1]
         bodytokens = bodytokens[j + 1..-1]
+        bodytokens.unshift(wstoken)
+        text = text[bodytokens[0][1]..bodytokens[-2][2]]
         apply_offset(bodytokens, 0, -bodytokens[0][1])
 
         sections[i] = {
@@ -452,10 +455,23 @@ for s in sections
                     insert(text, alltokens, tokens[i + 1][1] + 1, "#{state}, ")
 
                 elsif tokens[i][0] == :return
+                    if tokens[i + 1][0] != :semicolon
+                        $stderr.write "'return' statement must be followed by semicolon.\n"
+                        exit
+                    end
                     replace(text, alltokens, tokens[i], "mill_return")
 
                 elsif tokens[i][0] == :raise
-                    replace(text, alltokens, tokens[i], "mill_raise")
+                    for j in i..tokens.size - 1
+                       break if tokens[j][0] == :semicolon
+                    end
+                    if tokens[j][0] != :semicolon
+                        $stderr.write "'raise' statement must be followed by semicolon.\n"
+                        exit
+                    end
+                    replace(text, alltokens, tokens[i], "mill_raise (")
+                    replace(text, alltokens, tokens[j], ");")
+                    i = j
 
                 elsif tokens[i][0] == :cancel
                     replace(text, alltokens, tokens[i], "mill_cancel")
@@ -464,7 +480,20 @@ for s in sections
                     replace(text, alltokens, tokens[i], "mill_cancelall")
 
                 elsif tokens[i][0] == :typeof
-                    replace(text, alltokens, tokens[i], "mill_typeof")
+                    if tokens[i + 1][0] != :braces || tokens[i + 1][3].size < 1
+                        $stderr.write "'typeof' should be followed by an argument list.\n"
+                        exit
+                    end
+                    if tokens[i + 1][3][0][0] == :coroutine
+                        if tokens[i + 1][3].size != 3
+                            $stderr.write "'typeof' requires single parameter.\n"
+                            exit
+                        end
+                        replace(text, alltokens, tokens[i], "(&mill_type_#{text[tokens[i + 1][3][1][1]..tokens[i + 1][3][1][2]]})")
+                        replace(text, alltokens, tokens[i + 1], "")
+                    else
+                        replace(text, alltokens, tokens[i], "mill_typeof")
+                    end
 
                 elsif tokens[i][3] != nil
                     state = expand_keywords(text, alltokens, tokens[i][3], state)
@@ -499,7 +528,7 @@ for s in sections
     if s[:type] == :coroutine
 .extern const struct mill_type mill_type_@{s[:name]};
 .
-.struct mill_coframe_@{s[:name]} {
+.struct mill_cf_@{s[:name]} {
 .
 .    /* Generic coframe header. */
 .    struct mill_cfh mill_cfh;
@@ -521,7 +550,7 @@ for s in sections
 .
 .void *mill_call_@{s[:name]} (
 .    void *cf,
-.    struct mill_type *type,
+.    const struct mill_type *type,
 .    struct mill_loop *loop,
 .    void *parent
         for a in s[:args]
@@ -530,7 +559,7 @@ for s in sections
         end
 ./+);
 .
-.void @{s[:name]} (
+.int @{s[:name]} (
 ./!separate ", "
         for a in s[:args]
 .    @{a[:type]} @{a[:name]}@{a[:postfix]}
@@ -541,10 +570,12 @@ for s in sections
     end
 
     if s[:type] == :extension
-.struct mill_coframe_@{s[:name]} {
+.extern const struct mill_type mill_type_@{s[:name]};
+.
+.struct mill_cf_@{s[:name]} {
 .
 .    /* Coframe of the base coroutine. */
-.    struct mill_coframe_@{s[:base]} mill_base;
+.    struct mill_cf_@{s[:base]} mill_base;
         if !s[:vars].empty?
 .
 .    /* Coroutine extension variables. */
@@ -580,12 +611,12 @@ for s in sections
 .@{s[:text]}
 .
     elsif s[:type] == :coroutine
-.static void mill_handler_@{s[:name]} (void *coframe, void *event)
+.static void mill_handler_@{s[:name]} (void *cfptr, void *event)
 .{
-.    struct mill_coframe_@{s[:name]} *cf;
+.    struct mill_cf_@{s[:name]} *cf;
 .    struct mill_cfh *ev;
 .
-.    cf = (struct mill_coframe_@{s[:name]}*) coframe;
+.    cf = (struct mill_cf_@{s[:name]}*) cfptr;
 .    ev = (struct mill_cfh*) event;
 .
 .    /* In case of shutdown request jump straight to 'finally' section. */
@@ -614,8 +645,8 @@ end
 .const struct mill_type mill_type_@{s[:name]} = {mill_type_tag, mill_handler_@{s[:name]}};
 .
 .void *mill_call_@{s[:name]} (
-.    void *coframe,
-.    struct mill_type *type,
+.    void *cfptr,
+.    const struct mill_type *type,
 .    struct mill_loop *loop,
 .    void *parent
 for a in s[:args]
@@ -624,15 +655,15 @@ for a in s[:args]
 end
 ./+)
 .{
-.    struct mill_coframe_@{s[:name]} *cf;
+.    struct mill_cf_@{s[:name]} *cf;
 .    int flags = 0;
 .
-.    cf = (struct mill_coframe_@{s[:name]}*) coframe;
+.    cf = (struct mill_cf_@{s[:name]}*) cfptr;
 .
 .    /* If needed, allocate the coframe for the coroutine. */
 .    if (!cf) {
 .        flags |= mill_flag_deallocate;
-.        cf = malloc (sizeof (struct mill_coframe_@{s[:name]}));
+.        cf = malloc (sizeof (struct mill_cf_@{s[:name]}));
 .        assert (cf);
 .    }
 .
@@ -653,9 +684,42 @@ end
 .    return (void*) cf;
 .}
 .
+.int @{s[:name]} (
+./!separate ", "
+for a in s[:args]
+.    @{a[:type]} @{a[:name]}@{a[:postfix]}
+end
+./+)
+.{
+.    struct mill_loop loop;
+.    struct mill_cf_@{s[:name]} cf;
+.    int err;
+.
+.    /* Run an event loop to execute the coroutine in synchronous manner. */
+.    mill_loop_init (&loop);
+.    mill_call_@{s[:name]} (&cf, &mill_type_@{s[:name]}, &loop, 0
+for a in s[:args]
+.    /+, @{a[:name]}
+end
+./+);
+.    mill_loop_run (&loop);
+.    mill_loop_term (&loop);
+.
+.    /* Return the error code produced by the coroutine. */
+.    mill_cfh_getresult (&cf.mill_cfh, 0, &err);
+.    return err;
+.}
+.
 
     elsif s[:type] == :extension
-./* Extension @{s[:name]} */
+.static void mill_handler_@{s[:name]} (void *cfptr, void *event)
+.{
+.    /*  Pass the event handling to the base coroutine. */
+.    mill_type_@{s[:base]}.handler (cfptr, event);
+.}
+.
+.const struct mill_type mill_type_@{s[:name]} = {mill_type_tag, mill_handler_@{s[:name]}};
+.
     end
 end
 

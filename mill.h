@@ -43,7 +43,7 @@
 /* 'coframe' points to the coframe of the coroutine being evaluated.
    'event' either points to the coframe of the child coroutine that have just
    terminated or is one of the special events listed above. */
-typedef void (*mill_fn_handler) (void *coframe, void *event);
+typedef void (*mill_fn_handler) (void *cfptr, void *event);
 
 struct mill_type {
     int tag;
@@ -77,20 +77,43 @@ void mill_cfh_init (
     struct mill_cfh *parent,
     int flags);
 
+void mill_cfh_getresult (struct mill_cfh *cfh, void **who, int *err);
+
+/******************************************************************************/
+/* The event loop. */
+/******************************************************************************/
+
+struct mill_loop
+{
+    /* Underlying libuv loop. */
+    uv_loop_t uv_loop;
+
+    /* Libuv hook that processes the mill events. */
+    uv_idle_t idle;
+
+    /* Local event queue. Items in this list are processed immediately,
+       before control is returned to libuv. */
+    struct mill_cfh *first;
+    struct mill_cfh *last;
+};
+
+void mill_loop_init (struct mill_loop *self);
+void mill_loop_term (struct mill_loop *self);
+void mill_loop_run (struct mill_loop *self);
+void mill_loop_emit (struct mill_loop *self, struct mill_cfh *base);
+
 /******************************************************************************/
 /*  Mill keywords.                                                            */
 /******************************************************************************/
 
 /*  wait  */
 
-void mill_getresult (struct mill_cfh *cfh, void **who, int *err);
-
 #define mill_wait(statearg, whoarg, errarg)\
     do {\
         cf->mill_cfh.state = (statearg);\
         return;\
         mill_state##statearg:\
-        mill_getresult (&cf->mill_cfh, (whoarg), (errarg));\
+        mill_cfh_getresult (&cf->mill_cfh, (whoarg), (errarg));\
     } while (0)
 
 /*  raise  */
@@ -107,7 +130,7 @@ void mill_getresult (struct mill_cfh *cfh, void **who, int *err);
 
 /*  cancel  */
 
-void mill_cancel (void *cf);
+void mill_cancel (void *cfptr);
 
 /*  cancelall  */
 
@@ -124,11 +147,24 @@ void mill_cancel (void *cf);
         }\
     } while (0)
 
+/*  typeof  */
+
+void *mill_typeof (void *cfptr);
+
 /******************************************************************************/
 /* coroutine msleep (int milliseconds)                                        */
 /******************************************************************************/
 
 extern const struct mill_type mill_type_msleep;
+
+struct mill_cf_msleep {
+
+    /* Generic coframe header. */
+    struct mill_cfh mill_cfh;
+
+    /* Local variables. */
+    uv_timer_t timer;
+};
 
 void *mill_call_msleep (
     void *cf,
@@ -136,6 +172,8 @@ void *mill_call_msleep (
     struct mill_loop *loop,
     void *parent,
     int millseconds);
+
+int msleep (int milliseconds);
 
 #endif
 

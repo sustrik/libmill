@@ -1,23 +1,29 @@
 
 #include <stdio.h>
 
+coroutine sleep1 : msleep
+{
+    int quux;
+}
+
+coroutine sleep2 : msleep {}
+
 coroutine stopwatch ()
 {
-    void *sleep1;
-    void *sleep2;
     void *hndl = 0;
     endvars;
 
-    sleep1 = call msleep (1000);
-    sleep2 = call msleep (2000);
+    call sleep1 (1000);
+    call sleep2 (2000);
 
     while (1) {
         wait (&hndl, 0);
-        if (hndl == sleep1)
+        if (typeof(hndl) == typeof(coroutine sleep1))
             printf ("1 second elapsed!\n");
-        if (hndl == sleep2)
+        if (typeof(hndl) == typeof(coroutine sleep2))
             printf ("2 seconds elapsed!\n");
     }
+    raise 6;
 }
 
 int main ()
