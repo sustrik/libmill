@@ -316,8 +316,8 @@ module Ribosome
 
             # Expression of higher indirection levels are simply brought
             # down by one level.
-            if(level > 1)
-                if line [i + 1] == ?2
+            if(level > 0)
+                if line [i + 1] == ?1
                     block.add_right(Block.new("@" + line[i + 2..j]))
                 else
                     line[i + 1] -= 1

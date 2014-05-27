@@ -39,47 +39,6 @@
     } while (0)
 
 /******************************************************************************/
-/* Coframe head -- common to all coroutines.                                  */
-/******************************************************************************/
-
-void mill_cfh_init (
-    struct mill_cfh *self,
-    const struct mill_type *type,
-    struct mill_loop *loop,
-    struct mill_cfh *parent,
-    int flags)
-{
-    struct mill_cfh *sibling;
-
-    self->type = type;
-    self->state = 0;
-    self->flags = flags;
-    self->err = 0;
-    self->parent = parent;
-    self->children = 0;
-    self->next = 0;
-    self->prev = 0;
-    self->loop = loop;
-
-    /* Add this coroutine to the paren't list of children. */
-    if (self->parent) {
-        sibling = self->parent->children;
-        self->next = sibling;
-        if (sibling)
-            sibling->prev = self;
-        self->parent->children = self;
-    }
-}
-
-void mill_cfh_getresult (struct mill_cfh *cfh, void **who, int *err)
-{
-    if (who)
-        *who = (void*) cfh;
-    if (err)
-        *err = cfh->err;
-}
-
-/******************************************************************************/
 /* The event loop. */
 /******************************************************************************/
 
@@ -169,13 +128,24 @@ void mill_loop_emit (
 /*  Mill keywords.                                                            */
 /******************************************************************************/
 
+void mill_getresult (void *cfptr, void **who, int *err)
+{
+    struct mill_cfh *cfh;
+
+    cfh = (struct mill_cfh*) cfptr;
+    if (who)
+        *who = (void*) cfh;
+    if (err)
+        *err = cfh->err;
+}
+
 void mill_cancel (void *cfptr)
 {
-    struct mill_cfh *self;
+    struct mill_cfh *cfh;
 
-    self = (struct mill_cfh*) cfptr;
-    assert (self->type->tag == mill_type_tag);
-    self->type->handler (self, mill_event_term);
+    cfh = (struct mill_cfh*) cfptr;
+    assert (cfh->type->tag == mill_type_tag);
+    cfh->type->handler (cfh, mill_event_term);
 }
 
 void *mill_typeof (void *cfptr)
@@ -187,23 +157,30 @@ void *mill_typeof (void *cfptr)
     return (void*) &cfh->type;
 }
 
-void mill_cfh_emit (
-    struct mill_cfh *self)
+void mill_emit (void *cfptr)
 {
-    mill_loop_emit (self->loop, self);
+    struct mill_cfh *cfh;
+
+    cfh = (struct mill_cfh*) cfptr; 
+    mill_loop_emit (cfh->loop, cfh);
 }
 
-void mill_cfh_cancelall (struct mill_cfh *self)
+void mill_cancel_children (void *cfptr)
 {
-    struct mill_cfh *ch;
+    struct mill_cfh *cfh;
+    struct mill_cfh *child;
 
-    for (ch = self->children; ch != 0; ch = ch->next)
-        ch->type->handler (ch,  mill_event_term);
+    cfh = (struct mill_cfh*) cfptr; 
+    for (child = cfh->children; child != 0; child = child->next)
+        child->type->handler (child,  mill_event_term);
 }
 
-int mill_cfh_haschildren (struct mill_cfh *self)
+int mill_has_children (void *cfptr)
 {
-    return self->children ? 1 : 0;
+    struct mill_cfh *cfh;
+
+    cfh = (struct mill_cfh*) cfptr;
+    return cfh->children ? 1 : 0;
 }
 
 /******************************************************************************/
@@ -217,13 +194,17 @@ static void mill_handler_msleep (void *cfptr, void *event)
 
     cf = (struct mill_cf_msleep*) cfptr;
 
-    assert (event == mill_event_term);
+    if (event == mill_event_init)
+        return;
 
     /* Cancel the timer. */
-    rc = uv_timer_stop (&cf->timer);
-    uv_assert (rc);
-    cf->mill_cfh.err = ECANCELED;
-    mill_cfh_emit (&cf->mill_cfh);
+    if (event == mill_event_term) {
+        rc = uv_timer_stop (&cf->timer);
+        uv_assert (rc);
+        cf->mill_cfh.err = ECANCELED;
+        mill_emit (cf);
+        return;
+    }
 }
 
 static void msleep_cb (
@@ -234,7 +215,7 @@ static void msleep_cb (
     cf = mill_cont (timer, struct mill_cf_msleep, timer);
 
     /* The coroutine is done. */
-    mill_cfh_emit (&cf->mill_cfh);
+    mill_emit (cf);
 }
 
 const struct mill_type mill_type_msleep =
@@ -247,26 +228,13 @@ void *mill_call_msleep (
     void *parent,
     int milliseconds)
 {
-    struct mill_cf_msleep *cf;
-    int flags = 0;
-
-    cf = (struct mill_cf_msleep*) cfptr;
-
-    /* If needed, allocate the coframe for the coroutine. */
-    if (!cf) {
-        flags |= mill_flag_deallocate;
-        cf = malloc (sizeof (struct mill_cf_msleep));
-        assert (cf);
-    }
-
-    /* Fill in the coframe. */
-    mill_cfh_init (&cf->mill_cfh, &mill_type_msleep, loop, parent, flags);
-    uv_timer_init (&loop->uv_loop, &cf->timer);
+    mill_callimpl_prologue (msleep);
 
     /* Launch the timer. */
+    uv_timer_init (&loop->uv_loop, &cf->timer);
     uv_timer_start(&cf->timer, msleep_cb, milliseconds, 0);
 
-    return (void*) cf;
+    mill_callimpl_epilogue (msleep);
 }
 
 int msleep (int milliseconds)

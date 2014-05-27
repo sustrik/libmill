@@ -70,14 +70,37 @@ struct mill_cfh {
     struct mill_loop *loop;
 };
 
-void mill_cfh_init (
-    struct mill_cfh *self,
-    const struct mill_type *type,
-    struct mill_loop *loop,
-    struct mill_cfh *parent,
-    int flags);
+#define mill_callimpl_prologue(name)\
+    struct mill_cf_##name *cf;\
+    struct mill_cfh *mill_sibling;\
+    int mill_flags = 0;\
+    \
+    cf = (struct mill_cf_##name*) cfptr;\
+    if (!cf) {\
+        mill_flags |= mill_flag_deallocate;\
+        cf = malloc (sizeof (struct mill_cf_##name));\
+        assert (cf);\
+    }\
+    cf->mill_cfh.type = type;\
+    cf->mill_cfh.state = 0;\
+    cf->mill_cfh.flags = mill_flags;\
+    cf->mill_cfh.err = 0;\
+    cf->mill_cfh.parent = parent;\
+    cf->mill_cfh.children = 0;\
+    cf->mill_cfh.next = 0;\
+    cf->mill_cfh.prev = 0;\
+    cf->mill_cfh.loop = loop;\
+    if (cf->mill_cfh.parent) {\
+        mill_sibling = cf->mill_cfh.parent->children;\
+        cf->mill_cfh.next = mill_sibling;\
+        if (mill_sibling)\
+            mill_sibling->prev = &cf->mill_cfh;\
+        cf->mill_cfh.parent->children = &cf->mill_cfh;\
+    }
 
-void mill_cfh_getresult (struct mill_cfh *cfh, void **who, int *err);
+#define mill_callimpl_epilogue(name)\
+    mill_handler_##name (&cf->mill_cfh, mill_event_init);\
+    return (void*) cf;
 
 /******************************************************************************/
 /* The event loop. */
@@ -108,12 +131,14 @@ void mill_loop_emit (struct mill_loop *self, struct mill_cfh *base);
 
 /*  wait  */
 
+void mill_getresult (void *cfptr, void **who, int *err);
+
 #define mill_wait(statearg, whoarg, errarg)\
     do {\
         cf->mill_cfh.state = (statearg);\
         return;\
         mill_state##statearg:\
-        mill_cfh_getresult (&cf->mill_cfh, (whoarg), (errarg));\
+        mill_getresult (event, (whoarg), (errarg));\
     } while (0)
 
 /*  raise  */
@@ -134,11 +159,14 @@ void mill_cancel (void *cfptr);
 
 /*  cancelall  */
 
+void mill_cancel_children (void *cfptr);
+int mill_has_children (void *cfptr);
+
 #define mill_cancelall(statearg)\
     do {\
-        mill_cfh_cancelall (&cf->mill_cfh);\
+        mill_cancel_children (cf);\
         while (1) {\
-            if (!mill_cfh_haschildren (&cf->mill_cfh))\
+            if (!mill_has_children (cf))\
                 break;\
             cf->mill_cfh.state = (statearg);\
             return;\

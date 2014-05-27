@@ -639,7 +639,7 @@ end
 .
 .mill_finally:
 .    mill_cancelall (@{s[:laststate]});
-.    mill_cfh_emit (&cf->mill_cfh);
+.    mill_emit (cf);
 .}
 .
 .const struct mill_type mill_type_@{s[:name]} = {mill_type_tag, mill_handler_@{s[:name]}};
@@ -655,20 +655,8 @@ for a in s[:args]
 end
 ./+)
 .{
-.    struct mill_cf_@{s[:name]} *cf;
-.    int flags = 0;
+.    mill_callimpl_prologue (@{s[:name]});
 .
-.    cf = (struct mill_cf_@{s[:name]}*) cfptr;
-.
-.    /* If needed, allocate the coframe for the coroutine. */
-.    if (!cf) {
-.        flags |= mill_flag_deallocate;
-.        cf = malloc (sizeof (struct mill_cf_@{s[:name]}));
-.        assert (cf);
-.    }
-.
-.    /* Fill in the coframe. */
-.    mill_cfh_init (&cf->mill_cfh, type, loop, parent, flags);
 for a in s[:args]
 .    cf->@{a[:name]} = @{a[:name]};
 end
@@ -678,10 +666,7 @@ for v in s[:vars]
     end
 end
 .
-.    /* Execute the initial part of the coroutine. */
-.    mill_handler_@{s[:name]} (&cf->mill_cfh, 0);
-.
-.    return (void*) cf;
+.    mill_callimpl_epilogue (@{s[:name]});
 .}
 .
 .int @{s[:name]} (
@@ -706,7 +691,7 @@ end
 .    mill_loop_term (&loop);
 .
 .    /* Return the error code produced by the coroutine. */
-.    mill_cfh_getresult (&cf.mill_cfh, 0, &err);
+.    mill_getresult (&cf, 0, &err);
 .    return err;
 .}
 .
