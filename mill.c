@@ -154,7 +154,7 @@ void *mill_typeof (void *cfptr)
 
     cfh = (struct mill_cfh*) cfptr;
     assert (cfh->type && cfh->type->tag == mill_type_tag);
-    return (void*) &cfh->type;
+    return (void*) cfh->type;
 }
 
 void mill_emit (void *cfptr)
@@ -184,7 +184,7 @@ int mill_has_children (void *cfptr)
 }
 
 /******************************************************************************/
-/*  coroutine msleep                                                          */
+/*  Coroutine msleep.                                                         */
 /******************************************************************************/
 
 static void mill_handler_msleep (void *cfptr, void *event)
@@ -240,5 +240,390 @@ void *mill_call_msleep (
 int msleep (int milliseconds)
 {
     assert (0);
+}
+
+/******************************************************************************/
+/* Class tcpsocket.                                                           */
+/******************************************************************************/
+
+#define TCPSOCKET_STATE_INIT 1
+#define TCPSOCKET_STATE_CONNECTING 2
+#define TCPSOCKET_STATE_LISTENING 3
+#define TCPSOCKET_STATE_ACCEPTING 4
+#define TCPSOCKET_STATE_ACTIVE 5
+#define TCPSOCKET_STATE_TERMINATING 6
+
+int tcpsocket_init (
+    struct tcpsocket *self,
+    struct mill_loop *loop)
+{
+    self->loop = &loop->uv_loop;
+    self->state = TCPSOCKET_STATE_INIT;
+    self->recvop = 0;
+    self->sendop = 0;
+    return uv_tcp_init (&loop->uv_loop, &self->s);
+}
+
+static void mill_handler_tcpsocket_term (void *cfptr, void *event)
+{
+    mill_handlerimpl_prologue (tcpsocket_term);
+    mill_handlerimpl_epilogue (tcpsocket_term, 1);
+}
+
+static void tcpsocket_term_cb (
+    uv_handle_t* handle)
+{
+    struct tcpsocket *self = mill_cont (handle, struct tcpsocket, s);
+
+    /* Double check that the socket is in the correct state. */
+    assert (self->state == TCPSOCKET_STATE_TERMINATING);
+    assert (self->recvop != 0);
+
+    /* The coroutine is done. */
+    mill_emit (self->recvop);
+
+    /* Flip the state. */
+    self->state = 0;
+    self->recvop = 0;
+}
+
+const struct mill_type mill_type_tcpsocket_term =
+    {mill_type_tag, mill_handler_tcpsocket_term};
+
+void *mill_call_tcpsocket_term (
+    void *cfptr,
+    const struct mill_type *type,
+    struct mill_loop *loop,
+    void *parent,
+    struct tcpsocket *self)
+{
+    mill_callimpl_prologue (tcpsocket_term);
+
+    cf->self = self;
+
+    mill_callimpl_epilogue (tcpsocket_term);
+}
+
+static void mill_handler_tcpsocket_connect (void *cfptr, void *event)
+{
+    mill_handlerimpl_prologue (tcpsocket_connect);
+    mill_handlerimpl_epilogue (tcpsocket_connect, 1);
+}
+
+static void tcpsocket_connect_cb (
+    uv_connect_t* req,
+    int status)
+{
+    struct mill_cf_tcpsocket_connect *cf;
+
+    cf = mill_cont (req, struct mill_cf_tcpsocket_connect, req);
+
+    /* Double-check that the socket is in the correct state. */
+    assert (cf->self->state == TCPSOCKET_STATE_CONNECTING);
+    
+    /* Flip the state. */
+    cf->self->state = (status == 0) ?
+        TCPSOCKET_STATE_ACTIVE :
+        TCPSOCKET_STATE_INIT;
+    cf->self->recvop = 0;
+
+    /* The coroutine is done. */
+    cf->mill_cfh.err = status;
+    mill_emit (cf);
+}
+
+const struct mill_type mill_type_tcpsocket_connect =
+    {mill_type_tag, mill_handler_tcpsocket_connect};
+
+void *mill_call_tcpsocket_connect (
+    void *cfptr,
+    const struct mill_type *type,
+    struct mill_loop *loop,
+    void *parent,
+    struct tcpsocket *self,
+    struct sockaddr *addr)
+{
+    mill_callimpl_prologue (tcpsocket_connect);
+
+    cf->self = self;
+    cf->addr = addr;
+
+    mill_callimpl_epilogue (tcpsocket_connect);
+}
+
+int tcpsocket_bind (
+    struct tcpsocket *self,
+    struct sockaddr *addr,
+    int flags)
+{
+    /* Socket can be bound only before it is listening or connected. */
+    assert (self->state == TCPSOCKET_STATE_INIT);
+
+    return uv_tcp_bind (&self->s, addr, flags);
+}
+
+static void tcpsocket_listen_cb (
+    uv_stream_t *s,
+    int status)
+{
+    int rc;
+    struct tcpsocket *self;
+    struct mill_cf_tcpsocket_accept *cf;
+    uv_tcp_t uvs;
+
+    self = mill_cont (s, struct tcpsocket, s);
+
+    /* Double-check that the socket is in the correct state. */
+    assert (self->state == TCPSOCKET_STATE_LISTENING ||
+        self->state == TCPSOCKET_STATE_ACCEPTING);
+
+    /* If nobody is accepting connections at the moment
+       we'll simply drop them. */
+    if (self->state != TCPSOCKET_STATE_ACCEPTING) {
+        rc = uv_tcp_init (s->loop, &uvs);
+        uv_assert (rc);
+        rc = uv_accept (s, (uv_stream_t*) &uvs);
+        uv_assert (rc);
+        uv_close ((uv_handle_t*) &s, NULL); // TODO: This is an async op!
+
+        /* The coroutine goes on. No need to notify the parent. */
+        return; 
+    }
+
+    if (status != 0)
+        goto error;
+
+    /* Actual accept. */
+    assert (self->recvop != 0);
+    cf = mill_cont (self->recvop, struct mill_cf_tcpsocket_accept,
+        mill_cfh);
+    status = uv_accept (s, (uv_stream_t*) &cf->newsock->s);
+    if (status != 0)
+        goto error;
+
+    /* Flip both listening and accepted socket to new states. */
+    cf->newsock->state = TCPSOCKET_STATE_ACTIVE;
+    cf->self->state = TCPSOCKET_STATE_LISTENING;
+    self->recvop = 0;
+
+    /* The coroutine is done. */
+    mill_emit (cf);
+    return;
+
+error:
+
+    /* End the coroutine. Report the error. */
+    cf->newsock->state = TCPSOCKET_STATE_INIT;
+    cf->self->state = TCPSOCKET_STATE_LISTENING;
+    self->recvop = 0;
+    cf->mill_cfh.err = status;
+    mill_emit (cf);
+}
+
+int tcpsocket_listen (
+    struct tcpsocket *self,
+    int backlog,
+    struct mill_loop *loop)
+{
+    int rc;
+
+    /* Listen cannot be called on socket that is already listening or
+       connected. */
+    assert (self->state == TCPSOCKET_STATE_INIT);
+
+    /* Start listening. */
+    rc = uv_listen((uv_stream_t*) &self->s, backlog, tcpsocket_listen_cb);
+    if (rc != 0)
+        return rc;
+    self->state = TCPSOCKET_STATE_LISTENING;
+    return 0;
+}
+
+static void mill_handler_tcpsocket_accept (void *cfptr, void *event)
+{
+    mill_handlerimpl_prologue (tcpsocket_accept);
+
+#if 0
+    /* End the coroutine. Report the error. */
+    cf->newsock->state = TCPSOCKET_STATE_INIT;
+    cf->self->state = TCPSOCKET_STATE_LISTENING;
+    cf->self->recvop = 0;
+    cf->mill_cfh.err = ECANCELED;
+    mill_cfh_emit (&cf->mill_cfh);
+#endif
+
+    mill_handlerimpl_epilogue (tcpsocket_accept, 1);
+}
+
+const struct mill_type mill_type_tcpsocket_accept =
+    {mill_type_tag, mill_handler_tcpsocket_accept};
+
+void *mill_call_tcpsocket_accept (
+    void *cfptr,
+    const struct mill_type *type,
+    struct mill_loop *loop,
+    void *parent,
+    struct tcpsocket *self,
+    struct tcpsocket *newsock)
+{
+    mill_callimpl_prologue (tcpsocket_accept);
+
+    cf->self = self;
+    cf->newsock = newsock;
+
+    mill_callimpl_epilogue (tcpsocket_accept);
+}
+
+static void mill_handler_tcpsocket_send (void *cfptr, void *event)
+{
+    mill_handlerimpl_prologue (tcpsocket_send);
+    mill_handlerimpl_epilogue (tcpsocket_send, 1);
+}
+
+static void tcpsocket_send_cb (
+    uv_write_t* req,
+    int status)
+{
+    struct mill_cf_tcpsocket_send *cf;
+
+    cf = mill_cont (req, struct mill_cf_tcpsocket_send, req);
+
+    /* Notify the parent coroutine that the operation is finished. */
+    cf->self->sendop = 0;
+    cf->mill_cfh.err = status;
+    mill_emit (cf);
+}
+
+const struct mill_type mill_type_tcpsocket_send =
+    {mill_type_tag, mill_handler_tcpsocket_send};
+
+void *mill_call_tcpsocket_send (
+    void *cfptr,
+    const struct mill_type *type,
+    struct mill_loop *loop,
+    void *parent,
+    struct tcpsocket *self,
+    const void *buf,
+    size_t len)
+{
+    mill_callimpl_prologue (tcpsocket_send);
+
+    cf->self = self;
+
+#if 0
+    /* Make sure that the socket is properly connected and that no other send
+       operation is in progress. */
+    assert (self->state == TCPSOCKET_STATE_ACTIVE);
+    assert (self->sendop == 0);
+
+    /* Mark the socket as being in process of sending. */
+    cf->self->sendop = &cf->mill_cfh;
+
+    /* Initiate the sending. */
+    cf->buffer.base = (void*) buf;
+    cf->buffer.len = len;
+    rc = uv_write (&cf->req, (uv_stream_t*) &cf->self->s, &cf->buffer, 1,
+        tcpsocket_send_cb);
+    assert (rc == 0);
+#endif
+
+    mill_callimpl_epilogue (tcpsocket_send);
+}
+
+static void mill_handler_tcpsocket_recv (void *cfptr, void *event)
+{
+    mill_handlerimpl_prologue (tcpsocket_recv);
+
+#if 0
+    /* End the coroutine. Report the error. */
+    rc = uv_read_stop ((uv_stream_t*) &cf->self->s);
+    assert (rc == 0);
+    cf->self->recvop = 0;
+    cf->mill_cfh.err = ECANCELED;
+    mill_cfh_emit (&cf->mill_cfh);
+#endif
+
+    mill_handlerimpl_epilogue (tcpsocket_recv, 1);
+}
+
+static void tcpsocket_alloc_cb (
+    uv_handle_t* handle,
+    size_t suggested_size,
+    uv_buf_t* buf)
+{
+    struct mill_cf_tcpsocket_recv *cf;
+    struct tcpsocket *self;
+
+    self = mill_cont (handle, struct tcpsocket, s);
+    assert (self->recvop);
+    cf = mill_cont (self->recvop, struct mill_cf_tcpsocket_recv,
+        mill_cfh);
+
+    buf->base = cf->buf;
+    buf->len = cf->len;
+}
+
+static void tcpsocket_recv_cb (
+    uv_stream_t* stream,
+    ssize_t nread,
+    const uv_buf_t* buf)
+{
+    struct mill_cf_tcpsocket_recv *cf;
+    struct tcpsocket *self;
+
+    self = mill_cont (stream, struct tcpsocket, s);
+    assert (self->recvop);
+    cf = mill_cont (self->recvop, struct mill_cf_tcpsocket_recv,
+        mill_cfh);
+
+    /* Adjust the input buffer to not cover the data already received. */
+    assert (buf->base == cf->buf);
+    assert (nread <= cf->len);
+    cf->buf = ((char*) cf->buf) + nread;
+    cf->len -= nread;
+
+    /* If there are no more data to be read, stop reading and notify the parent
+       coroutine that the operation is finished. */
+    if (!cf->len) {
+        uv_read_stop (stream);
+        self->recvop = 0;
+        mill_emit (cf);
+    }
+}
+
+const struct mill_type mill_type_tcpsocket_recv =
+    {mill_type_tag, mill_handler_tcpsocket_recv};
+
+void *mill_call_tcpsocket_recv (
+    void *cfptr,
+    const struct mill_type *type,
+    struct mill_loop *loop,
+    void *parent,
+    struct tcpsocket *self,
+    void *buf,
+    size_t len)
+{
+    mill_callimpl_prologue (tcpsocket_recv);
+
+    cf->self = self;
+    cf->buf = buf;
+    cf->len = len;
+
+#if 0
+    /* Make sure that the socket is properly connected and that no other recv
+       operation is in progress. */
+    assert (self->state == TCPSOCKET_STATE_ACTIVE);
+    assert (self->recvop == 0);
+
+    /* Mark the socket as being in process of receiving. */
+    cf->self->recvop = &cf->mill_cfh;
+
+    /* Initiate the receiving. */
+    rc = uv_read_start ((uv_stream_t*) &cf->self->s,
+        tcpsocket_alloc_cb, tcpsocket_recv_cb);
+    uv_assert (rc);
+#endif
+
+    mill_callimpl_epilogue (tcpsocket_recv);
 }
 

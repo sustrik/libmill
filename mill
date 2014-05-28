@@ -495,6 +495,11 @@ for s in sections
                         replace(text, alltokens, tokens[i], "mill_typeof")
                     end
 
+                elsif(tokens[i][0] == :identifier &&
+                        ["tcpsocket_init", "tcpsocket_listen"].include?(text[tokens[i][1]..tokens[i][2]]) &&
+                        tokens[i + 1][0] == :braces)
+                    insert(text, alltokens, tokens[i + 1][2], ", cf->mill_cfh.loop")
+
                 elsif tokens[i][3] != nil
                     state = expand_keywords(text, alltokens, tokens[i][3], state)
                 end
@@ -613,15 +618,7 @@ for s in sections
     elsif s[:type] == :coroutine
 .static void mill_handler_@{s[:name]} (void *cfptr, void *event)
 .{
-.    struct mill_cf_@{s[:name]} *cf;
-.    struct mill_cfh *ev;
-.
-.    cf = (struct mill_cf_@{s[:name]}*) cfptr;
-.    ev = (struct mill_cfh*) event;
-.
-.    /* In case of shutdown request jump straight to 'finally' section. */
-.    if (event == mill_event_term)
-.        goto mill_finally;
+.    mill_handlerimpl_prologue (@{s[:name]});
 .
 .    /* Jump to the place where the coroutine was interrupted the last time. */
 .    switch (cf->mill_cfh.state) {
@@ -637,9 +634,7 @@ end
 .
 .    @{s[:text]}
 .
-.mill_finally:
-.    mill_cancelall (@{s[:laststate]});
-.    mill_emit (cf);
+.    mill_handlerimpl_epilogue (@{s[:name]}, @{s[:laststate]});
 .}
 .
 .const struct mill_type mill_type_@{s[:name]} = {mill_type_tag, mill_handler_@{s[:name]}};

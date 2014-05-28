@@ -1,33 +1,43 @@
 
 #include <stdio.h>
+#include <assert.h>
+#include <uv.h>
 
-coroutine sleep1 : msleep
+coroutine hello (int i)
 {
-    int quux;
-}
-
-coroutine sleep2 : msleep {}
-
-coroutine stopwatch ()
-{
-    void *hndl = 0;
+    int rc;
+    struct sockaddr_in addr;
+    struct tcpsocket ls;
+    struct tcpsocket s;
+    char buf [6];
     endvars;
 
-    call sleep1 (1000);
-    call sleep2 (2000);
-
+    rc = tcpsocket_init (&ls);
+    assert (rc == 0);
+    rc = uv_ip4_addr ("127.0.0.1", 7000, &addr);
+    assert (rc == 0);
+    rc = tcpsocket_bind (&ls, (struct sockaddr*) &addr, 0);
+    assert (rc == 0);
+    rc = tcpsocket_listen (&ls, 10);
+    assert (rc == 0);
+    
     while (1) {
-        wait (&hndl, 0);
-        if (typeof(hndl) == typeof(coroutine sleep1))
-            printf ("1 second elapsed!\n");
-        if (typeof(hndl) == typeof(coroutine sleep2))
-            printf ("2 seconds elapsed!\n");
+        rc = tcpsocket_init (&s);
+        assert (rc == 0);
+        call tcpsocket_accept (&ls, &s);
+        wait (0, 0);
+        call tcpsocket_send (&s, "Hello, world!", 13);
+        wait (0, 0);
+        call tcpsocket_recv (&s, buf, sizeof (buf));
+        wait (0, 0);
+        call tcpsocket_term (&s);
+        wait (0, 0);
     }
-    raise 6;
 }
 
 int main ()
 {
-    stopwatch ();
+    hello (1);
     return 0;
 }
+
