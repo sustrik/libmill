@@ -187,7 +187,9 @@ int mill_has_children (void *cfptr)
 /*  Coroutine msleep.                                                         */
 /******************************************************************************/
 
-static void mill_handler_msleep (void *cfptr, void *event)
+static void mill_handler_msleep (
+    void *cfptr,
+    void *event)
 {
     int rc;
     struct mill_cf_msleep *cf;
@@ -259,14 +261,23 @@ int tcpsocket_init (
 {
     self->loop = &loop->uv_loop;
     self->state = TCPSOCKET_STATE_INIT;
-    self->recvop = 0;
-    self->sendop = 0;
+    self->recvcfptr = 0;
+    self->sendcfptr = 0;
     return uv_tcp_init (&loop->uv_loop, &self->s);
 }
 
-static void mill_handler_tcpsocket_term (void *cfptr, void *event)
+static void mill_handler_tcpsocket_term (
+    void *cfptr,
+    void *event)
 {
     mill_handlerimpl_prologue (tcpsocket_term);
+
+    if (event == mill_event_init)
+        return;
+    if (event == mill_event_term)
+        assert (0); // TODO
+    assert (event == mill_event_done);
+
     mill_handlerimpl_epilogue (tcpsocket_term, 1);
 }
 
@@ -277,14 +288,14 @@ static void tcpsocket_term_cb (
 
     /* Double check that the socket is in the correct state. */
     assert (self->state == TCPSOCKET_STATE_TERMINATING);
-    assert (self->recvop != 0);
+    assert (self->recvcfptr != 0);
 
     /* The coroutine is done. */
-    mill_emit (self->recvop);
+    mill_handler_tcpsocket_term (self->recvcfptr, mill_event_done);
 
     /* Flip the state. */
     self->state = 0;
-    self->recvop = 0;
+    self->recvcfptr = 0;
 }
 
 const struct mill_type mill_type_tcpsocket_term =
@@ -301,12 +312,27 @@ void *mill_call_tcpsocket_term (
 
     cf->self = self;
 
+    /* Make sure that no async operations are going on on the socket. */
+    assert (cf->self->state != TCPSOCKET_STATE_TERMINATING);
+    assert (cf->self->recvcfptr == 0);
+    assert (cf->self->sendcfptr == 0);
+
+    /* Mark the socket as being in process of being terminated. */
+    cf->self->state = TCPSOCKET_STATE_TERMINATING;
+    cf->self->recvcfptr = &cf->mill_cfh;
+
+    /* Initiate the termination. */
+    uv_close ((uv_handle_t*) &cf->self->s, tcpsocket_term_cb);
+
     mill_callimpl_epilogue (tcpsocket_term);
 }
 
-static void mill_handler_tcpsocket_connect (void *cfptr, void *event)
+static void mill_handler_tcpsocket_connect (
+    void *cfptr,
+    void *event)
 {
     mill_handlerimpl_prologue (tcpsocket_connect);
+
     mill_handlerimpl_epilogue (tcpsocket_connect, 1);
 }
 
@@ -320,12 +346,13 @@ static void tcpsocket_connect_cb (
 
     /* Double-check that the socket is in the correct state. */
     assert (cf->self->state == TCPSOCKET_STATE_CONNECTING);
+    assert (cf->self->recvcfptr != 0);
     
     /* Flip the state. */
     cf->self->state = (status == 0) ?
         TCPSOCKET_STATE_ACTIVE :
         TCPSOCKET_STATE_INIT;
-    cf->self->recvop = 0;
+    cf->self->recvcfptr = 0;
 
     /* The coroutine is done. */
     cf->mill_cfh.err = status;
@@ -343,10 +370,22 @@ void *mill_call_tcpsocket_connect (
     struct tcpsocket *self,
     struct sockaddr *addr)
 {
+    int rc;
+
     mill_callimpl_prologue (tcpsocket_connect);
 
     cf->self = self;
-    cf->addr = addr;
+
+    /* Connect can be done only on a fresh socket. */
+    assert (cf->self->state == TCPSOCKET_STATE_INIT);
+
+    /* Mark the socket as being in process of connecting. */
+    cf->self->state = TCPSOCKET_STATE_CONNECTING;
+    cf->self->recvcfptr = cf;
+    
+    /* Initiate the connecting. */
+    rc = uv_tcp_connect (&cf->req, &cf->self->s, addr, tcpsocket_connect_cb);
+    uv_assert (rc);
 
     mill_callimpl_epilogue (tcpsocket_connect);
 }
@@ -394,8 +433,8 @@ static void tcpsocket_listen_cb (
         goto error;
 
     /* Actual accept. */
-    assert (self->recvop != 0);
-    cf = mill_cont (self->recvop, struct mill_cf_tcpsocket_accept,
+    assert (self->recvcfptr != 0);
+    cf = mill_cont (self->recvcfptr, struct mill_cf_tcpsocket_accept,
         mill_cfh);
     status = uv_accept (s, (uv_stream_t*) &cf->newsock->s);
     if (status != 0)
@@ -404,7 +443,7 @@ static void tcpsocket_listen_cb (
     /* Flip both listening and accepted socket to new states. */
     cf->newsock->state = TCPSOCKET_STATE_ACTIVE;
     cf->self->state = TCPSOCKET_STATE_LISTENING;
-    self->recvop = 0;
+    self->recvcfptr = 0;
 
     /* The coroutine is done. */
     mill_emit (cf);
@@ -415,15 +454,14 @@ error:
     /* End the coroutine. Report the error. */
     cf->newsock->state = TCPSOCKET_STATE_INIT;
     cf->self->state = TCPSOCKET_STATE_LISTENING;
-    self->recvop = 0;
+    self->recvcfptr = 0;
     cf->mill_cfh.err = status;
     mill_emit (cf);
 }
 
 int tcpsocket_listen (
     struct tcpsocket *self,
-    int backlog,
-    struct mill_loop *loop)
+    int backlog)
 {
     int rc;
 
@@ -489,7 +527,7 @@ static void tcpsocket_send_cb (
     cf = mill_cont (req, struct mill_cf_tcpsocket_send, req);
 
     /* Notify the parent coroutine that the operation is finished. */
-    cf->self->sendop = 0;
+    cf->self->sendcfptr = 0;
     cf->mill_cfh.err = status;
     mill_emit (cf);
 }
@@ -555,8 +593,8 @@ static void tcpsocket_alloc_cb (
     struct tcpsocket *self;
 
     self = mill_cont (handle, struct tcpsocket, s);
-    assert (self->recvop);
-    cf = mill_cont (self->recvop, struct mill_cf_tcpsocket_recv,
+    assert (self->recvcfptr);
+    cf = mill_cont (self->recvcfptr, struct mill_cf_tcpsocket_recv,
         mill_cfh);
 
     buf->base = cf->buf;
@@ -572,8 +610,8 @@ static void tcpsocket_recv_cb (
     struct tcpsocket *self;
 
     self = mill_cont (stream, struct tcpsocket, s);
-    assert (self->recvop);
-    cf = mill_cont (self->recvop, struct mill_cf_tcpsocket_recv,
+    assert (self->recvcfptr);
+    cf = mill_cont (self->recvcfptr, struct mill_cf_tcpsocket_recv,
         mill_cfh);
 
     /* Adjust the input buffer to not cover the data already received. */
@@ -586,7 +624,7 @@ static void tcpsocket_recv_cb (
        coroutine that the operation is finished. */
     if (!cf->len) {
         uv_read_stop (stream);
-        self->recvop = 0;
+        self->recvcfptr = 0;
         mill_emit (cf);
     }
 }

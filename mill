@@ -496,7 +496,7 @@ for s in sections
                     end
 
                 elsif(tokens[i][0] == :identifier &&
-                        ["tcpsocket_init", "tcpsocket_listen"].include?(text[tokens[i][1]..tokens[i][2]]) &&
+                        ["tcpsocket_init"].include?(text[tokens[i][1]..tokens[i][2]]) &&
                         tokens[i + 1][0] == :braces)
                     insert(text, alltokens, tokens[i + 1][2], ", cf->mill_cfh.loop")
 

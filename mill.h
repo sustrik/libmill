@@ -39,6 +39,7 @@
 /*  Special events. */
 #define mill_event_init ((void*) 0)
 #define mill_event_term ((void*) -1)
+#define mill_event_done ((void*) -2)
 
 /* 'coframe' points to the coframe of the coroutine being evaluated.
    'event' either points to the coframe of the child coroutine that have just
@@ -194,7 +195,7 @@ int mill_has_children (void *cfptr);
 void *mill_typeof (void *cfptr);
 
 /******************************************************************************/
-/* Coroutine msleep.                                                          */
+/*  Coroutine msleep.                                                         */
 /******************************************************************************/
 
 /*
@@ -223,15 +224,23 @@ void *mill_call_msleep (
 int msleep (int milliseconds);
 
 /******************************************************************************/
-/* Class tcpsocket.                                                           */
+/*  Class tcpsocket.                                                          */
 /******************************************************************************/
 
 struct tcpsocket {
     uv_tcp_t s;
     uv_loop_t *loop;
+
+    /* See TCPSOCKET_STATE_* constants. */
     int state;
-    struct mill_cfh *recvop;
-    struct mill_cfh *sendop;
+
+    /* Handle of the receive coroutine currently being executed on this socket.
+       This includes any socket-scoped asynchronous operations such as connect,
+       accept or term. */
+    void *recvcfptr;
+
+    /* Handle of the send coroutine currently being executed on this socket. */
+    void *sendcfptr;
 };
 
 int tcpsocket_init (
@@ -281,7 +290,6 @@ struct mill_cf_tcpsocket_connect {
 
     /* Coroutine arguments. */
     struct tcpsocket *self;
-    struct sockaddr *addr;
 
     /* Local variables. */
     uv_connect_t req;
@@ -297,8 +305,7 @@ void *mill_call_tcpsocket_connect (
 
 int tcpsocket_listen (
     struct tcpsocket *self,
-    int backlog,
-    struct mill_loop *loop);
+    int backlog);
 
 /*
     coroutine tcpsocket_accept (
