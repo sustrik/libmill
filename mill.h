@@ -172,9 +172,11 @@ void mill_getresult (void *cfptr, void **who, int *err);
 
 /*  raise  */
 
+void mill_seterror (void *cfptr, int err);
+
 #define mill_raise(errarg)\
     do {\
-        cf->mill_cfh.err = (errarg);\
+        mill_seterror (cf, (errarg));\
         goto mill_finally;\
     } while (0)
 
