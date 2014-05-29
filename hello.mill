@@ -9,7 +9,7 @@ coroutine hello ()
     struct sockaddr_in addr;
     struct tcpsocket ls;
     struct tcpsocket s;
-    char buf [6];
+    char buf [7];
     endvars;
 
     rc = tcpsocket_init (&ls);
@@ -30,9 +30,11 @@ coroutine hello ()
         call tcpsocket_send (&s, "Hello, world!", 13);
         wait (0, &rc);
         assert (rc == 0);
-        //call tcpsocket_recv (&s, buf, sizeof (buf));
-        //wait (0, &rc);
-        //assert (rc == 0);
+        call tcpsocket_recv (&s, buf, 6);
+        wait (0, &rc);
+        assert (rc == 0);
+        buf [6] = 0;
+        printf ("%s\n", buf);
         call tcpsocket_term (&s);
         wait (0, &rc);
         assert (rc == 0);

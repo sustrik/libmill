@@ -42,6 +42,14 @@
 /* The event loop. */
 /******************************************************************************/
 
+static void loop_close_cb (uv_handle_t *handle)
+{
+    struct mill_loop *self;
+
+    self = mill_cont (handle, struct mill_loop, idle);
+    uv_stop (&self->uv_loop);
+}
+
 static void loop_cb (uv_idle_t* handle)
 {
     struct mill_loop *self;
@@ -52,8 +60,10 @@ static void loop_cb (uv_idle_t* handle)
     while (self->first) {
         src = self->first;
 
+        /*  If top level coroutine exits, we can stop the event loop.
+            However, first we have to close the 'idle' object. */
         if (!src->parent) {
-            uv_stop (&self->uv_loop);
+            uv_close ((uv_handle_t*) &self->idle, loop_close_cb);
             return;
         }
 
@@ -69,6 +79,9 @@ static void loop_cb (uv_idle_t* handle)
 
         src->parent->type->handler (src->parent, src);
         self->first = src->next;
+
+        /* Mark the coframe as uninitialied. */
+        src->type = 0;
 
         /* Deallocate auto-allocated coframes. */
         if (src->flags & mill_flag_deallocate)
@@ -189,35 +202,54 @@ int mill_has_children (void *cfptr)
 
 static void mill_handler_msleep (
     void *cfptr,
-    void *event)
-{
-    int rc;
-    struct mill_cf_msleep *cf;
+    void *event);
 
-    cf = (struct mill_cf_msleep*) cfptr;
-
-    if (event == mill_event_init)
-        return;
-
-    /* Cancel the timer. */
-    if (event == mill_event_term) {
-        rc = uv_timer_stop (&cf->timer);
-        uv_assert (rc);
-        cf->mill_cfh.err = ECANCELED;
-        mill_emit (cf);
-        return;
-    }
-}
-
-static void msleep_cb (
+static void msleep_timer_cb (
     uv_timer_t *timer)
 {
     struct mill_cf_msleep *cf;
 
     cf = mill_cont (timer, struct mill_cf_msleep, timer);
 
-    /* The coroutine is done. */
-    mill_emit (cf);
+    /* Convert uv callback into mill event. */
+    mill_handler_msleep (cf, mill_event_done);
+}
+
+static void msleep_close_cb (
+    uv_handle_t *handle)
+{
+    struct mill_cf_msleep *cf;
+
+    cf = mill_cont (handle, struct mill_cf_msleep, timer);
+
+    /* Convert uv callback into mill event. */
+    mill_handler_msleep (cf, mill_event_closed);
+}
+
+static void mill_handler_msleep (
+    void *cfptr,
+    void *event)
+{
+    int rc;
+    
+    mill_handlerimpl_prologue (msleep);
+
+    if (event == mill_event_init)
+        return;
+    else if (event == mill_event_term) {
+        rc = uv_timer_stop (&cf->timer);
+        uv_assert (rc);
+        cf->mill_cfh.err = ECANCELED;
+        return;
+    }
+    else if (event == mill_event_done) {
+        uv_close ((uv_handle_t*) &cf->timer, msleep_close_cb);
+        return;
+    }
+    else
+        assert (event == mill_event_closed);
+
+    mill_handlerimpl_epilogue(msleep, 1);
 }
 
 const struct mill_type mill_type_msleep =
@@ -230,11 +262,15 @@ void *mill_call_msleep (
     void *parent,
     int milliseconds)
 {
+    int rc;
+
     mill_callimpl_prologue (msleep);
 
     /* Launch the timer. */
-    uv_timer_init (&loop->uv_loop, &cf->timer);
-    uv_timer_start(&cf->timer, msleep_cb, milliseconds, 0);
+    rc = uv_timer_init (&loop->uv_loop, &cf->timer);
+    uv_assert (rc);
+    rc = uv_timer_start (&cf->timer, msleep_timer_cb, milliseconds, 0);
+    uv_assert (rc);
 
     mill_callimpl_epilogue (msleep);
 }
@@ -332,6 +368,13 @@ static void mill_handler_tcpsocket_connect (
     void *event)
 {
     mill_handlerimpl_prologue (tcpsocket_connect);
+
+    if (event == mill_event_init)
+        return;
+    else if (event == mill_event_term)
+        assert (0); // TODO
+    else
+        assert (event == mill_event_done);
 
     mill_handlerimpl_epilogue (tcpsocket_connect, 1);
 }
@@ -528,7 +571,12 @@ static void mill_handler_tcpsocket_send (void *cfptr, void *event)
 {
     mill_handlerimpl_prologue (tcpsocket_send);
 
-
+    if (event == mill_event_init)
+        return;
+    else if (event == mill_event_term)
+        assert (0); // TODO
+    else
+        assert (event == mill_event_done);
 
     mill_handlerimpl_epilogue (tcpsocket_send, 1);
 }

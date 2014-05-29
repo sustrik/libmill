@@ -40,8 +40,9 @@
 #define mill_event_init ((void*) 0)
 #define mill_event_term ((void*) -1)
 #define mill_event_done ((void*) -2)
+#define mill_event_closed ((void*) -3)
 
-/* 'coframe' points to the coframe of the coroutine being evaluated.
+/* 'cfptr' points to the coframe of the coroutine being evaluated.
    'event' either points to the coframe of the child coroutine that have just
    terminated or is one of the special events listed above. */
 typedef void (*mill_fn_handler) (void *cfptr, void *event);
