@@ -651,7 +651,6 @@ end
 ./+)
 .{
 .    mill_callimpl_prologue (@{s[:name]});
-.
 for a in s[:args]
 .    cf->@{a[:name]} = @{a[:name]};
 end
@@ -660,7 +659,6 @@ for v in s[:vars]
 .    cf->@{v[:name]} = @{v[:init]};
     end
 end
-.
 .    mill_callimpl_epilogue (@{s[:name]});
 .}
 .
@@ -671,23 +669,13 @@ for a in s[:args]
 end
 ./+)
 .{
-.    struct mill_loop loop;
-.    struct mill_cf_@{s[:name]} cf;
-.    int err;
-.
-.    /* Run an event loop to execute the coroutine in synchronous manner. */
-.    mill_loop_init (&loop);
+.    mill_synccallimpl_prologue (@{s[:name]});
 .    mill_call_@{s[:name]} (&cf, &mill_type_@{s[:name]}, &loop, 0
 for a in s[:args]
 .    /+, @{a[:name]}
 end
 ./+);
-.    mill_loop_run (&loop);
-.    mill_loop_term (&loop);
-.
-.    /* Return the error code produced by the coroutine. */
-.    mill_getresult (&cf, 0, &err);
-.    return err;
+.    mill_synccallimpl_epilogue (@{s[:name]});
 .}
 .
 

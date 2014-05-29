@@ -117,6 +117,19 @@ struct mill_cfh {
     mill_cancelall (state);\
     mill_emit (cf);
 
+#define mill_synccallimpl_prologue(name)\
+    struct mill_loop loop;\
+    struct mill_cf_##name cf;\
+    int err;\
+    \
+    mill_loop_init (&loop);
+
+#define mill_synccallimpl_epilogue(name)\
+    mill_loop_run (&loop);\
+    mill_loop_term (&loop);\
+    mill_getresult (&cf, 0, &err);\
+    return err;
+
 /******************************************************************************/
 /* The event loop. */
 /******************************************************************************/

@@ -347,16 +347,16 @@ static void tcpsocket_connect_cb (
     /* Double-check that the socket is in the correct state. */
     assert (cf->self->state == TCPSOCKET_STATE_CONNECTING);
     assert (cf->self->recvcfptr != 0);
+
+    /* The coroutine is done. */
+    cf->mill_cfh.err = status;
+    mill_handler_tcpsocket_connect (cf->self->recvcfptr, mill_event_done);
     
     /* Flip the state. */
     cf->self->state = (status == 0) ?
         TCPSOCKET_STATE_ACTIVE :
         TCPSOCKET_STATE_INIT;
-    cf->self->recvcfptr = 0;
-
-    /* The coroutine is done. */
-    cf->mill_cfh.err = status;
-    mill_emit (cf);
+    cf->self->recvcfptr = 0;    
 }
 
 const struct mill_type mill_type_tcpsocket_connect =
@@ -414,7 +414,8 @@ static void tcpsocket_listen_cb (
 
     /* Double-check that the socket is in the correct state. */
     assert (self->state == TCPSOCKET_STATE_LISTENING ||
-        self->state == TCPSOCKET_STATE_ACCEPTING);
+        self->state == TCPSOCKET_STATE_ACCEPTING ||
+        self->state == TCPSOCKET_STATE_TERMINATING);
 
     /* If nobody is accepting connections at the moment
        we'll simply drop them. */
@@ -481,14 +482,16 @@ static void mill_handler_tcpsocket_accept (void *cfptr, void *event)
 {
     mill_handlerimpl_prologue (tcpsocket_accept);
 
-#if 0
-    /* End the coroutine. Report the error. */
-    cf->newsock->state = TCPSOCKET_STATE_INIT;
-    cf->self->state = TCPSOCKET_STATE_LISTENING;
-    cf->self->recvop = 0;
-    cf->mill_cfh.err = ECANCELED;
-    mill_cfh_emit (&cf->mill_cfh);
-#endif
+    if (event == mill_event_init)
+        return;
+    else if (event == mill_event_term) {
+        cf->newsock->state = TCPSOCKET_STATE_INIT;
+        cf->self->state = TCPSOCKET_STATE_LISTENING;
+        cf->self->recvcfptr = 0;
+        cf->mill_cfh.err = ECANCELED;
+    }
+    else
+        assert (event == mill_event_done);
 
     mill_handlerimpl_epilogue (tcpsocket_accept, 1);
 }
@@ -505,9 +508,18 @@ void *mill_call_tcpsocket_accept (
     struct tcpsocket *newsock)
 {
     mill_callimpl_prologue (tcpsocket_accept);
-
     cf->self = self;
     cf->newsock = newsock;
+
+    /* Only sockets that are already listening can accept new connections. */
+    assert (cf->self->state == TCPSOCKET_STATE_LISTENING);
+
+    /* Mark the socket as being in process of being accepted. */
+    cf->self->state = TCPSOCKET_STATE_ACCEPTING;
+    cf->self->recvcfptr = cf;
+
+    /* There's no need for any action here as callback for incoming connections
+       was already registered in tcpsocket_listen function. */
 
     mill_callimpl_epilogue (tcpsocket_accept);
 }
@@ -544,18 +556,19 @@ void *mill_call_tcpsocket_send (
     const void *buf,
     size_t len)
 {
+    int rc;
+
     mill_callimpl_prologue (tcpsocket_send);
 
     cf->self = self;
 
-#if 0
     /* Make sure that the socket is properly connected and that no other send
        operation is in progress. */
-    assert (self->state == TCPSOCKET_STATE_ACTIVE);
-    assert (self->sendop == 0);
+    assert (cf->self->state == TCPSOCKET_STATE_ACTIVE);
+    assert (cf->self->sendcfptr == 0);
 
     /* Mark the socket as being in process of sending. */
-    cf->self->sendop = &cf->mill_cfh;
+    cf->self->sendcfptr = cf;
 
     /* Initiate the sending. */
     cf->buffer.base = (void*) buf;
@@ -563,7 +576,6 @@ void *mill_call_tcpsocket_send (
     rc = uv_write (&cf->req, (uv_stream_t*) &cf->self->s, &cf->buffer, 1,
         tcpsocket_send_cb);
     assert (rc == 0);
-#endif
 
     mill_callimpl_epilogue (tcpsocket_send);
 }
@@ -641,26 +653,26 @@ void *mill_call_tcpsocket_recv (
     void *buf,
     size_t len)
 {
+    int rc;
+
     mill_callimpl_prologue (tcpsocket_recv);
 
     cf->self = self;
     cf->buf = buf;
     cf->len = len;
 
-#if 0
     /* Make sure that the socket is properly connected and that no other recv
        operation is in progress. */
-    assert (self->state == TCPSOCKET_STATE_ACTIVE);
-    assert (self->recvop == 0);
+    assert (cf->self->state == TCPSOCKET_STATE_ACTIVE);
+    assert (cf->self->recvcfptr == 0);
 
     /* Mark the socket as being in process of receiving. */
-    cf->self->recvop = &cf->mill_cfh;
+    cf->self->recvcfptr = cf;
 
     /* Initiate the receiving. */
     rc = uv_read_start ((uv_stream_t*) &cf->self->s,
         tcpsocket_alloc_cb, tcpsocket_recv_cb);
     uv_assert (rc);
-#endif
 
     mill_callimpl_epilogue (tcpsocket_recv);
 }

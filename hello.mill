@@ -26,14 +26,18 @@ coroutine hello (int i)
         assert (rc == 0);
         printf ("accepting\n");
         call tcpsocket_accept (&ls, &s);
-        wait (0, 0);
+        wait (0, &rc);
+        assert (rc == 0);
         printf ("accepted\n");
         call tcpsocket_send (&s, "Hello, world!", 13);
-        wait (0, 0);
-        call tcpsocket_recv (&s, buf, sizeof (buf));
-        wait (0, 0);
+        wait (0, &rc);
+        assert (rc == 0);
+        //call tcpsocket_recv (&s, buf, sizeof (buf));
+        //wait (0, &rc);
+        //assert (rc == 0);
         call tcpsocket_term (&s);
-        wait (0, 0);
+        wait (0, &rc);
+        assert (rc == 0);
     }
 }
 
