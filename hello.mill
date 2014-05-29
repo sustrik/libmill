@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <uv.h>
 
-coroutine hello (int i)
+coroutine hello ()
 {
     int rc;
     struct sockaddr_in addr;
@@ -24,11 +24,9 @@ coroutine hello (int i)
     while (1) {
         rc = tcpsocket_init (&s);
         assert (rc == 0);
-        printf ("accepting\n");
         call tcpsocket_accept (&ls, &s);
         wait (0, &rc);
         assert (rc == 0);
-        printf ("accepted\n");
         call tcpsocket_send (&s, "Hello, world!", 13);
         wait (0, &rc);
         assert (rc == 0);
@@ -43,7 +41,7 @@ coroutine hello (int i)
 
 int main ()
 {
-    hello (1);
+    hello ();
     return 0;
 }
 

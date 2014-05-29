@@ -527,6 +527,9 @@ void *mill_call_tcpsocket_accept (
 static void mill_handler_tcpsocket_send (void *cfptr, void *event)
 {
     mill_handlerimpl_prologue (tcpsocket_send);
+
+
+
     mill_handlerimpl_epilogue (tcpsocket_send, 1);
 }
 
@@ -582,16 +585,20 @@ void *mill_call_tcpsocket_send (
 
 static void mill_handler_tcpsocket_recv (void *cfptr, void *event)
 {
+    int rc;
+
     mill_handlerimpl_prologue (tcpsocket_recv);
 
-#if 0
-    /* End the coroutine. Report the error. */
-    rc = uv_read_stop ((uv_stream_t*) &cf->self->s);
-    assert (rc == 0);
-    cf->self->recvop = 0;
-    cf->mill_cfh.err = ECANCELED;
-    mill_cfh_emit (&cf->mill_cfh);
-#endif
+    if (event == mill_event_init)
+        return;
+    else if (event == mill_event_term) {
+        rc = uv_read_stop ((uv_stream_t*) &cf->self->s);
+        assert (rc == 0);
+        cf->self->recvcfptr = 0;
+        cf->mill_cfh.err = ECANCELED;
+    }
+    else
+        assert (event == mill_event_done);
 
     mill_handlerimpl_epilogue (tcpsocket_recv, 1);
 }
