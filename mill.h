@@ -65,6 +65,7 @@ struct mill_cfh {
     int state;
     int flags;
     int err;
+    struct mill_cfh *nextev;
     struct mill_cfh *parent;
     struct mill_cfh *children;
     struct mill_cfh *next;
@@ -74,7 +75,6 @@ struct mill_cfh {
 
 #define mill_callimpl_prologue(name)\
     struct mill_cf_##name *cf;\
-    struct mill_cfh *mill_sibling;\
     int mill_flags = 0;\
     \
     cf = (struct mill_cf_##name*) cfptr;\
@@ -87,18 +87,14 @@ struct mill_cfh {
     cf->mill_cfh.state = 0;\
     cf->mill_cfh.flags = mill_flags;\
     cf->mill_cfh.err = 0;\
+    cf->mill_cfh.nextev = 0;\
     cf->mill_cfh.parent = parent;\
     cf->mill_cfh.children = 0;\
     cf->mill_cfh.next = 0;\
     cf->mill_cfh.prev = 0;\
     cf->mill_cfh.loop = loop;\
-    if (cf->mill_cfh.parent) {\
-        mill_sibling = cf->mill_cfh.parent->children;\
-        cf->mill_cfh.next = mill_sibling;\
-        if (mill_sibling)\
-            mill_sibling->prev = &cf->mill_cfh;\
-        cf->mill_cfh.parent->children = &cf->mill_cfh;\
-    }
+    if (parent)\
+        mill_add_child (parent, cf);
 
 #define mill_callimpl_epilogue(name)\
     mill_handler_##name (&cf->mill_cfh, mill_event_init);\
@@ -157,6 +153,10 @@ void mill_loop_emit (struct mill_loop *self, struct mill_cfh *base);
 /******************************************************************************/
 /*  Mill keywords.                                                            */
 /******************************************************************************/
+
+/*  call  */
+
+void mill_add_child (void *cfptr, void *child);
 
 /*  wait  */
 

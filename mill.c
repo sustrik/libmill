@@ -67,8 +67,10 @@ static void loop_cb (uv_idle_t* handle)
             return;
         }
 
-        /* Remove the child from parent's list of children. */
-        if (src != 0 && src != (struct mill_cfh*) -1) {
+        if (src != mill_event_init && src != mill_event_term &&
+              src != mill_event_done && src != mill_event_closed) {
+
+            /* Remove the child from parent's list of children. */
             if (src->parent->children == src)
                 src->parent->children = src->next;
             if (src->prev)
@@ -78,9 +80,9 @@ static void loop_cb (uv_idle_t* handle)
         }
 
         src->parent->type->handler (src->parent, src);
-        self->first = src->next;
+        self->first = src->nextev;
 
-        /* Mark the coframe as uninitialied. */
+        /* Mark the coframe as uninitialised. */
         src->type = 0;
 
         /* Deallocate auto-allocated coframes. */
@@ -132,14 +134,29 @@ void mill_loop_emit (
     if (self->first == 0)
         self->first = ev;
     else
-        self->last->next = ev;
-    ev->next = 0;
+        self->last->nextev = ev;
+    ev->nextev = 0;
     self->last = ev;
 }
 
 /******************************************************************************/
 /*  Mill keywords.                                                            */
 /******************************************************************************/
+
+void mill_add_child (void *cfptr, void *child)
+{
+    struct mill_cfh *cfh;
+    struct mill_cfh *ch;
+
+    cfh = (struct mill_cfh*) cfptr;
+    ch = (struct mill_cfh*) child;
+
+    ch->prev = 0;
+    ch->next = cfh->children;
+    if (cfh->children)
+        cfh->children->prev = ch;
+    cfh->children = ch;
+}
 
 void mill_getresult (void *cfptr, void **who, int *err)
 {
