@@ -93,7 +93,7 @@ C language, one with direct support for coroutines.
 
 To define a new coroutine use "coroutine" keyword. The coroutine definition
 is similar to a standard C function definition. One difference to note though
-is that mill coroutines don't have a return types. From C point of view they
+is that mill coroutines don't have return types. From C point of view they
 can be though of as void functions:
 
 ```
@@ -240,6 +240,17 @@ coroutine quux (int a)
 
     b = 3;
     printf ("%d\n", a + b);
+}
+```
+
+Third, in-place structure and array initialisation doesn't work with local
+variables in coroutines:
+
+```
+coroutine foo ()
+{
+    int i[3] = {0, 1, 2}; // This line will cause a compilation error.
+    endvars;
 }
 ```
 
