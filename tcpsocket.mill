@@ -10,9 +10,6 @@ coroutine test1 ()
     struct tcpsocket ls;
     struct tcpsocket as;
     struct tcpsocket cs;
-    void *acc;
-    void *conn;
-    void *hndl;
     endvars;
 
     rc = uv_ip4_addr ("127.0.0.1", 7000, &addr);
@@ -27,26 +24,28 @@ coroutine test1 ()
 
     rc = tcpsocket_init (&as);
     assert (rc == 0);
-    acc = call tcpsocket_accept (&ls, &as);
+    call tcpsocket_accept (&ls, &as);
 
     rc = tcpsocket_init (&cs);
     assert (rc == 0);
-    conn = call tcpsocket_connect (&cs, (struct sockaddr*) &addr);
+    call tcpsocket_connect (&cs, (struct sockaddr*) &addr);
 
-    wait (&hndl, &rc);
+    wait (0, &rc);
     assert (rc == 0);
-    wait (&hndl, &rc);
+    wait (0, &rc);
     assert (rc == 0);
+
+
 
     call tcpsocket_term (&cs);
     call tcpsocket_term (&as);
     call tcpsocket_term (&ls);
 
-    wait (&hndl, &rc);
+    wait (0, &rc);
     assert (rc == 0);
-    wait (&hndl, &rc);
+    wait (0, &rc);
     assert (rc == 0);
-    wait (&hndl, &rc);
+    wait (0, &rc);
     assert (rc == 0);
 }
 

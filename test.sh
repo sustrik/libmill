@@ -2,7 +2,7 @@
 gcc -o sleep sleep.c mill.c -luv -g -O0
 ./sleep
 ./mill tcpsocket.mill
-gcc -o sleep tcpsocket.c mill.c -luv -g -O0
+gcc -o tcpsocket tcpsocket.c mill.c -luv -g -O0
 ./tcpsocket
 
 ./mill hello.mill
