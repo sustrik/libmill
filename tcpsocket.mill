@@ -10,6 +10,7 @@ coroutine test1 ()
     struct tcpsocket ls;
     struct tcpsocket as;
     struct tcpsocket cs;
+    char buf [2];
     endvars;
 
     rc = uv_ip4_addr ("127.0.0.1", 7000, &addr);
@@ -35,7 +36,14 @@ coroutine test1 ()
     wait (0, &rc);
     assert (rc == 0);
 
+    call tcpsocket_send (&cs, "Hi", 2);
+    call tcpsocket_recv (&as, buf, 2);
 
+    wait (0, &rc);
+    assert (rc == 0);
+    wait (0, &rc);
+    assert (rc == 0);
+    assert (buf [0] == 'H' && buf [1] == 'i');
 
     call tcpsocket_term (&cs);
     call tcpsocket_term (&as);
