@@ -237,7 +237,7 @@ loop do
     end
 
     # End of file.
-    break if tokens[i][0] == :end
+    break if i == cstop
 
     # Create the coroutine section.
     sections << {
