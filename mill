@@ -306,7 +306,7 @@ for i in 0..sections.size - 1
         # Coroutine body. Split it into variables part and the executable code.
         # 'endvars' statement is the delimiter between the two.
         bodytokens = tokens[3][3]
-        bodytokens.unshift [:whitespace, bodytokens [3][1] + 1, tokens[0][1] - 1]
+        bodytokens.unshift [:whitespace, tokens [3][1] + 1, bodytokens[0][1] - 1]
         for j in 1..bodytokens.size - 1
             break if bodytokens[j][0] == :endvars
         end
