@@ -89,6 +89,12 @@ annoying to write and confusing to read.
 Mill tries to solve this problem by defining a slightly augmented version of
 C language, one with direct support for coroutines.
 
+Mill is slightly more than a coroutine generator though. It tries to tame the
+complexity inherent in asynchronous programming by defining strict limits
+for coroutine lifetimes. Specifically, no coroutine can exceed the lifetime of
+the coroutine that launched it. In other words, when coroutine ends, all the
+coroutines it have launched are automatically canceled.
+
 ### Defining a coroutine
 
 To define a new coroutine use "coroutine" keyword. The coroutine definition
