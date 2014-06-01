@@ -3,14 +3,11 @@
 #include <assert.h>
 #include <uv.h>
 
-coroutine test1 ()
+coroutine tcpsocketpair (struct tcpsocket *s1, struct tcpsocket *s2)
 {
     int rc;
     struct sockaddr_in addr;
     struct tcpsocket ls;
-    struct tcpsocket as;
-    struct tcpsocket cs;
-    char buf [2];
     endvars;
 
     rc = uv_ip4_addr ("127.0.0.1", 7000, &addr);
@@ -23,21 +20,39 @@ coroutine test1 ()
     rc = tcpsocket_listen (&ls, 10);
     assert (rc == 0);
 
-    rc = tcpsocket_init (&as);
+    rc = tcpsocket_init (s1);
     assert (rc == 0);
-    call tcpsocket_accept (&ls, &as);
+    call tcpsocket_accept (&ls, s1);
 
-    rc = tcpsocket_init (&cs);
+    rc = tcpsocket_init (s2);
     assert (rc == 0);
-    call tcpsocket_connect (&cs, (struct sockaddr*) &addr);
+    call tcpsocket_connect (s2, (struct sockaddr*) &addr);
 
     wait (0, &rc);
     assert (rc == 0);
     wait (0, &rc);
     assert (rc == 0);
 
-    call tcpsocket_send (&cs, "Hi", 2);
-    call tcpsocket_recv (&as, buf, 2);
+    call tcpsocket_term (&ls);
+
+    wait (0, &rc);
+    assert (rc == 0);
+}
+
+coroutine test1 ()
+{
+    int rc;
+    struct tcpsocket s1;
+    struct tcpsocket s2;
+    char buf [2];
+    endvars;
+
+    call tcpsocketpair (&s1, &s2);
+    wait (0, &rc);
+    assert (rc == 0);
+
+    call tcpsocket_send (&s1, "Hi", 2);
+    call tcpsocket_recv (&s2, buf, 2);
 
     wait (0, &rc);
     assert (rc == 0);
@@ -45,12 +60,9 @@ coroutine test1 ()
     assert (rc == 0);
     assert (buf [0] == 'H' && buf [1] == 'i');
 
-    call tcpsocket_term (&cs);
-    call tcpsocket_term (&as);
-    call tcpsocket_term (&ls);
+    call tcpsocket_term (&s1);
+    call tcpsocket_term (&s2);
 
-    wait (0, &rc);
-    assert (rc == 0);
     wait (0, &rc);
     assert (rc == 0);
     wait (0, &rc);
