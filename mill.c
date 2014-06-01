@@ -222,7 +222,7 @@ int mill_has_children (void *cfptr)
 }
 
 /******************************************************************************/
-/*  coroutine msleep.                                                         */
+/*  coroutine msleep                                                          */
 /******************************************************************************/
 
 static void mill_handler_msleep (
@@ -312,6 +312,100 @@ int msleep (
     mill_synccallimpl_prologue (msleep);
     mill_call_msleep (&cf, &mill_type_msleep, &loop, 0, milliseconds);
     mill_synccallimpl_epilogue (msleep);
+}
+
+/******************************************************************************/
+/*  coroutine getaddressinfo                                                  */
+/******************************************************************************/
+
+static void mill_handler_getaddressinfo (
+    void *cfptr,
+    void *event)
+{
+    int rc;
+    struct mill_cf_getaddressinfo *cf;
+
+    cf = (struct mill_cf_getaddressinfo*) cfptr;
+    
+    if (event == mill_event_init)
+        return;
+
+    if (event == mill_event_term) {
+        uv_cancel ((uv_req_t*) &cf->req);
+        return;
+    }
+
+    if (event == mill_event_done) {
+        mill_emit (cf);
+        return;
+    }
+
+    /* Invalid event. */
+    assert (0);
+}
+
+static void getaddressinfo_cb (
+    uv_getaddrinfo_t* req,
+    int status,
+    struct addrinfo* res)
+{
+    struct mill_cf_getaddressinfo *cf;
+
+    cf = mill_cont (req, struct mill_cf_getaddressinfo, req);
+    if (status == 0) {
+        *(cf->res) = res;
+    }
+    else {
+        *(cf->res) = 0;
+        mill_seterror (cf, status);
+    }
+    mill_handler_getaddressinfo (cf, mill_event_done);
+}
+
+const struct mill_type mill_type_getaddressinfo =
+    {mill_type_tag, mill_handler_getaddressinfo};
+
+void *mill_call_getaddressinfo (
+    void *cfptr,
+    const struct mill_type *type,
+    struct mill_loop *loop,
+    void *parent,
+    const char *node,
+    const char *service,
+    const struct addrinfo *hints,
+    struct addrinfo **res)
+{
+    int rc;
+
+    mill_callimpl_prologue (getaddressinfo);
+
+    cf->res = res;
+
+    /* Start resolving the address in asynchronous manner. */
+    /* TODO: Pass the 'hints' parameter to the function. When testing in
+       on Linux/gcc I've seen a strage pointer there. A compiler bug? */
+    rc = uv_getaddrinfo (&cf->mill_cfh.loop->uv_loop, &cf->req,
+        getaddressinfo_cb, node, service, 0);
+    uv_assert (rc);
+
+    mill_callimpl_epilogue (getaddressinfo);
+}
+
+int getaddressinfo (
+    const char *node,
+    const char *service,
+    const struct addrinfo *hints,
+    struct addrinfo **res)
+{
+    mill_synccallimpl_prologue (getaddressinfo);
+    mill_call_getaddressinfo (&cf, &mill_type_getaddressinfo, &loop, 0,
+        node, service, hints, res);
+    mill_synccallimpl_epilogue (getaddressinfo);
+}
+
+void freeaddressinfo (struct addrinfo *ai)
+{
+    uv_freeaddrinfo (ai);
 }
 
 /******************************************************************************/

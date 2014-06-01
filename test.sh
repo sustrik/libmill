@@ -4,6 +4,9 @@ gcc -o sleep sleep.c mill.c -luv -g -O0
 ./mill tcpsocket.mill
 gcc -o tcpsocket tcpsocket.c mill.c -luv -g -O0
 ./tcpsocket
+./mill getaddressinfo.mill
+gcc -o getaddressinfo getaddressinfo.c mill.c -luv -g -O0
+./getaddressinfo
 
 ./mill hello.mill
 gcc -o hello hello.c mill.c -luv -g -O0

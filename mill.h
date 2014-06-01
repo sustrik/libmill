@@ -211,6 +211,48 @@ int mill_has_children (void *cfptr);
 void *mill_typeof (void *cfptr);
 
 /******************************************************************************/
+/*  Coroutine getaddressinfo.                                                 */
+/******************************************************************************/
+
+/*
+    coroutine getaddressinfo (
+        const char *node,
+        const char *service,
+        const struct addrinfo *hints,
+        struct addrinfo **res);
+*/
+
+extern const struct mill_type mill_type_getaddressinfo;
+
+struct mill_cf_getaddressinfo {
+
+    /* Generic coframe header. */
+    struct mill_cfh mill_cfh;
+
+    /* Local variables. */
+    uv_getaddrinfo_t req;
+    struct addrinfo **res;
+};
+
+void *mill_call_getddressinfo (
+    void *cf,
+    const struct mill_type *type,
+    struct mill_loop *loop,
+    void *parent,
+    const char *node,
+    const char *service,
+    const struct addrinfo *hints,
+    struct addrinfo **res);
+    
+int getaddressinfo (
+    const char *node,
+    const char *service,
+    const struct addrinfo *hints,
+    struct addrinfo **res);
+
+void freeaddressinfo (struct addrinfo *ai);
+
+/******************************************************************************/
 /*  Coroutine msleep.                                                         */
 /******************************************************************************/
 
