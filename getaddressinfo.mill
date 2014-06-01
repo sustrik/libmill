@@ -19,9 +19,21 @@ coroutine test1 ()
     freeaddressinfo (ai);
 }
 
+/* Try cancelling the coroutine. */
+
+coroutine test2 ()
+{
+    int rc;
+    struct addrinfo *ai = 0;
+    endvars;
+
+    call getaddressinfo ("example.org", 0, 0, &ai);
+}
+
 int main ()
 {
     test1 ();
+    test2 ();
     return 0;
 }
 
