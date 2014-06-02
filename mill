@@ -330,10 +330,12 @@ for i in 0..sections.size - 1
         end
 
         # Leave only the executable code in text & tokens.
-        j += 1 if bodytokens[j][0] == :endvars
-        wstoken = [:whitespace, bodytokens [j][2] + 1, bodytokens[j + 1][1] - 1]
-        bodytokens = bodytokens[j + 1..-1]
-        bodytokens.unshift(wstoken)
+        if bodytokens[j][0] == :endvars
+            j += 1
+            wstoken = [:whitespace, bodytokens [j][2] + 1, bodytokens[j + 1][1] - 1]
+            bodytokens = bodytokens[j + 1..-1]
+            bodytokens.unshift(wstoken)
+        end
         text = text[bodytokens[0][1]..bodytokens[-2][2]]
         apply_offset(bodytokens, 0, -bodytokens[0][1])
 
