@@ -38,7 +38,7 @@
 
 /*  Special events. */
 #define mill_event_init ((void*) 0)
-#define mill_event_term ((void*) -1)
+#define mill_event_cancel ((void*) -1)
 #define mill_event_done ((void*) -2)
 #define mill_event_closed ((void*) -3)
 
@@ -106,7 +106,7 @@ struct mill_cfh {
     \
     cf = (struct mill_cf_##name*) cfptr;\
     ev = (struct mill_cfh*) event;\
-    if (event == mill_event_term)\
+    if (event == mill_event_cancel)\
         goto mill_finally;
 
 #define mill_handlerimpl_epilogue(name, state)\

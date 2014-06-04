@@ -67,7 +67,7 @@ static void loop_cb (uv_idle_t* handle)
             return;
         }
 
-        if (src != mill_event_init && src != mill_event_term &&
+        if (src != mill_event_init && src != mill_event_cancel &&
               src != mill_event_done && src != mill_event_closed) {
 
             /* Remove the child from parent's list of children. */
@@ -183,7 +183,7 @@ void mill_cancel (void *cfptr)
 
     cfh = (struct mill_cfh*) cfptr;
     assert (cfh->type->tag == mill_type_tag);
-    cfh->type->handler (cfh, mill_event_term);
+    cfh->type->handler (cfh, mill_event_cancel);
 }
 
 void *mill_typeof (void *cfptr)
@@ -210,7 +210,7 @@ void mill_cancel_children (void *cfptr)
 
     cfh = (struct mill_cfh*) cfptr; 
     for (child = cfh->children; child != 0; child = child->next)
-        child->type->handler (child,  mill_event_term);
+        child->type->handler (child,  mill_event_cancel);
 }
 
 int mill_has_children (void *cfptr)
@@ -263,7 +263,7 @@ static void mill_handler_msleep (
     if (event == mill_event_init)
         return;
 
-    if (event == mill_event_term) {
+    if (event == mill_event_cancel) {
         mill_seterror (cf, ECANCELED);
         uv_close ((uv_handle_t*) &cf->timer, msleep_close_cb);
         return;
@@ -330,7 +330,7 @@ static void mill_handler_getaddressinfo (
     if (event == mill_event_init)
         return;
 
-    if (event == mill_event_term) {
+    if (event == mill_event_cancel) {
         uv_cancel ((uv_req_t*) &cf->req);
         return;
     }
@@ -456,7 +456,7 @@ static void mill_handler_tcpsocket_term (
     if (event == mill_event_init)
         return;
 
-    if (event == mill_event_term) {
+    if (event == mill_event_cancel) {
 
         /* The termination is in progress anyway.
            Let's just wait till it finishes. */
@@ -541,7 +541,7 @@ static void mill_handler_tcpsocket_connect (
     if (event == mill_event_init)
         return;
 
-    if (event == mill_event_term) {
+    if (event == mill_event_cancel) {
         assert (0); // TODO
         return;
     }
@@ -712,7 +712,7 @@ static void mill_handler_tcpsocket_accept (void *cfptr, void *event)
     if (event == mill_event_init)
         return;
 
-    else if (event == mill_event_term) {
+    else if (event == mill_event_cancel) {
         cf->newsock->state = TCPSOCKET_STATE_INIT;
         cf->self->state = TCPSOCKET_STATE_LISTENING;
         cf->self->recvcfptr = 0;
@@ -781,7 +781,7 @@ static void mill_handler_tcpsocket_send (void *cfptr, void *event)
     if (event == mill_event_init)
         return;
 
-    if (event == mill_event_term) {
+    if (event == mill_event_cancel) {
         assert (0); // TODO
     }
 
@@ -869,7 +869,7 @@ static void mill_handler_tcpsocket_recv (void *cfptr, void *event)
     if (event == mill_event_init)
         return;
 
-    if (event == mill_event_term) {
+    if (event == mill_event_cancel) {
         rc = uv_read_stop ((uv_stream_t*) &cf->self->s);
         assert (rc == 0);
         cf->self->recvcfptr = 0;
