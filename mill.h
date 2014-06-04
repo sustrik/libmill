@@ -36,7 +36,13 @@
    coframe can be considered invalid. */
 #define mill_type_tag 0x4efd36df
 
-/*  Special events. */
+/*
+    Special events:
+     mill_event_init is fired when the coroutine starts.
+     mill_event_cancel is fired when the coroutine is canceled.
+     mill_event_done is used to let the coroutine know the work is done.
+     mill_event_closed means that the resources are deallocated.
+*/
 #define mill_event_init ((void*) 0)
 #define mill_event_cancel ((void*) -1)
 #define mill_event_done ((void*) -2)
