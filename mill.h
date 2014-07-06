@@ -20,9 +20,13 @@
     IN THE SOFTWARE.
 */
 
+/* This header is used inernally by mill. Don't use it directly in your code! */
+
 #ifndef mill_h_included
 #define mill_h_included
 
+#include <stdio.h>
+#include <stddef.h>
 #include <assert.h>
 #include <stdlib.h>
 #include <uv.h>
@@ -32,52 +36,74 @@
 /******************************************************************************/
 
 /* Constant tag is used to make sure that the coframe is valid. If its type
-   member doesn't point to something that begins with MILL_TYPE_TAG, the
-   coframe can be considered invalid. */
+   member doesn't point to something that begins with mill_type_tag, the
+   coframe is considered invalid. */
 #define mill_type_tag 0x4efd36df
 
-/*
-    Special events:
-     mill_event_init is fired when the coroutine starts.
-     mill_event_cancel is fired when the coroutine is canceled.
-     mill_event_done is used to let the coroutine know the work is done.
-     mill_event_closed means that the resources are deallocated.
-*/
-#define mill_event_init ((void*) 0)
-#define mill_event_cancel ((void*) -1)
-#define mill_event_done ((void*) -2)
-#define mill_event_closed ((void*) -3)
-
-/* 'cfptr' points to the coframe of the coroutine being evaluated.
+/* Main body of the coroutine. Handles all incoming events.
+   'cfptr' points to the coframe of the coroutine being evaluated.
    'event' either points to the coframe of the child coroutine that have just
-   terminated or is one of the special events listed above. */
+   terminated or 0 in case the parent have asked the coroutine to cancel. */
 typedef void (*mill_fn_handler) (void *cfptr, void *event);
 
+/* Final step of the coroutine.
+   Copies all output arguments to their intended destinations. */
+typedef void (*mill_fn_output) (void *cfptr);
+
+/* Structure containing all the coroutine metadata. */
 struct mill_type {
     int tag;
     mill_fn_handler handler;
+    mill_fn_output output;
+    const char *name;
 };
 
 /******************************************************************************/
-/* Coframe head -- common to all coroutines.                                  */
+/* Coframe head is common to all coroutines.                                  */
 /******************************************************************************/
 
-/* These flags are used to construct 'flags' member. */
-#define mill_flag_deallocate 1
-#define mill_flag_canceled 2
+/* Following flags are used to construct 'flags' member. */
 
+/* If true, the coframe was allocated automatically and should be deallocated
+   automatically as well. */
+#define mill_flag_deallocate 1
+
+/* This structure is placed at the beginning of each coframe. */
 struct mill_cfh {
+
+    /* Coroutine metadata. */
     const struct mill_type *type;
-    int state;
+
+    /* Coroutine's "program counter". Specifies which point in the coroutine
+       is currently being executed. The values are specific to individual
+       coroutines. */
+    int pc;
+
+    /* See the flags above. */
     int flags;
-    int err;
+
+    /* Once the coroutine finishes, the coframe is put into the parent
+       coroutine's event queue. This member implements the single-linked
+       list that is the event queue. */
     struct mill_cfh *nextev;
+
+    /* Parent corouine. */
     struct mill_cfh *parent;
+
+    /* List of child coroutines. */
     struct mill_cfh *children;
+
+    /* Double-linked list of sibling coroutines. */
     struct mill_cfh *next;
     struct mill_cfh *prev;
+
+    /* Event loop that executes this coroutine. */
     struct mill_loop *loop;
 };
+
+/******************************************************************************/
+/* Prologues and epilogues for generated functions.                           */
+/******************************************************************************/
 
 #define mill_callimpl_prologue(name)\
     struct mill_cf_##name *cf;\
@@ -90,9 +116,8 @@ struct mill_cfh {
         assert (cf);\
     }\
     cf->mill_cfh.type = type;\
-    cf->mill_cfh.state = 0;\
+    cf->mill_cfh.pc = 0;\
     cf->mill_cfh.flags = mill_flags;\
-    cf->mill_cfh.err = 0;\
     cf->mill_cfh.nextev = 0;\
     cf->mill_cfh.parent = parent;\
     cf->mill_cfh.children = 0;\
@@ -103,7 +128,7 @@ struct mill_cfh {
         mill_add_child (parent, cf);
 
 #define mill_callimpl_epilogue(name)\
-    mill_handler_##name (&cf->mill_cfh, mill_event_init);\
+    mill_handler_##name (&cf->mill_cfh, 0);\
     return (void*) cf;
 
 #define mill_handlerimpl_prologue(name)\
@@ -111,30 +136,25 @@ struct mill_cfh {
     struct mill_cfh *ev;\
     \
     cf = (struct mill_cf_##name*) cfptr;\
-    ev = (struct mill_cfh*) event;\
-    if (event == mill_event_cancel)\
-        goto mill_finally;
+    ev = (struct mill_cfh*) event;
 
-#define mill_handlerimpl_epilogue(name, state)\
+#define mill_handlerimpl_epilogue(name, pcarg)\
     mill_finally:\
-    mill_cancelall (state);\
+    mill_cancelall (pcarg);\
     mill_emit (cf);
 
 #define mill_synccallimpl_prologue(name)\
     struct mill_loop loop;\
     struct mill_cf_##name cf;\
-    int err;\
     \
     mill_loop_init (&loop);
 
 #define mill_synccallimpl_epilogue(name)\
     mill_loop_run (&loop);\
-    mill_loop_term (&loop);\
-    mill_getresult (&cf, 0, &err);\
-    return err;
+    mill_loop_term (&loop);
 
 /******************************************************************************/
-/* The event loop. */
+/* The event loop.                                                            */
 /******************************************************************************/
 
 struct mill_loop
@@ -145,319 +165,57 @@ struct mill_loop
     /* Libuv hook that processes the mill events. */
     uv_idle_t idle;
 
-    /* Local event queue. Items in this list are processed immediately,
-       before control is returned to libuv. */
+    /* Local event queue. Items in the list are processed using
+       the hook above. */
     struct mill_cfh *first;
     struct mill_cfh *last;
 };
 
+/* Initialise the loop object. */
 void mill_loop_init (struct mill_loop *self);
+
+/* Deallocate resources used by the loop. This function can be called only
+   after mill_loop_run exits. */
 void mill_loop_term (struct mill_loop *self);
+
+/* Start the loop. The loop runs until the top-level coroutine exits. */
 void mill_loop_run (struct mill_loop *self);
-void mill_loop_emit (struct mill_loop *self, struct mill_cfh *base);
+
+/* Enqueue the event to the loop's event queue. */
+void mill_loop_emit (struct mill_loop *self, struct mill_cfh *ev);
 
 /******************************************************************************/
-/*  Mill keywords.                                                            */
+/*  Helpers used to implement mill keywords.                                  */
 /******************************************************************************/
 
-/*  call  */
-
-void mill_add_child (void *cfptr, void *child);
-
-/*  wait  */
-
-void mill_getresult (void *cfptr, void **who, int *err);
-
-#define mill_wait(statearg, whoarg, errarg)\
+#define mill_wait(pcarg, whoarg)\
     do {\
-        cf->mill_cfh.state = (statearg);\
+        cf->mill_cfh.pc = (pcarg);\
         return;\
-        mill_state##statearg:\
-        mill_getresult (event, (whoarg), (errarg));\
+        mill_pc_##pcarg:\
+        mill_who (event, (whoarg));\
     } while (0)
-
-/*  raise  */
-
-void mill_seterror (void *cfptr, int err);
-
-#define mill_raise(errarg)\
-    do {\
-        mill_seterror (cf, (errarg));\
-        goto mill_finally;\
-    } while (0)
-
-/*  return  */
-
-#define mill_return mill_raise (0)
-
-/*  cancel  */
-
-void mill_cancel (void *cfptr);
-
-/*  cancelall  */
-
-void mill_cancel_children (void *cfptr);
-int mill_has_children (void *cfptr);
 
 #define mill_cancelall(statearg)\
     do {\
         mill_cancel_children (cf);\
+        cf->mill_cfh.pc = (statearg);\
         while (1) {\
             if (!mill_has_children (cf))\
                 break;\
-            cf->mill_cfh.state = (statearg);\
             return;\
-            mill_state##statearg:\
+            mill_pc_##statearg:\
             ;\
         }\
     } while (0)
 
-/*  typeof  */
-
+void mill_emit (void *cfptr);
+void mill_add_child (void *cfptr, void *child);
+void mill_who (void *cfptr, void **who);
+void mill_cancel (void *cfptr, void *child);
+void mill_cancel_children (void *cfptr);
+int mill_has_children (void *cfptr);
 void *mill_typeof (void *cfptr);
-
-/******************************************************************************/
-/*  Coroutine getaddressinfo.                                                 */
-/******************************************************************************/
-
-/*
-    coroutine getaddressinfo (
-        const char *node,
-        const char *service,
-        const struct addrinfo *hints,
-        struct addrinfo **res);
-*/
-
-extern const struct mill_type mill_type_getaddressinfo;
-
-struct mill_cf_getaddressinfo {
-
-    /* Generic coframe header. */
-    struct mill_cfh mill_cfh;
-
-    /* Local variables. */
-    uv_getaddrinfo_t req;
-    struct addrinfo **res;
-};
-
-void *mill_call_getddressinfo (
-    void *cf,
-    const struct mill_type *type,
-    struct mill_loop *loop,
-    void *parent,
-    const char *node,
-    const char *service,
-    const struct addrinfo *hints,
-    struct addrinfo **res);
-    
-int getaddressinfo (
-    const char *node,
-    const char *service,
-    const struct addrinfo *hints,
-    struct addrinfo **res);
-
-void freeaddressinfo (struct addrinfo *ai);
-
-/******************************************************************************/
-/*  Coroutine msleep.                                                         */
-/******************************************************************************/
-
-/*
-    coroutine msleep (
-        int milliseconds);
-*/
-
-extern const struct mill_type mill_type_msleep;
-
-struct mill_cf_msleep {
-
-    /* Generic coframe header. */
-    struct mill_cfh mill_cfh;
-
-    /* Local variables. */
-    uv_timer_t timer;
-};
-
-void *mill_call_msleep (
-    void *cf,
-    const struct mill_type *type,
-    struct mill_loop *loop,
-    void *parent,
-    int millseconds);
-
-int msleep (int milliseconds);
-
-/******************************************************************************/
-/*  Class tcpsocket.                                                          */
-/******************************************************************************/
-
-struct tcpsocket {
-    uv_tcp_t s;
-    uv_loop_t *loop;
-
-    /* See TCPSOCKET_STATE_* constants. */
-    int state;
-
-    /* Handle of the receive coroutine currently being executed on this socket.
-       This includes any socket-scoped asynchronous operations such as connect,
-       accept or term. */
-    void *recvcfptr;
-
-    /* Handle of the send coroutine currently being executed on this socket. */
-    void *sendcfptr;
-};
-
-int tcpsocket_init (
-    struct tcpsocket *self,
-    struct mill_loop *loop);
-
-/*
-    coroutine tcpsocket_term (
-        struct tcpsocket *self);
-*/
-
-extern const struct mill_type mill_type_tcpsocket_term;
-
-struct mill_cf_tcpsocket_term {
-
-    /* Generic coframe header. */
-    struct mill_cfh mill_cfh;
-
-    /* Coroutine arguments. */
-    struct tcpsocket *self;
-};
-
-void *mill_call_tcpsocket_term (
-    void *cfptr,
-    const struct mill_type *type,
-    struct mill_loop *loop,
-    void *parent,
-    struct tcpsocket *self);
-
-int tcpsocket_bind (
-    struct tcpsocket *self,
-    struct sockaddr *addr,
-    int flags);
-
-/*
-    coroutine tcpsocket_connect (
-        struct tcpsocket *self,
-        struct sockaddr *addr);
-*/
-
-extern const struct mill_type mill_type_tcpsocket_connect;
-
-struct mill_cf_tcpsocket_connect {
-
-    /* Generic coframe header. */
-    struct mill_cfh mill_cfh;
-
-    /* Coroutine arguments. */
-    struct tcpsocket *self;
-
-    /* Local variables. */
-    uv_connect_t req;
-};
-
-void *mill_call_tcpsocket_connect (
-    void *cfptr,
-    const struct mill_type *type,
-    struct mill_loop *loop,
-    void *parent,
-    struct tcpsocket *self,
-    struct sockaddr *addr);
-
-int tcpsocket_listen (
-    struct tcpsocket *self,
-    int backlog);
-
-/*
-    coroutine tcpsocket_accept (
-        struct tcpsocket *self,
-        struct tcpsocket *newsock);
-*/
-
-extern const struct mill_type mill_type_tcpsocket_accept;
-
-struct mill_cf_tcpsocket_accept {
-
-    /* Generic coframe header. */
-    struct mill_cfh mill_cfh;
-
-    /* Coroutine arguments. */
-    struct tcpsocket *self;
-    struct tcpsocket *newsock;
-};
-
-void *mill_call_tcpsocket_accept (
-    void *cfptr,
-    const struct mill_type *type,
-    struct mill_loop *loop,
-    void *parent,
-    struct tcpsocket *self,
-    struct tcpsocket *newsock);
-
-/*
-    coroutine tcpsocket_send (
-        struct tcpsocket *self,
-        const void *buf,
-        size_t len);
-*/
-
-extern const struct mill_type mill_type_tcpsocket_send;
-
-struct mill_cf_tcpsocket_send {
-
-    /* Generic coframe header. */
-    struct mill_cfh mill_cfh;
-
-    /* Coroutine arguments. */
-    struct tcpsocket *self;
-
-    /* Local variables. */
-    uv_write_t req;
-    uv_buf_t buffer;
-};
-
-void *mill_call_tcpsocket_send (
-    void *cfptr,
-    const struct mill_type *type,
-    struct mill_loop *loop,
-    void *parent,
-    struct tcpsocket *self,
-    const void *buf,
-    size_t len);
-
-/*
-    coroutine tcpsocket_recv (
-        struct tcpsocket *self,
-        void *buf,
-        size_t len);
-*/
-
-extern const struct mill_type mill_type_tcpsocket_recv;
-
-struct mill_cf_tcpsocket_recv {
-
-    /* Generic coframe header. */
-    struct mill_cfh mill_cfh;
-
-    /* Coroutine arguments. */
-    struct tcpsocket *self;
-
-    /* Local variables. */
-    void *buf;
-    size_t len;
-};
-
-void *mill_call_tcpsocket_recv (
-    void *cfptr,
-    const struct mill_type *type,
-    struct mill_loop *loop,
-    void *parent,
-    struct tcpsocket *self,
-    void *buf,
-    size_t len);
 
 #endif
 

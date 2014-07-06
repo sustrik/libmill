@@ -173,9 +173,6 @@ module Ribosome
 
     end
 
-    # This is the variable to hold the parsed content of the input file.
-    @root = nil
-
     # Size of a tab. If set to zero, tabs are not generated.
     @tabsize = 0
 
@@ -186,60 +183,6 @@ module Ribosome
     # This is the ribosome call stack. At each level there is a list of
     # text blocks generated up to that point.
     @stack = [[]]
-
-    # Open the input file.
-    def Ribosome.openroot(name)
-        @input = File.basename(name)
-        if(name[-4..-1] == ".xml")
-            require "rexml/document"
-            @root = REXML::Document.new(File.new(name)).root
-        elsif(name[-5..-1] == ".json")
-            require "rubygems"
-            require "json"
-            @root = JSON.parse(File.read(name))
-        elsif(name[-5..-1] == ".yaml" || name [-4..-1] == ".yml")
-            require "yaml"
-            @root = YAML::load(File.open(name))
-        else
-            @name = nil
-            @root = nil
-        end
-    end
-
-    # Retrieves the root of the input file.
-    def Ribosome.root()
-        if @root == nil
-            raise Exception.new "Input file not available."
-        end
-        return @root
-    end
-
-    # Retrieves the name of the input file.
-    def Ribosome.input()
-        return @input
-    end
-
-    # Open the JSON input file.
-    def Ribosome.loadjson()
-        require "rubygems"
-        require "json"
-        @root = JSON.parse(File.read(ARGV[0]))
-        @input = File.basename(ARGV[0])
-    end
-
-    # Open the XML input file.
-    def Ribosome.loadxml()
-        require "rexml/document"
-        @root = REXML::Document.new(File.new(ARGV[0])).root
-        @input = File.basename(ARGV[0])
-    end
-
-    # Open the YAML input file.
-    def Ribosome.loadyaml()
-        require "yaml"
-        @root = YAML::load(File.open(ARGV[0]))
-        @input = File.basename(ARGV[0])
-    end
 
     # Redirects output to the specified file.
     def Ribosome.output(filename)
@@ -312,6 +255,9 @@ module Ribosome
                 end
                 break if par == 0
                 j += 1
+                if j >= line.size
+                    raise SyntaxError.new("Unmatched {")
+                end
             end
 
             # Expression of higher indirection levels are simply brought
@@ -337,7 +283,7 @@ module Ribosome
                 val = Block.new(val.to_s)
             else
                 val = Block.new("")
-                for b in top[1..-1]
+                for b in top
                     val.add_bottom(b)
                 end
             end
@@ -375,14 +321,6 @@ module Ribosome
 
 end
 
-def root()
-    return Ribosome.root()
-end
-
-def input()
-    return Ribosome.input()
-end
-
 # Escape function for @
 def at()
     return "@"
@@ -398,13 +336,10 @@ def slash()
     return "/"
 end
 
-# Parse command line arguments.
-Ribosome.openroot(ARGV[0]) if ARGV.size > 0
-
 ################################################################################
 # The code that belongs to the ribosome project ends at this point of the      #
-# RNA file and so does so does the associated license. What follows is the     #
-# code generated from the DNA file.                                            #
+# RNA file and so does the associated license. What follows is the code        #
+# generated from the DNA file.                                                 #
 ################################################################################
 
 begin
@@ -433,16 +368,11 @@ end
 ################################################################################
 
 # Parse the command line arguments.
-if(ARGV.size() != 1 && ARGV.size() != 2)
-    puts "usage: ribosome <dna-file> [<input-file>]"
+if(ARGV.size() < 1)
+    puts "usage: ribosome <dna-file> <optional-args>"
     exit
 end
 dnafile = ARGV[0]
-if ARGV.size == 1
-    infile = ""
-else
-    infile = ARGV[1]
-end
 
 # Given that we can 'require' other DNA files, we need to keep a stack of
 # open DNA files. We also keep the name of the file and the line number to
@@ -485,12 +415,9 @@ loop do
         next
     end
 
-    # Removes dot from the beginning of the line, newline from the end and
-    # possibly trailing $ sign, if present.
+    # Removes dot from the beginning of the line and
+    # trailing $ sign, if present.
     line = line[1..-2]
-    if(line != line.rstrip)
-        dnaerror("line ends by whitespace, add '$' sign at the end")
-    end
     line = line[0..-2] if line[-1] == ?$
 
     # Make sure there are no tabs in the line.
@@ -590,9 +517,9 @@ $rna.write("\n")
 # Flush the RNA file.
 $rna.close()
 
-# Execute the RNA file.
-system("ruby #{$rnafile} #{infile}")
+# Execute the RNA file. Pass it any arguments not used by ribosome.
+system("ruby #{$rnafile} " + ARGV[1..-1].join(' '))
 
 # Delete the RNA file.
-#File.delete($rnafile)
+# File.delete($rnafile)
 

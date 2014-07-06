@@ -16,6 +16,10 @@
 	# Alpha charactres or underscore.
 	alpha_u = alpha | '_';
 
+    '->' {
+        stack.last << [:arrow, ts, te - 1]
+    };
+
 	# Symbols. Upon entering clear the buffer. On all transitions
 	# buffer a character. Upon leaving dump the symbol.
 	( punct - [_'"] ) {
@@ -50,14 +54,14 @@
                 exit
             end
             stack.last << [:sbraces, last[0][1], ts, last[1..-1]]
-        elsif token == ":"
-            stack.last << [:colon, ts, te - 1]
         elsif token == ";"
             stack.last << [:semicolon, ts, te - 1]
         elsif token == ","
             stack.last << [:comma, ts, te - 1]
         elsif token == "="
             stack.last << [:eq, ts, te - 1]
+        elsif token == "."
+            stack.last << [:dot, ts, te - 1]
         else
             stack.last << [:cruft, ts, te - 1]
         end
@@ -69,6 +73,8 @@
         token = data[ts..te-1].pack("c*")
         if token == "coroutine"
             stack.last << [:coroutine, ts, te - 1]
+        elsif token == "out"
+            stack.last << [:out, ts, te - 1]
         elsif token == "endvars"
             stack.last << [:endvars, ts, te - 1]
         elsif token == "call"
@@ -81,14 +87,12 @@
             stack.last << [:cancelall, ts, te - 1]
         elsif token == "return"
             stack.last << [:return, ts, te - 1]
-        elsif token == "raise"
-            stack.last << [:raise, ts, te - 1]
         elsif token == "struct"
             stack.last << [:struct, ts, te - 1]
         elsif token == "typeof"
             stack.last << [:typeof, ts, te - 1]
-        elsif token == "finally"
-            stack.last << [:finally, ts, te - 1]
+        elsif token == "typedef"
+            stack.last << [:typedef, ts, te - 1]
         else
             stack.last << [:identifier, ts, te - 1]
         end

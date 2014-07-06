@@ -22,8 +22,9 @@
 
 #include "mill.h"
 
-#include <stdio.h>
-#include <stddef.h>
+/******************************************************************************/
+/* Generic helpers.                                                           */
+/******************************************************************************/
 
 #define mill_cont(ptr, type, member) \
     (ptr ? ((type*) (((char*) ptr) - offsetof(type, member))) : NULL)
@@ -60,6 +61,9 @@ static void loop_cb (uv_idle_t* handle)
     while (self->first) {
         src = self->first;
 
+        /* Copy the output arguments to their proper destinations. */
+        src->type->output (src);
+
         /*  If top level coroutine exits, we can stop the event loop.
             However, first we have to close the 'idle' object. */
         if (!src->parent) {
@@ -67,19 +71,10 @@ static void loop_cb (uv_idle_t* handle)
             return;
         }
 
-        if (src != mill_event_init && src != mill_event_cancel &&
-              src != mill_event_done && src != mill_event_closed) {
-
-            /* Remove the child from parent's list of children. */
-            if (src->parent->children == src)
-                src->parent->children = src->next;
-            if (src->prev)
-                src->prev->next = src->next;
-            if (src->next)
-                src->next->prev = src->prev;
-        }
-
+        /* Invoke the handler for the finished coroutine. */
         src->parent->type->handler (src->parent, src);
+
+        /* Move to the next event. */
         self->first = src->nextev;
 
         /* Mark the coframe as uninitialised. */
@@ -140,67 +135,72 @@ void mill_loop_emit (
 }
 
 /******************************************************************************/
-/*  Mill keywords.                                                            */
+/*  Helpers used to implement mill keywords.                                  */
 /******************************************************************************/
-
-void mill_add_child (void *cfptr, void *child)
-{
-    struct mill_cfh *cfh;
-    struct mill_cfh *ch;
-
-    cfh = (struct mill_cfh*) cfptr;
-    ch = (struct mill_cfh*) child;
-
-    ch->prev = 0;
-    ch->next = cfh->children;
-    if (cfh->children)
-        cfh->children->prev = ch;
-    cfh->children = ch;
-}
-
-void mill_getresult (void *cfptr, void **who, int *err)
-{
-    struct mill_cfh *cfh;
-
-    cfh = (struct mill_cfh*) cfptr;
-    if (who)
-        *who = (void*) cfh;
-    if (err)
-        *err = cfh->err;
-}
-
-void mill_seterror (void *cfptr, int err)
-{
-    struct mill_cfh *cfh;
-
-    cfh = (struct mill_cfh*) cfptr;
-    cfh->err = err;
-}
-
-void mill_cancel (void *cfptr)
-{
-    struct mill_cfh *cfh;
-
-    cfh = (struct mill_cfh*) cfptr;
-    assert (cfh->type->tag == mill_type_tag);
-    cfh->type->handler (cfh, mill_event_cancel);
-}
-
-void *mill_typeof (void *cfptr)
-{
-    struct mill_cfh *cfh;
-
-    cfh = (struct mill_cfh*) cfptr;
-    assert (cfh->type && cfh->type->tag == mill_type_tag);
-    return (void*) cfh->type;
-}
 
 void mill_emit (void *cfptr)
 {
     struct mill_cfh *cfh;
 
-    cfh = (struct mill_cfh*) cfptr; 
+    cfh = (struct mill_cfh*) cfptr;
+
+    /* At this point all the child coroutines should be stopped. */
+    assert (!cfh->children);
+
+    /* Remove the corouine from the parent's list of children. */
+    if (cfh->parent) {
+        if (cfh->parent->children == cfh)
+            cfh->parent->children = cfh->next;
+        if (cfh->prev)
+            cfh->prev->next = cfh->next;
+        if (cfh->next)
+            cfh->next->prev = cfh->prev;
+        cfh->prev = 0;
+        cfh->next = 0;
+    }
+
+    /* Add the coroutine to the event queue. */
     mill_loop_emit (cfh->loop, cfh);
+}
+
+void mill_add_child (void *cfptr, void *child)
+{
+    struct mill_cfh *cfh_parent;
+    struct mill_cfh *cfh_child;
+
+    cfh_parent = (struct mill_cfh*) cfptr;
+    cfh_child = (struct mill_cfh*) child;
+
+    cfh_child->prev = 0;
+    cfh_child->next = cfh_parent->children;
+    if (cfh_parent->children)
+        cfh_parent->children->prev = cfh_child;
+    cfh_parent->children = cfh_child;
+}
+
+void mill_who (void *cfptr, void **who)
+{
+    /* This simple operation is defined as a function rather than a macro
+       so that 'who' argument is not evaluated twice. */
+    if (who)
+        *who = cfptr; 
+}
+
+void mill_cancel (void *cfptr, void *child)
+{
+    struct mill_cfh *cfh_parent;
+    struct mill_cfh *cfh_child;
+
+    cfh_parent = (struct mill_cfh*) cfptr;
+    cfh_child = (struct mill_cfh*) child;
+
+    /* Make sure that the handle passed by user actually corresponds
+       to a valid child coroutine. */
+    assert (cfh_child->type->tag == mill_type_tag);
+    assert (cfh_child->parent == cfh_parent);
+
+    /* Ask the coroutine to cancel. */
+    cfh_child->type->handler (cfh_child, 0);
 }
 
 void mill_cancel_children (void *cfptr)
@@ -208,9 +208,11 @@ void mill_cancel_children (void *cfptr)
     struct mill_cfh *cfh;
     struct mill_cfh *child;
 
-    cfh = (struct mill_cfh*) cfptr; 
+    cfh = (struct mill_cfh*) cfptr;
+
+    /* Ask all child coroutines to cancel. */
     for (child = cfh->children; child != 0; child = child->next)
-        child->type->handler (child,  mill_event_cancel);
+        child->type->handler (child, 0);
 }
 
 int mill_has_children (void *cfptr)
@@ -221,761 +223,16 @@ int mill_has_children (void *cfptr)
     return cfh->children ? 1 : 0;
 }
 
-/******************************************************************************/
-/*  coroutine msleep                                                          */
-/******************************************************************************/
-
-static void mill_handler_msleep (
-    void *cfptr,
-    void *event);
-
-static void msleep_timer_cb (
-    uv_timer_t *timer)
+void *mill_typeof (void *cfptr)
 {
-    struct mill_cf_msleep *cf;
+    struct mill_cfh *cfh;
 
-    cf = mill_cont (timer, struct mill_cf_msleep, timer);
+    cfh = (struct mill_cfh*) cfptr;
 
-    /* Convert uv callback into mill event. */
-    mill_handler_msleep (cf, mill_event_done);
-}
+    /* Make sure that the handle specified by the user is a valid
+       coroutine handle. */
+    assert (cfh->type && cfh->type->tag == mill_type_tag);
 
-static void msleep_close_cb (
-    uv_handle_t *handle)
-{
-    struct mill_cf_msleep *cf;
-
-    cf = mill_cont (handle, struct mill_cf_msleep, timer);
-
-    /* Convert uv callback into mill event. */
-    mill_handler_msleep (cf, mill_event_closed);
-}
-
-static void mill_handler_msleep (
-    void *cfptr,
-    void *event)
-{
-    int rc;
-    struct mill_cf_msleep *cf;
-
-    cf = (struct mill_cf_msleep*) cfptr;
-    
-    if (event == mill_event_init)
-        return;
-
-    if (event == mill_event_cancel) {
-        mill_seterror (cf, ECANCELED);
-        uv_close ((uv_handle_t*) &cf->timer, msleep_close_cb);
-        return;
-    }
-
-    if (event == mill_event_done) {
-        uv_close ((uv_handle_t*) &cf->timer, msleep_close_cb);
-        return;
-    }
-
-    if (event == mill_event_closed) {
-        mill_emit (cf);
-        return;
-    }
-
-    /* Invalid event. */
-    assert (0);
-}
-
-const struct mill_type mill_type_msleep =
-    {mill_type_tag, mill_handler_msleep};
-
-void *mill_call_msleep (
-    void *cfptr,
-    const struct mill_type *type,
-    struct mill_loop *loop,
-    void *parent,
-    int milliseconds)
-{
-    int rc;
-
-    mill_callimpl_prologue (msleep);
-
-    /* Launch the timer. */
-    rc = uv_timer_init (&loop->uv_loop, &cf->timer);
-    uv_assert (rc);
-    rc = uv_timer_start (&cf->timer, msleep_timer_cb, milliseconds, 0);
-    uv_assert (rc);
-
-    mill_callimpl_epilogue (msleep);
-}
-
-int msleep (
-    int milliseconds)
-{
-    mill_synccallimpl_prologue (msleep);
-    mill_call_msleep (&cf, &mill_type_msleep, &loop, 0, milliseconds);
-    mill_synccallimpl_epilogue (msleep);
-}
-
-/******************************************************************************/
-/*  coroutine getaddressinfo                                                  */
-/******************************************************************************/
-
-static void mill_handler_getaddressinfo (
-    void *cfptr,
-    void *event)
-{
-    int rc;
-    struct mill_cf_getaddressinfo *cf;
-
-    cf = (struct mill_cf_getaddressinfo*) cfptr;
-    
-    if (event == mill_event_init)
-        return;
-
-    if (event == mill_event_cancel) {
-        uv_cancel ((uv_req_t*) &cf->req);
-        return;
-    }
-
-    if (event == mill_event_done) {
-        mill_emit (cf);
-        return;
-    }
-
-    /* Invalid event. */
-    assert (0);
-}
-
-static void getaddressinfo_cb (
-    uv_getaddrinfo_t* req,
-    int status,
-    struct addrinfo* res)
-{
-    struct mill_cf_getaddressinfo *cf;
-
-    cf = mill_cont (req, struct mill_cf_getaddressinfo, req);
-    if (status == 0) {
-        *(cf->res) = res;
-    }
-    else {
-        *(cf->res) = 0;
-        mill_seterror (cf, status);
-    }
-    mill_handler_getaddressinfo (cf, mill_event_done);
-}
-
-const struct mill_type mill_type_getaddressinfo =
-    {mill_type_tag, mill_handler_getaddressinfo};
-
-void *mill_call_getaddressinfo (
-    void *cfptr,
-    const struct mill_type *type,
-    struct mill_loop *loop,
-    void *parent,
-    const char *node,
-    const char *service,
-    const struct addrinfo *hints,
-    struct addrinfo **res)
-{
-    int rc;
-
-    mill_callimpl_prologue (getaddressinfo);
-
-    cf->res = res;
-
-    /* Start resolving the address in asynchronous manner. */
-    /* TODO: Pass the 'hints' parameter to the function. When testing in
-       on Linux/gcc I've seen a strage pointer there. A compiler bug? */
-    rc = uv_getaddrinfo (&cf->mill_cfh.loop->uv_loop, &cf->req,
-        getaddressinfo_cb, node, service, 0);
-    uv_assert (rc);
-
-    mill_callimpl_epilogue (getaddressinfo);
-}
-
-int getaddressinfo (
-    const char *node,
-    const char *service,
-    const struct addrinfo *hints,
-    struct addrinfo **res)
-{
-    mill_synccallimpl_prologue (getaddressinfo);
-    mill_call_getaddressinfo (&cf, &mill_type_getaddressinfo, &loop, 0,
-        node, service, hints, res);
-    mill_synccallimpl_epilogue (getaddressinfo);
-}
-
-void freeaddressinfo (struct addrinfo *ai)
-{
-    uv_freeaddrinfo (ai);
-}
-
-/******************************************************************************/
-/*  Class tcpsocket. The non-coroutine stuff.                                 */
-/******************************************************************************/
-
-#define TCPSOCKET_STATE_INIT 1
-#define TCPSOCKET_STATE_CONNECTING 2
-#define TCPSOCKET_STATE_LISTENING 3
-#define TCPSOCKET_STATE_ACCEPTING 4
-#define TCPSOCKET_STATE_ACTIVE 5
-#define TCPSOCKET_STATE_TERMINATING 6
-
-int tcpsocket_init (
-    struct tcpsocket *self,
-    struct mill_loop *loop)
-{
-    self->loop = &loop->uv_loop;
-    self->state = TCPSOCKET_STATE_INIT;
-    self->recvcfptr = 0;
-    self->sendcfptr = 0;
-    return uv_tcp_init (&loop->uv_loop, &self->s);
-}
-
-int tcpsocket_bind (
-    struct tcpsocket *self,
-    struct sockaddr *addr,
-    int flags)
-{
-    /* Socket can be bound only before it is listening or connected. */
-    assert (self->state == TCPSOCKET_STATE_INIT);
-
-    return uv_tcp_bind (&self->s, addr, flags);
-}
-
-/******************************************************************************/
-/*  coroutine tcpsocket_term                                                  */
-/******************************************************************************/
-
-static void mill_handler_tcpsocket_term (
-    void *cfptr,
-    void *event)
-{
-    struct mill_cf_tcpsocket_term *cf;
-
-    cf = (struct mill_cf_tcpsocket_term*) cfptr;
-
-    if (event == mill_event_init)
-        return;
-
-    if (event == mill_event_cancel) {
-
-        /* The termination is in progress anyway.
-           Let's just wait till it finishes. */
-        return;
-    }
-
-    if (event == mill_event_done) {
-        mill_emit (cf);
-        return;
-    }
-
-    /* Invalid event. */
-    assert (0);
-}
-
-static void tcpsocket_term_cb (
-    uv_handle_t* handle)
-{
-    struct tcpsocket *self = mill_cont (handle, struct tcpsocket, s);
-
-    /* Double check that the socket is in the correct state. */
-    assert (self->state == TCPSOCKET_STATE_TERMINATING);
-    assert (self->recvcfptr != 0);
-
-    /* The coroutine is done. */
-    mill_handler_tcpsocket_term (self->recvcfptr, mill_event_done);
-
-    /* Flip the state. */
-    self->state = 0;
-    self->recvcfptr = 0;
-}
-
-const struct mill_type mill_type_tcpsocket_term =
-    {mill_type_tag, mill_handler_tcpsocket_term};
-
-void *mill_call_tcpsocket_term (
-    void *cfptr,
-    const struct mill_type *type,
-    struct mill_loop *loop,
-    void *parent,
-    struct tcpsocket *self)
-{
-    mill_callimpl_prologue (tcpsocket_term);
-
-    cf->self = self;
-
-    /* Make sure that no async operations are going on on the socket. */
-    assert (cf->self->state != TCPSOCKET_STATE_TERMINATING);
-    assert (cf->self->recvcfptr == 0);
-    assert (cf->self->sendcfptr == 0);
-
-    /* Mark the socket as being in process of being terminated. */
-    cf->self->state = TCPSOCKET_STATE_TERMINATING;
-    cf->self->recvcfptr = &cf->mill_cfh;
-
-    /* Initiate the termination. */
-    uv_close ((uv_handle_t*) &cf->self->s, tcpsocket_term_cb);
-
-    mill_callimpl_epilogue (tcpsocket_term);
-}
-
-int tcpsocket_term (
-    struct tcpsocket *self)
-{
-    mill_synccallimpl_prologue (tcpsocket_term);
-    mill_call_tcpsocket_term (&cf, &mill_type_tcpsocket_term, &loop, 0, self);
-    mill_synccallimpl_epilogue (tcpsocket_term);
-}
-
-/******************************************************************************/
-/*  coroutine tcpsocket_connect                                               */
-/******************************************************************************/
-
-static void mill_handler_tcpsocket_connect (
-    void *cfptr,
-    void *event)
-{
-    struct mill_cf_tcpsocket_connect *cf;
-
-    cf = (struct mill_cf_tcpsocket_connect*) cfptr;
-
-    if (event == mill_event_init)
-        return;
-
-    if (event == mill_event_cancel) {
-        assert (0); // TODO
-        return;
-    }
-
-    if (event == mill_event_done) {
-        mill_emit (cf);
-        return;
-    }
-
-    /* Invalid event. */
-    assert (0);
-}
-
-static void tcpsocket_connect_cb (
-    uv_connect_t* req,
-    int status)
-{
-    struct mill_cf_tcpsocket_connect *cf;
-
-    cf = mill_cont (req, struct mill_cf_tcpsocket_connect, req);
-
-    /* Double-check that the socket is in the correct state. */
-    assert (cf->self->state == TCPSOCKET_STATE_CONNECTING);
-    assert (cf->self->recvcfptr != 0);
-
-    /* The coroutine is done. */
-    mill_seterror (cf, status);
-    mill_handler_tcpsocket_connect (cf->self->recvcfptr, mill_event_done);
-    
-    /* Flip the state. */
-    cf->self->state = (status == 0) ?
-        TCPSOCKET_STATE_ACTIVE :
-        TCPSOCKET_STATE_INIT;
-    cf->self->recvcfptr = 0;    
-}
-
-const struct mill_type mill_type_tcpsocket_connect =
-    {mill_type_tag, mill_handler_tcpsocket_connect};
-
-void *mill_call_tcpsocket_connect (
-    void *cfptr,
-    const struct mill_type *type,
-    struct mill_loop *loop,
-    void *parent,
-    struct tcpsocket *self,
-    struct sockaddr *addr)
-{
-    int rc;
-
-    mill_callimpl_prologue (tcpsocket_connect);
-
-    cf->self = self;
-
-    /* Connect can be done only on a fresh socket. */
-    assert (cf->self->state == TCPSOCKET_STATE_INIT);
-
-    /* Mark the socket as being in process of connecting. */
-    cf->self->state = TCPSOCKET_STATE_CONNECTING;
-    cf->self->recvcfptr = cf;
-    
-    /* Initiate the connecting. */
-    rc = uv_tcp_connect (&cf->req, &cf->self->s, addr, tcpsocket_connect_cb);
-    uv_assert (rc);
-
-    mill_callimpl_epilogue (tcpsocket_connect);
-}
-
-int tcpsocket_connect (
-    struct tcpsocket *self,
-    struct sockaddr *addr)
-{
-    mill_synccallimpl_prologue (tcpsocket_connect);
-    mill_call_tcpsocket_connect (&cf, &mill_type_tcpsocket_connect, &loop, 0,
-        self, addr);
-    mill_synccallimpl_epilogue (tcpsocket_connect);
-}
-
-/******************************************************************************/
-/******************************************************************************/
-
-static void tcpsocket_listen_cb (
-    uv_stream_t *s,
-    int status)
-{
-    int rc;
-    struct tcpsocket *self;
-    struct mill_cf_tcpsocket_accept *cf;
-    uv_tcp_t uvs;
-
-    self = mill_cont (s, struct tcpsocket, s);
-
-    /* Double-check that the socket is in the correct state. */
-    assert (self->state == TCPSOCKET_STATE_LISTENING ||
-        self->state == TCPSOCKET_STATE_ACCEPTING ||
-        self->state == TCPSOCKET_STATE_TERMINATING);
-
-    /* If nobody is accepting connections at the moment
-       we'll simply drop them. */
-    if (self->state != TCPSOCKET_STATE_ACCEPTING) {
-        rc = uv_tcp_init (s->loop, &uvs);
-        uv_assert (rc);
-        rc = uv_accept (s, (uv_stream_t*) &uvs);
-        uv_assert (rc);
-        uv_close ((uv_handle_t*) &s, NULL); // TODO: This is an async op!
-
-        /* The coroutine goes on. No need to notify the parent. */
-        return; 
-    }
-
-    if (status != 0)
-        goto error;
-
-    /* Actual accept. */
-    assert (self->recvcfptr != 0);
-    cf = mill_cont (self->recvcfptr, struct mill_cf_tcpsocket_accept,
-        mill_cfh);
-    status = uv_accept (s, (uv_stream_t*) &cf->newsock->s);
-    if (status != 0)
-        goto error;
-
-    /* Flip both listening and accepted socket to new states. */
-    cf->newsock->state = TCPSOCKET_STATE_ACTIVE;
-    cf->self->state = TCPSOCKET_STATE_LISTENING;
-    self->recvcfptr = 0;
-
-    /* The coroutine is done. */
-    mill_emit (cf);
-    return;
-
-error:
-
-    /* End the coroutine. Report the error. */
-    cf->newsock->state = TCPSOCKET_STATE_INIT;
-    cf->self->state = TCPSOCKET_STATE_LISTENING;
-    self->recvcfptr = 0;
-    cf->mill_cfh.err = status;
-    mill_emit (cf);
-}
-
-int tcpsocket_listen (
-    struct tcpsocket *self,
-    int backlog)
-{
-    int rc;
-
-    /* Listen cannot be called on socket that is already listening or
-       connected. */
-    assert (self->state == TCPSOCKET_STATE_INIT);
-
-    /* Start listening. */
-    rc = uv_listen((uv_stream_t*) &self->s, backlog, tcpsocket_listen_cb);
-    if (rc != 0)
-        return rc;
-    self->state = TCPSOCKET_STATE_LISTENING;
-    return 0;
-}
-
-/******************************************************************************/
-/*  coroutine tcpsocket_accept                                                */
-/******************************************************************************/
-
-static void mill_handler_tcpsocket_accept (void *cfptr, void *event)
-{
-    struct mill_cf_tcpsocket_accept *cf;
-
-    cf = (struct mill_cf_tcpsocket_accept*) cfptr;
-
-    if (event == mill_event_init)
-        return;
-
-    else if (event == mill_event_cancel) {
-        cf->newsock->state = TCPSOCKET_STATE_INIT;
-        cf->self->state = TCPSOCKET_STATE_LISTENING;
-        cf->self->recvcfptr = 0;
-        mill_seterror (cf, ECANCELED);
-        mill_emit (cf);
-        return;
-    }
-
-    if (event == mill_event_done) {
-        mill_emit (cf);
-        return;
-    }
-
-    /* Invalid event. */
-    assert (0);
-}
-
-const struct mill_type mill_type_tcpsocket_accept =
-    {mill_type_tag, mill_handler_tcpsocket_accept};
-
-void *mill_call_tcpsocket_accept (
-    void *cfptr,
-    const struct mill_type *type,
-    struct mill_loop *loop,
-    void *parent,
-    struct tcpsocket *self,
-    struct tcpsocket *newsock)
-{
-    mill_callimpl_prologue (tcpsocket_accept);
-    cf->self = self;
-    cf->newsock = newsock;
-
-    /* Only sockets that are already listening can accept new connections. */
-    assert (cf->self->state == TCPSOCKET_STATE_LISTENING);
-
-    /* Mark the socket as being in process of being accepted. */
-    cf->self->state = TCPSOCKET_STATE_ACCEPTING;
-    cf->self->recvcfptr = cf;
-
-    /* There's no need for any action here as callback for incoming connections
-       was already registered in tcpsocket_listen function. */
-
-    mill_callimpl_epilogue (tcpsocket_accept);
-}
-
-int tcpsocket_accept (
-    struct tcpsocket *self,
-    struct tcpsocket *newsock)
-{
-    mill_synccallimpl_prologue (tcpsocket_accept);
-    mill_call_tcpsocket_accept (&cf, &mill_type_tcpsocket_accept, &loop, 0,
-        self, newsock);
-    mill_synccallimpl_epilogue (tcpsocket_accept);
-}
-
-/******************************************************************************/
-/*  coroutine tcpsocket_send                                                  */
-/******************************************************************************/
-
-static void mill_handler_tcpsocket_send (void *cfptr, void *event)
-{
-    struct mill_cf_tcpsocket_send *cf;
-
-    cf = (struct mill_cf_tcpsocket_send*) cfptr;
-
-    if (event == mill_event_init)
-        return;
-
-    if (event == mill_event_cancel) {
-        assert (0); // TODO
-    }
-
-    if (event == mill_event_done) {
-        mill_emit (cf);
-        return;
-    }
-
-    /* Invalid event. */
-    assert (0);
-}
-
-static void tcpsocket_send_cb (
-    uv_write_t* req,
-    int status)
-{
-    struct mill_cf_tcpsocket_send *cf;
-
-    cf = mill_cont (req, struct mill_cf_tcpsocket_send, req);
-
-    /* Notify the parent coroutine that the operation is finished. */
-    cf->self->sendcfptr = 0;
-    cf->mill_cfh.err = status;
-    mill_emit (cf);
-}
-
-const struct mill_type mill_type_tcpsocket_send =
-    {mill_type_tag, mill_handler_tcpsocket_send};
-
-void *mill_call_tcpsocket_send (
-    void *cfptr,
-    const struct mill_type *type,
-    struct mill_loop *loop,
-    void *parent,
-    struct tcpsocket *self,
-    const void *buf,
-    size_t len)
-{
-    int rc;
-
-    mill_callimpl_prologue (tcpsocket_send);
-
-    cf->self = self;
-
-    /* Make sure that the socket is properly connected and that no other send
-       operation is in progress. */
-    assert (cf->self->state == TCPSOCKET_STATE_ACTIVE);
-    assert (cf->self->sendcfptr == 0);
-
-    /* Mark the socket as being in process of sending. */
-    cf->self->sendcfptr = cf;
-
-    /* Initiate the sending. */
-    cf->buffer.base = (void*) buf;
-    cf->buffer.len = len;
-    rc = uv_write (&cf->req, (uv_stream_t*) &cf->self->s, &cf->buffer, 1,
-        tcpsocket_send_cb);
-    assert (rc == 0);
-
-    mill_callimpl_epilogue (tcpsocket_send);
-}
-
-int tcpsocket_send (
-    struct tcpsocket *self,
-    const void *buf,
-    size_t len)
-{
-    mill_synccallimpl_prologue (tcpsocket_send);
-    mill_call_tcpsocket_send (&cf, &mill_type_tcpsocket_send, &loop, 0,
-        self, buf, len);
-    mill_synccallimpl_epilogue (tcpsocket_send);
-}
-
-/******************************************************************************/
-/*  coroutine tcpsocket_recv                                                  */
-/******************************************************************************/
-
-static void mill_handler_tcpsocket_recv (void *cfptr, void *event)
-{
-    int rc;
-    struct mill_cf_tcpsocket_recv *cf;
-
-    cf = (struct mill_cf_tcpsocket_recv*) cfptr;
-
-    if (event == mill_event_init)
-        return;
-
-    if (event == mill_event_cancel) {
-        rc = uv_read_stop ((uv_stream_t*) &cf->self->s);
-        assert (rc == 0);
-        cf->self->recvcfptr = 0;
-        mill_seterror (cf, ECANCELED);
-        mill_emit (cf);
-        return;
-    }
-
-    if (event == mill_event_done) {
-        mill_emit (cf);
-        return;
-    }
-
-    /* Invalid event. */
-    assert (0);
-}
-
-static void tcpsocket_alloc_cb (
-    uv_handle_t* handle,
-    size_t suggested_size,
-    uv_buf_t* buf)
-{
-    struct mill_cf_tcpsocket_recv *cf;
-    struct tcpsocket *self;
-
-    self = mill_cont (handle, struct tcpsocket, s);
-    assert (self->recvcfptr);
-    cf = mill_cont (self->recvcfptr, struct mill_cf_tcpsocket_recv,
-        mill_cfh);
-
-    buf->base = cf->buf;
-    buf->len = cf->len;
-}
-
-static void tcpsocket_recv_cb (
-    uv_stream_t* stream,
-    ssize_t nread,
-    const uv_buf_t* buf)
-{
-    struct mill_cf_tcpsocket_recv *cf;
-    struct tcpsocket *self;
-
-    self = mill_cont (stream, struct tcpsocket, s);
-    assert (self->recvcfptr);
-    cf = mill_cont (self->recvcfptr, struct mill_cf_tcpsocket_recv,
-        mill_cfh);
-
-    /* Adjust the input buffer to not cover the data already received. */
-    assert (buf->base == cf->buf);
-    assert (nread <= cf->len);
-    cf->buf = ((char*) cf->buf) + nread;
-    cf->len -= nread;
-
-    /* If there are no more data to be read, stop reading and notify the parent
-       coroutine that the operation is finished. */
-    if (!cf->len) {
-        uv_read_stop (stream);
-        self->recvcfptr = 0;
-        mill_emit (cf);
-    }
-}
-
-const struct mill_type mill_type_tcpsocket_recv =
-    {mill_type_tag, mill_handler_tcpsocket_recv};
-
-void *mill_call_tcpsocket_recv (
-    void *cfptr,
-    const struct mill_type *type,
-    struct mill_loop *loop,
-    void *parent,
-    struct tcpsocket *self,
-    void *buf,
-    size_t len)
-{
-    int rc;
-
-    mill_callimpl_prologue (tcpsocket_recv);
-
-    cf->self = self;
-    cf->buf = buf;
-    cf->len = len;
-
-    /* Make sure that the socket is properly connected and that no other recv
-       operation is in progress. */
-    assert (cf->self->state == TCPSOCKET_STATE_ACTIVE);
-    assert (cf->self->recvcfptr == 0);
-
-    /* Mark the socket as being in process of receiving. */
-    cf->self->recvcfptr = cf;
-
-    /* Initiate the receiving. */
-    rc = uv_read_start ((uv_stream_t*) &cf->self->s,
-        tcpsocket_alloc_cb, tcpsocket_recv_cb);
-    uv_assert (rc);
-
-    mill_callimpl_epilogue (tcpsocket_recv);
-}
-
-int tcpsocket_recv (
-    struct tcpsocket *self,
-    void *buf,
-    size_t len)
-{
-    mill_synccallimpl_prologue (tcpsocket_recv);
-    mill_call_tcpsocket_recv (&cf, &mill_type_tcpsocket_recv, &loop, 0,
-        self, buf, len);
-    mill_synccallimpl_epilogue (tcpsocket_recv);
+    return (void*) cfh->type;
 }
 
