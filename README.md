@@ -57,7 +57,7 @@ thread!
 ## Usage
 
 ```
-mill stopwatch.mill
+mill stopwatch.mc
 gcc -o stopwatch stopwatch.c mill.c stdmill.c -luv
 ./stopwatch
 ```

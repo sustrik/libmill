@@ -34,10 +34,11 @@ if ARGV.size < 1
 end
 
 $input_filename = ARGV[-1]
-if $input_filename.size < 6 || $input_filename[-5..-1] != ".mill"
-    $base_filename = $input_filename
+if $input_filename.size < 4 || ![".mh", ".mc"].include?($input_filename[-3..-1])
+    $stderr.write "Only files with .mh and .mc extensions are valid mill input files.\n"
+    exit
 else
-    base_filename = $input_filename[0..-6]
+    $output_filename = $input_filename[0..-4] + "." + $input_filename[-1..-1]
 end
 
 $system = false
@@ -148,7 +149,7 @@ end
 # Tokenise the input file.                                                     #
 ################################################################################
 
-text = IO.read(base_filename + ".mill")
+text = IO.read($input_filename)
 tokens = parse(text)
 
 ################################################################################
@@ -185,47 +186,16 @@ end
 i = 0
 
 # Sections array will consist of the following items
-# :include     C includes at the beginning of the mill file
 # :rawc        Section containing raw C code
-# :coroutine   Standard mill coroutine definition
+# :coroutine   Coroutine declaration or definition
 # :typedef     Coroutine typedef
 sections = []
-
-################################################################################
-#  Process includes.                                                           #
-################################################################################
-
-begin
-
-    # Parse the includes section.
-    for i in 0..tokens.size - 1
-        break if tokens[i][0] != :include
-    end
-    includes_end = i == tokens.size ? text.size : tokens[i][1] 
-    sections << {
-        :type => :include,
-        :text => text[0..includes_end - 1]
-    }
-
-    # Make sure there are no more includes in the rest of the file.
-    def no_includes(token)
-        if token[0] == :include
-            $stderr.write "All includes must be in the beginning of the file.\n"
-            exit
-        end
-        if [:braces, :cbraces, :sbraces].include? token[0]
-            no_includes token[3]
-        end
-    end
-    for j in i..tokens.size - 1
-        no_includes tokens[j]
-    end
-end
 
 ################################################################################
 #  Split the text into coroutine definitions and interleaved chunks of raw C.  #
 ################################################################################
 
+i = 0
 loop do
 
     # Find the start of next coroutine.
@@ -235,6 +205,7 @@ loop do
     cotype = nil
     cotext = nil
     cotokens = nil
+
     loop do
 
         if tokens[i][0] == :end
@@ -245,7 +216,7 @@ loop do
         if(tokens[i][0] == :coroutine &&
               tokens [i + 1][0] == :identifier &&
               tokens[i + 2][0] == :braces &&
-              tokens[i + 3][0] == :cbraces)
+              (tokens[i + 3][0] == :cbraces || tokens[i + 3][0] == :semicolon))
             cstop = i
             cotype = :coroutine
             cotext = text[tokens[i][1]..tokens[i + 3][2]]
@@ -347,50 +318,66 @@ for i in 0..sections.size - 1
             end
         end
 
-        # Coroutine body. Split it into variables part and the executable code.
-        # 'endvars' statement is the delimiter between the two.
-        bodytokens = tokens[3][3]
-        bodytokens.unshift [:whitespace, tokens [3][1] + 1, bodytokens[0][1] - 1]
-        for j in 1..bodytokens.size - 1
-            break if bodytokens[j][0] == :endvars
-        end
-        if j == bodytokens.size - 1
-            j = 0
+        if tokens[3][0] == :cbraces
+
+            # Coroutine body. Split it into variables part and the executable
+            # code. 'endvars' statement is the delimiter between the two.
+            bodytokens = tokens[3][3]
+            bodytokens.unshift [:whitespace, tokens [3][1] + 1,
+                bodytokens[0][1] - 1]
+            for j in 1..bodytokens.size - 1
+                break if bodytokens[j][0] == :endvars
+            end
+            if j == bodytokens.size - 1
+                j = 0
+            else
+                if bodytokens[j + 1][0] != :semicolon
+                    $stderr.write "'endvars' must be followed by a semicolon.\n"
+                    exit
+                end
+            end
+
+            # Parse the local variables.
+            vars = []
+            start = 1
+            for k in 1..j
+                if bodytokens[k][0] == :semicolon
+                    vars << parsedeclinit(text, bodytokens[start..k - 1])
+                    start = k + 1
+                end
+            end
+
+            # Leave only the executable code in text & tokens.
+            if bodytokens[j][0] == :endvars
+                j += 1
+                wstoken = [:whitespace, bodytokens [j][2] + 1,
+                    bodytokens[j + 1][1] - 1]
+                bodytokens = bodytokens[j + 1..-1]
+                bodytokens.unshift(wstoken)
+            end
+            text = text[bodytokens[0][1]..bodytokens[-2][2]]
+            apply_offset(bodytokens, 0, -bodytokens[0][1])
+
+            # Coroutine definition.
+            sections[i] = {
+                :type => :codef,
+                :name => name,
+                :args => args,
+                :vars => vars,
+                :text => text,
+                :tokens => bodytokens
+            }
+
         else
-            if bodytokens[j + 1][0] != :semicolon
-                $stderr.write "'endvars' must be followed by a semicolon.\n"
-                exit
-            end
-        end
 
-        # Parse the local variables.
-        vars = []
-        start = 1
-        for k in 1..j
-            if bodytokens[k][0] == :semicolon
-                vars << parsedeclinit(text, bodytokens[start..k - 1])
-                start = k + 1
-            end
-        end
+            # Coroutine declaration.
+            sections[i] = {
+                :type => :codecl,
+                :name => name,
+                :args => args
+            }
 
-        # Leave only the executable code in text & tokens.
-        if bodytokens[j][0] == :endvars
-            j += 1
-            wstoken = [:whitespace, bodytokens [j][2] + 1, bodytokens[j + 1][1] - 1]
-            bodytokens = bodytokens[j + 1..-1]
-            bodytokens.unshift(wstoken)
         end
-        text = text[bodytokens[0][1]..bodytokens[-2][2]]
-        apply_offset(bodytokens, 0, -bodytokens[0][1])
-
-        sections[i] = {
-            :type => :coroutine,
-            :name => name,
-            :args => args,
-            :vars => vars,
-            :text => text,
-            :tokens => bodytokens
-        }
     end
 end
 
@@ -417,7 +404,7 @@ end
 ################################################################################
 
 for s in sections
-    if s[:type] == :coroutine
+    if s[:type] == :codef
 
         # Expand references to the local variables.
         def expand_vars(text, alltokens, tokens, locals)
@@ -534,27 +521,60 @@ for s in sections
 end
 
 ################################################################################
-# Generate the .h file.                                                        #
+# Generate the output file.                                                    #
 ################################################################################
 
-./!output base_filename + ".h"
+./!output $output_filename
 
 ./* @{Time.now}:
-.   This file was generated from @{$input_filename} */
+.   This file was generated by mill from @{$input_filename} */
 .
 .#include "mill.h"
 .
 for s in sections
 
-    if s[:type] == :include
+################################################################################
+# First, deal with chunks of raw C code.                                       #
+# These are copied to the output file verbatim.                                #
+################################################################################
+
+    if s[:type] == :rawc
 .@{s[:text]}
 .
-        next
     end
 
-    if s[:type] == :coroutine
+################################################################################
+# Coroutine declarations.                                                      #
+################################################################################
+
+    if s[:type] == :codecl
 .extern const struct mill_type mill_type_@{s[:name]};
 .
+.void *mill_call_@{s[:name]} (
+.    void *cf,
+.    const struct mill_type *type,
+.    struct mill_loop *loop,
+.    void *parent
+        for a in s[:args]
+.    /+,
+.    @{renderarg(a)}
+        end
+./+);
+.
+.void @{s[:name]} (
+./!separate ", "
+        for a in s[:args]
+.    @{renderarg(a)}
+        end
+./+);
+.
+    end
+
+################################################################################
+# Coroutine definitions.                                                       #
+################################################################################
+
+    if s[:type] == :codef
 .struct mill_cf_@{s[:name]} {
 .
 .    /* Generic coframe header. */
@@ -586,54 +606,6 @@ for s in sections
         end
 .};
 .
-.void *mill_call_@{s[:name]} (
-.    void *cf,
-.    const struct mill_type *type,
-.    struct mill_loop *loop,
-.    void *parent
-        for a in s[:args]
-.    /+,
-.    @{renderarg(a)}
-        end
-./+);
-.
-.void @{s[:name]} (
-./!separate ", "
-        for a in s[:args]
-.    @{renderarg(a)}
-        end
-./+);
-.
-        next
-    end
-
-    if s[:type] == :typedef
-.extern const struct mill_type mill_type_@{s[:new]};
-.#define mill_call_@{s[:new]} mill_call_@{s[:old]}
-.#define @{s[:new]} @{s[:old]}
-.
-        next
-    end
-
-end
-.
-
-################################################################################
-# Generate the .c file.                                                        #
-################################################################################
-
-./!output base_filename + ".c"
-
-./* @{Time.now}:
-.   This file was generated from @{$input_filename} */
-.
-.#include "@{base_filename}.h"
-.
-for s in sections
-    if s[:type] == :rawc
-.@{s[:text]}
-.
-    elsif s[:type] == :coroutine
 .static void mill_handler_@{s[:name]} (void *cfptr, void *event)
 .{
 .    mill_handlerimpl_prologue (@{s[:name]});
@@ -716,14 +688,22 @@ end
 .    mill_synccallimpl_epilogue (@{s[:name]});
 .}
 .
+    end
 
-    elsif s[:type] == :typedef
+################################################################################
+# Coroutine typedefs.                                                          #
+################################################################################
+
+    if s[:type] == :typedef
 .const struct mill_type mill_type_@{s[:new]} = {
 .    mill_type_tag,
 .    mill_handler_@{s[:old]},
 .    mill_output_@{s[:old]},
 .    "@{s[:new]}"};
 .
+.#define mill_call_@{s[:new]} mill_call_@{s[:old]}
+.#define @{s[:new]} @{s[:old]}
     end
+
 end
 

@@ -20,18 +20,20 @@
     IN THE SOFTWARE.
 */
 
-/* This header is used inernally by mill. Don't use it directly in your code! */
+#ifndef stdmill_h_included
+#define stdmill_h_included
 
-#ifndef stdmillx_h_included
-#define stdmillx_h_included
+coroutine msleep (
+    out int rc,
+    int milliseconds);
 
 struct tcpsocket {
     uv_tcp_t s;
     uv_loop_t *loop;
     int pc;
 
-    /* Handle of the receive coroutine currently being executed on this socket.
-       This includes any socket-scoped asynchronous operations such as connect,
+    /* Handle of the receive coroutine currently being executed on this
+       socket. Also any socket-scoped asynchronous operations such as connect,
        accept or term. */
     void *recvcfptr;
 
@@ -43,6 +45,9 @@ int tcpsocket_init (
     struct tcpsocket *self,
     struct mill_loop *loop);
 
+coroutine tcpsocket_term (
+    struct tcpsocket *self);
+
 int tcpsocket_bind (
     struct tcpsocket *self,
     struct sockaddr *addr,
@@ -52,4 +57,27 @@ int tcpsocket_listen (
     struct tcpsocket *self,
     int backlog);
 
+coroutine tcpsocket_connect (
+    out int rc,
+    struct tcpsocket *self,
+    struct sockaddr *addr);
+
+coroutine tcpsocket_accept (
+    out int rc,
+    struct tcpsocket *self,
+    struct tcpsocket *newsock);
+
+coroutine tcpsocket_send (
+    out int rc,
+    struct tcpsocket *self,
+    const void *buf,
+    size_t len);
+
+coroutine tcpsocket_recv (
+    out int rc,
+    struct tcpsocket *self,
+    void *buf,
+    size_t len);
+
 #endif
+
