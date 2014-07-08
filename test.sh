@@ -1,4 +1,6 @@
 #!/bin/sh
+./ribosome --rna mill.dna > ./mill
+chmod +x ./mill
 ./mill --system stdmill.mh
 ./mill --system stdmill.mc
 ./mill test.mc

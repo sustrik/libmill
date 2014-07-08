@@ -23,7 +23,7 @@
 #
 
 ################################################################################
-#  RNA prologue and epilogue code.                                             #
+#  RNA prologue code.                                                          #
 ################################################################################
 
 # In theory, helpers could be placed into a separate module file to keep
@@ -342,13 +342,16 @@ end
 # generated from the DNA file.                                                 #
 ################################################################################
 
-begin
-
 '
 
 ################################################################################
 #  DNA helper functions.                                                       #
 ################################################################################
+
+def usage()
+    $stderr.write "usage: ribosome [options] <dna-file> <args-passed-to-dna-script>\n"
+    exit
+end
 
 # Print out the error and terminate the generation.
 def dnaerror(s)
@@ -369,28 +372,43 @@ end
 
 # Parse the command line arguments.
 if(ARGV.size() < 1)
-    puts "usage: ribosome <dna-file> <optional-args>"
-    exit
+    usage()
 end
-dnafile = ARGV[0]
+if ARGV[0] == "--rna"
+    if(ARGV.size() < 2)
+        usage()
+    end
+    rnaopt = true
+    dnafile = ARGV[1]
+else
+    rnaopt = false
+    dnafile = ARGV[0]
+end
 
 # Given that we can 'require' other DNA files, we need to keep a stack of
 # open DNA files. We also keep the name of the file and the line number to
 # be able to report errors.
 $dnastack = [[nil, "ribosome", PROLOGUE_LINE + 1]]
 
-# Create the RNA file.
-if(dnafile[-4..-1] == ".dna")
-    $rnafile = dnafile[0..-5] + ".rna"
+if rnaopt
+    $rna = $stdout
 else
-    $rnafile = dnafile + ".rna"
+    # Create the RNA file.
+    if(dnafile[-4..-1] == ".dna")
+        $rnafile = dnafile[0..-5] + ".rna"
+    else
+        $rnafile = dnafile + ".rna"
+    end
+    $rna = File.open($rnafile, "w")
 end
-$rna = File.open($rnafile, "w")
 $rnaln = 1
 $linemap = []
 
 # Generate RNA prologue code.
 rnawrite(PROLOGUE)
+if (!rnaopt)
+    rnawrite("begin\n\n")
+end
 
 # Process the DNA file.
 $dnastack.push [File.open(dnafile, "r"), dnafile, 0]
@@ -496,30 +514,35 @@ end
 # Generate RNA epilogue code.
 $dnastack = [[nil, "ribosome", __LINE__ + 1]]
 $rna.write("\n")
-$rna.write("\n")
-$rna.write("rescue Exception =>e\n")
-$rna.write("    LINEMAP = [\n");
-last = nil
-for le in $linemap
-    if last == nil || le[1] != last[1] || le[0] - last [0] != le[2] - last[2]
-        $rna.write("        [#{le[0]}, #{le[1].inspect}, #{le[2]}],\n")
-        last = le
+if !rnaopt
+    $rna.write("rescue Exception =>e\n")
+    $rna.write("    LINEMAP = [\n");
+    last = nil
+    for le in $linemap
+        if last == nil || le[1] != last[1] || le[0] - last [0] != le[2] - last[2]
+            $rna.write("        [#{le[0]}, #{le[1].inspect}, #{le[2]}],\n")
+            last = le
+        end
     end
+    $rna.write("        [nil]\n")
+    $rna.write("    ]\n");
+    $rna.write("    Ribosome.rethrow(e, " + $rnafile.inspect + ", LINEMAP)\n")
+    $rna.write("end\n")
+    $rna.write("\n")
 end
-$rna.write("        [nil]\n")
-$rna.write("    ]\n");
-$rna.write("    Ribosome.rethrow(e, " + $rnafile.inspect + ", LINEMAP)\n")
-$rna.write("end\n")
-$rna.write("\n")
 $rna.write("Ribosome.close()\n")
 $rna.write("\n")
 
 # Flush the RNA file.
 $rna.close()
 
-# Execute the RNA file. Pass it any arguments not used by ribosome.
-system("ruby #{$rnafile} " + ARGV[1..-1].join(' '))
+if !rnaopt
 
-# Delete the RNA file.
-# File.delete($rnafile)
+    # Execute the RNA file. Pass it any arguments not used by ribosome.
+    system("ruby #{$rnafile} " + ARGV[1..-1].join(' '))
+
+    # Delete the RNA file.
+    # File.delete($rnafile)
+
+end
 

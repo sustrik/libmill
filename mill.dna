@@ -1,314 +1,3 @@
-#!/usr/bin/ruby
-
-#
-# The initial part of this file belongs to the ribosome project.
-#
-# Copyright (c) 2014 Martin Sustrik  All rights reserved.
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"),
-# to deal in the Software without restriction, including without limitation
-# the rights to use, copy, modify, merge, publish, distribute, sublicense,
-# and/or sell copies of the Software, and to permit persons to whom
-# the Software is furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included
-# in all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
-# IN THE SOFTWARE.
-#
-
-module Ribosome
-
-    # Class Block represents a rectangular area of text.
-    class Block
-
-        attr_accessor :text, :width
-
-        def initialize(s)
-            @text = []
-            @width = 0
-            return if s == nil
-
-            # Split the string into individual lines.
-			start = 0
-			loop do
-				i = s.index("\n", start) || s.size
-				@text << (i == start ? "" : s[start..i - 1])
-                @width = [@width, @text.last.size].max
-				start = i + 1
-				break if start > s.size
-			end
-        end
-
-        # Weld the supplied block to the right side of this block.
-        def add_right(block)
-
-            # Merge the blocks while taking care to add whitespace
-            # where they do not align properly.
-            i = 0
-            for l in block.text
-                if(@text[i])
-                    @text[i] += (" " * (@width - @text[i].size)) + l
-                else
-                    @text << (" " * @width) + l
-                end
-                i += 1
-            end
-
-            # Adjust the overall width of the block.
-            @width += block.width
-            
-        end
-
-        # Weld the supplied block to the bottom side of this block.
-        def add_bottom(block)
-            @text += block.text
-            @width = [@width, block.width].max
-        end
-
-        # Trim the whitespace from the block.
-        def trim()
-
-            # Find the boundaries of the text.
-            top = -1
-            bottom = -1
-            left = -1
-            right = -1
-
-            i = 0
-            for l in @text
-                if(!l.lstrip().empty?)
-                    top = i if top == -1
-                    bottom = i;
-                    if (left == -1)
-                        left = l.size() - l.lstrip().size()
-                    else
-                        left = [left, l.size() - l.lstrip().size()].min
-                    end
-                    if (right == -1)
-                        right = l.rstrip().size()
-                    else
-                        right = [right, l.rstrip().size()].max
-                    end
-                end
-                i += 1
-            end
-
-            # The case of block with no text whatsoever.
-            if bottom == -1
-                @text = []
-                @width = 0
-                return
-            end
-
-            # Strip off the top and bottom whitespace.
-            @text = @text[top..bottom]
-
-            # Strip off the whitespace on the left and on the right.
-            for i in 0..@text.size() - 1
-                @text[i] = @text[i].rstrip()[left..right]
-                @text[i] = "" if @text[i] == nil
-            end
-
-            # Adjust the overall width of the block.
-            @width = (@text.max {|x,y| x.size <=> y.size} || "").size
-
-        end
-
-        def write(out, tabsize)
-            for l in @text
-
-                # If required, replace the initial whitespace by tabs.
-                if(tabsize > 0)
-                    ws = l.size - l.lstrip.size
-                    l = "\t" * (ws / tabsize) +
-                        " " * (ws % tabsize) + l.lstrip
-                end
-
-                # Write an individual line to the output file.
-                out.write(l)
-                out.write("\n")
-            end
-        end
-
-    end
-
-    # Size of a tab. If set to zero, tabs are not generated.
-    @tabsize = 0
-
-    # The output file, or, alternativly, stdout.
-    @outisafile = false
-    @out = $stdout
-
-    # This is the ribosome call stack. At each level there is a list of
-    # text blocks generated up to that point.
-    @stack = [[]]
-
-    # Redirects output to the specified file.
-    def Ribosome.output(filename)
-        close()
-        @outisafile = true
-        @out = File.open(filename, "w")
-    end
-
-    # Redirects output to the stdout.
-    def Ribosome.stdout()
-        close()
-        @outisafile = false
-        @out = $stdout
-    end
-
-    # Sets the size of the tab.
-    def Ribosome.tabsize(size)
-        @tabsize = size
-    end
-
-    # Flush the data to the currently open file and close it.
-    def Ribosome.close()
-        for b in @stack.last
-            b.write(@out, @tabsize)
-        end
-        @stack = [[]]
-        @out.close() if @outisafile
-    end
-
-    # Adds one . line from the DNA file.
-    def Ribosome.add(line, bind)
-
-        # If there is no previous line, add one.
-        if(@stack.last.empty?)
-            @stack.last << Block.new("")
-        end
-
-        # In this block we will accumulate the expanded line.
-        block = @stack.last.last
-
-        # Traverse the line and convert it into a block.
-        i = 0
-        while true
-            j = line.index(/[@&][1-9]?\{/, i)
-            j = line.size if j == nil
-
-            # Process constant block of text.
-            if (i != j)
-                block.add_right(Block.new(line[i..j - 1]))
-            end
-
-            break if line.size == j
-
-            # Process an embedded expression.
-            i = j
-            j += 1
-            level = 0
-            if (line[j] >= ?1 && line[j] <= ?9)
-                level = line[j] - ?0
-                j += 1
-            end
-
-            # Find corresponding }.
-            par = 0;
-            while true
-                if(line[j] == ?{)
-                    par += 1
-                elsif(line[j] == ?})
-                    par -= 1
-                end
-                break if par == 0
-                j += 1
-                if j >= line.size
-                    raise SyntaxError.new("Unmatched {")
-                end
-            end
-
-            # Expression of higher indirection levels are simply brought
-            # down by one level.
-            if(level > 0)
-                if line [i + 1] == ?1
-                    block.add_right(Block.new("@" + line[i + 2..j]))
-                else
-                    line[i + 1] -= 1
-                    block.add_right(Block.new(line[i..j]))
-                end
-                i = j + 1
-                next
-            end
-
-            # We are at the lowest level of embeddedness so we have to
-            # evaluate the embedded expression straight away.
-            expr = line[(level == 0 ? i + 2 : i + 3)..j - 1]
-            @stack.push([])
-            val = eval(expr, bind)
-            top = @stack.pop()
-            if(top.empty?)
-                val = Block.new(val.to_s)
-            else
-                val = Block.new("")
-                for b in top
-                    val.add_bottom(b)
-                end
-            end
-            val.trim if line[i] == ?@
-            block.add_right(val)
-            i = j + 1
-        end
-    end
-
-    # Adds newline followed by one . line from the DNA file.
-    def Ribosome.dot(line, bind)
-        @stack.last << Block.new("")
-        add(line, bind)
-    end
-
-    #  Report an error that happened when executing RNA file.
-    def Ribosome.rethrow(e, rnafile, linemap)
-        i = 0
-        for i in 0..e.backtrace.size - 1
-            l = e.backtrace[i]
-            if l.start_with?(rnafile + ":")
-                stop = l.index(":", rnafile.size + 1) || l.size
-                num = l[rnafile.size + 1..stop - 1].to_i
-                for j in 0..linemap.size - 1
-                    break if linemap[j][0] == nil || linemap[j][0] > num
-                end
-                j -= 1
-                num = num - linemap[j][0] + linemap[j][2]
-                l = "#{linemap[j][1]}:#{num}#{l[stop..-1]}"
-                e.backtrace[i] = l
-            end
-        end
-        raise e
-    end
-
-end
-
-# Escape function for @
-def at()
-    return "@"
-end
-
-# Escape function for &
-def amp()
-    return "&"
-end
-
-# Escape function for /
-def slash()
-    return "/"
-end
-
-################################################################################
-# The code that belongs to the ribosome project ends at this point of the      #
-# RNA file and so does the associated license. What follows is the code        #
-# generated from the DNA file.                                                 #
-################################################################################
-
 #!./ribosome
 
 #
@@ -450,9 +139,9 @@ end
 def renderarg(arg)
 
     if arg[:out]
-Ribosome.dot("       @{arg[:type]} *@{arg[:name]}@{arg[:postfix]}", binding)
+.       @{arg[:type]} *@{arg[:name]}@{arg[:postfix]}
     else
-Ribosome.dot("       @{arg[:type]} @{arg[:name]}@{arg[:postfix]}", binding)
+.       @{arg[:type]} @{arg[:name]}@{arg[:postfix]}
     end
 end
 
@@ -835,13 +524,13 @@ end
 # Generate the output file.                                                    #
 ################################################################################
 
-Ribosome.output $output_filename
+./!output $output_filename
 
-Ribosome.dot("/* @{Time.now}:", binding)
-Ribosome.dot("   This file was generated by mill from @{$input_filename} */", binding)
-Ribosome.dot("", binding)
-Ribosome.dot("#include \"mill.h\"", binding)
-Ribosome.dot("", binding)
+./* @{Time.now}:
+.   This file was generated by mill from @{$input_filename} */
+.
+.#include "mill.h"
+.
 for s in sections
 
 ################################################################################
@@ -850,8 +539,8 @@ for s in sections
 ################################################################################
 
     if s[:type] == :rawc
-Ribosome.dot("@{s[:text]}", binding)
-Ribosome.dot("", binding)
+.@{s[:text]}
+.
     end
 
 ################################################################################
@@ -859,31 +548,26 @@ Ribosome.dot("", binding)
 ################################################################################
 
     if s[:type] == :codecl
-Ribosome.dot("extern const struct mill_type mill_type_@{s[:name]};", binding)
-Ribosome.dot("", binding)
-Ribosome.dot("void *mill_call_@{s[:name]} (", binding)
-Ribosome.dot("    void *cf,", binding)
-Ribosome.dot("    const struct mill_type *type,", binding)
-Ribosome.dot("    struct mill_loop *loop,", binding)
-Ribosome.dot("    void *parent", binding)
+.extern const struct mill_type mill_type_@{s[:name]};
+.
+.void *mill_call_@{s[:name]} (
+.    void *cf,
+.    const struct mill_type *type,
+.    struct mill_loop *loop,
+.    void *parent
         for a in s[:args]
-Ribosome.add(",", binding)
-Ribosome.dot("    @{renderarg(a)}", binding)
+.    /+,
+.    @{renderarg(a)}
         end
-Ribosome.add(");", binding)
-Ribosome.dot("", binding)
-Ribosome.dot("void @{s[:name]} (", binding)
-____separate_876____ = true
+./+);
+.
+.void @{s[:name]} (
+./!separate ", "
         for a in s[:args]
-if(____separate_876____)
-    ____separate_876____ = false
-else
-    Ribosome.add(", ", binding)
-end
-Ribosome.dot("    @{renderarg(a)}", binding)
+.    @{renderarg(a)}
         end
-Ribosome.add(");", binding)
-Ribosome.dot("", binding)
+./+);
+.
     end
 
 ################################################################################
@@ -891,124 +575,119 @@ Ribosome.dot("", binding)
 ################################################################################
 
     if s[:type] == :codef
-Ribosome.dot("struct mill_cf_@{s[:name]} {", binding)
-Ribosome.dot("", binding)
-Ribosome.dot("    /* Generic coframe header. */", binding)
-Ribosome.dot("    struct mill_cfh mill_cfh;", binding)
+.struct mill_cf_@{s[:name]} {
+.
+.    /* Generic coframe header. */
+.    struct mill_cfh mill_cfh;
         if !s[:args].empty?
-Ribosome.dot("", binding)
-Ribosome.dot("    /* Coroutine arguments. */", binding)
+.
+.    /* Coroutine arguments. */
         end
         hasoutargs = false
         for a in s[:args]
-Ribosome.dot("    @{a[:type]} @{a[:name]}@{a[:postfix]};", binding)
+.    @{a[:type]} @{a[:name]}@{a[:postfix]};
         hasoutargs = true if a[:out] == true
         end
         if !s[:vars].empty?
-Ribosome.dot("", binding)
-Ribosome.dot("    /* Local variables. */", binding)
+.
+.    /* Local variables. */
         end
         for v in s[:vars]
-Ribosome.dot("    @{v[:type]} @{v[:name]}@{v[:postfix]};", binding)
+.    @{v[:type]} @{v[:name]}@{v[:postfix]};
         end
         if hasoutargs
-Ribosome.dot("", binding)
-Ribosome.dot("    /* Destinations for out arguments. */", binding)
+.
+.    /* Destinations for out arguments. */
         end
         for a in s[:args]
             if a[:out]
-Ribosome.dot("    @{a[:type]} *mill_out_@{a[:name]}@{a[:postfix]};", binding)
+.    @{a[:type]} *mill_out_@{a[:name]}@{a[:postfix]};
             end
         end
-Ribosome.dot("};", binding)
-Ribosome.dot("", binding)
-Ribosome.dot("static void mill_handler_@{s[:name]} (void *cfptr, void *event)", binding)
-Ribosome.dot("{", binding)
-Ribosome.dot("    mill_handlerimpl_prologue (@{s[:name]});", binding)
-Ribosome.dot("", binding)
-Ribosome.dot("    switch (cf->mill_cfh.pc) {", binding)
-Ribosome.dot("    case 0:", binding)
-Ribosome.dot("        break;", binding)
+.};
+.
+.static void mill_handler_@{s[:name]} (void *cfptr, void *event)
+.{
+.    mill_handlerimpl_prologue (@{s[:name]});
+.
+.    switch (cf->mill_cfh.pc) {
+.    case 0:
+.        break;
 for i in 1..s[:lastpc] + 1
-Ribosome.dot("    case @{i}:", binding)
-Ribosome.dot("        goto mill_pc_@{i};", binding)
+.    case @{i}:
+.        goto mill_pc_@{i};
 end
-Ribosome.dot("    default:", binding)
-Ribosome.dot("        assert (0);", binding)
-Ribosome.dot("    }", binding)
-Ribosome.dot("", binding)
-Ribosome.dot("    @{s[:text]}", binding)
-Ribosome.dot("", binding)
-Ribosome.dot("    mill_handlerimpl_epilogue (@{s[:name]}, @{s[:lastpc] + 1});", binding)
-Ribosome.dot("}", binding)
-Ribosome.dot("", binding)
-Ribosome.dot("static void mill_output_@{s[:name]} (void *cfptr)", binding)
-Ribosome.dot("{", binding)
-Ribosome.dot("    struct mill_cf_@{s[:name]} *cf;", binding)
-Ribosome.dot("", binding)
-Ribosome.dot("    cf = (struct mill_cf_@{s[:name]}*) cfptr;    ", binding)
+.    default:
+.        assert (0);
+.    }
+.
+.    @{s[:text]}
+.
+.    mill_handlerimpl_epilogue (@{s[:name]}, @{s[:lastpc] + 1});
+.}
+.
+.static void mill_output_@{s[:name]} (void *cfptr)
+.{
+.    struct mill_cf_@{s[:name]} *cf;
+.
+.    cf = (struct mill_cf_@{s[:name]}*) cfptr;    
 for a in s[:args]
     if a[:out]
-Ribosome.dot("    *cf->mill_out_@{a[:name]} = cf->@{a[:name]};", binding)
+.    *cf->mill_out_@{a[:name]} = cf->@{a[:name]};
     end
 end
-Ribosome.dot("}", binding)
-Ribosome.dot("", binding)
-Ribosome.dot("const struct mill_type mill_type_@{s[:name]} = {", binding)
-Ribosome.dot("    mill_type_tag,", binding)
-Ribosome.dot("    mill_handler_@{s[:name]},", binding)
-Ribosome.dot("    mill_output_@{s[:name]},", binding)
-Ribosome.dot("    \"@{s[:name]}\"", binding)
-Ribosome.dot("};", binding)
-Ribosome.dot("", binding)
-Ribosome.dot("void *mill_call_@{s[:name]} (", binding)
-Ribosome.dot("    void *cfptr,", binding)
-Ribosome.dot("    const struct mill_type *type,", binding)
-Ribosome.dot("    struct mill_loop *loop,", binding)
-Ribosome.dot("    void *parent", binding)
+.}
+.
+.const struct mill_type mill_type_@{s[:name]} = {
+.    mill_type_tag,
+.    mill_handler_@{s[:name]},
+.    mill_output_@{s[:name]},
+.    "@{s[:name]}"
+.};
+.
+.void *mill_call_@{s[:name]} (
+.    void *cfptr,
+.    const struct mill_type *type,
+.    struct mill_loop *loop,
+.    void *parent
 for a in s[:args]
-Ribosome.add(",", binding)
-Ribosome.dot("    @{renderarg(a)}", binding)
+.    /+,
+.    @{renderarg(a)}
 end
-Ribosome.add(")", binding)
-Ribosome.dot("{", binding)
-Ribosome.dot("    mill_callimpl_prologue (@{s[:name]});", binding)
+./+)
+.{
+.    mill_callimpl_prologue (@{s[:name]});
 for a in s[:args]
     if a[:out]
-Ribosome.dot("    cf->mill_out_@{a[:name]} = @{a[:name]};", binding)
+.    cf->mill_out_@{a[:name]} = @{a[:name]};
     else
-Ribosome.dot("    cf->@{a[:name]} = @{a[:name]};", binding)
+.    cf->@{a[:name]} = @{a[:name]};
     end
 end
 for v in s[:vars]
     if v[:init] != nil
-Ribosome.dot("    cf->@{v[:name]} = @{v[:init]};", binding)
+.    cf->@{v[:name]} = @{v[:init]};
     end
 end
-Ribosome.dot("    mill_callimpl_epilogue (@{s[:name]});", binding)
-Ribosome.dot("}", binding)
-Ribosome.dot("", binding)
-Ribosome.dot("void @{s[:name]} (", binding)
-____separate_992____ = true
+.    mill_callimpl_epilogue (@{s[:name]});
+.}
+.
+.void @{s[:name]} (
+./!separate ", "
 for a in s[:args]
-if(____separate_992____)
-    ____separate_992____ = false
-else
-    Ribosome.add(", ", binding)
+.    @{renderarg(a)}
 end
-Ribosome.dot("    @{renderarg(a)}", binding)
-end
-Ribosome.add(")", binding)
-Ribosome.dot("{", binding)
-Ribosome.dot("    mill_synccallimpl_prologue (@{s[:name]});", binding)
-Ribosome.dot("    mill_call_@{s[:name]} (&cf, &mill_type_@{s[:name]}, &loop, 0", binding)
+./+)
+.{
+.    mill_synccallimpl_prologue (@{s[:name]});
+.    mill_call_@{s[:name]} (&cf, &mill_type_@{s[:name]}, &loop, 0
 for a in s[:args]
-Ribosome.add(", @{a[:name]}", binding)
+.    /+, @{a[:name]}
 end
-Ribosome.add(");", binding)
-Ribosome.dot("    mill_synccallimpl_epilogue (@{s[:name]});", binding)
-Ribosome.dot("}", binding)
-Ribosome.dot("", binding)
+./+);
+.    mill_synccallimpl_epilogue (@{s[:name]});
+.}
+.
     end
 
 ################################################################################
@@ -1016,18 +695,15 @@ Ribosome.dot("", binding)
 ################################################################################
 
     if s[:type] == :typedef
-Ribosome.dot("const struct mill_type mill_type_@{s[:new]} = {", binding)
-Ribosome.dot("    mill_type_tag,", binding)
-Ribosome.dot("    mill_handler_@{s[:old]},", binding)
-Ribosome.dot("    mill_output_@{s[:old]},", binding)
-Ribosome.dot("    \"@{s[:new]}\"};", binding)
-Ribosome.dot("", binding)
-Ribosome.dot("#define mill_call_@{s[:new]} mill_call_@{s[:old]}", binding)
-Ribosome.dot("#define @{s[:new]} @{s[:old]}", binding)
+.const struct mill_type mill_type_@{s[:new]} = {
+.    mill_type_tag,
+.    mill_handler_@{s[:old]},
+.    mill_output_@{s[:old]},
+.    "@{s[:new]}"};
+.
+.#define mill_call_@{s[:new]} mill_call_@{s[:old]}
+.#define @{s[:new]} @{s[:old]}
     end
 
 end
-
-
-Ribosome.close()
 
