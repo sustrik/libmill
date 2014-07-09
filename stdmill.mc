@@ -103,8 +103,6 @@ static void msleep_close_cb (
 /* tcpsocket                                                                  */
 /******************************************************************************/
 
-/* For the definition of struct tcpsocket look into stdmillx.h header file. */
-
 static void tcpsocket_close_cb (
     uv_handle_t* handle);
 static void tcpsocket_listen_cb (
