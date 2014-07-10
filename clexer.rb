@@ -1,12 +1,16 @@
 
 # line 1 "clexer.rl"
+################################################################################
+# Begin generated clexer.rb (from clexer.rl).  This (generated) file is        #
+# included verbatim by mill.dna to avoid an external dependency.               #
+################################################################################
 
 
-# line 152 "clexer.rl"
+# line 156 "clexer.rl"
 
 
 
-# line 10 "clexer.rb"
+# line 14 "clexer.rb"
 class << self
 	attr_accessor :_c_actions
 	private :_c_actions, :_c_actions=
@@ -161,7 +165,7 @@ end
 self.c_en_main = 11;
 
 
-# line 155 "clexer.rl"
+# line 159 "clexer.rl"
 
 def parse(data)
 
@@ -172,7 +176,7 @@ def parse(data)
     stack = [[]]
 
 	
-# line 176 "clexer.rb"
+# line 180 "clexer.rb"
 begin
 	p ||= 0
 	pe ||= data.length
@@ -182,9 +186,9 @@ begin
 	act = 0
 end
 
-# line 165 "clexer.rl"
+# line 169 "clexer.rl"
     
-# line 188 "clexer.rb"
+# line 192 "clexer.rb"
 begin
 	_klen, _trans, _keys, _acts, _nacts = nil
 	_goto_level = 0
@@ -218,7 +222,7 @@ begin
 		begin
 ts = p
 		end
-# line 222 "clexer.rb"
+# line 226 "clexer.rb"
 		end # from state action switch
 	end
 	if _trigger_goto
@@ -285,11 +289,11 @@ ts = p
 			_acts += 1
 			case _c_actions[_acts - 1]
 when 0 then
-# line 5 "clexer.rl"
+# line 9 "clexer.rl"
 		begin
 curline += 1;		end
 when 1 then
-# line 9 "clexer.rl"
+# line 13 "clexer.rl"
 		begin
 	begin
 		cs = 11
@@ -304,7 +308,7 @@ when 4 then
 te = p+1
 		end
 when 5 then
-# line 19 "clexer.rl"
+# line 23 "clexer.rl"
 		begin
 te = p+1
  begin 
@@ -312,7 +316,7 @@ te = p+1
      end
 		end
 when 6 then
-# line 25 "clexer.rl"
+# line 29 "clexer.rl"
 		begin
 te = p+1
  begin 
@@ -361,7 +365,7 @@ te = p+1
 	 end
 		end
 when 7 then
-# line 103 "clexer.rl"
+# line 107 "clexer.rl"
 		begin
 te = p+1
  begin 
@@ -369,7 +373,7 @@ te = p+1
      end
 		end
 when 8 then
-# line 109 "clexer.rl"
+# line 113 "clexer.rl"
 		begin
 te = p+1
  begin 
@@ -377,12 +381,12 @@ te = p+1
      end
 		end
 when 9 then
-# line 114 "clexer.rl"
+# line 118 "clexer.rl"
 		begin
 te = p+1
 		end
 when 10 then
-# line 117 "clexer.rl"
+# line 121 "clexer.rl"
 		begin
 te = p+1
  begin 
@@ -395,12 +399,12 @@ te = p+1
      end
 		end
 when 11 then
-# line 129 "clexer.rl"
+# line 133 "clexer.rl"
 		begin
 te = p+1
 		end
 when 12 then
-# line 131 "clexer.rl"
+# line 135 "clexer.rl"
 		begin
 te = p+1
  begin  	begin
@@ -412,7 +416,7 @@ te = p+1
   end
 		end
 when 13 then
-# line 25 "clexer.rl"
+# line 29 "clexer.rl"
 		begin
 te = p
 p = p - 1; begin 
@@ -461,7 +465,7 @@ p = p - 1; begin
 	 end
 		end
 when 14 then
-# line 72 "clexer.rl"
+# line 76 "clexer.rl"
 		begin
 te = p
 p = p - 1; begin 
@@ -494,7 +498,7 @@ p = p - 1; begin
 	 end
 		end
 when 15 then
-# line 135 "clexer.rl"
+# line 139 "clexer.rl"
 		begin
 te = p
 p = p - 1; begin 
@@ -502,7 +506,7 @@ p = p - 1; begin
      end
 		end
 when 16 then
-# line 141 "clexer.rl"
+# line 145 "clexer.rl"
 		begin
 te = p
 p = p - 1; begin 
@@ -510,7 +514,7 @@ p = p - 1; begin
      end
 		end
 when 17 then
-# line 147 "clexer.rl"
+# line 151 "clexer.rl"
 		begin
 te = p
 p = p - 1; begin 
@@ -518,7 +522,7 @@ p = p - 1; begin
      end
 		end
 when 18 then
-# line 25 "clexer.rl"
+# line 29 "clexer.rl"
 		begin
  begin p = ((te))-1; end
  begin 
@@ -567,14 +571,14 @@ when 18 then
 	 end
 		end
 when 19 then
-# line 135 "clexer.rl"
+# line 139 "clexer.rl"
 		begin
  begin p = ((te))-1; end
  begin 
         stack.last << [:cruft, ts, te - 1]
      end
 		end
-# line 578 "clexer.rb"
+# line 582 "clexer.rb"
 			end # action switch
 		end
 	end
@@ -594,7 +598,7 @@ when 2 then
 # line 1 "NONE"
 		begin
 ts = nil;		end
-# line 598 "clexer.rb"
+# line 602 "clexer.rb"
 		end # to state action switch
 	end
 	if _trigger_goto
@@ -625,7 +629,7 @@ end
 	end
 	end
 
-# line 166 "clexer.rl"
+# line 170 "clexer.rl"
 
     stack.last << [:end, data.length - 1, data.length - 1]
 
@@ -638,3 +642,6 @@ end
 
 end
 
+################################################################################
+# End generated clexer.rb (from clexer.rl).                                    #
+################################################################################
