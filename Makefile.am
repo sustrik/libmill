@@ -11,6 +11,14 @@ stdmill.c: stdmill.mc stdmill.h mill
 stdmill.h: stdmill.mh mill
 	./mill --system $<
 
+check_PROGRAMS = tests/tcpsocket
+check_CLEANFILES = tests/tcpsocket.c
+TESTS = $(check_PROGRAMS)
+LDADD = libstdmill.a
+
+.mc.c:
+	./mill $<
+
 if GEN
 
 mill: gen/mill.dna gen/clexer.rb
@@ -20,7 +28,7 @@ mill: gen/mill.dna gen/clexer.rb
 gen/clexer.rb: gen/clexer.rl
 	ragel -R $< -o $@
 
-CLEANFILES = mill gen/clexer.rb stdmill.h stdmill.c
+CLEANFILES = mill gen/clexer.rb stdmill.h stdmill.c $(check_CLEANFILES)
 
 else
 
@@ -29,6 +37,6 @@ mill: gen/mill.dna gen/clexer.rb
 
 gen/clexer.rb:
 
-CLEANFILES = stdmill.h stdmill.c
+CLEANFILES = stdmill.h stdmill.c $(check_CLEANFILES)
 
 endif
