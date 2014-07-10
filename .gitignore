@@ -1,1 +1,19 @@
+.*.sw?
 *.rna
+Makefile
+Makefile.in
+aclocal.m4
+autom4te.cache/
+config.log
+config.status
+configure
+install-sh
+missing
+*.o
+*.a
+.deps/
+depcomp
+
+# Generated from stdmill.[mc,mh]
+stdmill.c
+stdmill.h
