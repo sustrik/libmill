@@ -1,4 +1,4 @@
-#!/usr/bin/ruby
+#!/usr/bin/env ruby
 
 #
 # Copyright (c) 2014 Martin Sustrik  All rights reserved.
@@ -31,7 +31,7 @@
 # file makes the ribosome dependencies and deployment much simpler.
 
 PROLOGUE_LINE = __LINE__
-PROLOGUE = '#!/usr/bin/ruby
+PROLOGUE = '#!/usr/bin/env ruby
 
 #
 # The initial part of this file belongs to the ribosome project.
