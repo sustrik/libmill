@@ -1,9 +1,5 @@
 dist_bin_SCRIPTS = mill
 
-mill: mill.dna
-	ribosome --rna $< >$@
-	chmod +x $@
-
 include_HEADERS = mill.h stdmill.h
 
 lib_LIBRARIES = libstdmill.a
@@ -14,3 +10,25 @@ stdmill.c: stdmill.mc stdmill.h mill
 
 stdmill.h: stdmill.mh mill
 	./mill --system $<
+
+if GEN
+
+mill: gen/mill.dna gen/clexer.rb
+	ribosome --rna $< >$@
+	chmod +x $@
+
+gen/clexer.rb: gen/clexer.rl
+	ragel -R $< -o $@
+
+CLEANFILES = mill gen/clexer.rb stdmill.h stdmill.c
+
+else
+
+mill: gen/mill.dna gen/clexer.rb
+	@echo You have modified Mill source files in gen/, reconfigure with --enable-gen and rebuild. && false
+
+gen/clexer.rb:
+
+CLEANFILES = stdmill.h stdmill.c
+
+endif

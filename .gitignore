@@ -14,6 +14,9 @@ missing
 .deps/
 depcomp
 
+# Generated from clexer.rl
+gen/clexer.rb
+
 # Generated from stdmill.[mc,mh]
 stdmill.c
 stdmill.h
