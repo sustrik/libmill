@@ -6,7 +6,7 @@ an experiment in adding more structure (think gotos vs. structured programming!)
 into parallel programming.
 
 *coroutine* keyword provides a way to define a new coroutine. The syntax mimics
-the syntax of standard C function, except that is has not return value.
+the syntax of standard C function, except that it has not return value.
 
 ```
 coroutine foo (int a, const char *b, int *result)
@@ -46,6 +46,8 @@ coroutine bar ()
     endvars;
 
     go foo (&i);
+    go foo (&i);
+    go foo (&i);
 }
 ``` 
 
@@ -57,16 +59,20 @@ coroutine foo ()
     printf ("Hello, world!\n");
 }
 
-go foo();
+coroutine bar ()
+{
+    go foo();
+}
 ```
 
 Note that all the coroutines launched from the current coroutine are canceled
 automatically once the parent coroutine exits. Therefore, program's 'costack'
 (as call stack, but for coroutines) forms a tree. There's no lifetime overlap
-among the coroutines, callee's lifetime is fully contained in caller's lifetime.
+among the coroutines, callee's lifetime is fully contained within caller's
+lifetime.
 
 Use *select* keyword to wait for events. The only events supported by mill are
-'done' events from the child corouines and 'cancel' event from the parent.
+'done' events from the child coroutines and 'cancel' event from the parent.
 
 ```
 coroutine foo ()
@@ -86,7 +92,7 @@ coroutine bar ()
 }
 ```
 
-Note that events are distinguished using coroutine types, not coroutine
+Note that events are distinguished based on coroutine types, not coroutine
 instances. This is an experiment that seems to lead to better coding practices.
 
 Coroutines can be invoked in synchronous manner from standard C functions:

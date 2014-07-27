@@ -103,6 +103,7 @@ static void msleep_close_cb (
 /* tcpsocket                                                                  */
 /******************************************************************************/
 
+/* Forward declarations. */
 static void tcpsocket_close_cb (
     uv_handle_t* handle);
 static void tcpsocket_listen_cb (
@@ -123,15 +124,64 @@ static void tcpsocket_recv_cb (
     ssize_t nread,
     const uv_buf_t* buf);
 
+#define TCPSOCKET_GETEVENT(pcarg) \
+    self->pc = pcarg; \
+    return; \
+    pc##pcarg:
+
+#define TCPSOCKET_INIT 1
+#define TCPSOCKET_LISTEN 2
+#define TCPSOCKET_ACCEPT 3
+#define TCPSOCKET_ACCEPTED 4
+#define TCPSOCKET_CONNECT 5
+#define TCPSOCKET_CONNECTED 6
+#define TCPSOCKET_ERROR 7
+#define TCPSOCKET_TERM 8
+
+/* tpcsocket's handler function. */
+static void tcpsocket_handler (struct tcpsocket *self, int event)
+{
+    switch (self->pc) {
+    case 0:
+        break;
+    case 1:
+        goto pc1;
+    case 2:
+        goto pc2;
+    default:
+        assert (0);
+    }
+
+    assert (event == TCPSOCKET_INIT);
+    TCPSOCKET_GETEVENT(1)
+    switch (event) {
+    case TCPSOCKET_LISTEN:
+        while (1) {
+            TCPSOCKET_GETEVENT(2)
+        }
+        break;
+    case TCPSOCKET_CONNECT)
+        assert (0);
+        break;
+    default:
+        assert (0);
+    }
+}
+
 int tcpsocket_init (
     struct tcpsocket *self,
     struct mill_loop *loop)
 {
+    int rc;
+
     self->loop = &loop->uv_loop;
     self->pc = 0;
     self->recvcfptr = 0;
     self->sendcfptr = 0;
-    return uv_tcp_init (&loop->uv_loop, &self->s);
+    rc = uv_tcp_init (&loop->uv_loop, &self->s);
+    if (rc != 0)
+        return rc;
+    tcpsocket_handler (self, TCPSOCKET_INIT);
 }
 
 coroutine tcpsocket_term (
@@ -165,7 +215,12 @@ int tcpsocket_listen (
     struct tcpsocket *self,
     int backlog)
 {
-    return uv_listen ((uv_stream_t*) &self->s, backlog, tcpsocket_listen_cb);
+    int rc;
+
+    rc = uv_listen ((uv_stream_t*) &self->s, backlog, tcpsocket_listen_cb);
+    if (rc != 0)
+        return rc;
+    tcpsocket_handler (self, TCPSOCKET_LISTEN);
 }
 
 coroutine tcpsocket_connect (
