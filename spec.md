@@ -2,11 +2,11 @@ Mill summary
 ============
 
 Mill is a preprocessor that adds coroutine support to C. It is also
-an experiment in adding more structure (think gotos vs. structured programming!)
+an experiment in adding more structure (think gotos vs. structured programming)
 into parallel programming.
 
 *coroutine* keyword provides a way to define a new coroutine. The syntax mimics
-the syntax of standard C function, except that it has not return value.
+the syntax of standard C function, except that it has no return value.
 
 ```
 coroutine foo (int a, const char *b, int *result)
