@@ -127,7 +127,7 @@ coroutine foo ()
 }
 ```
 
-Preprocessor command line: Following commands will generate foo.h from foo.m
+Preprocessor command line: Following commands will generate foo.h from foo.mh
 and foo.c from foo.mc:
 
 ```
