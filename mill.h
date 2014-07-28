@@ -133,10 +133,8 @@ struct mill_cfh {
 
 #define mill_handlerimpl_prologue(name)\
     struct mill_cf_##name *cf;\
-    struct mill_cfh *ev;\
     \
-    cf = (struct mill_cf_##name*) cfptr;\
-    ev = (struct mill_cfh*) event;
+    cf = (struct mill_cf_##name*) cfptr;
 
 #define mill_handlerimpl_epilogue(name, pcarg)\
     mill_finally:\
