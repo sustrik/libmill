@@ -91,8 +91,6 @@
             stack.last << [:struct, ts, te - 1]
         elsif token == "typeof"
             stack.last << [:typeof, ts, te - 1]
-        elsif token == "typedef"
-            stack.last << [:typedef, ts, te - 1]
         else
             stack.last << [:identifier, ts, te - 1]
         end

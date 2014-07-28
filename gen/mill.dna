@@ -186,7 +186,7 @@ i = 0
 # Sections array will consist of the following items
 # :rawc        Section containing raw C code
 # :coroutine   Coroutine declaration or definition
-# :typedef     Coroutine typedef
+# :alias       Coroutine alias ("coroutine x = y")
 sections = []
 
 ################################################################################
@@ -223,13 +223,13 @@ loop do
             break;
         end
 
-        if(tokens[i][0] == :typedef &&
-              tokens [i + 1][0] == :coroutine &&
-              tokens[i + 2][0] == :identifier &&
+        if(tokens[i][0] == :coroutine &&
+              tokens [i + 1][0] == :identifier &&
+              tokens[i + 2][0] == :eq &&
               tokens[i + 3][0] == :identifier &&
               tokens [i + 4][0] == :semicolon)
             cstop = i
-            cotype = :typedef
+            cotype = :alias
             cotext = text[tokens[i][1]..tokens[i + 4][2]]
             cotokens = tokens[i..i + 4]
             i += 5
@@ -380,17 +380,17 @@ for i in 0..sections.size - 1
 end
 
 ################################################################################
-#  Process typedef sections.                                                   #
+#  Process alias sections.                                                     #
 ################################################################################
 
 for i in 0..sections.size - 1
-    if sections[i][:type] == :typedef
+    if sections[i][:type] == :alias
         text = sections[i][:text]
         tokens = sections[i][:tokens]
-        old = text[tokens[2][1]..tokens[2][2]]
-        new = text[tokens[3][1]..tokens[3][2]]
+        new = text[tokens[1][1]..tokens[1][2]]
+        old = text[tokens[3][1]..tokens[3][2]]
         sections[i] = {
-            :type => :typedef,
+            :type => :alias,
             :old => old,
             :new => new
         }
@@ -680,10 +680,10 @@ end
     end
 
 ################################################################################
-# Coroutine typedefs.                                                          #
+# Coroutine aliases.                                                           #
 ################################################################################
 
-    if s[:type] == :typedef
+    if s[:type] == :alias
 .const struct mill_type mill_type_@{s[:new]} = {
 .    mill_type_tag,
 .    mill_handler_@{s[:old]},
