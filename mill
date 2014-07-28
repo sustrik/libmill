@@ -339,7 +339,7 @@ end
 ################################################################################
 
 
-# line 156 "gen/clexer.rl"
+# line 152 "gen/clexer.rl"
 
 
 
@@ -498,7 +498,7 @@ end
 self.c_en_main = 11;
 
 
-# line 159 "gen/clexer.rl"
+# line 155 "gen/clexer.rl"
 
 def parse(data)
 
@@ -519,7 +519,7 @@ begin
 	act = 0
 end
 
-# line 169 "gen/clexer.rl"
+# line 165 "gen/clexer.rl"
     
 # line 192 "gen/clexer.rb"
 begin
@@ -698,7 +698,7 @@ te = p+1
 	 end
 		end
 when 7 then
-# line 107 "gen/clexer.rl"
+# line 103 "gen/clexer.rl"
 		begin
 te = p+1
  begin 
@@ -706,7 +706,7 @@ te = p+1
      end
 		end
 when 8 then
-# line 113 "gen/clexer.rl"
+# line 109 "gen/clexer.rl"
 		begin
 te = p+1
  begin 
@@ -714,12 +714,12 @@ te = p+1
      end
 		end
 when 9 then
-# line 118 "gen/clexer.rl"
+# line 114 "gen/clexer.rl"
 		begin
 te = p+1
 		end
 when 10 then
-# line 121 "gen/clexer.rl"
+# line 117 "gen/clexer.rl"
 		begin
 te = p+1
  begin 
@@ -732,12 +732,12 @@ te = p+1
      end
 		end
 when 11 then
-# line 133 "gen/clexer.rl"
+# line 129 "gen/clexer.rl"
 		begin
 te = p+1
 		end
 when 12 then
-# line 135 "gen/clexer.rl"
+# line 131 "gen/clexer.rl"
 		begin
 te = p+1
  begin  	begin
@@ -813,10 +813,6 @@ p = p - 1; begin
             stack.last << [:go, ts, te - 1]
         elsif token == "select"
             stack.last << [:select, ts, te - 1]
-        elsif token == "cancel"
-            stack.last << [:cancel, ts, te - 1]
-        elsif token == "cancelall"
-            stack.last << [:cancelall, ts, te - 1]
         elsif token == "return"
             stack.last << [:return, ts, te - 1]
         elsif token == "struct"
@@ -831,7 +827,7 @@ p = p - 1; begin
 	 end
 		end
 when 15 then
-# line 139 "gen/clexer.rl"
+# line 135 "gen/clexer.rl"
 		begin
 te = p
 p = p - 1; begin 
@@ -839,7 +835,7 @@ p = p - 1; begin
      end
 		end
 when 16 then
-# line 145 "gen/clexer.rl"
+# line 141 "gen/clexer.rl"
 		begin
 te = p
 p = p - 1; begin 
@@ -847,7 +843,7 @@ p = p - 1; begin
      end
 		end
 when 17 then
-# line 151 "gen/clexer.rl"
+# line 147 "gen/clexer.rl"
 		begin
 te = p
 p = p - 1; begin 
@@ -904,14 +900,14 @@ when 18 then
 	 end
 		end
 when 19 then
-# line 139 "gen/clexer.rl"
+# line 135 "gen/clexer.rl"
 		begin
  begin p = ((te))-1; end
  begin 
         stack.last << [:cruft, ts, te - 1]
      end
 		end
-# line 582 "gen/clexer.rb"
+# line 578 "gen/clexer.rb"
 			end # action switch
 		end
 	end
@@ -931,7 +927,7 @@ when 2 then
 # line 1 "NONE"
 		begin
 ts = nil;		end
-# line 602 "gen/clexer.rb"
+# line 598 "gen/clexer.rb"
 		end # to state action switch
 	end
 	if _trigger_goto
@@ -962,7 +958,7 @@ end
 	end
 	end
 
-# line 170 "gen/clexer.rl"
+# line 166 "gen/clexer.rl"
 
     stack.last << [:end, data.length - 1, data.length - 1]
 
@@ -1433,15 +1429,6 @@ for s in sections
                 elsif tokens[i][0] == :return
                     replace(text, alltokens, tokens[i], "goto mill_finally")
 
-                elsif tokens[i][0] == :cancel
-                    replace(text, alltokens, tokens[i], "mill_cancel")
-                    insert(text, alltokens, tokens[i + 1][1] + 1, "cf, ")
-
-                elsif tokens[i][0] == :cancelall
-                    replace(text, alltokens, tokens[i], "mill_cancelall")
-                    pc += 1
-                    insert(text, alltokens, tokens[i + 1][1] + 1, "#{pc}")
-
                 elsif tokens[i][0] == :typeof
                     if tokens[i + 1][0] != :braces || tokens[i + 1][3].size < 1
                         $stderr.write "'typeof' should be followed by an argument list.\n"
@@ -1517,10 +1504,10 @@ Ribosome.dot("    @{renderarg(a)}", binding)
 Ribosome.add(");", binding)
 Ribosome.dot("", binding)
 Ribosome.dot("void @{s[:name]} (", binding)
-____separate_1520____ = true
+____separate_1507____ = true
         for a in s[:args]
-if(____separate_1520____)
-    ____separate_1520____ = false
+if(____separate_1507____)
+    ____separate_1507____ = false
 else
     Ribosome.add(", ", binding)
 end
@@ -1633,10 +1620,10 @@ Ribosome.dot("    mill_callimpl_epilogue (@{s[:name]});", binding)
 Ribosome.dot("}", binding)
 Ribosome.dot("", binding)
 Ribosome.dot("void @{s[:name]} (", binding)
-____separate_1636____ = true
+____separate_1623____ = true
 for a in s[:args]
-if(____separate_1636____)
-    ____separate_1636____ = false
+if(____separate_1623____)
+    ____separate_1623____ = false
 else
     Ribosome.add(", ", binding)
 end

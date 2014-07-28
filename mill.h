@@ -212,7 +212,6 @@ void mill_loop_emit (struct mill_loop *self, struct mill_cfh *ev);
 void mill_emit (void *cfptr);
 void mill_add_child (void *cfptr, void *child);
 void mill_who (void *cfptr, void **who);
-void mill_cancel (void *cfptr, void *child);
 void mill_cancel_children (void *cfptr);
 int mill_has_children (void *cfptr);
 void *mill_typeof (void *cfptr);

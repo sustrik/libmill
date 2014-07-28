@@ -186,23 +186,6 @@ void mill_who (void *cfptr, void **who)
         *who = cfptr; 
 }
 
-void mill_cancel (void *cfptr, void *child)
-{
-    struct mill_cfh *cfh_parent;
-    struct mill_cfh *cfh_child;
-
-    cfh_parent = (struct mill_cfh*) cfptr;
-    cfh_child = (struct mill_cfh*) child;
-
-    /* Make sure that the handle passed by user actually corresponds
-       to a valid child coroutine. */
-    assert (cfh_child->type->tag == mill_type_tag);
-    assert (cfh_child->parent == cfh_parent);
-
-    /* Ask the coroutine to cancel. */
-    cfh_child->type->handler (cfh_child, 0);
-}
-
 void mill_cancel_children (void *cfptr)
 {
     struct mill_cfh *cfh;

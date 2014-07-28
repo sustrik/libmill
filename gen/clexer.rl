@@ -85,10 +85,6 @@
             stack.last << [:go, ts, te - 1]
         elsif token == "select"
             stack.last << [:select, ts, te - 1]
-        elsif token == "cancel"
-            stack.last << [:cancel, ts, te - 1]
-        elsif token == "cancelall"
-            stack.last << [:cancelall, ts, te - 1]
         elsif token == "return"
             stack.last << [:return, ts, te - 1]
         elsif token == "struct"
