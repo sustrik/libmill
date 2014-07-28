@@ -1431,7 +1431,7 @@ for s in sections
                         $stderr.write "'syswait' should be followed by argument list.\n"
                         exit
                     end
-                    replace(text, alltokens, tokens[i], "mill_select")
+                    replace(text, alltokens, tokens[i], "mill_syswait")
                     pc += 1
                     insert(text, alltokens, tokens[i + 1][1] + 1, "#{pc}, ")
 

@@ -196,6 +196,14 @@ void mill_loop_emit (struct mill_loop *self, struct mill_cfh *ev);
         mill_who (event, (whoarg));\
     } while (0)
 
+#define mill_syswait(pcarg, whoarg)\
+    do {\
+        cf->mill_cfh.pc = (pcarg);\
+        return;\
+        mill_pc_##pcarg:\
+        mill_who (event, (whoarg));\
+    } while (0)
+
 #define mill_cancelall(statearg)\
     do {\
         mill_cancel_children (cf);\
