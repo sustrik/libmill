@@ -222,7 +222,6 @@ void mill_add_child (void *cfptr, void *child);
 void mill_who (void *cfptr, void **who);
 void mill_cancel_children (void *cfptr);
 int mill_has_children (void *cfptr);
-void *mill_typeof (void *cfptr);
 
 #endif
 

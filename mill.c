@@ -206,16 +206,3 @@ int mill_has_children (void *cfptr)
     return cfh->children ? 1 : 0;
 }
 
-void *mill_typeof (void *cfptr)
-{
-    struct mill_cfh *cfh;
-
-    cfh = (struct mill_cfh*) cfptr;
-
-    /* Make sure that the handle specified by the user is a valid
-       coroutine handle. */
-    assert (cfh->type && cfh->type->tag == mill_type_tag);
-
-    return (void*) cfh->type;
-}
-
