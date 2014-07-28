@@ -63,7 +63,7 @@ coroutine msleep (
     uv_assert (rc);
 
     /* Wait till it finishes or the coroutine is canceled. */
-    wait (&hndl);
+    select (&hndl);
     if (hndl == msleep_timer_cb)
         rc = 0;
     else if (hndl == 0)
@@ -74,7 +74,7 @@ coroutine msleep (
     /* Close the timer. Ignore cancel requests during this phase. */
     uv_close ((uv_handle_t*) &timer, msleep_close_cb);
     while (1) {
-        wait (&hndl);
+        select (&hndl);
         if (hndl == msleep_close_cb)
            break;
         assert (hndl == 0);
@@ -124,50 +124,6 @@ static void tcpsocket_recv_cb (
     ssize_t nread,
     const uv_buf_t* buf);
 
-#define TCPSOCKET_GETEVENT(pcarg) \
-    self->pc = pcarg; \
-    return; \
-    pc##pcarg:
-
-#define TCPSOCKET_INIT 1
-#define TCPSOCKET_LISTEN 2
-#define TCPSOCKET_ACCEPT 3
-#define TCPSOCKET_ACCEPTED 4
-#define TCPSOCKET_CONNECT 5
-#define TCPSOCKET_CONNECTED 6
-#define TCPSOCKET_ERROR 7
-#define TCPSOCKET_TERM 8
-
-/* tpcsocket's handler function. */
-static void tcpsocket_handler (struct tcpsocket *self, int event)
-{
-    switch (self->pc) {
-    case 0:
-        break;
-    case 1:
-        goto pc1;
-    case 2:
-        goto pc2;
-    default:
-        assert (0);
-    }
-
-    assert (event == TCPSOCKET_INIT);
-    TCPSOCKET_GETEVENT(1)
-    switch (event) {
-    case TCPSOCKET_LISTEN:
-        while (1) {
-            TCPSOCKET_GETEVENT(2)
-        }
-        break;
-    case TCPSOCKET_CONNECT)
-        assert (0);
-        break;
-    default:
-        assert (0);
-    }
-}
-
 int tcpsocket_init (
     struct tcpsocket *self,
     struct mill_loop *loop)
@@ -181,7 +137,6 @@ int tcpsocket_init (
     rc = uv_tcp_init (&loop->uv_loop, &self->s);
     if (rc != 0)
         return rc;
-    tcpsocket_handler (self, TCPSOCKET_INIT);
 }
 
 coroutine tcpsocket_term (
@@ -196,7 +151,7 @@ coroutine tcpsocket_term (
 
     /* Wait till socket is closed. In the meanime ignore cancel requests. */
     while (1) {
-        wait (&hndl);
+        select (&hndl);
         if (hndl == tcpsocket_close_cb)
            break;
         assert (hndl == 0);
@@ -220,7 +175,6 @@ int tcpsocket_listen (
     rc = uv_listen ((uv_stream_t*) &self->s, backlog, tcpsocket_listen_cb);
     if (rc != 0)
         return rc;
-    tcpsocket_handler (self, TCPSOCKET_LISTEN);
 }
 
 coroutine tcpsocket_connect (
@@ -239,7 +193,7 @@ coroutine tcpsocket_connect (
         return;
 
     /* Wait till connecting finishes. */
-    wait (&hndl);
+    select (&hndl);
 
     /* TODO: Canceling connect operation requires closing the entire socket. */
     if (!hndl) {
@@ -261,7 +215,7 @@ coroutine tcpsocket_accept (
     self->recvcfptr = cf;
 
     /* Wait for an incoming connection. */
-    wait (&hndl);
+    select (&hndl);
     if (!hndl) {
         rc = ECANCELED;
         return;
@@ -295,7 +249,7 @@ coroutine tcpsocket_send (
     self->sendcfptr = cf;
 
     /* Wait till sending is done. */
-    wait (&hndl);
+    select (&hndl);
 
     /* TODO: Cancelling a send operation requires closing the entire socket. */
     if (!hndl) {
@@ -328,7 +282,7 @@ coroutine tcpsocket_recv (
     while (1) {
 
         /* Wait for next chunk of data. */
-        wait (&hndl);
+        select (&hndl);
 
         /* User asks operation to be canceled. */
         if (!hndl) {

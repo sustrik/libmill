@@ -81,10 +81,10 @@
             stack.last << [:out, ts, te - 1]
         elsif token == "endvars"
             stack.last << [:endvars, ts, te - 1]
-        elsif token == "call"
-            stack.last << [:call, ts, te - 1]
-        elsif token == "wait"
-            stack.last << [:wait, ts, te - 1]
+        elsif token == "go"
+            stack.last << [:go, ts, te - 1]
+        elsif token == "select"
+            stack.last << [:select, ts, te - 1]
         elsif token == "cancel"
             stack.last << [:cancel, ts, te - 1]
         elsif token == "cancelall"

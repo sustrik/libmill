@@ -23,27 +23,27 @@ coroutine test ()
     assert (rc == 0);
     rc = tcpsocket_listen (&ls, 10);
     assert (rc == 0);
-    call tcpsocket_accept (&rc, &ls, &s1);
-    call tcpsocket_connect(&rc, &s2, (struct sockaddr*) &addr);
-    wait (0);
+    go tcpsocket_accept (&rc, &ls, &s1);
+    go tcpsocket_connect(&rc, &s2, (struct sockaddr*) &addr);
+    select (0);
     assert (rc == 0);
-    wait (0);
-    assert (rc == 0);
-
-    call tcpsocket_send (&rc, &s1, "Hi", 2);
-    wait (0);
+    select (0);
     assert (rc == 0);
 
-    call tcpsocket_recv (&rc, &s2, buf, 2);
-    wait (0);
+    go tcpsocket_send (&rc, &s1, "Hi", 2);
+    select (0);
     assert (rc == 0);
 
-    call tcpsocket_term (&s2);
-    wait (0);
-    call tcpsocket_term (&s1);
-    wait (0);
-    call tcpsocket_term (&ls);
-    wait (0);
+    go tcpsocket_recv (&rc, &s2, buf, 2);
+    select (0);
+    assert (rc == 0);
+
+    go tcpsocket_term (&s2);
+    select (0);
+    go tcpsocket_term (&s1);
+    select (0);
+    go tcpsocket_term (&ls);
+    select (0);
 }
 
 int main ()

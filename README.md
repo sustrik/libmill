@@ -1,7 +1,9 @@
 Mill
 ====
 
-Mill is a preprocessor that adds coroutine support to C language.
+Mill is a preprocessor that adds coroutine support to C language. It is also
+an experiment in adding more structure (think gotos vs. structured programming)
+into parallel programming.
 
 The result of preprocessing are standard C source and header files that can be
 added directly to your C project.
@@ -31,11 +33,11 @@ coroutine stopwatch ()
     void *hndl;
     endvars;
 
-    sleep1 = call msleep (&rc, 1000);
-    sleep2 = call msleep (&rc, 2000);
+    sleep1 = go msleep (&rc, 1000);
+    sleep2 = go msleep (&rc, 2000);
 
     while (1) {
-        wait (&hndl, 0);
+        select (&hndl);
         assert (rc == 0);
         if (hndl == sleep1)
             printf ("1 second elapsed!\n");

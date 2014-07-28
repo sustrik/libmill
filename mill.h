@@ -188,7 +188,7 @@ void mill_loop_emit (struct mill_loop *self, struct mill_cfh *ev);
 /*  Helpers used to implement mill keywords.                                  */
 /******************************************************************************/
 
-#define mill_wait(pcarg, whoarg)\
+#define mill_select(pcarg, whoarg)\
     do {\
         cf->mill_cfh.pc = (pcarg);\
         return;\

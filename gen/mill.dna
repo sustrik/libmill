@@ -20,7 +20,7 @@
 # IN THE SOFTWARE.
 #
 
-./!include "clexer.rb"
+./!include "gen/clexer.rb"
 
 ################################################################################
 # Parse command line arguments.                                                #
@@ -433,7 +433,7 @@ for s in sections
         def expand_keywords(text, alltokens, tokens, pc)
             for i in 0..tokens.size - 1
 
-                if tokens[i][0] == :call
+                if tokens[i][0] == :go
                     start = i
                     i += 1
                     if tokens[i][0] == :identifier
@@ -464,12 +464,12 @@ for s in sections
                     delim = tokens[i][3].size == 1 ? "" : ", ";
                     insert(text, alltokens, tokens[i][1] + 1, "#{cf}, &mill_type_#{name}, cf->mill_cfh.loop, cf#{delim}")
 
-                elsif tokens[i][0] == :wait
+                elsif tokens[i][0] == :select
                     if tokens[i + 1][0] != :braces
-                        $stderr.write "'wait' should be followed by argument list.\n"
+                        $stderr.write "'select' should be followed by argument list.\n"
                         exit
                     end
-                    replace(text, alltokens, tokens[i], "mill_wait")
+                    replace(text, alltokens, tokens[i], "mill_select")
                     pc += 1
                     insert(text, alltokens, tokens[i + 1][1] + 1, "#{pc}, ")
 
