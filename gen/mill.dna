@@ -473,6 +473,15 @@ for s in sections
                     pc += 1
                     insert(text, alltokens, tokens[i + 1][1] + 1, "#{pc}, ")
 
+                elsif tokens[i][0] == :syswait && $system
+                    if tokens[i + 1][0] != :braces
+                        $stderr.write "'syswait' should be followed by argument list.\n"
+                        exit
+                    end
+                    replace(text, alltokens, tokens[i], "mill_select")
+                    pc += 1
+                    insert(text, alltokens, tokens[i + 1][1] + 1, "#{pc}, ")
+
                 elsif tokens[i][0] == :return
                     replace(text, alltokens, tokens[i], "goto mill_finally")
 

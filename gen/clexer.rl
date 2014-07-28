@@ -85,6 +85,8 @@
             stack.last << [:go, ts, te - 1]
         elsif token == "select"
             stack.last << [:select, ts, te - 1]
+        elsif token == "syswait"
+            stack.last << [:syswait, ts, te - 1] 
         elsif token == "return"
             stack.last << [:return, ts, te - 1]
         elsif token == "struct"

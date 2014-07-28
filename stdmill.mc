@@ -63,7 +63,7 @@ coroutine msleep (
     uv_assert (rc);
 
     /* Wait till it finishes or the coroutine is canceled. */
-    select (&hndl);
+    syswait (&hndl);
     if (hndl == msleep_timer_cb)
         rc = 0;
     else if (hndl == 0)
@@ -74,7 +74,7 @@ coroutine msleep (
     /* Close the timer. Ignore cancel requests during this phase. */
     uv_close ((uv_handle_t*) &timer, msleep_close_cb);
     while (1) {
-        select (&hndl);
+        syswait (&hndl);
         if (hndl == msleep_close_cb)
            break;
         assert (hndl == 0);
@@ -151,7 +151,7 @@ coroutine tcpsocket_term (
 
     /* Wait till socket is closed. In the meanime ignore cancel requests. */
     while (1) {
-        select (&hndl);
+        syswait (&hndl);
         if (hndl == tcpsocket_close_cb)
            break;
         assert (hndl == 0);
@@ -193,7 +193,7 @@ coroutine tcpsocket_connect (
         return;
 
     /* Wait till connecting finishes. */
-    select (&hndl);
+    syswait (&hndl);
 
     /* TODO: Canceling connect operation requires closing the entire socket. */
     if (!hndl) {
@@ -215,7 +215,7 @@ coroutine tcpsocket_accept (
     self->recvcfptr = cf;
 
     /* Wait for an incoming connection. */
-    select (&hndl);
+    syswait (&hndl);
     if (!hndl) {
         rc = ECANCELED;
         return;
@@ -249,7 +249,7 @@ coroutine tcpsocket_send (
     self->sendcfptr = cf;
 
     /* Wait till sending is done. */
-    select (&hndl);
+    syswait (&hndl);
 
     /* TODO: Cancelling a send operation requires closing the entire socket. */
     if (!hndl) {
@@ -282,7 +282,7 @@ coroutine tcpsocket_recv (
     while (1) {
 
         /* Wait for next chunk of data. */
-        select (&hndl);
+        syswait (&hndl);
 
         /* User asks operation to be canceled. */
         if (!hndl) {
