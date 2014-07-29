@@ -37,12 +37,10 @@ coroutine stopwatch ()
     sleep2 = go msleep (&rc, 2000);
 
     while (1) {
-        select (&hndl);
-        assert (rc == 0);
-        if (hndl == sleep1)
-            printf ("1 second elapsed!\n");
-        if (hndl == sleep2)
-            printf ("2 seconds elapsed!\n");
+        select {
+        msleep:
+            printf ("Timer elapsed!\n");
+        }
     }
 }
 
