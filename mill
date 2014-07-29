@@ -339,7 +339,7 @@ end
 ################################################################################
 
 
-# line 150 "gen/clexer.rl"
+# line 156 "gen/clexer.rl"
 
 
 
@@ -498,7 +498,7 @@ end
 self.c_en_main = 11;
 
 
-# line 153 "gen/clexer.rl"
+# line 159 "gen/clexer.rl"
 
 def parse(data)
 
@@ -519,7 +519,7 @@ begin
 	act = 0
 end
 
-# line 163 "gen/clexer.rl"
+# line 169 "gen/clexer.rl"
     
 # line 192 "gen/clexer.rb"
 begin
@@ -692,20 +692,14 @@ te = p+1
             stack.last << [:eq, ts, te - 1]
         elsif token == "."
             stack.last << [:dot, ts, te - 1]
+        elsif token == ":"
+            stack.last << [:colon, ts, te - 1]
         else
             stack.last << [:cruft, ts, te - 1]
         end
 	 end
 		end
 when 7 then
-# line 101 "gen/clexer.rl"
-		begin
-te = p+1
- begin 
-        stack.last << [:cruft, ts, te - 1]
-     end
-		end
-when 8 then
 # line 107 "gen/clexer.rl"
 		begin
 te = p+1
@@ -713,13 +707,21 @@ te = p+1
         stack.last << [:cruft, ts, te - 1]
      end
 		end
+when 8 then
+# line 113 "gen/clexer.rl"
+		begin
+te = p+1
+ begin 
+        stack.last << [:cruft, ts, te - 1]
+     end
+		end
 when 9 then
-# line 112 "gen/clexer.rl"
+# line 118 "gen/clexer.rl"
 		begin
 te = p+1
 		end
 when 10 then
-# line 115 "gen/clexer.rl"
+# line 121 "gen/clexer.rl"
 		begin
 te = p+1
  begin 
@@ -732,12 +734,12 @@ te = p+1
      end
 		end
 when 11 then
-# line 127 "gen/clexer.rl"
+# line 133 "gen/clexer.rl"
 		begin
 te = p+1
 		end
 when 12 then
-# line 129 "gen/clexer.rl"
+# line 135 "gen/clexer.rl"
 		begin
 te = p+1
  begin  	begin
@@ -792,13 +794,15 @@ p = p - 1; begin
             stack.last << [:eq, ts, te - 1]
         elsif token == "."
             stack.last << [:dot, ts, te - 1]
+        elsif token == ":"
+            stack.last << [:colon, ts, te - 1]
         else
             stack.last << [:cruft, ts, te - 1]
         end
 	 end
 		end
 when 14 then
-# line 76 "gen/clexer.rl"
+# line 78 "gen/clexer.rl"
 		begin
 te = p
 p = p - 1; begin 
@@ -813,6 +817,10 @@ p = p - 1; begin
             stack.last << [:go, ts, te - 1]
         elsif token == "select"
             stack.last << [:select, ts, te - 1]
+        elsif token == "case"
+            stack.last << [:case, ts, te - 1]
+        elsif token == "cancel"
+            stack.last << [:cancel, ts, te - 1]
         elsif token == "syswait"
             stack.last << [:syswait, ts, te - 1] 
         elsif token == "return"
@@ -825,14 +833,6 @@ p = p - 1; begin
 	 end
 		end
 when 15 then
-# line 133 "gen/clexer.rl"
-		begin
-te = p
-p = p - 1; begin 
-        stack.last << [:cruft, ts, te - 1]
-     end
-		end
-when 16 then
 # line 139 "gen/clexer.rl"
 		begin
 te = p
@@ -840,8 +840,16 @@ p = p - 1; begin
         stack.last << [:cruft, ts, te - 1]
      end
 		end
-when 17 then
+when 16 then
 # line 145 "gen/clexer.rl"
+		begin
+te = p
+p = p - 1; begin 
+        stack.last << [:cruft, ts, te - 1]
+     end
+		end
+when 17 then
+# line 151 "gen/clexer.rl"
 		begin
 te = p
 p = p - 1; begin 
@@ -892,20 +900,22 @@ when 18 then
             stack.last << [:eq, ts, te - 1]
         elsif token == "."
             stack.last << [:dot, ts, te - 1]
+        elsif token == ":"
+            stack.last << [:colon, ts, te - 1]
         else
             stack.last << [:cruft, ts, te - 1]
         end
 	 end
 		end
 when 19 then
-# line 133 "gen/clexer.rl"
+# line 139 "gen/clexer.rl"
 		begin
  begin p = ((te))-1; end
  begin 
         stack.last << [:cruft, ts, te - 1]
      end
 		end
-# line 576 "gen/clexer.rb"
+# line 586 "gen/clexer.rb"
 			end # action switch
 		end
 	end
@@ -925,7 +935,7 @@ when 2 then
 # line 1 "NONE"
 		begin
 ts = nil;		end
-# line 596 "gen/clexer.rb"
+# line 606 "gen/clexer.rb"
 		end # to state action switch
 	end
 	if _trigger_goto
@@ -956,7 +966,7 @@ end
 	end
 	end
 
-# line 164 "gen/clexer.rl"
+# line 170 "gen/clexer.rl"
 
     stack.last << [:end, data.length - 1, data.length - 1]
 
@@ -979,13 +989,13 @@ end
 
 if ARGV.size < 1
     $stderr.write "usage: mill [options] <input-file>\n"
-    exit
+    exit 1
 end
 
 $input_filename = ARGV[-1]
 if $input_filename.size < 4 || ![".mh", ".mc"].include?($input_filename[-3..-1])
     $stderr.write "Only files with .mh and .mc extensions are valid mill input files.\n"
-    exit
+    exit 1
 else
     $output_filename = $input_filename[0..-4] + "." + $input_filename[-1..-1]
 end
@@ -996,7 +1006,7 @@ for opt in ARGV[0..-2]
         $system = true;
     else
         $stderr.write "Unknown option #{opt}\n"
-        exit
+        exit 1
     end
 end
 
@@ -1032,6 +1042,13 @@ def replace(text, tokens, token, newtext)
     apply_offset(tokens, token[1], offset)
 end
 
+# Replace specific characters in the text by a different text.
+def replacechars(text, tokens, start, stop, newtext)
+    text[start..stop] = newtext
+    offset = newtext.size - (stop - start + 1)
+    apply_offset(tokens, start, offset)
+end
+
 # Insert specified string at the give position in the text.
 def insert(text, tokens, pos, newtext)
     text.insert(pos, newtext)
@@ -1044,14 +1061,14 @@ def parsedecl(text, tokens)
     loop do
         if i <= 0
             $stderr.write "Invalid declaration.\n"
-            exit
+            exit 1
         end
         break if tokens[i][0] != :sbraces
         i -= 1
     end
     if tokens[i][0] != :identifier
         $stderr.write "Invalid declaration.\n"
-        exit
+        exit 1
     end
     return {
         :type => text[tokens[0][1]..tokens[i - 1][2]],
@@ -1114,7 +1131,7 @@ begin
                 name = text[t[1]..t[2]]
                 if name.size >= 5 && name[0..4] == "mill_"
                     $stderr.write "Identifiers can't start with mill_ prefix.\n"
-                    exit
+                    exit 1
                 end
             end
             if t[3] != nil
@@ -1224,7 +1241,7 @@ begin
             if tokens[i][0] == :coroutine
                 if tokens[i + 1][0] != :identifier
                     $syserr.write "'coroutine' keyword should be followed by the coroutine name.\n"
-                    exit
+                    exit 1
                 end
                 name = text[tokens[i + 1][1]..tokens[i + 1][2]]
                 replace(text, alltokens, tokens[i], "struct mill_coroutine_#{name}")
@@ -1282,7 +1299,7 @@ for i in 0..sections.size - 1
             else
                 if bodytokens[j + 1][0] != :semicolon
                     $stderr.write "'endvars' must be followed by a semicolon.\n"
-                    exit
+                    exit 1
                 end
             end
 
@@ -1393,18 +1410,18 @@ for s in sections
                         cf = text[tokens[i][1]..tokens[i][2]]
                         i += 1
                     else
-                        $stderr.write "'call' keyword should be followed either by coroutine name or pointer to the coframe.\n"
-                        exit
+                        $stderr.write "'go' keyword should be followed either by coroutine name or pointer to the coframe.\n"
+                        exit 1
                     end
                     if tokens[i][0] != :identifier
-                        $stderr.write "Coroutine name missing after 'call'.\n"
-                        exit
+                        $stderr.write "Coroutine name missing after 'go'.\n"
+                        exit 1
                     end
                     name = text[tokens[i][1]..tokens[i][2]]
                     i += 1
                     if tokens[i][0] != :braces
-                        $stderr.write "Argument list missing after 'call'.\n"
-                        exit
+                        $stderr.write "Argument list missing after 'go'.\n"
+                        exit 1
                     end
 
                     replace(text, alltokens, tokens[start], "mill_call_#{name}")
@@ -1416,18 +1433,42 @@ for s in sections
                     insert(text, alltokens, tokens[i][1] + 1, "#{cf}, &mill_type_#{name}, cf->mill_cfh.loop, cf#{delim}")
 
                 elsif tokens[i][0] == :select
-                    if tokens[i + 1][0] != :braces
-                        $stderr.write "'select' should be followed by argument list.\n"
-                        exit
+                    if tokens[i + 1][0] != :cbraces
+                        $stderr.write "'select' should be followed by a curly brace.\n"
+                        exit 1
                     end
-                    replace(text, alltokens, tokens[i], "mill_select")
                     pc += 1
-                    insert(text, alltokens, tokens[i + 1][1] + 1, "#{pc}, ")
+                    replace(text, alltokens, tokens[i], "mill_select(#{pc})")
+                    replacechars(text, alltokens, tokens[i + 1][1], tokens[i + 1][1], "")
+                    replacechars(text, alltokens, tokens[i + 1][2], tokens[i + 1][2], "mill_endselect(#{pc})")
+                    subtokens = tokens[i + 1][3]
+                    if subtokens[0][0] != :case
+                        $stderr.write "'select' block should start with 'case' statement.\n"
+                        exit 1
+                    end
+                    first = true
+                    for j in 0..subtokens.size - 1
+                        if subtokens[j][0] == :case
+                            if subtokens[j + 1][0] != :identifier || subtokens[j + 2][0] != :colon
+                                $stderr.write "'case' keyword should be followed by a coroutine name and a colon.\n"
+                                exit 1
+                            end
+                            replace(text, alltokens, subtokens[j], "mill_case(#{pc},")
+                            replace(text, alltokens, subtokens[j + 2], ")")
+                        elsif subtokens [j][0] == :cancel
+                            if subtokens[j + 1][0] != :colon
+                                $stderr.write "'cancel' keyword should be followed by a colon.\n"
+                                exit 1
+                            end
+                            replace(text, alltokens, subtokens[j], "mill_cancel(#{pc})")
+                            replace(text, alltokens, subtokens[j + 1], "")
+                        end
+                    end
 
                 elsif tokens[i][0] == :syswait && $system
                     if tokens[i + 1][0] != :braces
                         $stderr.write "'syswait' should be followed by argument list.\n"
-                        exit
+                        exit 1
                     end
                     replace(text, alltokens, tokens[i], "mill_syswait")
                     pc += 1
@@ -1495,10 +1536,10 @@ Ribosome.dot("    @{renderarg(a)}", binding)
 Ribosome.add(");", binding)
 Ribosome.dot("", binding)
 Ribosome.dot("void @{s[:name]} (", binding)
-____separate_1498____ = true
+____separate_1539____ = true
         for a in s[:args]
-if(____separate_1498____)
-    ____separate_1498____ = false
+if(____separate_1539____)
+    ____separate_1539____ = false
 else
     Ribosome.add(", ", binding)
 end
@@ -1544,7 +1585,7 @@ Ribosome.dot("    @{a[:type]} *mill_out_@{a[:name]}@{a[:postfix]};", binding)
         end
 Ribosome.dot("};", binding)
 Ribosome.dot("", binding)
-Ribosome.dot("static void mill_handler_@{s[:name]} (void *cfptr, void *event)", binding)
+Ribosome.dot("static int mill_handler_@{s[:name]} (void *cfptr, void *event)", binding)
 Ribosome.dot("{", binding)
 Ribosome.dot("    mill_handlerimpl_prologue (@{s[:name]});", binding)
 Ribosome.dot("", binding)
@@ -1611,10 +1652,10 @@ Ribosome.dot("    mill_callimpl_epilogue (@{s[:name]});", binding)
 Ribosome.dot("}", binding)
 Ribosome.dot("", binding)
 Ribosome.dot("void @{s[:name]} (", binding)
-____separate_1614____ = true
+____separate_1655____ = true
 for a in s[:args]
-if(____separate_1614____)
-    ____separate_1614____ = false
+if(____separate_1655____)
+    ____separate_1655____ = false
 else
     Ribosome.add(", ", binding)
 end

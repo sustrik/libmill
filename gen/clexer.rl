@@ -66,6 +66,8 @@
             stack.last << [:eq, ts, te - 1]
         elsif token == "."
             stack.last << [:dot, ts, te - 1]
+        elsif token == ":"
+            stack.last << [:colon, ts, te - 1]
         else
             stack.last << [:cruft, ts, te - 1]
         end
@@ -85,6 +87,10 @@
             stack.last << [:go, ts, te - 1]
         elsif token == "select"
             stack.last << [:select, ts, te - 1]
+        elsif token == "case"
+            stack.last << [:case, ts, te - 1]
+        elsif token == "cancel"
+            stack.last << [:cancel, ts, te - 1]
         elsif token == "syswait"
             stack.last << [:syswait, ts, te - 1] 
         elsif token == "return"

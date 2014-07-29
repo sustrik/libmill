@@ -55,6 +55,9 @@ static void loop_cb (uv_idle_t* handle)
 {
     struct mill_loop *self;
     struct mill_cfh *src;
+    struct mill_cfh *dst;
+    struct mill_cfh *it;
+    struct mill_cfh *prev;
 
     self = mill_cont (handle, struct mill_loop, idle);
 
@@ -70,9 +73,59 @@ static void loop_cb (uv_idle_t* handle)
             uv_close ((uv_handle_t*) &self->idle, loop_close_cb);
             return;
         }
+        dst = src->parent;
 
-        /* Invoke the handler for the finished coroutine. */
-        src->parent->type->handler (src->parent, src);
+        /* Invoke the handler for the finished coroutine. If the event can't
+           be processed immediately.... */
+        if (dst->type->handler (dst, (void*) src->type) != 0) {
+
+            /* Remove it from the loop's event queue. */
+            self->first = src->nextev;
+
+            /* And put it to the end of parent's pending event queue. */
+            src->nextev = 0;
+            if (dst->pfirst)
+                dst->plast->nextev = src;
+            else
+                dst->pfirst = src;
+            dst->plast = src;
+
+            continue;
+        }
+
+        /* The event was processed successfully. That may have caused some of
+           the pending events to become applicable. */
+        it = dst->pfirst;
+        prev = 0;
+        while (it != 0) {
+            if (dst->type->handler (dst, (void*) it->type) == 0) {
+
+                /* Even was processed successfully. Remove it from the queue. */
+                if (prev)
+                    prev->nextev = it->nextev;
+                else
+                    dst->pfirst = it->nextev;
+                if (!it->nextev)
+                    dst->plast = prev;
+
+                /* Mark the coframe as uninitialised. */
+                it->type = 0;
+
+                /* Deallocate auto-allocated coframes. */
+                if (it->flags & mill_flag_deallocate)
+                    free (it);
+                
+                /* Start checking the pending even queue from beginning so
+                   that older events are processed before newer ones. */
+                it = dst->pfirst;
+                prev = 0;
+                continue;
+            }
+
+            /* If the event isn't applicable, try the next one. */
+            prev = it;
+            it = it->nextev;
+        }
 
         /* Move to the next event. */
         self->first = src->nextev;
@@ -178,12 +231,12 @@ void mill_add_child (void *cfptr, void *child)
     cfh_parent->children = cfh_child;
 }
 
-void mill_who (void *cfptr, void **who)
+/* This operation is defined as a function rather than a macro
+   so that 'dst' argument is not evaluated twice. */
+void mill_putptr (void *ptr, void **dst)
 {
-    /* This simple operation is defined as a function rather than a macro
-       so that 'who' argument is not evaluated twice. */
-    if (who)
-        *who = cfptr; 
+    if (dst)
+        *dst = ptr; 
 }
 
 void mill_cancel_children (void *cfptr)

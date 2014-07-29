@@ -43,8 +43,9 @@
 /* Main body of the coroutine. Handles all incoming events.
    'cfptr' points to the coframe of the coroutine being evaluated.
    'event' either points to the coframe of the child coroutine that have just
-   terminated or 0 in case the parent have asked the coroutine to cancel. */
-typedef void (*mill_fn_handler) (void *cfptr, void *event);
+   terminated or 0 in case the parent have asked the coroutine to cancel.
+   Returns 0 if the event was successfully processed, -1 otherwise. */
+typedef int (*mill_fn_handler) (void *cfptr, void *event);
 
 /* Final step of the coroutine.
    Copies all output arguments to their intended destinations. */
@@ -82,10 +83,15 @@ struct mill_cfh {
     /* See the flags above. */
     int flags;
 
-    /* Once the coroutine finishes, the coframe is put into the parent
-       coroutine's event queue. This member implements the single-linked
-       list that is the event queue. */
+    /* Once the coroutine finishes, the coframe is put into the loop's event
+       queue and later on, if the event can't be processed immediately, into
+       the parent coroutine's pending queue. This member implements the
+       single-linked list that forms the queue. */
     struct mill_cfh *nextev;
+
+    /* The queue of pending events that can't be processed at the moment. */
+    struct mill_cfh *pfirst;
+    struct mill_cfh *plast;
 
     /* Parent corouine. */
     struct mill_cfh *parent;
@@ -119,6 +125,8 @@ struct mill_cfh {
     cf->mill_cfh.pc = 0;\
     cf->mill_cfh.flags = mill_flags;\
     cf->mill_cfh.nextev = 0;\
+    cf->mill_cfh.pfirst = 0;\
+    cf->mill_cfh.plast = 0;\
     cf->mill_cfh.parent = parent;\
     cf->mill_cfh.children = 0;\
     cf->mill_cfh.next = 0;\
@@ -139,7 +147,8 @@ struct mill_cfh {
 #define mill_handlerimpl_epilogue(name, pcarg)\
     mill_finally:\
     mill_cancelall (pcarg);\
-    mill_emit (cf);
+    mill_emit (cf);\
+    return 0;
 
 #define mill_synccallimpl_prologue(name)\
     struct mill_loop loop;\
@@ -186,20 +195,39 @@ void mill_loop_emit (struct mill_loop *self, struct mill_cfh *ev);
 /*  Helpers used to implement mill keywords.                                  */
 /******************************************************************************/
 
-#define mill_select(pcarg, whoarg)\
-    do {\
-        cf->mill_cfh.pc = (pcarg);\
-        return;\
-        mill_pc_##pcarg:\
-        mill_who (event, (whoarg));\
-    } while (0)
+#define mill_select(pcarg)\
+    cf->mill_cfh.pc = (pcarg);\
+    return 0;\
+    mill_pc_##pcarg:\
+    if (0) {
 
-#define mill_syswait(pcarg, whoarg)\
+#define mill_case(pcarg, typearg)\
+        goto mill_pc2_##pcarg;\
+    }\
+    else if (event == &mill_type_##typearg) {
+
+#define mill_cancel(pcarg)\
+        goto mill_pc2_##pcarg;\
+    }\
+    else if (event == 0) {
+
+#define mill_endselect(pcarg)\
+        goto mill_pc2_##pcarg;\
+    }\
+    else if (event == 0) {\
+        goto mill_finally;\
+    }\
+    else {\
+        return -1;\
+    }\
+    mill_pc2_##pcarg:
+
+#define mill_syswait(pcarg, ptrarg)\
     do {\
         cf->mill_cfh.pc = (pcarg);\
         return;\
         mill_pc_##pcarg:\
-        mill_who (event, (whoarg));\
+        mill_putptr (event, (ptrarg));\
     } while (0)
 
 #define mill_cancelall(statearg)\
@@ -217,7 +245,7 @@ void mill_loop_emit (struct mill_loop *self, struct mill_cfh *ev);
 
 void mill_emit (void *cfptr);
 void mill_add_child (void *cfptr, void *child);
-void mill_who (void *cfptr, void **who);
+void mill_putptr (void *ptr, void **dst);
 void mill_cancel_children (void *cfptr);
 int mill_has_children (void *cfptr);
 

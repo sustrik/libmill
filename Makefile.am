@@ -16,7 +16,7 @@ check_CLEANFILES = tests/tcpsocket.c
 TESTS = $(check_PROGRAMS)
 LDADD = libstdmill.a
 
-.mc.c:
+.mc.c: mill
 	./mill $<
 
 if GEN

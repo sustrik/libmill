@@ -25,25 +25,41 @@ coroutine test ()
     assert (rc == 0);
     go tcpsocket_accept (&rc, &ls, &s1);
     go tcpsocket_connect(&rc, &s2, (struct sockaddr*) &addr);
-    select (0);
+    select {
+    case tcpsocket_accept:
+    case tcpsocket_connect:
+    }
     assert (rc == 0);
-    select (0);
+    select {
+    case tcpsocket_accept:
+    case tcpsocket_connect:
+    }
     assert (rc == 0);
 
     go tcpsocket_send (&rc, &s1, "Hi", 2);
-    select (0);
+    select {
+    case tcpsocket_send:
+    }
     assert (rc == 0);
 
     go tcpsocket_recv (&rc, &s2, buf, 2);
-    select (0);
+    select {
+    case tcpsocket_recv:
+    }
     assert (rc == 0);
 
     go tcpsocket_term (&s2);
-    select (0);
+    select {
+    case tcpsocket_term:
+    }
     go tcpsocket_term (&s1);
-    select (0);
+    select {
+    case tcpsocket_term:
+    }
     go tcpsocket_term (&ls);
-    select (0);
+    select {
+    case tcpsocket_term:
+    }
 }
 
 int main ()
