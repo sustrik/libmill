@@ -111,7 +111,7 @@ struct mill_cfh {
 /* Prologues and epilogues for generated functions.                           */
 /******************************************************************************/
 
-#define mill_callimpl_prologue(name)\
+#define mill_goimpl_prologue(name)\
     struct mill_cf_##name *cf;\
     int mill_flags = 0;\
     \
@@ -135,7 +135,7 @@ struct mill_cfh {
     if (parent)\
         mill_add_child (parent, cf);
 
-#define mill_callimpl_epilogue(name)\
+#define mill_goimpl_epilogue(name)\
     mill_handler_##name (&cf->mill_cfh, 0);\
     return (void*) cf;
 
@@ -150,13 +150,13 @@ struct mill_cfh {
     mill_emit (cf);\
     return 0;
 
-#define mill_synccallimpl_prologue(name)\
+#define mill_syncimpl_prologue(name)\
     struct mill_loop loop;\
     struct mill_cf_##name cf;\
     \
     mill_loop_init (&loop);
 
-#define mill_synccallimpl_epilogue(name)\
+#define mill_syncimpl_epilogue(name)\
     mill_loop_run (&loop);\
     mill_loop_term (&loop);
 

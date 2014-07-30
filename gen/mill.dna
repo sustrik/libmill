@@ -463,7 +463,7 @@ for s in sections
                         exit 1
                     end
 
-                    replace(text, alltokens, tokens[start], "mill_call_#{name}")
+                    replace(text, alltokens, tokens[start], "mill_go_#{name}")
                     if tokens[start + 1][0] == :braces
                         replace(text, alltokens, tokens[start + 1], "")
                     end
@@ -563,7 +563,7 @@ for s in sections
     if s[:type] == :codecl
 .extern const struct mill_type mill_type_@{s[:name]};
 .
-.void *mill_call_@{s[:name]} (
+.void *mill_go_@{s[:name]} (
 .    void *cf,
 .    const struct mill_type *type,
 .    struct mill_loop *loop,
@@ -658,7 +658,7 @@ end
 .    "@{s[:name]}"
 .};
 .
-.void *mill_call_@{s[:name]} (
+.void *mill_go_@{s[:name]} (
 .    void *cfptr,
 .    const struct mill_type *type,
 .    struct mill_loop *loop,
@@ -669,7 +669,7 @@ for a in s[:args]
 end
 ./+)
 .{
-.    mill_callimpl_prologue (@{s[:name]});
+.    mill_goimpl_prologue (@{s[:name]});
 for a in s[:args]
     if a[:out]
 .    cf->mill_out_@{a[:name]} = @{a[:name]};
@@ -682,7 +682,7 @@ for v in s[:vars]
 .    cf->@{v[:name]} = @{v[:init]};
     end
 end
-.    mill_callimpl_epilogue (@{s[:name]});
+.    mill_goimpl_epilogue (@{s[:name]});
 .}
 .
 .void @{s[:name]} (
@@ -692,13 +692,13 @@ for a in s[:args]
 end
 ./+)
 .{
-.    mill_synccallimpl_prologue (@{s[:name]});
-.    mill_call_@{s[:name]} (&cf, &mill_type_@{s[:name]}, &loop, 0
+.    mill_syncimpl_prologue (@{s[:name]});
+.    mill_go_@{s[:name]} (&cf, &mill_type_@{s[:name]}, &loop, 0
 for a in s[:args]
 .    /+, @{a[:name]}
 end
 ./+);
-.    mill_synccallimpl_epilogue (@{s[:name]});
+.    mill_syncimpl_epilogue (@{s[:name]});
 .}
 .
     end
@@ -714,7 +714,7 @@ end
 .    mill_output_@{s[:old]},
 .    "@{s[:new]}"};
 .
-.#define mill_call_@{s[:new]} mill_call_@{s[:old]}
+.#define mill_go_@{s[:new]} mill_go_@{s[:old]}
 .#define @{s[:new]} @{s[:old]}
     end
 

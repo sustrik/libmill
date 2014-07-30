@@ -1424,7 +1424,7 @@ for s in sections
                         exit 1
                     end
 
-                    replace(text, alltokens, tokens[start], "mill_call_#{name}")
+                    replace(text, alltokens, tokens[start], "mill_go_#{name}")
                     if tokens[start + 1][0] == :braces
                         replace(text, alltokens, tokens[start + 1], "")
                     end
@@ -1524,7 +1524,7 @@ Ribosome.dot("", binding)
     if s[:type] == :codecl
 Ribosome.dot("extern const struct mill_type mill_type_@{s[:name]};", binding)
 Ribosome.dot("", binding)
-Ribosome.dot("void *mill_call_@{s[:name]} (", binding)
+Ribosome.dot("void *mill_go_@{s[:name]} (", binding)
 Ribosome.dot("    void *cf,", binding)
 Ribosome.dot("    const struct mill_type *type,", binding)
 Ribosome.dot("    struct mill_loop *loop,", binding)
@@ -1624,7 +1624,7 @@ Ribosome.dot("    mill_output_@{s[:name]},", binding)
 Ribosome.dot("    \"@{s[:name]}\"", binding)
 Ribosome.dot("};", binding)
 Ribosome.dot("", binding)
-Ribosome.dot("void *mill_call_@{s[:name]} (", binding)
+Ribosome.dot("void *mill_go_@{s[:name]} (", binding)
 Ribosome.dot("    void *cfptr,", binding)
 Ribosome.dot("    const struct mill_type *type,", binding)
 Ribosome.dot("    struct mill_loop *loop,", binding)
@@ -1635,7 +1635,7 @@ Ribosome.dot("    @{renderarg(a)}", binding)
 end
 Ribosome.add(")", binding)
 Ribosome.dot("{", binding)
-Ribosome.dot("    mill_callimpl_prologue (@{s[:name]});", binding)
+Ribosome.dot("    mill_goimpl_prologue (@{s[:name]});", binding)
 for a in s[:args]
     if a[:out]
 Ribosome.dot("    cf->mill_out_@{a[:name]} = @{a[:name]};", binding)
@@ -1648,7 +1648,7 @@ for v in s[:vars]
 Ribosome.dot("    cf->@{v[:name]} = @{v[:init]};", binding)
     end
 end
-Ribosome.dot("    mill_callimpl_epilogue (@{s[:name]});", binding)
+Ribosome.dot("    mill_goimpl_epilogue (@{s[:name]});", binding)
 Ribosome.dot("}", binding)
 Ribosome.dot("", binding)
 Ribosome.dot("void @{s[:name]} (", binding)
@@ -1663,13 +1663,13 @@ Ribosome.dot("    @{renderarg(a)}", binding)
 end
 Ribosome.add(")", binding)
 Ribosome.dot("{", binding)
-Ribosome.dot("    mill_synccallimpl_prologue (@{s[:name]});", binding)
-Ribosome.dot("    mill_call_@{s[:name]} (&cf, &mill_type_@{s[:name]}, &loop, 0", binding)
+Ribosome.dot("    mill_syncimpl_prologue (@{s[:name]});", binding)
+Ribosome.dot("    mill_go_@{s[:name]} (&cf, &mill_type_@{s[:name]}, &loop, 0", binding)
 for a in s[:args]
 Ribosome.add(", @{a[:name]}", binding)
 end
 Ribosome.add(");", binding)
-Ribosome.dot("    mill_synccallimpl_epilogue (@{s[:name]});", binding)
+Ribosome.dot("    mill_syncimpl_epilogue (@{s[:name]});", binding)
 Ribosome.dot("}", binding)
 Ribosome.dot("", binding)
     end
@@ -1685,7 +1685,7 @@ Ribosome.dot("    mill_handler_@{s[:old]},", binding)
 Ribosome.dot("    mill_output_@{s[:old]},", binding)
 Ribosome.dot("    \"@{s[:new]}\"};", binding)
 Ribosome.dot("", binding)
-Ribosome.dot("#define mill_call_@{s[:new]} mill_call_@{s[:old]}", binding)
+Ribosome.dot("#define mill_go_@{s[:new]} mill_go_@{s[:old]}", binding)
 Ribosome.dot("#define @{s[:new]} @{s[:old]}", binding)
     end
 
