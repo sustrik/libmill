@@ -195,31 +195,34 @@ void mill_loop_emit (struct mill_loop *self, struct mill_cfh *ev);
 /******************************************************************************/
 
 #define mill_select(pcarg)\
-    cf->mill_cfh.pc = (pcarg);\
-    return 0;\
-    mill_pc_##pcarg:\
-    if (0) {
+    {\
+        cf->mill_cfh.pc = (pcarg);\
+        return 0;\
+        mill_pc_##pcarg:\
+        if (0) {
 
 #define mill_case(pcarg, typearg)\
-        goto mill_pc2_##pcarg;\
-    }\
-    else if (event == &mill_type_##typearg) {
+            goto mill_pc2_##pcarg;\
+        }\
+        else if (event == &mill_type_##typearg) {
 
 #define mill_cancel(pcarg)\
-        goto mill_pc2_##pcarg;\
-    }\
-    else if (event == 0) {
+            goto mill_pc2_##pcarg;\
+        }\
+        else if (event == 0) {
 
 #define mill_endselect(pcarg)\
-        goto mill_pc2_##pcarg;\
-    }\
-    else if (event == 0) {\
-        goto mill_finally;\
-    }\
-    else {\
-        return -1;\
-    }\
-    mill_pc2_##pcarg:
+            goto mill_pc2_##pcarg;\
+        }\
+        else if (event == 0) {\
+            goto mill_finally;\
+        }\
+        else {\
+            return -1;\
+        }\
+        mill_pc2_##pcarg:\
+        ;\
+    }
 
 #define mill_syswait(pcarg, ptrarg)\
     do {\

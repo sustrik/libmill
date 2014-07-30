@@ -1524,6 +1524,10 @@ Ribosome.dot("", binding)
     if s[:type] == :codecl
 Ribosome.dot("extern const struct mill_type mill_type_@{s[:name]};", binding)
 Ribosome.dot("", binding)
+Ribosome.dot("int mill_handler_@{s[:name]} (void *cfptr, void *event);", binding)
+Ribosome.dot("", binding)
+Ribosome.dot("void mill_output_@{s[:name]} (void *cfptr);", binding)
+Ribosome.dot("", binding)
 Ribosome.dot("void mill_go_@{s[:name]} (", binding)
 Ribosome.dot("    void *cf,", binding)
 Ribosome.dot("    const struct mill_type *type,", binding)
@@ -1536,10 +1540,10 @@ Ribosome.dot("    @{renderarg(a)}", binding)
 Ribosome.add(");", binding)
 Ribosome.dot("", binding)
 Ribosome.dot("void @{s[:name]} (", binding)
-____separate_1539____ = true
+____separate_1543____ = true
         for a in s[:args]
-if(____separate_1539____)
-    ____separate_1539____ = false
+if(____separate_1543____)
+    ____separate_1543____ = false
 else
     Ribosome.add(", ", binding)
 end
@@ -1585,7 +1589,7 @@ Ribosome.dot("    @{a[:type]} *mill_out_@{a[:name]}@{a[:postfix]};", binding)
         end
 Ribosome.dot("};", binding)
 Ribosome.dot("", binding)
-Ribosome.dot("static int mill_handler_@{s[:name]} (void *cfptr, void *event)", binding)
+Ribosome.dot("int mill_handler_@{s[:name]} (void *cfptr, void *event)", binding)
 Ribosome.dot("{", binding)
 Ribosome.dot("    mill_handlerimpl_prologue (@{s[:name]});", binding)
 Ribosome.dot("", binding)
@@ -1605,7 +1609,7 @@ Ribosome.dot("", binding)
 Ribosome.dot("    mill_handlerimpl_epilogue (@{s[:name]}, @{s[:lastpc] + 1});", binding)
 Ribosome.dot("}", binding)
 Ribosome.dot("", binding)
-Ribosome.dot("static void mill_output_@{s[:name]} (void *cfptr)", binding)
+Ribosome.dot("void mill_output_@{s[:name]} (void *cfptr)", binding)
 Ribosome.dot("{", binding)
 Ribosome.dot("    struct mill_cf_@{s[:name]} *cf;", binding)
 Ribosome.dot("", binding)
@@ -1652,10 +1656,10 @@ Ribosome.dot("    mill_goimpl_epilogue (@{s[:name]});", binding)
 Ribosome.dot("}", binding)
 Ribosome.dot("", binding)
 Ribosome.dot("void @{s[:name]} (", binding)
-____separate_1655____ = true
+____separate_1659____ = true
 for a in s[:args]
-if(____separate_1655____)
-    ____separate_1655____ = false
+if(____separate_1659____)
+    ____separate_1659____ = false
 else
     Ribosome.add(", ", binding)
 end
