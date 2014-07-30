@@ -9,6 +9,9 @@ coroutine fx1 (out int idout, int id, int milliseconds)
     endvars;
 
     msleep (&rc, milliseconds);
+    select {
+    case msleep:
+    }
     assert (rc == 0);
     idout = id;
 }
