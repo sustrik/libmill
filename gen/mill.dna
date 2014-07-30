@@ -563,7 +563,7 @@ for s in sections
     if s[:type] == :codecl
 .extern const struct mill_type mill_type_@{s[:name]};
 .
-.void *mill_go_@{s[:name]} (
+.void mill_go_@{s[:name]} (
 .    void *cf,
 .    const struct mill_type *type,
 .    struct mill_loop *loop,
@@ -658,7 +658,7 @@ end
 .    "@{s[:name]}"
 .};
 .
-.void *mill_go_@{s[:name]} (
+.void mill_go_@{s[:name]} (
 .    void *cfptr,
 .    const struct mill_type *type,
 .    struct mill_loop *loop,

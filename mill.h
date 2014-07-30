@@ -136,8 +136,7 @@ struct mill_cfh {
         mill_add_child (parent, cf);
 
 #define mill_goimpl_epilogue(name)\
-    mill_handler_##name (&cf->mill_cfh, 0);\
-    return (void*) cf;
+    mill_handler_##name (&cf->mill_cfh, 0);
 
 #define mill_handlerimpl_prologue(name)\
     struct mill_cf_##name *cf;\
