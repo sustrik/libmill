@@ -12,11 +12,14 @@ stdmill.h: stdmill.mh mill
 	./mill --system $<
 
 check_PROGRAMS = \
-    tests/tcpsocket\
-    tests/pending
+    tests/tcpsocket \
+    tests/pending \
+    tests/cancel
 check_CLEANFILES = \
-    tests/tcpsocket.c\
-    tests/pending.c
+    tests/tcpsocket.c \
+    tests/pending.c \
+    tests/cancel.c
+
 TESTS = $(check_PROGRAMS)
 LDADD = libstdmill.a
 

@@ -197,7 +197,8 @@ void mill_loop_emit (struct mill_loop *self, struct mill_cfh *ev);
 #define mill_case(pcarg, typearg)\
             goto mill_pc2_##pcarg;\
         }\
-        else if (((struct mill_cfh*) event)->type == &mill_type_##typearg) {\
+        else if (event &&\
+              ((struct mill_cfh*) event)->type == &mill_type_##typearg) {\
             mill_trace_select (event);
 
 #define mill_cancel(pcarg)\
