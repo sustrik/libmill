@@ -28,13 +28,10 @@ and runtime.
 coroutine stopwatch ()
 {
     int rc;
-    void *sleep1;
-    void *sleep2;
-    void *hndl;
     endvars;
 
-    sleep1 = go msleep (&rc, 1000);
-    sleep2 = go msleep (&rc, 2000);
+    go msleep (&rc, 1000);
+    go msleep (&rc, 2000);
 
     while (1) {
         select {
