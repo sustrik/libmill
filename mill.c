@@ -111,6 +111,11 @@ static void loop_cb (uv_idle_t* handle)
         /*  If top level coroutine exits, we can stop the event loop.
             However, first we have to close the 'idle' object. */
         if (!src->parent) {
+
+            /* Deallocate the coframe. */
+            src->type = 0;
+            free (src);
+
             uv_close ((uv_handle_t*) &self->idle, loop_close_cb);
             return;
         }
@@ -154,10 +159,8 @@ static void loop_cb (uv_idle_t* handle)
                 if (!it->nextev)
                     dst->plast = prev;
 
-                /* Mark the coframe as uninitialised. */
-                it->type = 0;
-
                 /* Deallocate the coframe. */
+                it->type = 0;
                 free (it);
                 
                 /* Start checking the pending even queue from beginning so
@@ -175,10 +178,8 @@ static void loop_cb (uv_idle_t* handle)
         /* Move to the next event. */
         self->first = src->nextev;
 
-        /* Mark the coframe as uninitialised. */
-        src->type = 0;
-
         /* Deallocate the coframe. */
+        src->type = 0;
         free (src);
     }
     self->last = 0;
