@@ -32,10 +32,11 @@
 #include <uv.h>
 
 /******************************************************************************/
-/* Global functions.                                                          */
+/* Tracing support.                                                           */
 /******************************************************************************/
 
 void _mill_trace ();
+void mill_trace_go (void *cfptr);
 
 /******************************************************************************/
 /*  Coroutine metadata.                                                       */
@@ -124,7 +125,8 @@ struct mill_cfh {
     cf->mill_cfh.prev = 0;\
     cf->mill_cfh.loop = loop;\
     if (parent)\
-        mill_add_child (parent, cf);
+        mill_add_child (parent, cf);\
+    mill_trace_go (cf);
 
 #define mill_goimpl_epilogue(name)\
     mill_handler_##name (&cf->mill_cfh, 0);

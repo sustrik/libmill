@@ -64,6 +64,7 @@ coroutine test ()
 
 int main ()
 {
+    _mill_trace ();
     test ();
     return 0;
 }

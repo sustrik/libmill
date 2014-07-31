@@ -40,7 +40,7 @@
     } while (0)
 
 /******************************************************************************/
-/* Global state.                                                              */
+/* Tracing support.                                                           */
 /******************************************************************************/
 
 static int mill_trace = 0;
@@ -48,6 +48,27 @@ static int mill_trace = 0;
 void _mill_trace ()
 {
     mill_trace = 1;
+}
+
+static mill_printstack (void *cfptr)
+{
+    struct mill_cfh *cfh;
+
+    cfh = (struct mill_cfh*) cfptr;
+    if (cfh->parent) {
+        mill_printstack (cfh->parent);
+        printf ("/");
+    }
+    printf ("%s", cfh->type->name);
+}
+
+void mill_trace_go (void *cfptr)
+{
+    if (mill_trace) {
+        printf ("mill ==> go     ");
+        mill_printstack (cfptr);
+        printf ("\n");
+    }
 }
 
 /******************************************************************************/
@@ -81,10 +102,6 @@ static void loop_cb (uv_idle_t* handle)
         /*  If top level coroutine exits, we can stop the event loop.
             However, first we have to close the 'idle' object. */
         if (!src->parent) {
-            if (mill_trace) {
-                printf ("mill ==> root coroutine '%s' is done; "
-                    "terminating the event loop\n", src->type->name);
-            }
             uv_close ((uv_handle_t*) &self->idle, loop_close_cb);
             return;
         }
@@ -93,14 +110,6 @@ static void loop_cb (uv_idle_t* handle)
         /* Invoke the handler for the finished coroutine. If the event can't
            be processed immediately.... */
         if (dst->type->handler (dst, (void*) src->type) != 0) {
-
-            if (mill_trace) {
-                printf ("mill ==> '%s' is processing event from '%s'; event "
-                     "not applicable in current state, moved to the pending "
-                     "event queue\n",
-                    dst->type->name,
-                    src->type->name);
-            }
 
             /* Remove it from the loop's event queue. */
             self->first = src->nextev;
@@ -116,11 +125,10 @@ static void loop_cb (uv_idle_t* handle)
             continue;
         }
 
-
         if (mill_trace) {
-            printf ("mill ==> '%s' is processing event from '%s'; success\n",
-                    dst->type->name,
-                    src->type->name);
+            printf ("mill ==> select ");
+            mill_printstack (src);
+            printf ("\n");
         }
 
         /* The event was processed successfully. That may have caused some of
@@ -131,10 +139,9 @@ static void loop_cb (uv_idle_t* handle)
             if (dst->type->handler (dst, (void*) it->type) == 0) {
 
                 if (mill_trace) {
-                    printf ("mill ==> '%s' is processing pending event from "
-                         "'%s'; success\n",
-                        dst->type->name,
-                        it->type->name);
+                    printf ("mill ==> select ");
+                    mill_printstack (it);
+                    printf ("\n");
                 }
 
                 /* Even was processed successfully. Remove it from the queue. */
@@ -258,9 +265,9 @@ void mill_emit (void *cfptr)
     mill_loop_emit (cfh->loop, cfh);
 
     if (mill_trace) {
-        printf ("mill ==> coroutine '%s' done; sending event to '%s'\n",
-            cfh->type->name,
-            cfh->parent ? cfh->parent->type->name : "<root>");
+        printf ("mill ==> return ");
+        mill_printstack (cfh);
+        printf ("\n");
     }
 }
 
@@ -295,8 +302,14 @@ void mill_cancel_children (void *cfptr)
     cfh = (struct mill_cfh*) cfptr;
 
     /* Ask all child coroutines to cancel. */
-    for (child = cfh->children; child != 0; child = child->next)
+    for (child = cfh->children; child != 0; child = child->next) {
+        if (mill_trace) {
+            printf ("mill ==> cancel ");
+            mill_printstack (child);
+            printf ("\n");
+        }
         child->type->handler (child, 0);
+    }
 }
 
 int mill_has_children (void *cfptr)
