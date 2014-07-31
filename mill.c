@@ -111,9 +111,8 @@ static void loop_cb (uv_idle_t* handle)
                 /* Mark the coframe as uninitialised. */
                 it->type = 0;
 
-                /* Deallocate auto-allocated coframes. */
-                if (it->flags & mill_flag_deallocate)
-                    free (it);
+                /* Deallocate the coframe. */
+                free (it);
                 
                 /* Start checking the pending even queue from beginning so
                    that older events are processed before newer ones. */
@@ -133,9 +132,8 @@ static void loop_cb (uv_idle_t* handle)
         /* Mark the coframe as uninitialised. */
         src->type = 0;
 
-        /* Deallocate auto-allocated coframes. */
-        if (src->flags & mill_flag_deallocate)
-            free (src);
+        /* Deallocate the coframe. */
+        free (src);
     }
     self->last = 0;
 }

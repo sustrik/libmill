@@ -1404,17 +1404,8 @@ for s in sections
                 if tokens[i][0] == :go
                     start = i
                     i += 1
-                    if tokens[i][0] == :identifier
-                        cf = "0"
-                    elsif tokens[i][0] == :braces
-                        cf = text[tokens[i][1]..tokens[i][2]]
-                        i += 1
-                    else
-                        $stderr.write "'go' keyword should be followed either by coroutine name or pointer to the coframe.\n"
-                        exit 1
-                    end
                     if tokens[i][0] != :identifier
-                        $stderr.write "Coroutine name missing after 'go'.\n"
+                        $stderr.write "'go' keyword should be followed by coroutine name.\n"
                         exit 1
                     end
                     name = text[tokens[i][1]..tokens[i][2]]
@@ -1425,12 +1416,9 @@ for s in sections
                     end
 
                     replace(text, alltokens, tokens[start], "mill_go_#{name}")
-                    if tokens[start + 1][0] == :braces
-                        replace(text, alltokens, tokens[start + 1], "")
-                    end
                     replace(text, alltokens, tokens[i - 1], "")
                     delim = tokens[i][3].size == 1 ? "" : ", ";
-                    insert(text, alltokens, tokens[i][1] + 1, "#{cf}, &mill_type_#{name}, cf->mill_cfh.loop, cf#{delim}")
+                    insert(text, alltokens, tokens[i][1] + 1, "&mill_type_#{name}, cf->mill_cfh.loop, cf#{delim}")
 
                 elsif tokens[i][0] == :select
                     if tokens[i + 1][0] != :cbraces
@@ -1529,7 +1517,6 @@ Ribosome.dot("", binding)
 Ribosome.dot("void mill_output_@{s[:name]} (void *cfptr);", binding)
 Ribosome.dot("", binding)
 Ribosome.dot("void mill_go_@{s[:name]} (", binding)
-Ribosome.dot("    void *cf,", binding)
 Ribosome.dot("    const struct mill_type *type,", binding)
 Ribosome.dot("    struct mill_loop *loop,", binding)
 Ribosome.dot("    void *parent", binding)
@@ -1540,10 +1527,10 @@ Ribosome.dot("    @{renderarg(a)}", binding)
 Ribosome.add(");", binding)
 Ribosome.dot("", binding)
 Ribosome.dot("void @{s[:name]} (", binding)
-____separate_1543____ = true
+____separate_1530____ = true
         for a in s[:args]
-if(____separate_1543____)
-    ____separate_1543____ = false
+if(____separate_1530____)
+    ____separate_1530____ = false
 else
     Ribosome.add(", ", binding)
 end
@@ -1629,7 +1616,6 @@ Ribosome.dot("    \"@{s[:name]}\"", binding)
 Ribosome.dot("};", binding)
 Ribosome.dot("", binding)
 Ribosome.dot("void mill_go_@{s[:name]} (", binding)
-Ribosome.dot("    void *cfptr,", binding)
 Ribosome.dot("    const struct mill_type *type,", binding)
 Ribosome.dot("    struct mill_loop *loop,", binding)
 Ribosome.dot("    void *parent", binding)
@@ -1656,10 +1642,10 @@ Ribosome.dot("    mill_goimpl_epilogue (@{s[:name]});", binding)
 Ribosome.dot("}", binding)
 Ribosome.dot("", binding)
 Ribosome.dot("void @{s[:name]} (", binding)
-____separate_1659____ = true
+____separate_1645____ = true
 for a in s[:args]
-if(____separate_1659____)
-    ____separate_1659____ = false
+if(____separate_1645____)
+    ____separate_1645____ = false
 else
     Ribosome.add(", ", binding)
 end
@@ -1668,7 +1654,7 @@ end
 Ribosome.add(")", binding)
 Ribosome.dot("{", binding)
 Ribosome.dot("    mill_syncimpl_prologue (@{s[:name]});", binding)
-Ribosome.dot("    mill_go_@{s[:name]} (&cf, &mill_type_@{s[:name]}, &loop, 0", binding)
+Ribosome.dot("    mill_go_@{s[:name]} (&mill_type_@{s[:name]}, &loop, 0", binding)
 for a in s[:args]
 Ribosome.add(", @{a[:name]}", binding)
 end

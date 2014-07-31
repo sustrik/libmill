@@ -21,45 +21,14 @@ coroutine fx2 = fx1;
 coroutine test ()
 {
     int id;
-    int rc;
     endvars;
 
-    /* This coroutines will be waited for. */
-    go fx2 (&id, 1, 40);
-    go fx1 (&id, 2, 20);
-    go fx2 (&id, 3, 50);
-    go fx1 (&id, 4, 30);
-    go fx1 (&id, 5, 100);
-    go fx2 (&id, 6, 10);
-
-    /* These coroutines will be canceled. */
-    go msleep (&rc, 10);
-    go msleep (&rc, 150);
-
+    go fx1 (&id, 1, 1000);
     select {
-    case fx1:
-        assert (id == 2);
-    }
-    select {
-    case fx1:
-        assert (id == 4);
-    }
-    select {
-    case fx1:
-        assert (id == 5);
-    }
-    select {
-    case fx2:
-        assert (id == 6);
-    }
-    select {
-    case fx2:
-        assert (id == 3);
-    }
-    select {
-    case fx2:
+    case msleep:
         assert (id == 1);
     }
+    printf ("done\n");
 }
 
 int main ()

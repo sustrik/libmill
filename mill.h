@@ -63,12 +63,6 @@ struct mill_type {
 /* Coframe head is common to all coroutines.                                  */
 /******************************************************************************/
 
-/* Following flags are used to construct 'flags' member. */
-
-/* If true, the coframe was allocated automatically and should be deallocated
-   automatically as well. */
-#define mill_flag_deallocate 1
-
 /* This structure is placed at the beginning of each coframe. */
 struct mill_cfh {
 
@@ -79,9 +73,6 @@ struct mill_cfh {
        is currently being executed. The values are specific to individual
        coroutines. */
     int pc;
-
-    /* See the flags above. */
-    int flags;
 
     /* Once the coroutine finishes, the coframe is put into the loop's event
        queue and later on, if the event can't be processed immediately, into
@@ -113,17 +104,11 @@ struct mill_cfh {
 
 #define mill_goimpl_prologue(name)\
     struct mill_cf_##name *cf;\
-    int mill_flags = 0;\
     \
-    cf = (struct mill_cf_##name*) cfptr;\
-    if (!cf) {\
-        mill_flags |= mill_flag_deallocate;\
-        cf = malloc (sizeof (struct mill_cf_##name));\
-        assert (cf);\
-    }\
+    cf = malloc (sizeof (struct mill_cf_##name));\
+    assert (cf);\
     cf->mill_cfh.type = type;\
     cf->mill_cfh.pc = 0;\
-    cf->mill_cfh.flags = mill_flags;\
     cf->mill_cfh.nextev = 0;\
     cf->mill_cfh.pfirst = 0;\
     cf->mill_cfh.plast = 0;\
@@ -151,7 +136,6 @@ struct mill_cfh {
 
 #define mill_syncimpl_prologue(name)\
     struct mill_loop loop;\
-    struct mill_cf_##name cf;\
     \
     mill_loop_init (&loop);
 
