@@ -70,6 +70,10 @@ static void loop_cb (uv_idle_t* handle)
         /*  If top level coroutine exits, we can stop the event loop.
             However, first we have to close the 'idle' object. */
         if (!src->parent) {
+#if defined MILL_TRACE
+            printf ("mill ==> root coroutine '%s' is done; "
+                "terminating the event loop\n", src->type->name);
+#endif
             uv_close ((uv_handle_t*) &self->idle, loop_close_cb);
             return;
         }
@@ -78,6 +82,14 @@ static void loop_cb (uv_idle_t* handle)
         /* Invoke the handler for the finished coroutine. If the event can't
            be processed immediately.... */
         if (dst->type->handler (dst, (void*) src->type) != 0) {
+
+#if defined MILL_TRACE
+            printf ("mill ==> '%s' is processing event from '%s'; event not "
+                 "applicable in current state, moved to the pending event "
+                 "queue\n",
+                dst->type->name,
+                src->type->name);
+#endif
 
             /* Remove it from the loop's event queue. */
             self->first = src->nextev;
@@ -93,12 +105,25 @@ static void loop_cb (uv_idle_t* handle)
             continue;
         }
 
+#if defined MILL_TRACE
+        printf ("mill ==> '%s' is processing event from '%s'; success\n",
+                dst->type->name,
+                src->type->name);
+#endif
+
         /* The event was processed successfully. That may have caused some of
            the pending events to become applicable. */
         it = dst->pfirst;
         prev = 0;
         while (it != 0) {
             if (dst->type->handler (dst, (void*) it->type) == 0) {
+
+#if defined MILL_TRACE
+            printf ("mill ==> '%s' is processing pending event from '%s'; "
+                 "success\n",
+                dst->type->name,
+                it->type->name);
+#endif
 
                 /* Even was processed successfully. Remove it from the queue. */
                 if (prev)
@@ -120,6 +145,13 @@ static void loop_cb (uv_idle_t* handle)
                 prev = 0;
                 continue;
             }
+
+#if defined MILL_TRACE
+            printf ("mill ==> '%s' is processing pending event from '%s'; "
+                 "event not applicable in current state\n",
+                dst->type->name,
+                it->type->name);
+#endif
 
             /* If the event isn't applicable, try the next one. */
             prev = it;
@@ -212,6 +244,12 @@ void mill_emit (void *cfptr)
 
     /* Add the coroutine to the event queue. */
     mill_loop_emit (cfh->loop, cfh);
+
+#if defined MILL_TRACE
+    printf ("mill ==> coroutine '%s' done; sending event to '%s'\n",
+        cfh->type->name,
+        cfh->parent ? cfh->parent->type->name : "<root>");
+#endif
 }
 
 void mill_add_child (void *cfptr, void *child)
