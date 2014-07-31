@@ -23,10 +23,9 @@ coroutine test ()
 
     go fx1 (&id, 1, 1000);
     select {
-    case msleep:
+    case fx1:
         assert (id == 1);
     }
-    printf ("done\n");
 }
 
 int main ()
