@@ -8,7 +8,7 @@ coroutine fx1 (out int idout, int id, int milliseconds)
     int rc;
     endvars;
 
-    msleep (&rc, milliseconds);
+    go msleep (&rc, milliseconds);
     select {
     case msleep:
     }

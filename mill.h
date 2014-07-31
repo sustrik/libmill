@@ -37,6 +37,7 @@
 
 void _mill_trace ();
 void mill_trace_go (void *cfptr);
+void mill_trace_select (void *cfptr);
 
 /******************************************************************************/
 /*  Coroutine metadata.                                                       */
@@ -196,7 +197,8 @@ void mill_loop_emit (struct mill_loop *self, struct mill_cfh *ev);
 #define mill_case(pcarg, typearg)\
             goto mill_pc2_##pcarg;\
         }\
-        else if (event == &mill_type_##typearg) {
+        else if (((struct mill_cfh*) event)->type == &mill_type_##typearg) {\
+            mill_trace_select (event);
 
 #define mill_cancel(pcarg)\
             goto mill_pc2_##pcarg;\

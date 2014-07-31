@@ -71,6 +71,15 @@ void mill_trace_go (void *cfptr)
     }
 }
 
+void mill_trace_select (void *cfptr)
+{
+    if (mill_trace) {
+        printf ("mill ==> select ");
+        mill_printstack (cfptr);
+        printf ("\n");
+    }
+}
+
 /******************************************************************************/
 /* The event loop. */
 /******************************************************************************/
@@ -109,7 +118,7 @@ static void loop_cb (uv_idle_t* handle)
 
         /* Invoke the handler for the finished coroutine. If the event can't
            be processed immediately.... */
-        if (dst->type->handler (dst, (void*) src->type) != 0) {
+        if (dst->type->handler (dst, src) != 0) {
 
             /* Remove it from the loop's event queue. */
             self->first = src->nextev;
@@ -125,24 +134,12 @@ static void loop_cb (uv_idle_t* handle)
             continue;
         }
 
-        if (mill_trace) {
-            printf ("mill ==> select ");
-            mill_printstack (src);
-            printf ("\n");
-        }
-
         /* The event was processed successfully. That may have caused some of
            the pending events to become applicable. */
         it = dst->pfirst;
         prev = 0;
         while (it != 0) {
-            if (dst->type->handler (dst, (void*) it->type) == 0) {
-
-                if (mill_trace) {
-                    printf ("mill ==> select ");
-                    mill_printstack (it);
-                    printf ("\n");
-                }
+            if (dst->type->handler (dst, it) == 0) {
 
                 /* Even was processed successfully. Remove it from the queue. */
                 if (prev)
@@ -163,13 +160,6 @@ static void loop_cb (uv_idle_t* handle)
                 it = dst->pfirst;
                 prev = 0;
                 continue;
-            }
-
-            if (mill_trace) {
-                printf ("mill ==> '%s' is processing pending event from '%s'; "
-                     "event not applicable in current state\n",
-                    dst->type->name,
-                    it->type->name);
             }
 
             /* If the event isn't applicable, try the next one. */
