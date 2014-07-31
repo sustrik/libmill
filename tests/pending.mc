@@ -5,14 +5,10 @@
 
 coroutine fx1 (out int idout, int id, int milliseconds)
 {
-    int rc;
-    endvars;
-
-    go msleep (&rc, milliseconds);
+    go msleep (0, milliseconds);
     select {
     case msleep:
     }
-    assert (rc == 0);
     idout = id;
 }
 

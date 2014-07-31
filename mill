@@ -1603,7 +1603,8 @@ Ribosome.dot("", binding)
 Ribosome.dot("    cf = (struct mill_cf_@{s[:name]}*) cfptr;    ", binding)
 for a in s[:args]
     if a[:out]
-Ribosome.dot("    *cf->mill_out_@{a[:name]} = cf->@{a[:name]};", binding)
+Ribosome.dot("    if (cf->mill_out_@{a[:name]})", binding)
+Ribosome.dot("        *cf->mill_out_@{a[:name]} = cf->@{a[:name]};", binding)
     end
 end
 Ribosome.dot("}", binding)
@@ -1642,10 +1643,10 @@ Ribosome.dot("    mill_goimpl_epilogue (@{s[:name]});", binding)
 Ribosome.dot("}", binding)
 Ribosome.dot("", binding)
 Ribosome.dot("void @{s[:name]} (", binding)
-____separate_1645____ = true
+____separate_1646____ = true
 for a in s[:args]
-if(____separate_1645____)
-    ____separate_1645____ = false
+if(____separate_1646____)
+    ____separate_1646____ = false
 else
     Ribosome.add(", ", binding)
 end

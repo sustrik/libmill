@@ -637,7 +637,8 @@ end
 .    cf = (struct mill_cf_@{s[:name]}*) cfptr;    
 for a in s[:args]
     if a[:out]
-.    *cf->mill_out_@{a[:name]} = cf->@{a[:name]};
+.    if (cf->mill_out_@{a[:name]})
+.        *cf->mill_out_@{a[:name]} = cf->@{a[:name]};
     end
 end
 .}
