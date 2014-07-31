@@ -16,8 +16,6 @@ coroutine fx1 (out int idout, int id, int milliseconds)
     idout = id;
 }
 
-coroutine fx2 = fx1;
-
 coroutine test ()
 {
     int id;
@@ -33,5 +31,7 @@ coroutine test ()
 
 int main ()
 {
+    _mill_trace ();
     test();
 }
+
