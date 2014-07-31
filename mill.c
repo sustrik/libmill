@@ -139,6 +139,11 @@ static void loop_cb (uv_idle_t* handle)
         it = dst->pfirst;
         prev = 0;
         while (it != 0) {
+
+            /* Copy the output arguments to their proper destinations. */
+            it->type->output (it);
+
+            /* Try to process the event. */
             if (dst->type->handler (dst, it) == 0) {
 
                 /* Even was processed successfully. Remove it from the queue. */
