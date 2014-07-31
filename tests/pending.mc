@@ -19,6 +19,7 @@ coroutine test ()
     int id;
     endvars;
 
+    go fx1 (&id, 3, 150);
     go fx1 (&id, 1, 100);
     go fx2 (&id, 2, 200);
     select {
@@ -28,6 +29,10 @@ coroutine test ()
     select {
     case fx1:
         assert (id == 1);
+    }
+    select {
+    case fx1:
+        assert (id == 3);
     }
 }
 
