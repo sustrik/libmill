@@ -3,7 +3,7 @@
 
 #include "../stdmill.h"
 
-coroutine pause ()
+coroutine block ()
 {
     go msleep (0, 1000000);
     select {
@@ -16,7 +16,7 @@ coroutine test ()
     int id;
     endvars;
 
-    go pause ();
+    go block ();
 }
 
 int main ()

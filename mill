@@ -309,27 +309,6 @@ end
 # generated from the DNA file.                                                 #
 ################################################################################
 
-#
-# Copyright (c) 2014 Martin Sustrik  All rights reserved.
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"),
-# to deal in the Software without restriction, including without limitation
-# the rights to use, copy, modify, merge, publish, distribute, sublicense,
-# and/or sell copies of the Software, and to permit persons to whom
-# the Software is furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included
-# in all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
-# IN THE SOFTWARE.
-#
 
 
 # line 1 "gen/clexer.rl"
@@ -983,6 +962,28 @@ end
 # End generated clexer.rb (from clexer.rl).                                    #
 ################################################################################
 
+#
+# Copyright (c) 2014 Martin Sustrik  All rights reserved.
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"),
+# to deal in the Software without restriction, including without limitation
+# the rights to use, copy, modify, merge, publish, distribute, sublicense,
+# and/or sell copies of the Software, and to permit persons to whom
+# the Software is furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included
+# in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+# IN THE SOFTWARE.
+#
+
 ################################################################################
 # Parse command line arguments.                                                #
 ################################################################################
@@ -1527,10 +1528,10 @@ Ribosome.dot("    @{renderarg(a)}", binding)
 Ribosome.add(");", binding)
 Ribosome.dot("", binding)
 Ribosome.dot("void @{s[:name]} (", binding)
-____separate_1530____ = true
+____separate_1531____ = true
         for a in s[:args]
-if(____separate_1530____)
-    ____separate_1530____ = false
+if(____separate_1531____)
+    ____separate_1531____ = false
 else
     Ribosome.add(", ", binding)
 end
@@ -1643,10 +1644,10 @@ Ribosome.dot("    mill_goimpl_epilogue (@{s[:name]});", binding)
 Ribosome.dot("}", binding)
 Ribosome.dot("", binding)
 Ribosome.dot("void @{s[:name]} (", binding)
-____separate_1646____ = true
+____separate_1647____ = true
 for a in s[:args]
-if(____separate_1646____)
-    ____separate_1646____ = false
+if(____separate_1647____)
+    ____separate_1647____ = false
 else
     Ribosome.add(", ", binding)
 end
