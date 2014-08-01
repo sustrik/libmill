@@ -285,7 +285,7 @@ coroutine bar ()
 
     select {
 
-    // This clase may be invoked because foo(1) have ended, thus i == 1.
+    // This clause may be invoked because foo(1) have ended, thus i == 1.
     case foo: 
 
         // foo(2) ends here and stores value 2 into i.
