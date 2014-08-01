@@ -13,6 +13,7 @@ coroutine fx1 (out int idout, int id, int milliseconds)
 }
 
 coroutine fx2 = fx1;
+coroutine fx3 = fx1;
 
 coroutine test ()
 {
@@ -33,6 +34,22 @@ coroutine test ()
     select {
     case fx1:
         assert (id == 3);
+    }
+
+    go fx1 (&id, 1, 50);
+    go fx2 (&id, 2, 100);
+    go fx3 (&id, 3, 150);
+    select {
+    case fx3:
+        assert (id == 3);
+    }
+    select {
+    case fx2:
+        assert (id == 2);
+    }
+    select {
+    case fx1:
+        assert (id == 1);
     }
 }
 
