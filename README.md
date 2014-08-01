@@ -1,5 +1,4 @@
-Mill
-====
+# Mill
 
 Mill is a preprocessor that adds coroutine support to C language. It is also
 an experiment in adding more structure (think gotos vs. structured programming)
@@ -9,7 +8,7 @@ The result of preprocessing are standard C source and header files that can be
 added directly to your C project.
 
 The project also contains library of elementary coroutines (timers,
-network I/O et c.)
+network I/O et c.) that can be used to build more complex functionality.
 
 WARNING: THIS PROJECT IS UNDER DEVELOPMENT! DO NOT USE YET!
 
@@ -20,6 +19,15 @@ WARNING: THIS PROJECT IS UNDER DEVELOPMENT! DO NOT USE YET!
 
 The former is needed at compilation time, the latter at both compilation time
 and runtime.
+
+## Installation
+
+```
+$ ./autogen.sh
+$ ./configure
+$ make
+$ sudo make install
+```
 
 ## Example
 
@@ -80,8 +88,8 @@ To use coroutines, it is best to choose a language that has direct support for
 the concept, such as Go.
 
 However, sometimes there is no other option but to use C. After all, C is
-the lingua franca of programming languages and every other language as well
-as every single OS integrates well with C.
+the lingua franca of programming languages. Every other language integrates
+well with C. C works on any operating system. Et c.
 
 Writing coroutines by hand (see the link above) is an option, but once you move
 beyond the very basic functionality all the required boilerplate code is both
@@ -107,8 +115,8 @@ maintain.
 Following commands will generate foo.h from foo.mh and foo.c from foo.mc:
 
 ```
-mill foo.mh
-mill foo.mc
+$ mill foo.mh
+$ mill foo.mc
 ```
 
 ### Defining a coroutine
@@ -125,9 +133,9 @@ coroutine foo (int a, const char *b, int *result)
 
 Mill is a simple preprocessor that doesn't do full semantic analysis of the
 source. The price for such simplicity is that it is not able to automatically
-distinguish variable declarations from the rest of the codebase. To help the
-parser, you must place all the local variable declarations to the beginning of
-the coroutine followed by "endvars" keyword:
+distinguish variable declarations from the other stuff in the codebase. To help
+the parser, you must place all the local variable declarations to the beginning
+of the coroutine. The declarations must be followed by "endvars" keyword:
 
 ```
 coroutine foo ()
@@ -140,8 +148,8 @@ coroutine foo ()
 ```
 
 WARNING: If you put local variable declarations elsewhere, mill won't complain
-about it but the behaviour of the coroutine will become undefined. Expect values
-of such variables to change randomly while coroutine is in progress.
+about the fact but the behaviour of the coroutine will become undefined. Expect
+values of such variables to change randomly while coroutine is in progress.
 
 ### Coroutine aliasing
 
@@ -191,9 +199,8 @@ int main ()
 }
 ```
 
-In the latter case the coroutine won't execute in parallel with the parent 
-function. Instead, the function will be block until the execution of the
-coroutine have finished.
+In this case the coroutine won't execute in parallel with the parent 
+function. Instead, the function will be blocked until the coroutine is finished.
 
 ### Waiting for coroutines
 
