@@ -241,6 +241,91 @@ coroutine bar ()
 }
 ```
 
+### Returning data from coroutines
+
+Coroutines have no return values. However, you can use standard output
+parameters and they should work as expected:
+
+```
+coroutine foo (int *result)
+{
+    *result = 1;
+}
+
+coroutine bar ()
+{
+    int i;
+    endvars;
+
+    go foo (&i);
+
+    select {
+    case foo:
+        assert (i == 1);
+    }
+}
+```
+
+There's a problem though if multiple coroutines write the result into a single
+location:
+
+coroutine foo (int *result, int i)
+{
+    *result = i;
+}
+
+coroutine bar ()
+{
+    int i;
+    endvars;
+
+    go foo (&i, 1);
+    go foo (&i, 2);
+
+    select {
+
+    // This clase may be invoked because foo(1) have ended, thus i == 1.
+    case foo: 
+
+        // foo(2) ends here and stores value 2 into i.
+        assert (i == 1); // Assert fails.
+    }
+}
+```
+
+To address this problem "out" keyword is introduced. The coroutine argument
+marked as "out" is allocated at callee's coframe (like a stack frame, but for
+coroutines) and copied to the caller-specified destination immediately before
+coroutine termination event is processed by the caller:
+
+```
+coroutine foo (out int result, int i)
+{
+    result = i;
+}
+
+coroutine bar ()
+{
+    int i;
+    endvars;
+
+    go foo (&i, 1);
+    go foo (&i, 2);
+    go foo (&i, 3);
+
+    while (1) {
+        select {
+        case foo:
+            printf ("coroutine foo returned %d\n", i);
+        }
+    }
+}
+```
+
+Note that inside of the coroutine "result" argument is of type int, however,
+the caller supplies argument of type int*.
+
+
 ### Debugging
 
 To make debugging of the asynchronous system easier, mill has support for
