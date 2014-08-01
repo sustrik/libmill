@@ -326,7 +326,24 @@ coroutine bar ()
 Note that inside of the coroutine "result" argument is of type int, however,
 the caller supplies argument of type int*.
 
-### Memory management 
+### Comment on memory management
+
+Keep in mind that coframes are deallocated when the child coroutine is
+selected. If you launch a coroutine without selecting it afterwards, the
+coframe will linger on in the memory until it is deallocated when the
+caller coroutine finishes.
+
+The behaviour is perfectly all right in most circumstances, however, doing
+such thing in a loop will quickly exhaust the memory:
+
+```
+coroutine foo ()
+{
+    while (1) {
+        go msleep (NULL, 1000);
+    }
+}
+```
 
 ### Debugging
 
