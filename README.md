@@ -269,6 +269,7 @@ coroutine bar ()
 There's a problem though if multiple coroutines write the result into a single
 location:
 
+```
 coroutine foo (int *result, int i)
 {
     *result = i;
