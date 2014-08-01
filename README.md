@@ -241,6 +241,37 @@ coroutine bar ()
 }
 ```
 
+### Debugging
+
+To make debugging of the asynchronous system easier, mill has support for
+tracing. You can switch it on by invoking "_mill_trace();" function.
+
+The tracing output looks like this:
+
+```
+mill ==> go     test
+mill ==> go     test/fx1
+mill ==> go     test/fx1/msleep
+mill ==> go     test/fx2
+mill ==> go     test/fx2/msleep
+mill ==> return test/fx1/msleep
+mill ==> select test/fx1/msleep
+mill ==> cancel test/fx2
+mill ==> cancel test/fx2/msleep
+mill ==> return test/fx2/msleep
+mill ==> return test/fx2
+mill ==> return test
+```
+
+Each line contains an operation and the corotine's backtrace. So, for example:
+
+```
+mill ==> return test/fx2
+```
+
+Means that coroutine "fx2" invoked from top-level coroutine "test" have finished
+execution.
+
 ## License
 
 Mill is licensed under MIT/X11 license.

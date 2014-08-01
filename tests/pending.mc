@@ -38,6 +38,7 @@ coroutine test ()
 
 int main ()
 {
+    _mill_trace();
     test();
 }
 
