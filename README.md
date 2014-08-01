@@ -326,6 +326,7 @@ coroutine bar ()
 Note that inside of the coroutine "result" argument is of type int, however,
 the caller supplies argument of type int*.
 
+### Memory management 
 
 ### Debugging
 
@@ -349,7 +350,7 @@ mill ==> return test/fx2
 mill ==> return test
 ```
 
-Each line contains an operation and the corotine's backtrace. So, for example:
+Each line contains an operation and the coroutine's backtrace. So, for example:
 
 ```
 mill ==> return test/fx2
@@ -361,3 +362,4 @@ execution.
 ## License
 
 Mill is licensed under MIT/X11 license.
+
