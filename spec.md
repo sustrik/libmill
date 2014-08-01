@@ -1,32 +1,3 @@
-Mill summary
-============
-
-Mill is a preprocessor that adds coroutine support to C. It is also
-an experiment in adding more structure (think gotos vs. structured programming)
-into parallel programming.
-
-*coroutine* keyword provides a way to define a new coroutine. The syntax mimics
-the syntax of standard C function, except that it has no return value.
-
-```
-coroutine foo (int a, const char *b, int *result)
-{
-    *result = a + b;
-}
-```
-
-To keep the preprocessor simple, *endvars* keyword is introduced to separate
-local variable declarations in the coroutine from the executable code:
-
-```
-coroutine foo ()
-{
-    int i;
-    endvars;
-
-    i = 0;
-}
-```
 
 To address the problem of multiple coroutines using the same location for the
 output argument in parallel, *out* keyword is introduced. The argument is
@@ -50,20 +21,6 @@ coroutine bar ()
     go foo (&i);
 }
 ``` 
-
-Use *go* keyword to launch a coroutine.
-
-```
-coroutine foo ()
-{
-    printf ("Hello, world!\n");
-}
-
-coroutine bar ()
-{
-    go foo();
-}
-```
 
 Note that all the coroutines launched from the current coroutine are canceled
 automatically once the parent coroutine exits. Therefore, program's 'costack'
@@ -92,23 +49,6 @@ coroutine bar ()
 }
 ```
 
-Note that events are distinguished based on coroutine types, not coroutine
-instances. This is an experiment that seems to lead to better coding practices.
-
-Coroutines can be invoked in synchronous manner from standard C functions:
-
-```
-coroutine foo ()
-{
-}
-
-int main ()
-{
-    foo ();
-    return 0;
-}
-```
-
 Finally, mill provides a library of atomic coroutines that can be used to build
 more complex programs. These include sleeping, using sockets, DNS queries etc.
 
@@ -125,13 +65,5 @@ coroutine foo ()
         return;
     }
 }
-```
-
-Preprocessor command line: Following commands will generate foo.h from foo.mh
-and foo.c from foo.mc:
-
-```
-mill foo.mh
-mill foo.mc
 ```
 
