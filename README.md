@@ -60,7 +60,7 @@ To run it:
 
 ```
 $ mill test.mc
-$ gcc -o test test.c -lstdmill
+$ gcc -o test test.c -lstdmill -luv
 $ ./test
 ```
 
