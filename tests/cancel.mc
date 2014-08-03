@@ -3,11 +3,16 @@
 
 #include "../stdmill.h"
 
+int counter = 0;
+
 coroutine block ()
 {
+    ++counter;
     go msleep (0, 1000000);
     select {
     case msleep:
+    cancel:
+        --counter;
     }
 }
 
@@ -23,5 +28,6 @@ int main ()
 {
     _mill_trace ();
     test();
+    assert (counter == 0);
 }
 
