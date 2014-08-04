@@ -331,10 +331,11 @@ the caller supplies argument of type int*.
 Keep in mind that coframes are deallocated when the child coroutine is
 selected. If you launch a coroutine without selecting it afterwards, the
 coframe will linger on in the memory until it is deallocated when the
-caller coroutine finishes.
+caller coroutine terminates.
 
-The behaviour is perfectly all right in most circumstances, however, doing
-such thing in a loop will quickly exhaust the memory:
+The behaviour is perfectly all right in most circumstances, however, launching
+arbitrary number of coroutines in a loop without selecting them can lead to
+memory exhaustion:
 
 ```
 coroutine foo ()
