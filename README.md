@@ -375,7 +375,7 @@ coroutine foo (out char *result)
 cancel:
     free (result);
 }
-``
+```
 
 ### Comment on memory management
 
