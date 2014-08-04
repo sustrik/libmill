@@ -326,6 +326,38 @@ coroutine bar ()
 Note that inside of the coroutine "result" argument is of type int, however,
 the caller supplies argument of type int*.
 
+### Canceling coroutines
+
+One of the main principles in mill is that lifetime of a coroutine never
+exceeds the lifetime of the coroutine that have launched it.
+
+Therefore, if child coroutine is still being executed when the parent coroutine
+is terminating, the former is automatically canceled. There's no need for any
+explicit action on parent's behalf.
+
+However, the child coroutine may want to intercept the cancelation and do
+any necessary cleanup. And given that coroutines can be interrupted only while
+waiting inside a select statement, the interception can be done by simply
+adding a 'cancel' cause to the statement:
+
+```
+coroutine foo (out char *result)
+{
+    result = malloc (14);
+    memcpy (result, "Hello, world!", 14);
+
+    go msleep (NULL, 1000);
+
+    select {
+    case msleep:
+        return;
+    cancel:
+        free (result);
+        return;
+    }
+}
+```
+
 ### Comment on memory management
 
 Keep in mind that coframes are deallocated when the child coroutine is
