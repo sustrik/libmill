@@ -336,9 +336,11 @@ is terminating, the former is automatically canceled. There's no need for any
 explicit action on parent's behalf.
 
 However, the child coroutine may want to intercept the cancelation and do
-any necessary cleanup. And given that coroutines can be interrupted only while
-waiting inside a select statement, the interception can be done by simply
-adding a 'cancel' cause to the statement:
+any necessary cleanup.
+
+Given that coroutines can be interrupted only while waiting inside a select
+statement, the interception can be done by simply adding a 'cancel' cause to
+the statement:
 
 ```
 coroutine foo (out char *result)
