@@ -43,7 +43,7 @@ coroutine test ()
 
     while (1) {
         select {
-        msleep:
+        case msleep:
             printf ("Timer elapsed!\n");
         }
     }
