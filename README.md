@@ -339,7 +339,7 @@ However, the child coroutine may want to intercept the cancelation and do
 any necessary cleanup.
 
 Given that coroutines can be interrupted only while waiting inside a select
-statement, the interception can be done by simply adding a 'cancel' cause to
+statement, the interception can be done by simply adding a 'cancel' clause to
 the statement:
 
 ```
@@ -359,6 +359,23 @@ coroutine foo (out char *result)
     }
 }
 ```
+
+There's one more cancelation scenario: The child coroutine may have been
+fully executed, yet the parent coroutine may exit without selecting it. In such
+case the coroutine being canceled (the child coroutine) still needs to do
+clean-up, specifically, it needs to deallocate any dynamically allocated output
+parameters. It can be done by adding the 'cancel' clause to the coroutine
+itself:
+
+```
+coroutine foo (out char *result)
+{
+    result = malloc (14);
+    memcpy (result, "Hello, world!", 14);
+cancel:
+    free (result);
+}
+``
 
 ### Comment on memory management
 
