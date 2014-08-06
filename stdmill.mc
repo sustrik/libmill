@@ -57,17 +57,17 @@ coroutine msleep (
     endvars;
 
     /* Start the timer. */
-    rc = uv_timer_init (&cf->mill_cfh.loop->uv_loop, &timer);
-    uv_assert (rc);
-    rc = uv_timer_start (&timer, msleep_timer_cb, milliseconds, 0);
-    uv_assert (rc);
+    *rc = uv_timer_init (&cf->mill_cfh.loop->uv_loop, &timer);
+    uv_assert (*rc);
+    *rc = uv_timer_start (&timer, msleep_timer_cb, milliseconds, 0);
+    uv_assert (*rc);
 
     /* Wait till it finishes or the coroutine is canceled. */
     syswait (&hndl);
     if (hndl == msleep_timer_cb)
-        rc = 0;
+        *rc = 0;
     else if (hndl == 0)
-        rc = ECANCELED;
+        *rc = ECANCELED;
     else
         assert (0);
 
@@ -188,8 +188,8 @@ coroutine tcpsocket_connect (
 
     /* Start connecting. */
     self->recvcfptr = cf;
-    rc = uv_tcp_connect (&req, &self->s, addr, tcpsocket_connect_cb);
-    if (rc != 0)
+    *rc = uv_tcp_connect (&req, &self->s, addr, tcpsocket_connect_cb);
+    if (*rc != 0)
         return;
 
     /* Wait till connecting finishes. */
@@ -217,13 +217,13 @@ coroutine tcpsocket_accept (
     /* Wait for an incoming connection. */
     syswait (&hndl);
     if (!hndl) {
-        rc = ECANCELED;
+        *rc = ECANCELED;
         return;
     }
  
     /* There's a new incoming connection. Let's accept it. */
     assert (hndl == tcpsocket_listen_cb);
-    rc = uv_accept ((uv_stream_t*) &self->s, (uv_stream_t*) &newsock->s);
+    *rc = uv_accept ((uv_stream_t*) &self->s, (uv_stream_t*) &newsock->s);
 }
 
 coroutine tcpsocket_send (
@@ -240,9 +240,9 @@ coroutine tcpsocket_send (
     /* Start the send operation. */
     buffer.base = (void*) buf;
     buffer.len = len;
-    rc = uv_write (&req, (uv_stream_t*) &self->s, &buffer, 1,
+    *rc = uv_write (&req, (uv_stream_t*) &self->s, &buffer, 1,
         tcpsocket_send_cb);
-    if (rc != 0)
+    if (*rc != 0)
         return;
 
     /* Mark the socket as being in process of sending. */
@@ -258,7 +258,7 @@ coroutine tcpsocket_send (
 
     assert (hndl == tcpsocket_send_cb);
     self->sendcfptr = 0;
-    rc = 0;
+    *rc = 0;
 }
 
 coroutine tcpsocket_recv (
@@ -271,9 +271,9 @@ coroutine tcpsocket_recv (
     endvars;
 
     /* Sart the receiving. */
-    rc = uv_read_start ((uv_stream_t*) &self->s,
+    *rc = uv_read_start ((uv_stream_t*) &self->s,
         tcpsocket_alloc_cb, tcpsocket_recv_cb);
-    if (rc != 0)
+    if (*rc != 0)
         return;
 
     /* Mark the socket as being in process of receiving. */
@@ -288,7 +288,7 @@ coroutine tcpsocket_recv (
         if (!hndl) {
             uv_read_stop ((uv_stream_t*) &self->s);
             self->recvcfptr = 0;
-            rc = ECANCELED;
+            *rc = ECANCELED;
             return;
         }
 
@@ -296,7 +296,7 @@ coroutine tcpsocket_recv (
         if (!len) {
             uv_read_stop ((uv_stream_t*) &self->s);
             self->recvcfptr = 0;
-            rc = 0;
+            *rc = 0;
             break;
         }
     }

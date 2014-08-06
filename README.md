@@ -302,7 +302,7 @@ coroutine termination event is processed by the caller:
 ```
 coroutine foo (out int result, int i)
 {
-    result = i;
+    *result = i;
 }
 
 coroutine bar ()
@@ -322,9 +322,6 @@ coroutine bar ()
     }
 }
 ```
-
-Note that inside of the coroutine "result" argument is of type int, however,
-the caller supplies argument of type int*.
 
 ### Canceling coroutines
 

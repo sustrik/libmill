@@ -9,7 +9,7 @@ coroutine fx1 (out int idout, int id, int milliseconds)
     select {
     case msleep:
     }
-    idout = id;
+    *idout = id;
 }
 
 coroutine fx2 = fx1;

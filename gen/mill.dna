@@ -413,7 +413,7 @@ for s in sections
     if s[:type] == :codef
 
         # Expand references to the local variables.
-        def expand_vars(text, alltokens, tokens, locals)
+        def expand_vars(text, alltokens, tokens, locals, outs)
             for i in 0..tokens.size - 1
                 if tokens[i][0] == :identifier && (i == 0 ||
                       (tokens[i - 1][0] != :struct &&
@@ -422,20 +422,27 @@ for s in sections
                     idname = text[tokens[i][1]..tokens[i][2]]
                     if locals.include? idname
                         replace(text, alltokens, tokens[i], "(cf->#{idname})")
+                    elsif outs.include? idname
+                        replace(text, alltokens, tokens[i], "(&cf->#{idname})")
                     end
                 elsif tokens[i][3] != nil
-                    expand_vars(text, alltokens, tokens[i][3], locals)
+                    expand_vars(text, alltokens, tokens[i][3], locals, outs)
                 end
             end
         end
         locals = []
+        outs = []
         for a in s[:args]
-            locals << a[:name]
+            if a[:out]
+                outs << a[:name]
+            else
+                locals << a[:name]
+            end
         end
         for v in s[:vars]
             locals << v[:name]
         end
-        expand_vars(s[:text], s[:tokens], s[:tokens], locals)
+        expand_vars(s[:text], s[:tokens], s[:tokens], locals, outs)
 
         # Expand mill keywords.
         def expand_keywords(text, alltokens, tokens, pc)
