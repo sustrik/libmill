@@ -1098,7 +1098,14 @@ def parsedeclout (text, tokens)
         decl[:out] = false
     else
         decl = parsedecl(text, tokens [1..-1])
+        type = decl[:type].strip
+        if type[-1] != ?*
+            $stderr.write "Out argument must be a pointer.\n"
+            exit 1
+        end
+        type = type[0..-2]
         decl[:out] = true
+        decl[:type] = type
     end
     return decl;
 end
@@ -1535,10 +1542,10 @@ Ribosome.dot("    @{renderarg(a)}", binding)
 Ribosome.add(");", binding)
 Ribosome.dot("", binding)
 Ribosome.dot("void @{s[:name]} (", binding)
-____separate_1538____ = true
+____separate_1545____ = true
         for a in s[:args]
-if(____separate_1538____)
-    ____separate_1538____ = false
+if(____separate_1545____)
+    ____separate_1545____ = false
 else
     Ribosome.add(", ", binding)
 end
@@ -1651,10 +1658,10 @@ Ribosome.dot("    mill_goimpl_epilogue (@{s[:name]});", binding)
 Ribosome.dot("}", binding)
 Ribosome.dot("", binding)
 Ribosome.dot("void @{s[:name]} (", binding)
-____separate_1654____ = true
+____separate_1661____ = true
 for a in s[:args]
-if(____separate_1654____)
-    ____separate_1654____ = false
+if(____separate_1661____)
+    ____separate_1661____ = false
 else
     Ribosome.add(", ", binding)
 end

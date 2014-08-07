@@ -49,7 +49,7 @@ static void msleep_close_cb (
     uv_handle_t *handle);
 
 coroutine msleep (
-    out int rc,
+    out int *rc,
     int milliseconds)
 {
     uv_timer_t timer;
@@ -178,7 +178,7 @@ int tcpsocket_listen (
 }
 
 coroutine tcpsocket_connect (
-    out int rc,
+    out int *rc,
     struct tcpsocket *self,
     struct sockaddr *addr)
 {
@@ -204,7 +204,7 @@ coroutine tcpsocket_connect (
 }
 
 coroutine tcpsocket_accept (
-    out int rc,
+    out int *rc,
     struct tcpsocket *self,
     struct tcpsocket *newsock)
 {
@@ -227,7 +227,7 @@ coroutine tcpsocket_accept (
 }
 
 coroutine tcpsocket_send (
-    out int rc,
+    out int *rc,
     struct tcpsocket *self,
     const void *buf,
     size_t len)
@@ -262,7 +262,7 @@ coroutine tcpsocket_send (
 }
 
 coroutine tcpsocket_recv (
-    out int rc,
+    out int *rc,
     struct tcpsocket *self,
     void *buf,
     size_t len)

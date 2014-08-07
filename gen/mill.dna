@@ -137,7 +137,14 @@ def parsedeclout (text, tokens)
         decl[:out] = false
     else
         decl = parsedecl(text, tokens [1..-1])
+        type = decl[:type].strip
+        if type[-1] != ?*
+            $stderr.write "Out argument must be a pointer.\n"
+            exit 1
+        end
+        type = type[0..-2]
         decl[:out] = true
+        decl[:type] = type
     end
     return decl;
 end

@@ -300,7 +300,7 @@ coroutines) and copied to the caller-specified destination immediately before
 coroutine termination event is processed by the caller:
 
 ```
-coroutine foo (out int result, int i)
+coroutine foo (out int *result, int i)
 {
     *result = i;
 }

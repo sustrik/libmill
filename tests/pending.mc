@@ -3,7 +3,7 @@
 
 #include "../stdmill.h"
 
-coroutine fx1 (out int idout, int id, int milliseconds)
+coroutine fx1 (out int *idout, int id, int milliseconds)
 {
     go msleep (0, milliseconds);
     select {
