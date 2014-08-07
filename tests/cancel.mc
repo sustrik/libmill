@@ -1,5 +1,7 @@
 
 #include <assert.h>
+#include <stdlib.h>
+#include <stddef.h>
 
 #include "../stdmill.h"
 
@@ -16,12 +18,19 @@ coroutine block ()
     }
 }
 
+/*
+coroutine alloc(out void **result)
+{
+    *result = malloc (100);
+cancel:
+    free (*result);
+}
+*/
+
 coroutine test ()
 {
-    int id;
-    endvars;
-
     go block ();
+    //go alloc (NULL);
 }
 
 int main ()

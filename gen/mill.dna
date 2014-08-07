@@ -419,6 +419,19 @@ end
 for s in sections
     if s[:type] == :codef
 
+        # Expand coroutine-level 'cancel' clause.
+        hascancel = false
+        for i in 0..s[:tokens].size - 2
+            if s[:tokens][i][0] == :cancel && s[:tokens][i + 1][0] == :colon
+                if hascancel
+                    $stderr.write "Duplicit 'cancel' clause.\n"
+                    exit 1
+                end
+                replace(s[:text], s[:tokens], s[:tokens][i], "mill_handlerimpl_cancel()")
+                replace(s[:text], s[:tokens], s[:tokens][i + 1], ";")
+            end
+        end
+
         # Expand references to the local variables.
         def expand_vars(text, alltokens, tokens, locals, outs)
             for i in 0..tokens.size - 1
