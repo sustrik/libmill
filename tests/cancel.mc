@@ -1,6 +1,5 @@
 
 #include <assert.h>
-#include <stdlib.h>
 #include <stddef.h>
 
 #include "../stdmill.h"
@@ -20,9 +19,9 @@ coroutine block ()
 
 coroutine alloc(out void **result)
 {
-    *result = malloc (100);
+    ++counter;
 cancel:
-    free (*result);
+    --counter;
 }
 
 coroutine test ()
