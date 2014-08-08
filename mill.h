@@ -137,10 +137,19 @@ struct mill_cfh {
     \
     cf = (struct mill_cf_##name*) cfptr;
 
-#define mill_handlerimpl_epilogue(name, pcarg)\
+#define mill_handlerimpl_cancel(name, pcarg)\
+    goto mill_finally;\
+    mill_pc_##pcarg:
+
+#define mill_handlerimpl_epilogue(name, pcarg, cancelpcarg)\
     mill_finally:\
-    mill_cancelall (pcarg);\
+    mill_cancel_children (cf);\
+    cf->mill_cfh.pc = (pcarg);\
+    mill_pc_##pcarg:\
+    if (mill_has_children (cf))\
+        return 0;\
     mill_emit (cf);\
+    cf->mill_cfh.pc = (cancelpcarg);\
     return 0;
 
 #define mill_syncimpl_prologue(name)\
@@ -225,19 +234,6 @@ void mill_loop_emit (struct mill_loop *self, struct mill_cfh *ev);
         return;\
         mill_pc_##pcarg:\
         mill_putptr (event, (ptrarg));\
-    } while (0)
-
-#define mill_cancelall(statearg)\
-    do {\
-        mill_cancel_children (cf);\
-        cf->mill_cfh.pc = (statearg);\
-        while (1) {\
-            if (!mill_has_children (cf))\
-                break;\
-            return;\
-            mill_pc_##statearg:\
-            ;\
-        }\
     } while (0)
 
 void mill_emit (void *cfptr);

@@ -18,19 +18,17 @@ coroutine block ()
     }
 }
 
-/*
 coroutine alloc(out void **result)
 {
     *result = malloc (100);
 cancel:
     free (*result);
 }
-*/
 
 coroutine test ()
 {
     go block ();
-    //go alloc (NULL);
+    go alloc (NULL);
 }
 
 int main ()
