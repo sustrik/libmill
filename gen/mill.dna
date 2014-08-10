@@ -448,40 +448,53 @@ def epilogue(lastpc)
     return res
 end
 
-def expand_case(pc, type)
+def expand_case(pc, type, first)
     res = ""
-    res += "    goto mill_pc2_#{pc};\n"
-    res += "}\n"
-    res += "else if (mill_typeof(event) == &mill_type_#{type}) {\n"
+    if !first
+        res += "    goto mill_endselect_#{pc};\n"
+        res += "}\n"
+        res += "else "
+    end
+    res += "if (mill_typeof(event) == &mill_type_#{type}) {\n"
     res += "    mill_coframe_term (event);"
     return res
 end
 
-def expand_cancel(pc)
+def expand_cancel(pc, first)
     res = ""
-    res += "    goto mill_pc2_#{pc};\n"
-    res += "}\n"
-    res += "else if (event == 0) {"
+    if !first
+        res += "    goto mill_endselect_#{pc};\n"
+        res += "}\n"
+        res += "else "
+    end
+    res += "if (event == 0) {"
     return res
 end
 
 def beginselect(pc)
     res = ""
     res += "{\n"
-    res += "mill_syswait (#{pc});\n"
-    res += "if (0) {"
+    res += "cf->mill_cfh.pc = #{pc};\n"
+    res += "return 0;\n"
+    res += "mill_pc_#{pc}:"
     return res;
 end
 
-def endselect(pc)
+def endselect(pc, first, hascancelclause)
     res = ""
-    res += "    goto mill_pc2_#{pc};\n"
-    res += "}\n"
-    res += "else if (event == 0)\n"
-    res += "    goto mill_finally;\n"
-    res += "else\n"
+    if !first
+        res += "    goto mill_endselect_#{pc};\n"
+        res += "}\n"
+        res += "else "
+    end
+    if !hascancelclause
+        res += "if (event == 0)\n"
+        res += "    goto mill_finally;\n"
+        res += "else"
+    end
+    res += "\n"
     res += "    return -1;\n"
-    res += "mill_pc2_#{pc}:;\n"
+    res += "mill_endselect_#{pc}:;\n"
     res += "}"
     return res
 end
@@ -552,13 +565,13 @@ for s in sections
                     pc += 1
                     replace(text, alltokens, tokens[i], beginselect(pc))
                     replacechars(text, alltokens, tokens[i + 1][1], tokens[i + 1][1], "")
-                    replacechars(text, alltokens, tokens[i + 1][2], tokens[i + 1][2], endselect(pc))
                     subtokens = tokens[i + 1][3]
                     if subtokens[0][0] != :case && subtokens[0][0] != :cancel
                         $stderr.write "'select' block should start with 'case' statement.\n"
                         exit 1
                     end
                     first = true
+                    hascancelclause = false
                     for j in 0..subtokens.size - 1
                         if subtokens[j][0] == :case
                             if subtokens[j + 1][0] != :identifier || subtokens[j + 2][0] != :colon
@@ -567,17 +580,27 @@ for s in sections
                             end
                             replacechars(text, alltokens,
                                 subtokens[j][1], subtokens[j + 2][2],
-                                expand_case(pc, text[subtokens[j + 1][1]..subtokens[j + 1][2]]))
+                                expand_case(pc, text[subtokens[j + 1][1]..subtokens[j + 1][2]], first))
+                            first = false
                         elsif subtokens [j][0] == :cancel
                             if subtokens[j + 1][0] != :colon
                                 $stderr.write "'cancel' keyword should be followed by a colon.\n"
                                 exit 1
                             end
+                            if hascancelclause
+                                $stderr.write "Duplicit 'cancel' clause.\n"
+                                exit 
+                            end
                             replacechars(text, alltokens,
                                 subtokens[j][1], subtokens[j + 1][2],
-                                expand_cancel(pc))
+                                expand_cancel(pc, first))
+                            first = false
+                            hascancelclause = true
                         end
                     end
+                    replacechars(text, alltokens,
+                        tokens[i + 1][2], tokens[i + 1][2],
+                        endselect(pc, first, hascancelclause))
 
                 elsif tokens[i][0] == :syswait && $system
                     if tokens[i + 1][0] != :braces
