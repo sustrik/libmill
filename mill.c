@@ -220,9 +220,11 @@ void mill_coframe_init (
     struct mill_loop *loop)
 {
     struct mill_cfh *cfh;
+    struct mill_cfh *pcfh;
 
     cfh = (struct mill_cfh*) cfptr;
 
+    /*  Initialise the coframe. */
     cfh->type = type;
     cfh->pc = 0;
     cfh->nextev = 0;
@@ -233,8 +235,18 @@ void mill_coframe_init (
     cfh->next = 0;
     cfh->prev = 0;
     cfh->loop = loop;
-    if (parent)
-        mill_add_child (parent, cfh);
+
+    /* Add the coframe to the parent's list of child coroutines. */
+    if (parent) {
+        pcfh = (struct mill_cfh*) parent;
+        cfh->prev = 0;
+        cfh->next = pcfh->children;
+        if (pcfh->children)
+            pcfh->children->prev = cfh;
+        pcfh->children = cfh;
+    }
+
+    /* Trace start of the new coroutine. */
     if (mill_trace) {
         printf ("mill ==> go     ");
         mill_printstack (cfh);
@@ -296,23 +308,6 @@ void mill_emit (
         mill_printstack (cfh);
         printf ("\n");
     }
-}
-
-void mill_add_child (
-    void *cfptr,
-    void *child)
-{
-    struct mill_cfh *cfh_parent;
-    struct mill_cfh *cfh_child;
-
-    cfh_parent = (struct mill_cfh*) cfptr;
-    cfh_child = (struct mill_cfh*) child;
-
-    cfh_child->prev = 0;
-    cfh_child->next = cfh_parent->children;
-    if (cfh_parent->children)
-        cfh_parent->children->prev = cfh_child;
-    cfh_parent->children = cfh_child;
 }
 
 void mill_cancel_children (

@@ -151,9 +151,6 @@ void mill_coframe_term (
     void *cfptr);
 void mill_emit (
     void *cfptr);
-void mill_add_child (
-    void *cfptr,
-    void *child);
 void mill_cancel_children (
     void *cfptr);
 int mill_has_children (
