@@ -1391,6 +1391,7 @@ def epilogue(lastpc)
     res += "#{lastpc + 2};\n    return 0;\nmill_pc_#{lastpc + 2}:"
     res += '
     assert (!event);'
+    res += "\n"
 end
 
 for s in sections
@@ -1572,10 +1573,10 @@ Ribosome.dot("    @{renderarg(a)}", binding)
 Ribosome.add(");", binding)
 Ribosome.dot("", binding)
 Ribosome.dot("void @{s[:name]} (", binding)
-____separate_1575____ = true
+____separate_1576____ = true
         for a in s[:args]
-if(____separate_1575____)
-    ____separate_1575____ = false
+if(____separate_1576____)
+    ____separate_1576____ = false
 else
     Ribosome.add(", ", binding)
 end
@@ -1638,7 +1639,11 @@ Ribosome.dot("    default:", binding)
 Ribosome.dot("        assert (0);", binding)
 Ribosome.dot("    }", binding)
 Ribosome.dot("", binding)
+if s[:hascancel]
+Ribosome.dot("@{s[:text]}", binding)
+else
 Ribosome.dot("    @{s[:text]}", binding)
+end
 Ribosome.dot("", binding)
 if !s[:hascancel]
 Ribosome.dot("@{epilogue(s[:lastpc])}", binding)
@@ -1698,10 +1703,10 @@ Ribosome.dot("    mill_handler_@{s[:name]} (&cf->mill_cfh, 0);", binding)
 Ribosome.dot("}", binding)
 Ribosome.dot("", binding)
 Ribosome.dot("void @{s[:name]} (", binding)
-____separate_1701____ = true
+____separate_1706____ = true
 for a in s[:args]
-if(____separate_1701____)
-    ____separate_1701____ = false
+if(____separate_1706____)
+    ____separate_1706____ = false
 else
     Ribosome.add(", ", binding)
 end

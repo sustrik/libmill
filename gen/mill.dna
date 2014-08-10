@@ -430,6 +430,7 @@ def epilogue(lastpc)
     res += "#{lastpc + 2};\n    return 0;\nmill_pc_#{lastpc + 2}:"
     res += '
     assert (!event);'
+    res += "\n"
 end
 
 for s in sections
@@ -672,7 +673,11 @@ end
 .        assert (0);
 .    }
 .
+if s[:hascancel]
+.@{s[:text]}
+else
 .    @{s[:text]}
+end
 .
 if !s[:hascancel]
 .@{epilogue(s[:lastpc])}
