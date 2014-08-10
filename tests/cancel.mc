@@ -1,6 +1,5 @@
 
 #include <assert.h>
-#include <stddef.h>
 
 #include "../stdmill.h"
 
@@ -17,7 +16,7 @@ coroutine block ()
     }
 }
 
-coroutine alloc(out void **result)
+coroutine nonblock()
 {
     ++counter;
 cancel:
@@ -27,7 +26,7 @@ cancel:
 coroutine test ()
 {
     go block ();
-    go alloc (NULL);
+    go nonblock ();
 }
 
 int main ()

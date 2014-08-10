@@ -418,19 +418,21 @@ end
 
 def epilogue(lastpc)
     res = "\n"
-    res += 'mill_finally:
-    mill_cancel_children (cf);
-    cf->mill_cfh.pc = '
-    res += "#{lastpc + 1};\nmill_pc_#{lastpc + 1}:"
-    res += '
-    if (mill_has_children (cf))
-        return 0;
-    mill_emit (cf);
-    cf->mill_cfh.pc = '
-    res += "#{lastpc + 2};\n    return 0;\nmill_pc_#{lastpc + 2}:"
-    res += '
-    assert (!event);'
-    res += "\n"
+    res += "mill_finally:\n"
+    res += "    mill_cancel_children (cf);\n"
+    res += "    cf->mill_cfh.pc = #{lastpc + 1};\n"
+    res += "    goto mill_test_children;\n"
+    res += "mill_pc_#{lastpc + 1}:\n"
+    res += "    mill_coframe_term (event);\n"
+    res += "mill_test_children:\n"
+    res += "    if (mill_has_children (cf))\n"
+    res += "        return 0;\n"
+    res += "    mill_emit (cf);\n"
+    res += "    cf->mill_cfh.pc = #{lastpc + 2};\n"
+    res += "    return 0;\n"
+    res += "mill_pc_#{lastpc + 2}:\n"
+    res += "    assert (!event);\n"
+    return res;
 end
 
 for s in sections

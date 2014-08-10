@@ -62,15 +62,6 @@ static mill_printstack (void *cfptr)
     printf ("%s", cfh->type->name);
 }
 
-void mill_trace_select (void *cfptr)
-{
-    if (mill_trace) {
-        printf ("mill ==> select ");
-        mill_printstack (cfptr);
-        printf ("\n");
-    }
-}
-
 /******************************************************************************/
 /* The event loop. */
 /******************************************************************************/
@@ -96,20 +87,18 @@ static void loop_cb (uv_idle_t* handle)
     while (self->first) {
         src = self->first;
 
-        /* Copy the output arguments to their proper destinations. */
-        src->type->output (src);
-
         /*  If top level coroutine exits, we can stop the event loop.
             However, first we have to close the 'idle' object. */
         if (!src->parent) {
 
             /* Deallocate the coframe. */
-            src->type = 0;
+            mill_coframe_term (src);
             free (src);
 
             uv_close ((uv_handle_t*) &self->idle, loop_close_cb);
             return;
         }
+
         dst = src->parent;
 
         /* Invoke the handler for the finished coroutine. If the event can't
@@ -136,9 +125,6 @@ static void loop_cb (uv_idle_t* handle)
         prev = 0;
         while (it != 0) {
 
-            /* Copy the output arguments to their proper destinations. */
-            it->type->output (it);
-
             /* Try to process the event. */
             if (dst->type->handler (dst, it) == 0) {
 
@@ -150,11 +136,11 @@ static void loop_cb (uv_idle_t* handle)
                 if (!it->nextev)
                     dst->plast = prev;
 
-                /* Deallocate the coframe. */
-                it->type = 0;
+                /* The coframe was already terminated by the handler.
+                   Now deallocate the memory. */
                 free (it);
                 
-                /* Start checking the pending even queue from beginning so
+                /* Start checking the pending event queue from beginning so
                    that older events are processed before newer ones. */
                 it = dst->pfirst;
                 prev = 0;
@@ -169,8 +155,8 @@ static void loop_cb (uv_idle_t* handle)
         /* Move to the next event. */
         self->first = src->nextev;
 
-        /* Deallocate the coframe. */
-        src->type = 0;
+        /* The coframe was already terminated by the handler.
+           Now deallocate the memory. */
         free (src);
     }
     self->last = 0;
@@ -256,17 +242,26 @@ void mill_coframe_init (
     }
 }
 
-void mill_emit (
+void mill_coframe_term (
     void *cfptr)
 {
     struct mill_cfh *cfh;
 
     cfh = (struct mill_cfh*) cfptr;
 
-    /* At this point all the child coroutines should be stopped. */
-    assert (!cfh->children);
+    /* Tracing support. No need to trace deallocation of the top-level coframe
+       as the return from the coroutine is already reported and the two are
+       basically the same thing. */
+    if (mill_trace && cfh->parent) {
+        printf ("mill ==> select ");
+        mill_printstack (cfh);
+        printf ("\n");
+    }
 
-    /* Remove the corouine from the parent's list of children. */
+    /* Copy the 'out' arguments to their final destinations. */
+    cfh->type->output (cfh);
+
+    /* Remove the coframe from the paren't list of child coroutines. */
     if (cfh->parent) {
         if (cfh->parent->children == cfh)
             cfh->parent->children = cfh->next;
@@ -277,6 +272,21 @@ void mill_emit (
         cfh->prev = 0;
         cfh->next = 0;
     }
+
+    /* This is a heuristic that should cause an error if deallocated
+       coframe is used. */
+    cfh->type = 0;
+}
+
+void mill_emit (
+    void *cfptr)
+{
+    struct mill_cfh *cfh;
+
+    cfh = (struct mill_cfh*) cfptr;
+
+    /* At this point all the child coroutines should be stopped. */
+    assert (!cfh->children);
 
     /* Add the coroutine to the event queue. */
     mill_loop_emit (cfh->loop, cfh);

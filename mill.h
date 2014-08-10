@@ -36,7 +36,6 @@
 /******************************************************************************/
 
 void _mill_trace ();
-void mill_trace_select (void *cfptr);
 
 /******************************************************************************/
 /*  Coroutine metadata.                                                       */
@@ -158,7 +157,7 @@ void mill_loop_emit (struct mill_loop *self, struct mill_cfh *ev);
         }\
         else if (event &&\
               ((struct mill_cfh*) event)->type == &mill_type_##typearg) {\
-            mill_trace_select (event);
+            mill_coframe_term (event);
 
 #define mill_cancel(pcarg)\
             goto mill_pc2_##pcarg;\
@@ -183,6 +182,8 @@ void mill_coframe_init (
     const struct mill_type *type,
     void *parent,
     struct mill_loop *loop);
+void mill_coframe_term (
+    void *cfptr);
 void mill_emit (
     void *cfptr);
 void mill_add_child (
