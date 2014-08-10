@@ -1392,18 +1392,24 @@ end
 
 def epilogue(lastpc)
     res = "\n"
+    res += "    /* The coroutine have exited. Cancel any remaining child coroutines. */\n"
     res += "mill_finally:\n"
     res += "    mill_cancel_children (cf);\n"
     res += "    cf->mill_cfh.pc = #{lastpc + 1};\n"
     res += "    goto mill_test_children;\n"
     res += "mill_pc_#{lastpc + 1}:\n"
     res += "    mill_coframe_term (event);\n"
+    res += "\n"
+    res += "    /* If there are no remaining children notify the parent that\n"
+    res += "       the coroutine have finished. */\n"
     res += "mill_test_children:\n"
     res += "    if (mill_has_children (cf))\n"
     res += "        return 0;\n"
     res += "    mill_emit (cf);\n"
     res += "    cf->mill_cfh.pc = #{lastpc + 2};\n"
     res += "    return 0;\n"
+    res += "\n"
+    res += "    /* The finished coroutine was canceled before if was selected. */\n"
     res += "mill_pc_#{lastpc + 2}:\n"
     res += "    assert (!event);\n"
     return res
@@ -1658,10 +1664,10 @@ Ribosome.dot("    @{renderarg(a)}", binding)
 Ribosome.add(");", binding)
 Ribosome.dot("", binding)
 Ribosome.dot("void @{s[:name]} (", binding)
-____separate_1661____ = true
+____separate_1667____ = true
         for a in s[:args]
-if(____separate_1661____)
-    ____separate_1661____ = false
+if(____separate_1667____)
+    ____separate_1667____ = false
 else
     Ribosome.add(", ", binding)
 end
@@ -1713,6 +1719,7 @@ Ribosome.dot("    struct mill_cf_@{s[:name]} *cf;", binding)
 Ribosome.dot("", binding)
 Ribosome.dot("    cf = (struct mill_cf_@{s[:name]}*) cfptr;", binding)
 Ribosome.dot("", binding)
+Ribosome.dot("    /* Continue from the point where the coroutine was interrupted. */", binding)
 Ribosome.dot("    switch (cf->mill_cfh.pc) {", binding)
 Ribosome.dot("    case 0:", binding)
 Ribosome.dot("        break;", binding)
@@ -1733,6 +1740,9 @@ Ribosome.dot("", binding)
 if !s[:hascancel]
 Ribosome.dot("@{epilogue(s[:lastpc])}", binding)
 end
+Ribosome.dot("", binding)
+Ribosome.dot("    /* There is no further code in the coroutine.", binding)
+Ribosome.dot("       Set the program counter to an invalid value. */", binding)
 Ribosome.dot("    cf->mill_cfh.pc = -1;", binding)
 Ribosome.dot("    return 0;", binding)
 Ribosome.dot("}", binding)
@@ -1769,8 +1779,11 @@ Ribosome.add(")", binding)
 Ribosome.dot("{", binding)
 Ribosome.dot("    struct mill_cf_@{s[:name]} *cf;", binding)
 Ribosome.dot("", binding)
+Ribosome.dot("    /* Allocate new coframe. */", binding)
 Ribosome.dot("    cf = malloc (sizeof (struct mill_cf_@{s[:name]}));", binding)
 Ribosome.dot("    assert (cf);", binding)
+Ribosome.dot("", binding)
+Ribosome.dot("    /* Inialise the coframe. */", binding)
 Ribosome.dot("    mill_coframe_init (cf, type, parent, loop);", binding)
 for a in s[:args]
     if a[:out]
@@ -1784,14 +1797,16 @@ for v in s[:vars]
 Ribosome.dot("    cf->@{v[:name]} = @{v[:init]};", binding)
     end
 end
+Ribosome.dot("", binding)
+Ribosome.dot("    /* Execute the initial part of the coroutine. */", binding)
 Ribosome.dot("    mill_handler_@{s[:name]} (&cf->mill_cfh, 0);", binding)
 Ribosome.dot("}", binding)
 Ribosome.dot("", binding)
 Ribosome.dot("void @{s[:name]} (", binding)
-____separate_1791____ = true
+____separate_1806____ = true
 for a in s[:args]
-if(____separate_1791____)
-    ____separate_1791____ = false
+if(____separate_1806____)
+    ____separate_1806____ = false
 else
     Ribosome.add(", ", binding)
 end
