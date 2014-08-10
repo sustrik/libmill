@@ -150,23 +150,6 @@ void mill_loop_emit (struct mill_loop *self, struct mill_cfh *ev);
         ;\
     } while (0)
 
-#define mill_select(pcarg)\
-    {\
-        mill_syswait (pcarg);
-
-#define mill_endselect(pcarg)\
-            goto mill_pc2_##pcarg;\
-        }\
-        else if (event == 0) {\
-            goto mill_finally;\
-        }\
-        else {\
-            return -1;\
-        }\
-        mill_pc2_##pcarg:\
-        ;\
-    }
-
 void mill_coframe_init (
     void *cfptr,
     const struct mill_type *type,

@@ -465,6 +465,27 @@ def expand_cancel(pc)
     return res
 end
 
+def beginselect(pc)
+    res = ""
+    res += "{\n"
+    res += "mill_syswait (#{pc});\n"
+    res += "if (0) {"
+    return res;
+end
+
+def endselect(pc)
+    res = ""
+    res += "    goto mill_pc2_#{pc};\n"
+    res += "}\n"
+    res += "else if (event == 0)\n"
+    res += "    goto mill_finally;\n"
+    res += "else\n"
+    res += "    return -1;\n"
+    res += "mill_pc2_#{pc}:;\n"
+    res += "}"
+    return res
+end
+
 for s in sections
     if s[:type] == :codef
 
@@ -529,9 +550,9 @@ for s in sections
                         exit 1
                     end
                     pc += 1
-                    replace(text, alltokens, tokens[i], "mill_select(#{pc})\nif (0) {")
+                    replace(text, alltokens, tokens[i], beginselect(pc))
                     replacechars(text, alltokens, tokens[i + 1][1], tokens[i + 1][1], "")
-                    replacechars(text, alltokens, tokens[i + 1][2], tokens[i + 1][2], "mill_endselect(#{pc})")
+                    replacechars(text, alltokens, tokens[i + 1][2], tokens[i + 1][2], endselect(pc))
                     subtokens = tokens[i + 1][3]
                     if subtokens[0][0] != :case && subtokens[0][0] != :cancel
                         $stderr.write "'select' block should start with 'case' statement.\n"
