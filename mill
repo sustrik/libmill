@@ -1660,7 +1660,11 @@ Ribosome.dot("    @{renderarg(a)}", binding)
 end
 Ribosome.add(")", binding)
 Ribosome.dot("{", binding)
-Ribosome.dot("    mill_goimpl_prologue (@{s[:name]});", binding)
+Ribosome.dot("    struct mill_cf_@{s[:name]} *cf;", binding)
+Ribosome.dot("", binding)
+Ribosome.dot("    cf = malloc (sizeof (struct mill_cf_@{s[:name]}));", binding)
+Ribosome.dot("    assert (cf);", binding)
+Ribosome.dot("    mill_coframe_init (cf, type, parent, loop);", binding)
 for a in s[:args]
     if a[:out]
 Ribosome.dot("    cf->mill_out_@{a[:name]} = @{a[:name]};", binding)
@@ -1673,14 +1677,14 @@ for v in s[:vars]
 Ribosome.dot("    cf->@{v[:name]} = @{v[:init]};", binding)
     end
 end
-Ribosome.dot("    mill_goimpl_epilogue (@{s[:name]});", binding)
+Ribosome.dot("    mill_handler_@{s[:name]} (&cf->mill_cfh, 0);", binding)
 Ribosome.dot("}", binding)
 Ribosome.dot("", binding)
 Ribosome.dot("void @{s[:name]} (", binding)
-____separate_1680____ = true
+____separate_1684____ = true
 for a in s[:args]
-if(____separate_1680____)
-    ____separate_1680____ = false
+if(____separate_1684____)
+    ____separate_1684____ = false
 else
     Ribosome.add(", ", binding)
 end
@@ -1688,13 +1692,16 @@ Ribosome.dot("    @{renderarg(a)}", binding)
 end
 Ribosome.add(")", binding)
 Ribosome.dot("{", binding)
-Ribosome.dot("    mill_syncimpl_prologue (@{s[:name]});", binding)
+Ribosome.dot("    struct mill_loop loop;", binding)
+Ribosome.dot("", binding)
+Ribosome.dot("    mill_loop_init (&loop);", binding)
 Ribosome.dot("    mill_go_@{s[:name]} (&mill_type_@{s[:name]}, &loop, 0", binding)
 for a in s[:args]
 Ribosome.add(", @{a[:name]}", binding)
 end
 Ribosome.add(");", binding)
-Ribosome.dot("    mill_syncimpl_epilogue (@{s[:name]});", binding)
+Ribosome.dot("    mill_loop_run (&loop);", binding)
+Ribosome.dot("    mill_loop_term (&loop);", binding)
 Ribosome.dot("}", binding)
 Ribosome.dot("", binding)
     end

@@ -694,7 +694,11 @@ for a in s[:args]
 end
 ./+)
 .{
-.    mill_goimpl_prologue (@{s[:name]});
+.    struct mill_cf_@{s[:name]} *cf;
+.
+.    cf = malloc (sizeof (struct mill_cf_@{s[:name]}));
+.    assert (cf);
+.    mill_coframe_init (cf, type, parent, loop);
 for a in s[:args]
     if a[:out]
 .    cf->mill_out_@{a[:name]} = @{a[:name]};
@@ -707,7 +711,7 @@ for v in s[:vars]
 .    cf->@{v[:name]} = @{v[:init]};
     end
 end
-.    mill_goimpl_epilogue (@{s[:name]});
+.    mill_handler_@{s[:name]} (&cf->mill_cfh, 0);
 .}
 .
 .void @{s[:name]} (
@@ -717,13 +721,16 @@ for a in s[:args]
 end
 ./+)
 .{
-.    mill_syncimpl_prologue (@{s[:name]});
+.    struct mill_loop loop;
+.
+.    mill_loop_init (&loop);
 .    mill_go_@{s[:name]} (&mill_type_@{s[:name]}, &loop, 0
 for a in s[:args]
 .    /+, @{a[:name]}
 end
 ./+);
-.    mill_syncimpl_epilogue (@{s[:name]});
+.    mill_loop_run (&loop);
+.    mill_loop_term (&loop);
 .}
 .
     end

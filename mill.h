@@ -36,7 +36,6 @@
 /******************************************************************************/
 
 void _mill_trace ();
-void mill_trace_go (void *cfptr);
 void mill_trace_select (void *cfptr);
 
 /******************************************************************************/
@@ -110,28 +109,6 @@ struct mill_cfh {
 /* Prologues and epilogues for generated functions.                           */
 /******************************************************************************/
 
-#define mill_goimpl_prologue(name)\
-    struct mill_cf_##name *cf;\
-    \
-    cf = malloc (sizeof (struct mill_cf_##name));\
-    assert (cf);\
-    cf->mill_cfh.type = type;\
-    cf->mill_cfh.pc = 0;\
-    cf->mill_cfh.nextev = 0;\
-    cf->mill_cfh.pfirst = 0;\
-    cf->mill_cfh.plast = 0;\
-    cf->mill_cfh.parent = parent;\
-    cf->mill_cfh.children = 0;\
-    cf->mill_cfh.next = 0;\
-    cf->mill_cfh.prev = 0;\
-    cf->mill_cfh.loop = loop;\
-    if (parent)\
-        mill_add_child (parent, cf);\
-    mill_trace_go (cf);
-
-#define mill_goimpl_epilogue(name)\
-    mill_handler_##name (&cf->mill_cfh, 0);
-
 #define mill_handlerimpl_prologue(name)\
     struct mill_cf_##name *cf;\
     \
@@ -151,15 +128,6 @@ struct mill_cfh {
     mill_emit (cf);\
     cf->mill_cfh.pc = (cancelpcarg);\
     return 0;
-
-#define mill_syncimpl_prologue(name)\
-    struct mill_loop loop;\
-    \
-    mill_loop_init (&loop);
-
-#define mill_syncimpl_epilogue(name)\
-    mill_loop_run (&loop);\
-    mill_loop_term (&loop);
 
 /******************************************************************************/
 /* The event loop.                                                            */
@@ -236,11 +204,23 @@ void mill_loop_emit (struct mill_loop *self, struct mill_cfh *ev);
         mill_putptr (event, (ptrarg));\
     } while (0)
 
-void mill_emit (void *cfptr);
-void mill_add_child (void *cfptr, void *child);
-void mill_putptr (void *ptr, void **dst);
-void mill_cancel_children (void *cfptr);
-int mill_has_children (void *cfptr);
+void mill_coframe_init (
+    void *cfptr,
+    const struct mill_type *type,
+    void *parent,
+    struct mill_loop *loop);
+void mill_emit (
+    void *cfptr);
+void mill_add_child (
+    void *cfptr,
+    void *child);
+void mill_putptr (
+    void *ptr,
+    void **dst);
+void mill_cancel_children (
+    void *cfptr);
+int mill_has_children (
+    void *cfptr);
 
 #endif
 

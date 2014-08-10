@@ -62,15 +62,6 @@ static mill_printstack (void *cfptr)
     printf ("%s", cfh->type->name);
 }
 
-void mill_trace_go (void *cfptr)
-{
-    if (mill_trace) {
-        printf ("mill ==> go     ");
-        mill_printstack (cfptr);
-        printf ("\n");
-    }
-}
-
 void mill_trace_select (void *cfptr)
 {
     if (mill_trace) {
@@ -236,7 +227,37 @@ void mill_loop_emit (
 /*  Helpers used to implement mill keywords.                                  */
 /******************************************************************************/
 
-void mill_emit (void *cfptr)
+void mill_coframe_init (
+    void *cfptr,
+    const struct mill_type *type,
+    void *parent,
+    struct mill_loop *loop)
+{
+    struct mill_cfh *cfh;
+
+    cfh = (struct mill_cfh*) cfptr;
+
+    cfh->type = type;
+    cfh->pc = 0;
+    cfh->nextev = 0;
+    cfh->pfirst = 0;
+    cfh->plast = 0;
+    cfh->parent = parent;
+    cfh->children = 0;
+    cfh->next = 0;
+    cfh->prev = 0;
+    cfh->loop = loop;
+    if (parent)
+        mill_add_child (parent, cfh);
+    if (mill_trace) {
+        printf ("mill ==> go     ");
+        mill_printstack (cfh);
+        printf ("\n");
+    }
+}
+
+void mill_emit (
+    void *cfptr)
 {
     struct mill_cfh *cfh;
 
@@ -267,7 +288,9 @@ void mill_emit (void *cfptr)
     }
 }
 
-void mill_add_child (void *cfptr, void *child)
+void mill_add_child (
+    void *cfptr,
+    void *child)
 {
     struct mill_cfh *cfh_parent;
     struct mill_cfh *cfh_child;
@@ -284,13 +307,16 @@ void mill_add_child (void *cfptr, void *child)
 
 /* This operation is defined as a function rather than a macro
    so that 'dst' argument is not evaluated twice. */
-void mill_putptr (void *ptr, void **dst)
+void mill_putptr (
+    void *ptr,
+    void **dst)
 {
     if (dst)
         *dst = ptr; 
 }
 
-void mill_cancel_children (void *cfptr)
+void mill_cancel_children (
+    void *cfptr)
 {
     struct mill_cfh *cfh;
     struct mill_cfh *child;
