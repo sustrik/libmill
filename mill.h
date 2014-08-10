@@ -140,6 +140,14 @@ void mill_loop_emit (struct mill_loop *self, struct mill_cfh *ev);
 /*  Helpers used to implement mill keywords.                                  */
 /******************************************************************************/
 
+#define mill_syswait(pcarg)\
+    do {\
+        cf->mill_cfh.pc = (pcarg);\
+        return 0;\
+        mill_pc_##pcarg:\
+        ;\
+    } while (0)
+
 #define mill_select(pcarg)\
     {\
         cf->mill_cfh.pc = (pcarg);\
@@ -171,14 +179,6 @@ void mill_loop_emit (struct mill_loop *self, struct mill_cfh *ev);
         mill_pc2_##pcarg:\
         ;\
     }
-
-#define mill_syswait(pcarg)\
-    do {\
-        cf->mill_cfh.pc = (pcarg);\
-        return;\
-        mill_pc_##pcarg:\
-        ;\
-    } while (0)
 
 void mill_coframe_init (
     void *cfptr,
