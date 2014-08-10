@@ -1460,6 +1460,14 @@ def endselect(pc, first, hascancelclause)
     return res
 end
 
+def syswait(pc)
+    res = ""
+    res += "cf->mill_cfh.pc = #{pc};\n"
+    res += "return 0;\n"
+    res += "mill_pc_#{pc}:"
+    return res
+end
+
 for s in sections
     if s[:type] == :codef
 
@@ -1564,13 +1572,12 @@ for s in sections
                         endselect(pc, first, hascancelclause))
 
                 elsif tokens[i][0] == :syswait && $system
-                    if tokens[i + 1][0] != :braces
-                        $stderr.write "'syswait' should be followed by argument list.\n"
+                    if tokens[i + 1][0] != :semicolon
+                        $stderr.write "'syswait' should be followed by semicolon.\n"
                         exit 1
                     end
-                    replace(text, alltokens, tokens[i], "mill_syswait")
                     pc += 1
-                    insert(text, alltokens, tokens[i + 1][1] + 1, "#{pc}")
+                    replace(text, alltokens, tokens[i], syswait(pc))
 
                 elsif tokens[i][0] == :return
                     replace(text, alltokens, tokens[i], "goto mill_finally")
@@ -1651,10 +1658,10 @@ Ribosome.dot("    @{renderarg(a)}", binding)
 Ribosome.add(");", binding)
 Ribosome.dot("", binding)
 Ribosome.dot("void @{s[:name]} (", binding)
-____separate_1654____ = true
+____separate_1661____ = true
         for a in s[:args]
-if(____separate_1654____)
-    ____separate_1654____ = false
+if(____separate_1661____)
+    ____separate_1661____ = false
 else
     Ribosome.add(", ", binding)
 end
@@ -1781,10 +1788,10 @@ Ribosome.dot("    mill_handler_@{s[:name]} (&cf->mill_cfh, 0);", binding)
 Ribosome.dot("}", binding)
 Ribosome.dot("", binding)
 Ribosome.dot("void @{s[:name]} (", binding)
-____separate_1784____ = true
+____separate_1791____ = true
 for a in s[:args]
-if(____separate_1784____)
-    ____separate_1784____ = false
+if(____separate_1791____)
+    ____separate_1791____ = false
 else
     Ribosome.add(", ", binding)
 end
