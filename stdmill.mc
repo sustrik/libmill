@@ -43,6 +43,7 @@
 /* msleep                                                                     */
 /******************************************************************************/
 
+/* Forward declarations. */
 static void msleep_timer_cb (
     uv_timer_t *timer);
 static void msleep_close_cb (
