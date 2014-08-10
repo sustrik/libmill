@@ -139,6 +139,9 @@ void mill_loop_emit (struct mill_loop *self, struct mill_cfh *ev);
 /*  Helpers used to implement mill keywords.                                  */
 /******************************************************************************/
 
+#define mill_typeof(expr)\
+    ((expr) ? (((struct mill_cfh*) expr)->type) : 0)
+
 #define mill_syswait(pcarg)\
     do {\
         cf->mill_cfh.pc = (pcarg);\
@@ -149,20 +152,7 @@ void mill_loop_emit (struct mill_loop *self, struct mill_cfh *ev);
 
 #define mill_select(pcarg)\
     {\
-        mill_syswait (pcarg);\
-        if (0) {
-
-#define mill_case(pcarg, typearg)\
-            goto mill_pc2_##pcarg;\
-        }\
-        else if (event &&\
-              ((struct mill_cfh*) event)->type == &mill_type_##typearg) {\
-            mill_coframe_term (event);
-
-#define mill_cancel(pcarg)\
-            goto mill_pc2_##pcarg;\
-        }\
-        else if (event == 0) {
+        mill_syswait (pcarg);
 
 #define mill_endselect(pcarg)\
             goto mill_pc2_##pcarg;\

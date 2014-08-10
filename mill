@@ -1036,18 +1036,31 @@ def apply_offset(tokens, start, offset)
     end
 end
 
-# Replace specific token in the text by a different text.
-def replace(text, tokens, token, newtext)
-    text[token[1]..token[2]] = newtext
-    offset = newtext.size - (token[2] - token[1] + 1)
-    apply_offset(tokens, token[1], offset)
-end
-
 # Replace specific characters in the text by a different text.
 def replacechars(text, tokens, start, stop, newtext)
+
+    # Determine the offset of the token in the line.
+    pos = start
+    while pos != 0 && text[pos] != ?\n
+       pos = pos - 1
+    end
+    if pos == 0
+        offset = start
+    else
+        offset = start - pos - 1
+    end
+
+    # Indent all lines in the text except for the first one by the offset.
+    newtext = newtext.gsub("\n", "\n" + (" " * offset))
+
     text[start..stop] = newtext
     offset = newtext.size - (stop - start + 1)
     apply_offset(tokens, start, offset)
+end
+
+# Replace specific token in the text by a different text.
+def replace(text, tokens, token, newtext)
+    replacechars(text, tokens, token[1], token[2], newtext)
 end
 
 # Insert specified string at the give position in the text.
@@ -1393,7 +1406,24 @@ def epilogue(lastpc)
     res += "    return 0;\n"
     res += "mill_pc_#{lastpc + 2}:\n"
     res += "    assert (!event);\n"
-    return res;
+    return res
+end
+
+def expand_case(pc, type)
+    res = ""
+    res += "    goto mill_pc2_#{pc};\n"
+    res += "}\n"
+    res += "else if (mill_typeof(event) == &mill_type_#{type}) {\n"
+    res += "    mill_coframe_term (event);"
+    return res
+end
+
+def expand_cancel(pc)
+    res = ""
+    res += "    goto mill_pc2_#{pc};\n"
+    res += "}\n"
+    res += "else if (event == 0) {"
+    return res
 end
 
 for s in sections
@@ -1460,7 +1490,7 @@ for s in sections
                         exit 1
                     end
                     pc += 1
-                    replace(text, alltokens, tokens[i], "mill_select(#{pc})")
+                    replace(text, alltokens, tokens[i], "mill_select(#{pc})\nif (0) {")
                     replacechars(text, alltokens, tokens[i + 1][1], tokens[i + 1][1], "")
                     replacechars(text, alltokens, tokens[i + 1][2], tokens[i + 1][2], "mill_endselect(#{pc})")
                     subtokens = tokens[i + 1][3]
@@ -1475,15 +1505,17 @@ for s in sections
                                 $stderr.write "'case' keyword should be followed by a coroutine name and a colon.\n"
                                 exit 1
                             end
-                            replace(text, alltokens, subtokens[j], "mill_case(#{pc},")
-                            replace(text, alltokens, subtokens[j + 2], ")")
+                            replacechars(text, alltokens,
+                                subtokens[j][1], subtokens[j + 2][2],
+                                expand_case(pc, text[subtokens[j + 1][1]..subtokens[j + 1][2]]))
                         elsif subtokens [j][0] == :cancel
                             if subtokens[j + 1][0] != :colon
                                 $stderr.write "'cancel' keyword should be followed by a colon.\n"
                                 exit 1
                             end
-                            replace(text, alltokens, subtokens[j], "mill_cancel(#{pc})")
-                            replace(text, alltokens, subtokens[j + 1], "")
+                            replacechars(text, alltokens,
+                                subtokens[j][1], subtokens[j + 1][2],
+                                expand_cancel(pc))
                         end
                     end
 
@@ -1575,10 +1607,10 @@ Ribosome.dot("    @{renderarg(a)}", binding)
 Ribosome.add(");", binding)
 Ribosome.dot("", binding)
 Ribosome.dot("void @{s[:name]} (", binding)
-____separate_1578____ = true
+____separate_1610____ = true
         for a in s[:args]
-if(____separate_1578____)
-    ____separate_1578____ = false
+if(____separate_1610____)
+    ____separate_1610____ = false
 else
     Ribosome.add(", ", binding)
 end
@@ -1705,10 +1737,10 @@ Ribosome.dot("    mill_handler_@{s[:name]} (&cf->mill_cfh, 0);", binding)
 Ribosome.dot("}", binding)
 Ribosome.dot("", binding)
 Ribosome.dot("void @{s[:name]} (", binding)
-____separate_1708____ = true
+____separate_1740____ = true
 for a in s[:args]
-if(____separate_1708____)
-    ____separate_1708____ = false
+if(____separate_1740____)
+    ____separate_1740____ = false
 else
     Ribosome.add(", ", binding)
 end
