@@ -106,30 +106,6 @@ struct mill_cfh {
 };
 
 /******************************************************************************/
-/* Prologues and epilogues for generated functions.                           */
-/******************************************************************************/
-
-#define mill_handlerimpl_prologue(name)\
-    struct mill_cf_##name *cf;\
-    \
-    cf = (struct mill_cf_##name*) cfptr;
-
-#define mill_handlerimpl_cancel(name, pcarg)\
-    goto mill_finally;\
-    mill_pc_##pcarg:
-
-#define mill_handlerimpl_epilogue(name, pcarg, cancelpcarg)\
-    mill_finally:\
-    mill_cancel_children (cf);\
-    cf->mill_cfh.pc = (pcarg);\
-    mill_pc_##pcarg:\
-    if (mill_has_children (cf))\
-        return 0;\
-    mill_emit (cf);\
-    cf->mill_cfh.pc = (cancelpcarg);\
-    return 0;
-
-/******************************************************************************/
 /* The event loop.                                                            */
 /******************************************************************************/
 
