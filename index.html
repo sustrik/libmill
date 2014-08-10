@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Mill</title>
+  <style>
+  body {font-family:sans-serif;} 
+  #toplist {
+    padding-left: 0px;
+  }
+  #toplist li {
+    display: inline;
+    list-style-type: none;
+    padding-right: 15px;
+  }
+  a {color:#000000;}
+  </style>
+</head>
+<body>
+<div style="width:50em">
+
+<h1>Mill - C language with coroutines</h1>
+
+<b>
+<ul id='toplist'>
+<li><a href="index.html">Home</a></li>
+<li><a href="download.html">Download</a></li>
+<li><a href="documentation.html">Documentation</a></li>
+</ul>
+</b>
+
+<p>Mill is a preprocessor that adds coroutine support to C language.</p>
+
+</p>The result of preprocessing are standard C source and header files that can
+be added directly to your C project.</p>
+
+<p>The project also contains library of elementary coroutines (timers,
+network I/O et c.) that can be used to build more complex functionality.</p>
+
+<h3>Example</h3>
+
+<pre>
+#include &lt;stdio.h&gt;
+#include &lt;stddef.h&gt;
+#include &lt;stdmill.h&gt;
+
+coroutine test ()
+{
+    go msleep (NULL, 1000);
+    go msleep (NULL, 2000);
+
+    while (1) {
+        select {
+        case msleep:
+            printf ("Timer elapsed!\n");
+        }
+    }
+}
+
+int main ()
+{
+    test ();
+    return 0;
+}
+</pre>
+
+<p>To run it:</p>
+
+<pre>
+$ mill test.mc
+$ gcc -o test test.c -lstdmill -luv
+$ ./test
+</pre>
+
+<p>Note that the two 'msleep' coroutines are running in parallel with the main
+thread!</p>
+
+<h3>License</h3>
+
+<p>Mill is licensed under MIT/X11 license.</p>
+
+</div>
+</body>
+</html>
