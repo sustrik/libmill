@@ -480,9 +480,12 @@ end
 def beginselect(pc)
     res = ""
     res += "{\n"
+    res += "/* Wait for next event. */\n"
     res += "cf->mill_cfh.pc = #{pc};\n"
     res += "return 0;\n"
-    res += "mill_pc_#{pc}:"
+    res += "mill_pc_#{pc}:\n"
+    res += "\n"
+    res += "/* Choose an action to take depending on the type of the event. */"
     return res;
 end
 
@@ -494,12 +497,16 @@ def endselect(pc, first, hascancelclause)
         res += "else "
     end
     if !hascancelclause
-        res += "if (event == 0)\n"
+        res += "if (event == 0) {\n"
+        res += "    /* Default cancel event handler. */\n"
         res += "    goto mill_finally;\n"
-        res += "else"
+        res += "}\n"
+        res += "else "
     end
-    res += "\n"
+    res += "{\n"
+    res += "    /* The event can't be processed at the moment. */\n"
     res += "    return -1;\n"
+    res += "}\n"
     res += "mill_endselect_#{pc}:;\n"
     res += "}"
     return res
@@ -846,12 +853,17 @@ end
 .    struct mill_loop loop;
 .
 .    mill_loop_init (&loop);
+.
+.    /* Execute initial part of the coroutine. */
 .    mill_go_@{s[:name]} (&mill_type_@{s[:name]}, &loop, 0
 for a in s[:args]
 .    /+, @{a[:name]}
 end
 ./+);
+.
+.    /* Run the event loop until the coroutine exits. */
 .    mill_loop_run (&loop);
+.
 .    mill_loop_term (&loop);
 .}
 .

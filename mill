@@ -1441,9 +1441,12 @@ end
 def beginselect(pc)
     res = ""
     res += "{\n"
+    res += "/* Wait for next event. */\n"
     res += "cf->mill_cfh.pc = #{pc};\n"
     res += "return 0;\n"
-    res += "mill_pc_#{pc}:"
+    res += "mill_pc_#{pc}:\n"
+    res += "\n"
+    res += "/* Choose an action to take depending on the type of the event. */"
     return res;
 end
 
@@ -1455,12 +1458,16 @@ def endselect(pc, first, hascancelclause)
         res += "else "
     end
     if !hascancelclause
-        res += "if (event == 0)\n"
+        res += "if (event == 0) {\n"
+        res += "    /* Default cancel event handler. */\n"
         res += "    goto mill_finally;\n"
-        res += "else"
+        res += "}\n"
+        res += "else "
     end
-    res += "\n"
+    res += "{\n"
+    res += "    /* The event can't be processed at the moment. */\n"
     res += "    return -1;\n"
+    res += "}\n"
     res += "mill_endselect_#{pc}:;\n"
     res += "}"
     return res
@@ -1664,10 +1671,10 @@ Ribosome.dot("    @{renderarg(a)}", binding)
 Ribosome.add(");", binding)
 Ribosome.dot("", binding)
 Ribosome.dot("void @{s[:name]} (", binding)
-____separate_1667____ = true
+____separate_1674____ = true
         for a in s[:args]
-if(____separate_1667____)
-    ____separate_1667____ = false
+if(____separate_1674____)
+    ____separate_1674____ = false
 else
     Ribosome.add(", ", binding)
 end
@@ -1803,10 +1810,10 @@ Ribosome.dot("    mill_handler_@{s[:name]} (&cf->mill_cfh, 0);", binding)
 Ribosome.dot("}", binding)
 Ribosome.dot("", binding)
 Ribosome.dot("void @{s[:name]} (", binding)
-____separate_1806____ = true
+____separate_1813____ = true
 for a in s[:args]
-if(____separate_1806____)
-    ____separate_1806____ = false
+if(____separate_1813____)
+    ____separate_1813____ = false
 else
     Ribosome.add(", ", binding)
 end
@@ -1817,12 +1824,17 @@ Ribosome.dot("{", binding)
 Ribosome.dot("    struct mill_loop loop;", binding)
 Ribosome.dot("", binding)
 Ribosome.dot("    mill_loop_init (&loop);", binding)
+Ribosome.dot("", binding)
+Ribosome.dot("    /* Execute initial part of the coroutine. */", binding)
 Ribosome.dot("    mill_go_@{s[:name]} (&mill_type_@{s[:name]}, &loop, 0", binding)
 for a in s[:args]
 Ribosome.add(", @{a[:name]}", binding)
 end
 Ribosome.add(");", binding)
+Ribosome.dot("", binding)
+Ribosome.dot("    /* Run the event loop until the coroutine exits. */", binding)
 Ribosome.dot("    mill_loop_run (&loop);", binding)
+Ribosome.dot("", binding)
 Ribosome.dot("    mill_loop_term (&loop);", binding)
 Ribosome.dot("}", binding)
 Ribosome.dot("", binding)
