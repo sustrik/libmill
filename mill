@@ -1492,7 +1492,7 @@ for s in sections
                     end
                     replace(text, alltokens, tokens[i], "mill_syswait")
                     pc += 1
-                    insert(text, alltokens, tokens[i + 1][1] + 1, "#{pc}, ")
+                    insert(text, alltokens, tokens[i + 1][1] + 1, "#{pc}")
 
                 elsif tokens[i][0] == :return
                     replace(text, alltokens, tokens[i], "goto mill_finally")

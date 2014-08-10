@@ -172,12 +172,12 @@ void mill_loop_emit (struct mill_loop *self, struct mill_cfh *ev);
         ;\
     }
 
-#define mill_syswait(pcarg, ptrarg)\
+#define mill_syswait(pcarg)\
     do {\
         cf->mill_cfh.pc = (pcarg);\
         return;\
         mill_pc_##pcarg:\
-        mill_putptr (event, (ptrarg));\
+        ;\
     } while (0)
 
 void mill_coframe_init (
@@ -190,9 +190,6 @@ void mill_emit (
 void mill_add_child (
     void *cfptr,
     void *child);
-void mill_putptr (
-    void *ptr,
-    void **dst);
 void mill_cancel_children (
     void *cfptr);
 int mill_has_children (

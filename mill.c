@@ -305,16 +305,6 @@ void mill_add_child (
     cfh_parent->children = cfh_child;
 }
 
-/* This operation is defined as a function rather than a macro
-   so that 'dst' argument is not evaluated twice. */
-void mill_putptr (
-    void *ptr,
-    void **dst)
-{
-    if (dst)
-        *dst = ptr; 
-}
-
 void mill_cancel_children (
     void *cfptr)
 {
