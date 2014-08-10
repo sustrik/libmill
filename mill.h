@@ -142,14 +142,6 @@ void mill_loop_emit (struct mill_loop *self, struct mill_cfh *ev);
 #define mill_typeof(expr)\
     ((expr) ? (((struct mill_cfh*) expr)->type) : 0)
 
-#define mill_syswait(pcarg)\
-    do {\
-        cf->mill_cfh.pc = (pcarg);\
-        return 0;\
-        mill_pc_##pcarg:\
-        ;\
-    } while (0)
-
 void mill_coframe_init (
     void *cfptr,
     const struct mill_type *type,
