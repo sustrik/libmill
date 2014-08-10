@@ -150,9 +150,7 @@ void mill_loop_emit (struct mill_loop *self, struct mill_cfh *ev);
 
 #define mill_select(pcarg)\
     {\
-        cf->mill_cfh.pc = (pcarg);\
-        return 0;\
-        mill_pc_##pcarg:\
+        mill_syswait (pcarg);\
         if (0) {
 
 #define mill_case(pcarg, typearg)\
