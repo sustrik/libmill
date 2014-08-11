@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Mill</title>
+  <style>
+  body {font-family:sans-serif;} 
+  #toplist {
+    padding-left: 0px;
+  }
+  #toplist li {
+    display: inline;
+    list-style-type: none;
+    padding-right: 15px;
+  }
+  a {color:#000000;}
+  </style>
+</head>
+<body>
+<div style="width:50em">
+
+<h1>Mill - C language with coroutines</h1>
+
+<b>
+<ul id='toplist'>
+<li><a href="index.html">Home</a></li>
+<li><a href="download.html">Download</a></li>
+<li><a href="documentation.html">Documentation</a></li>
+<li><a href="development.html">Development</a></li>
+<li><a href="community.html">Community</a></li>
+</ul>
+</b>
+
+<h2>Development</h2>
+
+<h3>Source code</h3>
+
+<p>Source code is hosted on GitHub:</p>
+<p><a href="https://github.com/sustrik/mill">https://github.com/sustrik/mill</a></p>
+
+<p>Source code of this website is located in gh-pages branch:</p>
+<p><a href="https://github.com/sustrik/mill/tree/gh-pages">https://github.com/sustrik/mill/tree/gh-pages</a></p>
+
+<h3>Build</h3>
+
+<p>If developing mill (as opposed to just using it) build it the following way.</p>
+
+<p>First, install these prerequisites:</p>
+
+<ul>
+<li>Install Ruby
+<li>Install libuv from here: <a href="https://github.com/joyent/libuv">https://github.com/joyent/libuv</a>
+<li>Install ribosome from here: <a href="https://github.com/sustrik/ribosome">https://github.com/sustrik/ribosome</a>
+<li>Install Ragel from here: <a href="http://www.complang.org/ragel/">http://www.complang.org/ragel/</a>
+</ul>
+
+<p>Then execute the following sequence commands:</p>
+
+<pre>
+$ ./autogen.sh
+$ ./configure --enable-gen
+$ make
+$ sudo make install
+</pre>
+
+<h3>Bug tracker</h3>
+
+<p>Use GitHub bug tracker to report problems with nanomsg:</p>
+<p><a href="https://github.com/sustrik/mill/issues">https://github.com/sustrik/mill/issues</a></p>
+
+<h3>Contributing</h3>
+
+<p>To contribute to the project send your patch to the mailing list or, alternatively, send a GitHub pull request. In either case you have to state that your patch is submitted under MIT/X11 license, so that we can incorporate it into the mainline codebase.</p>
+
+<p>If you make a substantial contribution to a file, add your copyright to the file header. Irrespective of whether you do so, your name will be added to the AUTHORS file to indicate you own copyright to a part of the codebase.</p>
+
+</div>
+</body>
+</html>
