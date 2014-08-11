@@ -10,8 +10,6 @@ added directly to your C project.
 The project also contains library of elementary coroutines (timers,
 network I/O et c.) that can be used to build more complex functionality.
 
-WARNING: THIS PROJECT IS UNDER DEVELOPMENT! DO NOT USE YET!
-
 ## Prerequisites
 
 * Install Ruby

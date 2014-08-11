@@ -146,7 +146,7 @@ coroutine tcpsocket_term (
     self->recvcfptr = cf;
     uv_close ((uv_handle_t*) &self->s, tcpsocket_close_cb);
 
-    /* Wait till socket is closed. In the meanime ignore cancel requests. */
+    /* Wait till socket is closed. In the meantime ignore cancel requests. */
     while (1) {
         syswait;
         if (event == tcpsocket_close_cb)
