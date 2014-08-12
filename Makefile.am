@@ -22,10 +22,10 @@
 
 dist_bin_SCRIPTS = mill
 
-include_HEADERS = mill.h stdmill.h
+include_HEADERS = stdmill.h
 
 lib_LIBRARIES = libstdmill.a
-libstdmill_a_SOURCES = stdmill.c mill.c
+libstdmill_a_SOURCES = stdmill.c
 
 stdmill.c: stdmill.mc stdmill.h mill
 	./mill --system $<
@@ -75,3 +75,4 @@ gen/clexer.rb:
 CLEANFILES = stdmill.h stdmill.c $(check_CLEANFILES)
 
 endif
+
