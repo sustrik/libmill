@@ -79,8 +79,8 @@ maintain.</p>
 <p>Following commands will generate foo.h from foo.mh and foo.c from foo.mc:</p>
 
 <pre>
-$ mill foo.mh
-$ mill foo.mc
+    $ mill foo.mh
+    $ mill foo.mc
 </pre>
 
 <h3>Defining a coroutine</h3>
@@ -89,10 +89,10 @@ $ mill foo.mc
 syntax of standard C function, except that it has no return value:</p>
 
 <pre>
-coroutine foo (int a, const char *b, int *result)
-{
-    *result = a + b;
-}
+    coroutine foo (int a, const char *b, int *result)
+    {
+        *result = a + b;
+    }
 </pre>
 
 <p>Mill is a simple preprocessor that doesn't do full semantic analysis of the
@@ -102,13 +102,13 @@ the parser, you must place all the local variable declarations to the beginning
 of the coroutine. The declarations must be followed by "endvars" keyword:</p>
 
 <pre>
-coroutine foo ()
-{
-    int i = 0;
-    endvars;
+    coroutine foo ()
+    {
+        int i = 0;
+        endvars;
 
-    i = i + 1
-}
+        i = i + 1
+    }
 </pre>
 
 <p>WARNING: If you put local variable declarations elsewhere, mill won't
@@ -122,7 +122,7 @@ in progress.</p>
 different coroutine:</p>
 
 <pre>
-coroutine foo = bar;
+    coroutine foo = bar;
 </pre>
 
 <p>While the construct looks a bit superfluous, it is actually quite important
@@ -134,15 +134,15 @@ in subsequent sections.</p>
 <p>Use "go" keyword to launch a coroutine:</p>
 
 <pre>
-coroutine foo ()
-{
-    printf ("Hello, world!\n");
-}
+    coroutine foo ()
+    {
+        printf ("Hello, world!\n");
+    }
 
-coroutine bar ()
-{
-    go foo();
-}
+    coroutine bar ()
+    {
+        go foo();
+    }
 </pre>
 
 <p>The coroutine will be executed in parallel with the parent coroutine.</p>
@@ -152,16 +152,16 @@ coroutines. If you want to launch a coroutine from standard C function you
 have to do so in synchornous manner:</p>
 
 <pre>
-coroutine foo ()
-{
-    printf ("Hello, world!\n");
-}
+    coroutine foo ()
+    {
+        printf ("Hello, world!\n");
+    }
 
-int main ()
-{
-    foo ();
-    return 0;
-}
+    int main ()
+    {
+        foo ();
+        return 0;
+    }
 </pre>
 
 <p>In this case the coroutine won't execute in parallel with the parent 
@@ -173,18 +173,18 @@ finished.</p>
 <p>Use "select" keyword to wait for termination of child coroutines:</p>
 
 <pre>
-coroutine foo ()
-{
-}
-
-coroutine bar ()
-{
-    go foo ();
-    select {
-    case foo:
-        printf ("foo is done\n");
+    coroutine foo ()
+    {
     }
-}
+
+    coroutine bar ()
+    {
+        go foo ();
+        select {
+        case foo:
+            printf ("foo is done\n");
+        }
+    }
 </pre>
 
 <p>Note that you are waiting for a specific *type* of coroutine rather than for
@@ -192,19 +192,19 @@ specific coroutine invocation. Thus, in the following example "select" waits
 for termination of any of the child coroutines:</p>
 
 <pre>
-coroutine bar ()
-{
-    go foo ();
-    go foo ();
-    go foo ();
+    coroutine bar ()
+    {
+        go foo ();
+        go foo ();
+        go foo ();
 
-    while (1) {
-        select {
-        case foo:
-            printf ("foo is done!\n");
+        while (1) {
+            select {
+            case foo:
+                printf ("foo is done!\n");
+            }
         }
     }
-}
 </pre>
 
 <h3>Returning data from coroutines</h3>
@@ -213,51 +213,51 @@ coroutine bar ()
 parameters and they should work as expected:</p>
 
 <pre>
-coroutine foo (int *result)
-{
-    *result = 1;
-}
-
-coroutine bar ()
-{
-    int i;
-    endvars;
-
-    go foo (&i);
-
-    select {
-    case foo:
-        assert (i == 1);
+    coroutine foo (int *result)
+    {
+        *result = 1;
     }
-}
+
+    coroutine bar ()
+    {
+        int i;
+        endvars;
+
+        go foo (&i);
+
+        select {
+        case foo:
+            assert (i == 1);
+        }
+    }
 </pre>
 
 <p>There's a problem though if multiple coroutines write the result into a
 single location:</p>
 
 <pre>
-coroutine foo (int *result, int i)
-{
-    *result = i;
-}
-
-coroutine bar ()
-{
-    int i;
-    endvars;
-
-    go foo (&i, 1);
-    go foo (&i, 2);
-
-    select {
-
-    // This clause may be invoked because foo(1) have ended, thus i == 1.
-    case foo: 
-
-        // foo(2) ends here and stores value 2 into i.
-        assert (i == 1); // Assert fails.
+    coroutine foo (int *result, int i)
+    {
+        *result = i;
     }
-}
+
+    coroutine bar ()
+    {
+        int i;
+        endvars;
+
+        go foo (&i, 1);
+        go foo (&i, 2);
+
+        select {
+
+        // This clause may be invoked because foo(1) have ended, thus i == 1.
+        case foo: 
+
+            // foo(2) ends here and stores value 2 into i.
+            assert (i == 1); // Assert fails.
+        }
+    }
 </pre>
 
 <p>To address this problem "out" keyword is introduced. The coroutine argument
@@ -266,27 +266,27 @@ coroutines) and copied to the caller-specified destination immediately before
 coroutine termination event is processed by the caller:</p>
 
 <pre>
-coroutine foo (out int *result, int i)
-{
-    *result = i;
-}
+    coroutine foo (out int *result, int i)
+    {
+        *result = i;
+    }
 
-coroutine bar ()
-{
-    int i;
-    endvars;
+    coroutine bar ()
+    {
+        int i;
+        endvars;
 
-    go foo (&i, 1);
-    go foo (&i, 2);
-    go foo (&i, 3);
+        go foo (&i, 1);
+        go foo (&i, 2);
+        go foo (&i, 3);
 
-    while (1) {
-        select {
-        case foo:
-            printf ("coroutine foo returned %d\n", i);
+        while (1) {
+            select {
+            case foo:
+                printf ("coroutine foo returned %d\n", i);
+            }
         }
     }
-}
 </pre>
 
 <h3>Canceling coroutines</h3>
@@ -306,21 +306,21 @@ statement, the interception can be done by simply adding a 'cancel' clause to
 the statement:</p>
 
 <pre>
-coroutine foo (out char *result)
-{
-    result = malloc (14);
-    memcpy (result, "Hello, world!", 14);
+    coroutine foo (out char *result)
+    {
+        result = malloc (14);
+        memcpy (result, "Hello, world!", 14);
 
-    go msleep (NULL, 1000);
+        go msleep (NULL, 1000);
 
-    select {
-    case msleep:
-        return;
-    cancel:
-        free (result);
-        return;
+        select {
+        case msleep:
+            return;
+        cancel:
+            free (result);
+            return;
+        }
     }
-}
 </pre>
 
 <p>There's one more cancelation scenario: The child coroutine may have been
@@ -331,13 +331,13 @@ parameters. It can be done by adding the 'cancel' clause to the coroutine
 itself:</p>
 
 <pre>
-coroutine foo (out char *result)
-{
-    result = malloc (14);
-    memcpy (result, "Hello, world!", 14);
-cancel:
-    free (result);
-}
+    coroutine foo (out char *result)
+    {
+        result = malloc (14);
+        memcpy (result, "Hello, world!", 14);
+    cancel:
+        free (result);
+    }
 </pre>
 
 <h3>Comment on memory management</h3>
@@ -352,12 +352,12 @@ launching arbitrary number of coroutines in a loop without selecting them can
 lead to memory exhaustion:</p>
 
 <pre>
-coroutine foo ()
-{
-    while (1) {
-        go msleep (NULL, 1000);
+    coroutine foo ()
+    {
+        while (1) {
+            go msleep (NULL, 1000);
+        }
     }
-}
 </pre>
 
 <h3>Debugging</h3>
@@ -368,25 +368,25 @@ tracing. You can switch it on by invoking "_mill_trace();" function.</p>
 <p>The tracing output looks like this:</p>
 
 <pre>
-mill ==> go     test
-mill ==> go     test/fx1
-mill ==> go     test/fx1/msleep
-mill ==> go     test/fx2
-mill ==> go     test/fx2/msleep
-mill ==> return test/fx1/msleep
-mill ==> select test/fx1/msleep
-mill ==> cancel test/fx2
-mill ==> cancel test/fx2/msleep
-mill ==> return test/fx2/msleep
-mill ==> return test/fx2
-mill ==> return test
+    mill ==> go     test
+    mill ==> go     test/fx1
+    mill ==> go     test/fx1/msleep
+    mill ==> go     test/fx2
+    mill ==> go     test/fx2/msleep
+    mill ==> return test/fx1/msleep
+    mill ==> select test/fx1/msleep
+    mill ==> cancel test/fx2
+    mill ==> cancel test/fx2/msleep
+    mill ==> return test/fx2/msleep
+    mill ==> return test/fx2
+    mill ==> return test
 </pre>
 
 <p>Each line contains an operation and the coroutine's backtrace. So, for
 example:</p>
 
 <pre>
-mill ==> return test/fx2
+    mill ==> return test/fx2
 </pre>
 
 <p>Means that coroutine "fx2" invoked from top-level coroutine "test" have
