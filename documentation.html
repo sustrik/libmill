@@ -392,6 +392,18 @@ example:</p>
 <p>Means that coroutine "fx2" invoked from top-level coroutine "test" have
 finished execution.</p>
 
+<h3>Avoiding the dependency on libstdmill.so</h3>
+
+<p>If you want your users not to have to install Mill runtime library, you
+can simply add the source files (stdmill.h and stdmill.c) directly to your
+project.<p>
+
+<p>However, keep in mind that in such case you should set your compiler's
+include path in such a way that it points to the location of stdmill.h file.</p>
+
+<p>Also consider that although the above will remove dependency on
+libstdmill.so you will still need to install libuv.so.</p>
+
 </div>
 </body>
 </html>
