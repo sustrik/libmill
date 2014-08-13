@@ -27,12 +27,6 @@ include_HEADERS = stdmill.h
 lib_LIBRARIES = libstdmill.a
 libstdmill_a_SOURCES = stdmill.c
 
-stdmill.c: stdmill.mc stdmill.h mill
-	./mill --system $<
-
-stdmill.h: stdmill.mh mill
-	./mill --system $<
-
 check_PROGRAMS = \
     tests/tcpsocket \
     tests/pending \
@@ -63,6 +57,14 @@ mill: gen/mill.dna gen/clexer.rb
 gen/clexer.rb: gen/clexer.rl
 	ragel -R $< -o $@
 
+stdmill.c: gen/stdmill.mc mill
+	./mill --system $<
+	mv gen/stdmill.c .
+
+stdmill.h: gen/stdmill.mh mill
+	./mill --system $<
+	mv gen/stdmill.h .
+
 CLEANFILES = mill gen/clexer.rb stdmill.h stdmill.c $(check_CLEANFILES)
 
 else
@@ -72,7 +74,7 @@ mill: gen/mill.dna gen/clexer.rb
 
 gen/clexer.rb:
 
-CLEANFILES = stdmill.h stdmill.c $(check_CLEANFILES)
+CLEANFILES = $(check_CLEANFILES)
 
 endif
 
