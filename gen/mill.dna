@@ -222,6 +222,7 @@ sections = []
 ################################################################################
 
 i = 0
+lastpos = 0
 loop do
 
     # Find the start of next coroutine.
@@ -231,6 +232,7 @@ loop do
     cotype = nil
     cotext = nil
     cotokens = nil
+    cpos = lastpos
 
     loop do
 
@@ -247,6 +249,7 @@ loop do
             cotype = :coroutine
             cotext = text[tokens[i][1]..tokens[i + 3][2]]
             cotokens = tokens[i..i + 3]
+            lastpos = tokens[i + 3][2] + 1
             i += 4
             break;
         end
@@ -260,6 +263,7 @@ loop do
             cotype = :alias
             cotext = text[tokens[i][1]..tokens[i + 4][2]]
             cotokens = tokens[i..i + 4]
+            lastpos = tokens[i + 4][2] + 1
             i += 5
             break;
         end
@@ -271,7 +275,7 @@ loop do
     if cstart != cstop
         sections << {
             :type => :rawc,
-            :text => text[tokens[cstart][1]..tokens[cstop][1] - 1],
+            :text => text[cpos..tokens[cstop][1] - 1],
             :tokens => tokens[cstart..cstop - 1]
         }
         apply_offset(sections.last[:tokens], 0, -sections.last[:tokens][0][1])
