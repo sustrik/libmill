@@ -31,7 +31,6 @@ coroutine test ()
 
 int main ()
 {
-    _mill_trace ();
     test();
     assert (counter == 0);
 }
