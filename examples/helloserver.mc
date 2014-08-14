@@ -1,4 +1,8 @@
 
+/* This example is a TCP server application that accepts connections and
+   sends "Hello, world!" to each of them. Afterwards it closes the connection.
+   Use telnet to connect to it: "telnet 127.0.0.1 7000". */
+
 #include <stdmill.h>
 #include <assert.h>
 #include <stdlib.h>
