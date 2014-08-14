@@ -1664,10 +1664,6 @@ Ribosome.dot("", binding)
     if s[:type] == :codecl
 Ribosome.dot("extern const struct mill_type mill_type_@{s[:name]};", binding)
 Ribosome.dot("", binding)
-Ribosome.dot("int mill_handler_@{s[:name]} (void *cfptr, void *event);", binding)
-Ribosome.dot("", binding)
-Ribosome.dot("void mill_output_@{s[:name]} (void *cfptr);", binding)
-Ribosome.dot("", binding)
 Ribosome.dot("void mill_go_@{s[:name]} (", binding)
 Ribosome.dot("    const struct mill_type *type,", binding)
 Ribosome.dot("    struct mill_loop *loop,", binding)
@@ -1679,10 +1675,10 @@ Ribosome.dot("    @{renderarg(a)}", binding)
 Ribosome.add(");", binding)
 Ribosome.dot("", binding)
 Ribosome.dot("void @{s[:name]} (", binding)
-____separate_1682____ = true
+____separate_1678____ = true
         for a in s[:args]
-if(____separate_1682____)
-    ____separate_1682____ = false
+if(____separate_1678____)
+    ____separate_1678____ = false
 else
     Ribosome.add(", ", binding)
 end
@@ -1728,7 +1724,7 @@ Ribosome.dot("    @{a[:type]} *mill_out_@{a[:name]}@{a[:postfix]};", binding)
         end
 Ribosome.dot("};", binding)
 Ribosome.dot("", binding)
-Ribosome.dot("int mill_handler_@{s[:name]} (void *cfptr, void *event)", binding)
+Ribosome.dot("static int mill_handler_@{s[:name]} (void *cfptr, void *event)", binding)
 Ribosome.dot("{", binding)
 Ribosome.dot("    struct mill_cf_@{s[:name]} *cf;", binding)
 Ribosome.dot("", binding)
@@ -1762,7 +1758,7 @@ Ribosome.dot("    cf->mill_cfh.pc = -1;", binding)
 Ribosome.dot("    return 0;", binding)
 Ribosome.dot("}", binding)
 Ribosome.dot("", binding)
-Ribosome.dot("void mill_output_@{s[:name]} (void *cfptr)", binding)
+Ribosome.dot("static void mill_output_@{s[:name]} (void *cfptr)", binding)
 Ribosome.dot("{", binding)
 Ribosome.dot("    struct mill_cf_@{s[:name]} *cf;", binding)
 Ribosome.dot("", binding)
@@ -1818,10 +1814,10 @@ Ribosome.dot("    mill_handler_@{s[:name]} (&cf->mill_cfh, 0);", binding)
 Ribosome.dot("}", binding)
 Ribosome.dot("", binding)
 Ribosome.dot("void @{s[:name]} (", binding)
-____separate_1821____ = true
+____separate_1817____ = true
 for a in s[:args]
-if(____separate_1821____)
-    ____separate_1821____ = false
+if(____separate_1817____)
+    ____separate_1817____ = false
 else
     Ribosome.add(", ", binding)
 end

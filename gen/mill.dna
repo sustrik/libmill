@@ -703,10 +703,6 @@ for s in sections
     if s[:type] == :codecl
 .extern const struct mill_type mill_type_@{s[:name]};
 .
-.int mill_handler_@{s[:name]} (void *cfptr, void *event);
-.
-.void mill_output_@{s[:name]} (void *cfptr);
-.
 .void mill_go_@{s[:name]} (
 .    const struct mill_type *type,
 .    struct mill_loop *loop,
@@ -762,7 +758,7 @@ for s in sections
         end
 .};
 .
-.int mill_handler_@{s[:name]} (void *cfptr, void *event)
+.static int mill_handler_@{s[:name]} (void *cfptr, void *event)
 .{
 .    struct mill_cf_@{s[:name]} *cf;
 .
@@ -796,7 +792,7 @@ end
 .    return 0;
 .}
 .
-.void mill_output_@{s[:name]} (void *cfptr)
+.static void mill_output_@{s[:name]} (void *cfptr)
 .{
 .    struct mill_cf_@{s[:name]} *cf;
 .
