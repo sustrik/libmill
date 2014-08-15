@@ -295,36 +295,6 @@ loop do
 end
 
 ################################################################################
-#  Process raw C code. There's nothing to do except replacing coroutines       #
-#  by the corresponding C structs.                                             #
-################################################################################
-
-begin
-    def expand_coroutines(text, alltokens, tokens)
-        for i in 0..tokens.size - 1
-            if tokens[i][0] == :coroutine
-                if tokens[i + 1][0] != :identifier
-                    $syserr.write "'coroutine' keyword should be followed by the coroutine name.\n"
-                    exit 1
-                end
-                name = text[tokens[i + 1][1]..tokens[i + 1][2]]
-                replace(text, alltokens, tokens[i], "struct mill_coroutine_#{name}")
-                replace(text, alltokens, tokens[i + 1], "")
-            end
-            if tokens[i][3] != nil
-                expand_coroutines(text, alltokens, tokens[i][3])
-            end
-        end
-    end
-
-    for s in sections
-        if s[:type] == :rawc
-            expand_coroutines(s[:text], s[:tokens], s[:tokens])
-        end
-    end
-end
-
-################################################################################
 #  Process coroutine sections.                                                 #
 ################################################################################
 
