@@ -804,8 +804,8 @@ p = p - 1; begin
             stack.last << [:syswait, ts, te - 1] 
         elsif token == "return"
             stack.last << [:return, ts, te - 1]
-        elsif token == "struct"
-            stack.last << [:struct, ts, te - 1]
+        elsif token == "static"
+            stack.last << [:static, ts, te - 1]
         else
             stack.last << [:identifier, ts, te - 1]
         end
@@ -1193,6 +1193,7 @@ loop do
     cotype = nil
     cotext = nil
     cotokens = nil
+    costatic = nil
     cpos = lastpos
 
     loop do
@@ -1207,11 +1208,28 @@ loop do
               tokens[i + 2][0] == :braces &&
               (tokens[i + 3][0] == :cbraces || tokens[i + 3][0] == :semicolon))
             cstop = i
+            costatic = false
             cotype = :coroutine
             cotext = text[tokens[i][1]..tokens[i + 3][2]]
             cotokens = tokens[i..i + 3]
             lastpos = tokens[i + 3][2] + 1
             i += 4
+            break;
+        end
+
+        if(tokens[i][0] == :static &&
+              tokens[i + 1][0] == :coroutine &&
+              tokens [i + 2][0] == :identifier &&
+              tokens[i + 3][0] == :braces &&
+              (tokens[i + 4][0] == :cbraces || tokens[i + 4][0] == :semicolon))
+            tokens[i + 1][1] = tokens[i][1]
+            cstop = i
+            costatic = true
+            cotype = :coroutine
+            cotext = text[tokens[i][1]..tokens[i + 4][2]]
+            cotokens = tokens[i + 1..i + 4]
+            lastpos = tokens[i + 4][2] + 1
+            i += 5
             break;
         end
 
@@ -1221,6 +1239,7 @@ loop do
               tokens[i + 3][0] == :identifier &&
               tokens [i + 4][0] == :semicolon)
             cstop = i
+            costatic = false
             cotype = :alias
             cotext = text[tokens[i][1]..tokens[i + 4][2]]
             cotokens = tokens[i..i + 4]
@@ -1247,6 +1266,7 @@ loop do
 
     # Create the coroutine section.
     sections << {
+        :static => costatic,
         :type => cotype,
         :text => cotext,
         :tokens => cotokens
@@ -1321,6 +1341,7 @@ for i in 0..sections.size - 1
 
             # Coroutine definition.
             sections[i] = {
+                :static => sections[i][:static],
                 :type => :codef,
                 :name => name,
                 :args => args,
@@ -1333,6 +1354,7 @@ for i in 0..sections.size - 1
 
             # Coroutine declaration.
             sections[i] = {
+                :static => sections[i][:static],
                 :type => :codecl,
                 :name => name,
                 :args => args
@@ -1462,8 +1484,7 @@ for s in sections
         def expand_vars(text, alltokens, tokens, locals, outs)
             for i in 0..tokens.size - 1
                 if tokens[i][0] == :identifier && (i == 0 ||
-                      (tokens[i - 1][0] != :struct &&
-                       tokens[i - 1][0] != :dot &&
+                       (tokens[i - 1][0] != :dot &&
                        tokens[i - 1][0] != :arrow))
                     idname = text[tokens[i][1]..tokens[i][2]]
                     if locals.include? idname
@@ -1634,7 +1655,11 @@ Ribosome.dot("", binding)
     if s[:type] == :codecl
 Ribosome.dot("extern const struct mill_type mill_type_@{s[:name]};", binding)
 Ribosome.dot("", binding)
+if s[:static]
+Ribosome.dot("static void mill_go_@{s[:name]} (", binding)
+else
 Ribosome.dot("void mill_go_@{s[:name]} (", binding)
+end
 Ribosome.dot("    const struct mill_type *type,", binding)
 Ribosome.dot("    struct mill_loop *loop,", binding)
 Ribosome.dot("    void *parent", binding)
@@ -1644,11 +1669,15 @@ Ribosome.dot("    @{renderarg(a)}", binding)
         end
 Ribosome.add(");", binding)
 Ribosome.dot("", binding)
+if s[:static]
+Ribosome.dot("static void @{s[:name]} (", binding)
+else
 Ribosome.dot("void @{s[:name]} (", binding)
-____separate_1648____ = true
+end
+____separate_1677____ = true
         for a in s[:args]
-if(____separate_1648____)
-    ____separate_1648____ = false
+if(____separate_1677____)
+    ____separate_1677____ = false
 else
     Ribosome.add(", ", binding)
 end
@@ -1748,7 +1777,11 @@ Ribosome.dot("    mill_output_@{s[:name]},", binding)
 Ribosome.dot("    \"@{s[:name]}\"", binding)
 Ribosome.dot("};", binding)
 Ribosome.dot("", binding)
+if s[:static]
+Ribosome.dot("static void mill_go_@{s[:name]} (", binding)
+else
 Ribosome.dot("void mill_go_@{s[:name]} (", binding)
+end
 Ribosome.dot("    const struct mill_type *type,", binding)
 Ribosome.dot("    struct mill_loop *loop,", binding)
 Ribosome.dot("    void *parent", binding)
@@ -1783,11 +1816,15 @@ Ribosome.dot("    /* Execute the initial part of the coroutine. */", binding)
 Ribosome.dot("    mill_handler_@{s[:name]} (&cf->mill_cfh, 0);", binding)
 Ribosome.dot("}", binding)
 Ribosome.dot("", binding)
+if s[:static]
+Ribosome.dot("static void @{s[:name]} (", binding)
+else
 Ribosome.dot("void @{s[:name]} (", binding)
-____separate_1787____ = true
+end
+____separate_1824____ = true
 for a in s[:args]
-if(____separate_1787____)
-    ____separate_1787____ = false
+if(____separate_1824____)
+    ____separate_1824____ = false
 else
     Ribosome.add(", ", binding)
 end

@@ -232,6 +232,7 @@ loop do
     cotype = nil
     cotext = nil
     cotokens = nil
+    costatic = nil
     cpos = lastpos
 
     loop do
@@ -246,11 +247,28 @@ loop do
               tokens[i + 2][0] == :braces &&
               (tokens[i + 3][0] == :cbraces || tokens[i + 3][0] == :semicolon))
             cstop = i
+            costatic = false
             cotype = :coroutine
             cotext = text[tokens[i][1]..tokens[i + 3][2]]
             cotokens = tokens[i..i + 3]
             lastpos = tokens[i + 3][2] + 1
             i += 4
+            break;
+        end
+
+        if(tokens[i][0] == :static &&
+              tokens[i + 1][0] == :coroutine &&
+              tokens [i + 2][0] == :identifier &&
+              tokens[i + 3][0] == :braces &&
+              (tokens[i + 4][0] == :cbraces || tokens[i + 4][0] == :semicolon))
+            tokens[i + 1][1] = tokens[i][1]
+            cstop = i
+            costatic = true
+            cotype = :coroutine
+            cotext = text[tokens[i][1]..tokens[i + 4][2]]
+            cotokens = tokens[i + 1..i + 4]
+            lastpos = tokens[i + 4][2] + 1
+            i += 5
             break;
         end
 
@@ -260,6 +278,7 @@ loop do
               tokens[i + 3][0] == :identifier &&
               tokens [i + 4][0] == :semicolon)
             cstop = i
+            costatic = false
             cotype = :alias
             cotext = text[tokens[i][1]..tokens[i + 4][2]]
             cotokens = tokens[i..i + 4]
@@ -286,6 +305,7 @@ loop do
 
     # Create the coroutine section.
     sections << {
+        :static => costatic,
         :type => cotype,
         :text => cotext,
         :tokens => cotokens
@@ -360,6 +380,7 @@ for i in 0..sections.size - 1
 
             # Coroutine definition.
             sections[i] = {
+                :static => sections[i][:static],
                 :type => :codef,
                 :name => name,
                 :args => args,
@@ -372,6 +393,7 @@ for i in 0..sections.size - 1
 
             # Coroutine declaration.
             sections[i] = {
+                :static => sections[i][:static],
                 :type => :codecl,
                 :name => name,
                 :args => args
@@ -501,8 +523,7 @@ for s in sections
         def expand_vars(text, alltokens, tokens, locals, outs)
             for i in 0..tokens.size - 1
                 if tokens[i][0] == :identifier && (i == 0 ||
-                      (tokens[i - 1][0] != :struct &&
-                       tokens[i - 1][0] != :dot &&
+                       (tokens[i - 1][0] != :dot &&
                        tokens[i - 1][0] != :arrow))
                     idname = text[tokens[i][1]..tokens[i][2]]
                     if locals.include? idname
@@ -673,7 +694,11 @@ for s in sections
     if s[:type] == :codecl
 .extern const struct mill_type mill_type_@{s[:name]};
 .
+if s[:static]
+.static void mill_go_@{s[:name]} (
+else
 .void mill_go_@{s[:name]} (
+end
 .    const struct mill_type *type,
 .    struct mill_loop *loop,
 .    void *parent
@@ -683,7 +708,11 @@ for s in sections
         end
 ./+);
 .
+if s[:static]
+.static void @{s[:name]} (
+else
 .void @{s[:name]} (
+end
 ./!separate ", "
         for a in s[:args]
 .    @{renderarg(a)}
@@ -782,7 +811,11 @@ end
 .    "@{s[:name]}"
 .};
 .
+if s[:static]
+.static void mill_go_@{s[:name]} (
+else
 .void mill_go_@{s[:name]} (
+end
 .    const struct mill_type *type,
 .    struct mill_loop *loop,
 .    void *parent
@@ -817,7 +850,11 @@ end
 .    mill_handler_@{s[:name]} (&cf->mill_cfh, 0);
 .}
 .
+if s[:static]
+.static void @{s[:name]} (
+else
 .void @{s[:name]} (
+end
 ./!separate ", "
 for a in s[:args]
 .    @{renderarg(a)}
