@@ -761,14 +761,11 @@ end
 .
 .    /* Continue from the point where the coroutine was interrupted. */
 .    switch (cf->mill_cfh.pc) {
-.    case 0:
-.        break;
+.        case 0: break;
 for i in 1..s[:lastpc] + 2
-.    case @{i}:
-.        goto mill_pc_@{i};
+.        case @{i}: goto mill_pc_@{i};
 end
-.    default:
-.        assert (0);
+.        default: assert (0);
 .    }
 .
 if s[:hascancel]

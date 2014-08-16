@@ -1727,14 +1727,11 @@ Ribosome.dot("    cf = (struct mill_cf_@{s[:name]}*) cfptr;", binding)
 Ribosome.dot("", binding)
 Ribosome.dot("    /* Continue from the point where the coroutine was interrupted. */", binding)
 Ribosome.dot("    switch (cf->mill_cfh.pc) {", binding)
-Ribosome.dot("    case 0:", binding)
-Ribosome.dot("        break;", binding)
+Ribosome.dot("        case 0: break;", binding)
 for i in 1..s[:lastpc] + 2
-Ribosome.dot("    case @{i}:", binding)
-Ribosome.dot("        goto mill_pc_@{i};", binding)
+Ribosome.dot("        case @{i}: goto mill_pc_@{i};", binding)
 end
-Ribosome.dot("    default:", binding)
-Ribosome.dot("        assert (0);", binding)
+Ribosome.dot("        default: assert (0);", binding)
 Ribosome.dot("    }", binding)
 Ribosome.dot("", binding)
 if s[:hascancel]
@@ -1817,10 +1814,10 @@ Ribosome.dot("static void @{s[:name]} (", binding)
 else
 Ribosome.dot("void @{s[:name]} (", binding)
 end
-____separate_1820____ = true
+____separate_1817____ = true
 for a in s[:args]
-if(____separate_1820____)
-    ____separate_1820____ = false
+if(____separate_1817____)
+    ____separate_1817____ = false
 else
     Ribosome.add(", ", binding)
 end
