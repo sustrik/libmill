@@ -1444,7 +1444,7 @@ def beginselect(pc)
     return res;
 end
 
-def endselect(pc, first, hascancelclause)
+def endselect(first, hascancelclause)
     res = ""
     if !first
         res += "}\n"
@@ -1573,7 +1573,7 @@ for s in sections
                     end
                     replacechars(text, alltokens,
                         tokens[i + 1][2], tokens[i + 1][2],
-                        endselect(pc, first, hascancelclause))
+                        endselect(first, hascancelclause))
 
                 elsif tokens[i][0] == :syswait && $system
                     if tokens[i + 1][0] != :semicolon
