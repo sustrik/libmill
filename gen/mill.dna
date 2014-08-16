@@ -467,7 +467,7 @@ def expand_cancel(pc, first)
         res += "}\n"
         res += "else "
     end
-    res += "if (event == 0) {"
+    res += "if (event == NULL) {"
     return res
 end
 
@@ -490,8 +490,8 @@ def endselect(pc, first, hascancelclause)
         res += "else "
     end
     if !hascancelclause
-        res += "if (event == 0) {\n"
-        res += "    /* Default cancel event handler. */\n"
+        res += "if (event == NULL) {\n"
+        res += "    /* Handler for 'cancel' events. */\n"
         res += "    goto mill_finally;\n"
         res += "}\n"
         res += "else "
@@ -862,7 +862,7 @@ end
 .    mill_loop_init (&loop);
 .
 .    /* Execute initial part of the coroutine. */
-.    mill_go_@{s[:name]} (&mill_type_@{s[:name]}, &loop, 0
+.    mill_go_@{s[:name]} (&mill_type_@{s[:name]}, &loop, NULL
 for a in s[:args]
 .    /+, @{a[:name]}
 end

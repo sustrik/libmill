@@ -109,7 +109,7 @@ static void loop_cb (uv_idle_t* handle)
             self->first = src->nextev;
 
             /* And put it to the end of parent's pending event queue. */
-            src->nextev = 0;
+            src->nextev = NULL;
             if (dst->pfirst)
                 dst->plast->nextev = src;
             else
@@ -122,8 +122,8 @@ static void loop_cb (uv_idle_t* handle)
         /* The event was processed successfully. That may have caused some of
            the pending events to become applicable. */
         it = dst->pfirst;
-        prev = 0;
-        while (it != 0) {
+        prev = NULL;
+        while (it != NULL) {
 
             /* Try to process the event. */
             if (dst->type->handler (dst, it) == 0) {
@@ -143,7 +143,7 @@ static void loop_cb (uv_idle_t* handle)
                 /* Start checking the pending event queue from beginning so
                    that older events are processed before newer ones. */
                 it = dst->pfirst;
-                prev = 0;
+                prev = NULL;
                 continue;
             }
 
@@ -159,7 +159,7 @@ static void loop_cb (uv_idle_t* handle)
            Now deallocate the memory. */
         free (src);
     }
-    self->last = 0;
+    self->last = NULL;
 }
 
 void mill_loop_init (
@@ -173,8 +173,8 @@ void mill_loop_init (
     uv_assert (rc);
     rc = uv_idle_start (&self->idle, loop_cb);
     uv_assert (rc);
-    self->first = 0;
-    self->last = 0;
+    self->first = NULL;
+    self->last = NULL;
 }
 
 void mill_loop_term (
@@ -201,11 +201,11 @@ void mill_loop_emit (
     struct mill_loop *self,
     struct mill_cfh *ev)
 {
-    if (self->first == 0)
+    if (self->first == NULL)
         self->first = ev;
     else
         self->last->nextev = ev;
-    ev->nextev = 0;
+    ev->nextev = NULL;
     self->last = ev;
 }
 
@@ -227,19 +227,19 @@ void mill_coframe_init (
     /*  Initialise the coframe. */
     cfh->type = type;
     cfh->pc = 0;
-    cfh->nextev = 0;
-    cfh->pfirst = 0;
-    cfh->plast = 0;
+    cfh->nextev = NULL;
+    cfh->pfirst = NULL;
+    cfh->plast = NULL;
     cfh->parent = parent;
-    cfh->children = 0;
-    cfh->next = 0;
-    cfh->prev = 0;
+    cfh->children = NULL;
+    cfh->next = NULL;
+    cfh->prev = NULL;
     cfh->loop = loop;
 
     /* Add the coframe to the parent's list of child coroutines. */
     if (parent) {
         pcfh = (struct mill_cfh*) parent;
-        cfh->prev = 0;
+        cfh->prev = NULL;
         cfh->next = pcfh->children;
         if (pcfh->children)
             pcfh->children->prev = cfh;
@@ -281,13 +281,13 @@ void mill_coframe_term (
             cfh->prev->next = cfh->next;
         if (cfh->next)
             cfh->next->prev = cfh->prev;
-        cfh->prev = 0;
-        cfh->next = 0;
+        cfh->prev = NULL;
+        cfh->next = NULL;
     }
 
     /* This is a heuristic that should cause an error if deallocated
        coframe is used. */
-    cfh->type = 0;
+    cfh->type = NULL;
 }
 
 void mill_emit (
@@ -319,13 +319,13 @@ void mill_cancel_children (
     cfh = (struct mill_cfh*) cfptr;
 
     /* Ask all child coroutines to cancel. */
-    for (child = cfh->children; child != 0; child = child->next) {
+    for (child = cfh->children; child != NULL; child = child->next) {
         if (mill_trace) {
             printf ("mill ==> cancel ");
             mill_printstack (child);
             printf ("\n");
         }
-        child->type->handler (child, 0);
+        child->type->handler (child, NULL);
     }
 }
 
@@ -364,7 +364,7 @@ coroutine msleep (
     syswait;
     if (event == msleep_timer_cb)
         *rc = 0;
-    else if (event == 0)
+    else if (event == NULL)
         *rc = ECANCELED;
     else
         assert (0);
@@ -375,7 +375,7 @@ coroutine msleep (
         syswait;
         if (event == msleep_close_cb)
            break;
-        assert (event == 0);
+        assert (event == NULL);
     }
 }
 
@@ -430,8 +430,8 @@ int tcpsocket_init (
 
     self->loop = &loop->uv_loop;
     self->pc = 0;
-    self->recvcfptr = 0;
-    self->sendcfptr = 0;
+    self->recvcfptr = NULL;
+    self->sendcfptr = NULL;
     rc = uv_tcp_init (&loop->uv_loop, &self->s);
     if (rc != 0)
         return rc;
@@ -449,7 +449,7 @@ coroutine tcpsocket_term (
         syswait;
         if (event == tcpsocket_close_cb)
            break;
-        assert (event == 0);
+        assert (event == NULL);
     }
 }
 
@@ -547,7 +547,7 @@ coroutine tcpsocket_send (
     }
 
     assert (event == tcpsocket_send_cb);
-    self->sendcfptr = 0;
+    self->sendcfptr = NULL;
     *rc = 0;
 }
 
@@ -574,7 +574,7 @@ coroutine tcpsocket_recv (
         /* User asks operation to be canceled. */
         if (!event) {
             uv_read_stop ((uv_stream_t*) &self->s);
-            self->recvcfptr = 0;
+            self->recvcfptr = NULL;
             *rc = ECANCELED;
             return;
         }
@@ -582,7 +582,7 @@ coroutine tcpsocket_recv (
         /* If there are no more data to be read, stop reading. */
         if (!len) {
             uv_read_stop ((uv_stream_t*) &self->s);
-            self->recvcfptr = 0;
+            self->recvcfptr = NULL;
             *rc = 0;
             break;
         }

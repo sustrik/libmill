@@ -1,11 +1,12 @@
 
 #include <assert.h>
+#include <stddef.h>
 
 #include "../stdmill.h"
 
 coroutine fx1 (out int *idout, int id, int milliseconds)
 {
-    go msleep (0, milliseconds);
+    go msleep (NULL, milliseconds);
     select {
     case msleep:
     }
