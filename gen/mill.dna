@@ -453,7 +453,6 @@ end
 def expand_case(pc, type, first)
     res = ""
     if !first
-        res += "    goto mill_endselect_#{pc};\n"
         res += "}\n"
         res += "else "
     end
@@ -465,7 +464,6 @@ end
 def expand_cancel(pc, first)
     res = ""
     if !first
-        res += "    goto mill_endselect_#{pc};\n"
         res += "}\n"
         res += "else "
     end
@@ -488,7 +486,6 @@ end
 def endselect(pc, first, hascancelclause)
     res = ""
     if !first
-        res += "    goto mill_endselect_#{pc};\n"
         res += "}\n"
         res += "else "
     end
@@ -503,7 +500,6 @@ def endselect(pc, first, hascancelclause)
     res += "    /* The event can't be processed at the moment. */\n"
     res += "    return -1;\n"
     res += "}\n"
-    res += "mill_endselect_#{pc}:;\n"
     res += "}"
     return res
 end

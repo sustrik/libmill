@@ -1414,7 +1414,6 @@ end
 def expand_case(pc, type, first)
     res = ""
     if !first
-        res += "    goto mill_endselect_#{pc};\n"
         res += "}\n"
         res += "else "
     end
@@ -1426,7 +1425,6 @@ end
 def expand_cancel(pc, first)
     res = ""
     if !first
-        res += "    goto mill_endselect_#{pc};\n"
         res += "}\n"
         res += "else "
     end
@@ -1449,7 +1447,6 @@ end
 def endselect(pc, first, hascancelclause)
     res = ""
     if !first
-        res += "    goto mill_endselect_#{pc};\n"
         res += "}\n"
         res += "else "
     end
@@ -1464,7 +1461,6 @@ def endselect(pc, first, hascancelclause)
     res += "    /* The event can't be processed at the moment. */\n"
     res += "    return -1;\n"
     res += "}\n"
-    res += "mill_endselect_#{pc}:;\n"
     res += "}"
     return res
 end
@@ -1674,10 +1670,10 @@ Ribosome.dot("static void @{s[:name]} (", binding)
 else
 Ribosome.dot("void @{s[:name]} (", binding)
 end
-____separate_1677____ = true
+____separate_1673____ = true
         for a in s[:args]
-if(____separate_1677____)
-    ____separate_1677____ = false
+if(____separate_1673____)
+    ____separate_1673____ = false
 else
     Ribosome.add(", ", binding)
 end
@@ -1821,10 +1817,10 @@ Ribosome.dot("static void @{s[:name]} (", binding)
 else
 Ribosome.dot("void @{s[:name]} (", binding)
 end
-____separate_1824____ = true
+____separate_1820____ = true
 for a in s[:args]
-if(____separate_1824____)
-    ____separate_1824____ = false
+if(____separate_1820____)
+    ____separate_1820____ = false
 else
     Ribosome.add(", ", binding)
 end
