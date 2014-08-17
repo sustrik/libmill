@@ -454,6 +454,10 @@ def expand_case(pc, type, first)
     res = ""
     if !first
         res += "}\n"
+    end
+    res += "\n"
+    res += "/* If child coroutine '#{type}' have terminated. */\n"
+    if !first
         res += "else "
     end
     res += "if (mill_typeof(event) == &mill_type_#{type}) {\n"
@@ -465,6 +469,10 @@ def expand_cancel(pc, first)
     res = ""
     if !first
         res += "}\n"
+    end
+    res += "\n"
+    res += "/* If parent coroutine have canceled this coroutine. */\n"
+    if !first
         res += "else "
     end
     res += "if (event == NULL) {"
@@ -477,9 +485,7 @@ def beginselect(pc)
     res += "/* Wait for next event. */\n"
     res += "cf->mill_cfh.pc = #{pc};\n"
     res += "return 0;\n"
-    res += "mill_pc_#{pc}:\n"
-    res += "\n"
-    res += "/* Choose an action to take depending on the type of the event. */"
+    res += "mill_pc_#{pc}:"
     return res;
 end
 
@@ -487,19 +493,20 @@ def endselect(first, hascancelclause)
     res = ""
     if !first
         res += "}\n"
-        res += "else "
     end
     if !hascancelclause
+        res += "\n"
+        res += "/* If parent coroutine have canceled this coroutine. */\n"
+        if (!first)
+            res += "else "
+        end
         res += "if (event == NULL) {\n"
-        res += "    /* Handler for 'cancel' events. */\n"
         res += "    goto mill_finally;\n"
         res += "}\n"
-        res += "else "
     end
-    res += "{\n"
-    res += "    /* The event can't be processed at the moment. */\n"
-    res += "    return -1;\n"
-    res += "}\n"
+    res += "\n"
+    res += "/* If the event can't be processed at the moment. */\n"
+    res += "else return -1;\n"
     res += "}"
     return res
 end
