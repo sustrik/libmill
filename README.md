@@ -34,8 +34,8 @@ $ sudo make install
 
 coroutine test ()
 {
-    go msleep (NULL, 1000);
-    go msleep (NULL, 2000);
+    go msleep (1000);
+    go msleep (2000);
 
     while (1) {
         select {
