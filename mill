@@ -1695,6 +1695,7 @@ Ribosome.dot("", binding)
 ################################################################################
 
     if s[:type] == :codef
+Ribosome.dot("/* Coframe definition for coroutine '@{s[:name]}'. */", binding)
 Ribosome.dot("struct mill_cf_@{s[:name]} {", binding)
 Ribosome.dot("", binding)
 Ribosome.dot("    /* Generic coframe header. */", binding)
@@ -1726,6 +1727,7 @@ Ribosome.dot("    @{a[:type]} *mill_out_@{a[:name]}@{a[:postfix]};", binding)
         end
 Ribosome.dot("};", binding)
 Ribosome.dot("", binding)
+Ribosome.dot("/* Event handler for coroutine '@{s[:name]}'. */", binding)
 Ribosome.dot("static int mill_handler_@{s[:name]} (void *cfptr, void *event)", binding)
 Ribosome.dot("{", binding)
 Ribosome.dot("    struct mill_cf_@{s[:name]} *cf;", binding)
@@ -1764,6 +1766,8 @@ for a in s[:args]
 end
 
 if hasoutargs
+Ribosome.dot("/* This function copies output arguments of coroutine '@{s[:name]}'", binding)
+Ribosome.dot("   from the coframe to their final destinations. */", binding)
 Ribosome.dot("static void mill_output_@{s[:name]} (void *cfptr)", binding)
 Ribosome.dot("{", binding)
 Ribosome.dot("    struct mill_cf_@{s[:name]} *cf;", binding)
@@ -1779,6 +1783,7 @@ Ribosome.dot("}", binding)
 Ribosome.dot("", binding)
 end
 
+Ribosome.dot("/* Metadata for coroutine '@{s[:name]}'. */", binding)
 Ribosome.dot("const struct mill_type mill_type_@{s[:name]} = {", binding)
 Ribosome.dot("    mill_type_tag,", binding)
 Ribosome.dot("    mill_handler_@{s[:name]},", binding)
@@ -1790,6 +1795,7 @@ end
 Ribosome.dot("    \"@{s[:name]}\"", binding)
 Ribosome.dot("};", binding)
 Ribosome.dot("", binding)
+Ribosome.dot("/* Start asynchronous execution of coroutine '@{s[:name]}'. */", binding)
 if s[:static]
 Ribosome.dot("static void mill_go_@{s[:name]} (", binding)
 else
@@ -1829,15 +1835,16 @@ Ribosome.dot("    /* Execute the initial part of the coroutine. */", binding)
 Ribosome.dot("    mill_handler_@{s[:name]} (&cf->mill_cfh, 0);", binding)
 Ribosome.dot("}", binding)
 Ribosome.dot("", binding)
+Ribosome.dot("/* Execute coroutine '@{s[:name]}' in blocking/synchronous manner. */", binding)
 if s[:static]
 Ribosome.dot("static void @{s[:name]} (", binding)
 else
 Ribosome.dot("void @{s[:name]} (", binding)
 end
-____separate_1837____ = true
+____separate_1844____ = true
 for a in s[:args]
-if(____separate_1837____)
-    ____separate_1837____ = false
+if(____separate_1844____)
+    ____separate_1844____ = false
 else
     Ribosome.add(", ", binding)
 end

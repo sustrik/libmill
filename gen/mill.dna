@@ -729,6 +729,7 @@ end
 ################################################################################
 
     if s[:type] == :codef
+./* Coframe definition for coroutine '@{s[:name]}'. */
 .struct mill_cf_@{s[:name]} {
 .
 .    /* Generic coframe header. */
@@ -760,6 +761,7 @@ end
         end
 .};
 .
+./* Event handler for coroutine '@{s[:name]}'. */
 .static int mill_handler_@{s[:name]} (void *cfptr, void *event)
 .{
 .    struct mill_cf_@{s[:name]} *cf;
@@ -798,6 +800,8 @@ for a in s[:args]
 end
 
 if hasoutargs
+./* This function copies output arguments of coroutine '@{s[:name]}'
+.   from the coframe to their final destinations. */
 .static void mill_output_@{s[:name]} (void *cfptr)
 .{
 .    struct mill_cf_@{s[:name]} *cf;
@@ -813,6 +817,7 @@ end
 .
 end
 
+./* Metadata for coroutine '@{s[:name]}'. */
 .const struct mill_type mill_type_@{s[:name]} = {
 .    mill_type_tag,
 .    mill_handler_@{s[:name]},
@@ -824,6 +829,7 @@ end
 .    "@{s[:name]}"
 .};
 .
+./* Start asynchronous execution of coroutine '@{s[:name]}'. */
 if s[:static]
 .static void mill_go_@{s[:name]} (
 else
@@ -863,6 +869,7 @@ end
 .    mill_handler_@{s[:name]} (&cf->mill_cfh, 0);
 .}
 .
+./* Execute coroutine '@{s[:name]}' in blocking/synchronous manner. */
 if s[:static]
 .static void @{s[:name]} (
 else
