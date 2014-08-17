@@ -791,6 +791,13 @@ end
 .    return 0;
 .}
 .
+
+hasoutargs = false
+for a in s[:args]
+    hasoutargs = true if a[:out]
+end
+
+if hasoutargs
 .static void mill_output_@{s[:name]} (void *cfptr)
 .{
 .    struct mill_cf_@{s[:name]} *cf;
@@ -804,10 +811,16 @@ for a in s[:args]
 end
 .}
 .
+end
+
 .const struct mill_type mill_type_@{s[:name]} = {
 .    mill_type_tag,
 .    mill_handler_@{s[:name]},
+if hasoutargs
 .    mill_output_@{s[:name]},
+else
+.    NULL,
+end
 .    "@{s[:name]}"
 .};
 .

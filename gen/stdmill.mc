@@ -271,7 +271,8 @@ void mill_coframe_term (
     }
 
     /* Copy the 'out' arguments to their final destinations. */
-    cfh->type->output (cfh);
+    if (cfh->type->output)
+        cfh->type->output (cfh);
 
     /* Remove the coframe from the paren't list of child coroutines. */
     if (cfh->parent) {

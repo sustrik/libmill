@@ -1405,7 +1405,7 @@ def epilogue(lastpc)
     res += "    cf->mill_cfh.pc = #{lastpc + 2};\n"
     res += "    return 0;\n"
     res += "\n"
-    res += "    /* The finished coroutine was canceled before if was selected. */\n"
+    res += "    /* If the finished coroutine was canceled before if was selected. */\n"
     res += "mill_pc_#{lastpc + 2}:\n"
     res += "    assert (!event);\n"
     return res
@@ -1757,6 +1757,13 @@ Ribosome.dot("    cf->mill_cfh.pc = -1;", binding)
 Ribosome.dot("    return 0;", binding)
 Ribosome.dot("}", binding)
 Ribosome.dot("", binding)
+
+hasoutargs = false
+for a in s[:args]
+    hasoutargs = true if a[:out]
+end
+
+if hasoutargs
 Ribosome.dot("static void mill_output_@{s[:name]} (void *cfptr)", binding)
 Ribosome.dot("{", binding)
 Ribosome.dot("    struct mill_cf_@{s[:name]} *cf;", binding)
@@ -1770,10 +1777,16 @@ Ribosome.dot("        *cf->mill_out_@{a[:name]} = cf->@{a[:name]};", binding)
 end
 Ribosome.dot("}", binding)
 Ribosome.dot("", binding)
+end
+
 Ribosome.dot("const struct mill_type mill_type_@{s[:name]} = {", binding)
 Ribosome.dot("    mill_type_tag,", binding)
 Ribosome.dot("    mill_handler_@{s[:name]},", binding)
+if hasoutargs
 Ribosome.dot("    mill_output_@{s[:name]},", binding)
+else
+Ribosome.dot("    NULL,", binding)
+end
 Ribosome.dot("    \"@{s[:name]}\"", binding)
 Ribosome.dot("};", binding)
 Ribosome.dot("", binding)
@@ -1821,10 +1834,10 @@ Ribosome.dot("static void @{s[:name]} (", binding)
 else
 Ribosome.dot("void @{s[:name]} (", binding)
 end
-____separate_1824____ = true
+____separate_1837____ = true
 for a in s[:args]
-if(____separate_1824____)
-    ____separate_1824____ = false
+if(____separate_1837____)
+    ____separate_1837____ = false
 else
     Ribosome.add(", ", binding)
 end
