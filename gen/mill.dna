@@ -444,7 +444,7 @@ def epilogue(lastpc)
     res += "    cf->mill_cfh.pc = #{lastpc + 2};\n"
     res += "    return 0;\n"
     res += "\n"
-    res += "    /* The finished coroutine was canceled before if was selected. */\n"
+    res += "    /* If the finished coroutine was canceled before if was selected. */\n"
     res += "mill_pc_#{lastpc + 2}:\n"
     res += "    assert (!event);\n"
     return res
