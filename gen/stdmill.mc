@@ -349,26 +349,21 @@ static void msleep_close_cb (
     uv_handle_t *handle);
 
 coroutine msleep (
-    out int *rc,
     int milliseconds)
 {
+    int rc;
     uv_timer_t timer;
     endvars;
 
     /* Start the timer. */
-    *rc = uv_timer_init (&cf->mill_cfh.loop->uv_loop, &timer);
-    uv_assert (*rc);
-    *rc = uv_timer_start (&timer, msleep_timer_cb, milliseconds, 0);
-    uv_assert (*rc);
+    rc = uv_timer_init (&cf->mill_cfh.loop->uv_loop, &timer);
+    uv_assert (rc);
+    rc = uv_timer_start (&timer, msleep_timer_cb, milliseconds, 0);
+    uv_assert (rc);
 
     /* Wait till it finishes or the coroutine is canceled. */
     syswait;
-    if (event == msleep_timer_cb)
-        *rc = 0;
-    else if (event == NULL)
-        *rc = ECANCELED;
-    else
-        assert (0);
+    assert (event == msleep_timer_cb || event == NULL);;
 
     /* Close the timer. Ignore cancel requests during this phase. */
     uv_close ((uv_handle_t*) &timer, msleep_close_cb);

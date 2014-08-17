@@ -159,7 +159,6 @@ int mill_has_children (
 /******************************************************************************/
 
 coroutine msleep (
-    out int *rc,
     int milliseconds);
 
 struct tcpsocket {

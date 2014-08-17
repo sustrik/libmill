@@ -8,7 +8,7 @@ int counter = 0;
 coroutine block ()
 {
     ++counter;
-    go msleep (0, 1000000);
+    go msleep (1000000);
     select {
     case msleep:
     cancel:
