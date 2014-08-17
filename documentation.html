@@ -311,7 +311,7 @@ the statement:</p>
         result = malloc (14);
         memcpy (result, "Hello, world!", 14);
 
-        go msleep (NULL, 1000);
+        go msleep (1000);
 
         select {
         case msleep:
@@ -355,7 +355,7 @@ lead to memory exhaustion:</p>
     coroutine foo ()
     {
         while (1) {
-            go msleep (NULL, 1000);
+            go msleep (1000);
         }
     }
 </pre>
