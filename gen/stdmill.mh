@@ -161,6 +161,15 @@ int mill_has_children (
 coroutine msleep (
     int milliseconds);
 
+coroutine getaddressinfo (
+    out int *rc,
+    const char *node,
+    const char *service,
+    const struct addrinfo *hints,
+    out struct addrinfo **res);
+
+void freeaddressinfo (struct addrinfo *ai);
+
 struct tcpsocket {
     uv_tcp_t s;
     uv_loop_t *loop;

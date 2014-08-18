@@ -363,7 +363,7 @@ coroutine msleep (
 
     /* Wait till it finishes or the coroutine is canceled. */
     syswait;
-    assert (event == msleep_timer_cb || event == NULL);;
+    assert (event == msleep_timer_cb || event == NULL);
 
     /* Close the timer. Ignore cancel requests during this phase. */
     uv_close ((uv_handle_t*) &timer, msleep_close_cb);
@@ -391,6 +391,65 @@ static void msleep_close_cb (
 
     cf = mill_cont (handle, struct mill_cf_msleep, timer);
     mill_handler_msleep (cf, (void*) msleep_close_cb);
+}
+
+/******************************************************************************/
+/* getaddressinfo                                                             */
+/******************************************************************************/
+
+/* Forward declarations. */
+static void getaddressinfo_cb (
+    uv_getaddrinfo_t* req,
+    int status,
+    struct addrinfo* res);
+
+coroutine getaddressinfo (
+    out int *rc,
+    const char *node,
+    const char *service,
+    const struct addrinfo *hints,
+    out struct addrinfo **res)
+{
+    uv_getaddrinfo_t req;
+    endvars;
+
+    /* Start resolving the address in asynchronous manner. */
+    /* TODO: Pass the 'hints' parameter to the function. When testing in
+       on Linux/gcc I've seen a strage pointer there. A compiler bug? */
+    *rc = uv_getaddrinfo (&cf->mill_cfh.loop->uv_loop, &req,
+        getaddressinfo_cb, node, service, 0);
+    uv_assert (*rc);
+
+    /* Wait for next event. */
+    syswait;
+
+    /* If the coroutine is canceled by the caller. */
+    if (event == NULL) {
+        *rc = uv_cancel ((uv_req_t*) &req);
+        uv_assert (*rc == 0);
+        syswait;
+    }
+
+    /* If the coroutine have finished. */
+    assert (event == getaddressinfo_cb);
+}
+
+static void getaddressinfo_cb (
+    uv_getaddrinfo_t* req,
+    int status,
+    struct addrinfo* res)
+{
+    struct mill_cf_getaddressinfo *cf;
+
+    cf = mill_cont (req, struct mill_cf_getaddressinfo, req);
+    cf->rc = status;
+    cf->res = res;
+    mill_handler_getaddressinfo (cf, (void*) getaddressinfo_cb);
+}
+
+void freeaddressinfo (struct addrinfo *ai)
+{
+    uv_freeaddrinfo (ai);
 }
 
 /******************************************************************************/

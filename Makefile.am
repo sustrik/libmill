@@ -30,11 +30,13 @@ libstdmill_a_SOURCES = stdmill.c
 check_PROGRAMS = \
     tests/tcpsocket \
     tests/pending \
-    tests/cancel
+    tests/cancel \
+    tests/getaddressinfo
 check_CLEANFILES = \
     tests/tcpsocket.c \
     tests/pending.c \
-    tests/cancel.c
+    tests/cancel.c \
+    tests/getaddressinfo.c
 
 TESTS = $(check_PROGRAMS)
 LDADD = libstdmill.a
