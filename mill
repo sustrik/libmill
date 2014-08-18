@@ -1785,7 +1785,6 @@ end
 
 Ribosome.dot("/* Metadata for coroutine '@{s[:name]}'. */", binding)
 Ribosome.dot("const struct mill_type mill_type_@{s[:name]} = {", binding)
-Ribosome.dot("    mill_type_tag,", binding)
 Ribosome.dot("    mill_handler_@{s[:name]},", binding)
 if hasoutargs
 Ribosome.dot("    mill_output_@{s[:name]},", binding)
@@ -1841,10 +1840,10 @@ Ribosome.dot("static void @{s[:name]} (", binding)
 else
 Ribosome.dot("void @{s[:name]} (", binding)
 end
-____separate_1844____ = true
+____separate_1843____ = true
 for a in s[:args]
-if(____separate_1844____)
-    ____separate_1844____ = false
+if(____separate_1843____)
+    ____separate_1843____ = false
 else
     Ribosome.add(", ", binding)
 end
@@ -1877,7 +1876,6 @@ Ribosome.dot("", binding)
 
     if s[:type] == :alias
 Ribosome.dot("const struct mill_type mill_type_@{s[:new]} = {", binding)
-Ribosome.dot("    mill_type_tag,", binding)
 Ribosome.dot("    mill_handler_@{s[:old]},", binding)
 Ribosome.dot("    mill_output_@{s[:old]},", binding)
 Ribosome.dot("    \"@{s[:new]}\"};", binding)

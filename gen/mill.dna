@@ -819,7 +819,6 @@ end
 
 ./* Metadata for coroutine '@{s[:name]}'. */
 .const struct mill_type mill_type_@{s[:name]} = {
-.    mill_type_tag,
 .    mill_handler_@{s[:name]},
 if hasoutargs
 .    mill_output_@{s[:name]},
@@ -906,7 +905,6 @@ end
 
     if s[:type] == :alias
 .const struct mill_type mill_type_@{s[:new]} = {
-.    mill_type_tag,
 .    mill_handler_@{s[:old]},
 .    mill_output_@{s[:old]},
 .    "@{s[:new]}"};
