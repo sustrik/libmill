@@ -92,7 +92,7 @@ static void loop_cb (uv_idle_t* handle)
         if (!src->parent) {
 
             /* Deallocate the coframe. */
-            mill_coframe_term (src);
+            mill_coframe_term (src, 0);
             free (src);
 
             uv_close ((uv_handle_t*) &self->idle, loop_close_cb);
@@ -255,7 +255,8 @@ void mill_coframe_init (
 }
 
 void mill_coframe_term (
-    void *cfptr)
+    void *cfptr,
+    int canceled)
 {
     struct mill_cfh *cfh;
 
@@ -271,8 +272,8 @@ void mill_coframe_term (
     }
 
     /* Copy the 'out' arguments to their final destinations. */
-    if (cfh->type->output)
-        cfh->type->output (cfh);
+    if (!canceled)
+        cfh->type->handler (cfh, cfh);
 
     /* Remove the coframe from the paren't list of child coroutines. */
     if (cfh->parent) {

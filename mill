@@ -1394,7 +1394,7 @@ def epilogue(lastpc)
     res += "    cf->mill_cfh.pc = #{lastpc + 1};\n"
     res += "    goto mill_test_children;\n"
     res += "mill_pc_#{lastpc + 1}:\n"
-    res += "    mill_coframe_term (event);\n"
+    res += "    mill_coframe_term (event, 1);\n"
     res += "\n"
     res += "    /* If there are no remaining children notify the parent that\n"
     res += "       the coroutine have finished. */\n"
@@ -1407,6 +1407,8 @@ def epilogue(lastpc)
     res += "\n"
     res += "    /* If the finished coroutine was canceled before if was selected. */\n"
     res += "mill_pc_#{lastpc + 2}:\n"
+    res += "    if (event == cf)\n"
+    res += "        goto mill_output;\n"
     res += "    assert (!event);\n"
     return res
 end
@@ -1422,7 +1424,7 @@ def expand_case(pc, type, first)
         res += "else "
     end
     res += "if (mill_typeof(event) == &mill_type_#{type}) {\n"
-    res += "    mill_coframe_term (event);"
+    res += "    mill_coframe_term (event, 0);"
     return res
 end
 
@@ -1677,10 +1679,10 @@ Ribosome.dot("static void @{s[:name]} (", binding)
 else
 Ribosome.dot("void @{s[:name]} (", binding)
 end
-____separate_1680____ = true
+____separate_1682____ = true
         for a in s[:args]
-if(____separate_1680____)
-    ____separate_1680____ = false
+if(____separate_1682____)
+    ____separate_1682____ = false
 else
     Ribosome.add(", ", binding)
 end
@@ -1727,6 +1729,12 @@ Ribosome.dot("    @{a[:type]} *mill_out_@{a[:name]}@{a[:postfix]};", binding)
         end
 Ribosome.dot("};", binding)
 Ribosome.dot("", binding)
+
+#hasoutargs = false
+#for a in s[:args]
+#    hasoutargs = true if a[:out]
+#end
+
 Ribosome.dot("/* Event handler for coroutine '@{s[:name]}'. */", binding)
 Ribosome.dot("static int mill_handler_@{s[:name]} (void *cfptr, void *event)", binding)
 Ribosome.dot("{", binding)
@@ -1752,45 +1760,27 @@ Ribosome.dot("", binding)
 if !s[:hascancel]
 Ribosome.dot("@{epilogue(s[:lastpc])}", binding)
 end
+Ribosome.dot("    goto mill_done;", binding)
+Ribosome.dot("", binding)
+Ribosome.dot("    /* Copy output parameters to their final destinations. */", binding)
+Ribosome.dot("mill_output:", binding)
+    for a in s[:args]
+        if a[:out]
+Ribosome.dot("    if (cf->mill_out_@{a[:name]})", binding)
+Ribosome.dot("        *cf->mill_out_@{a[:name]} = cf->@{a[:name]};", binding)
+        end
+    end
 Ribosome.dot("", binding)
 Ribosome.dot("    /* There is no further code in the coroutine.", binding)
 Ribosome.dot("       Set the program counter to an invalid value. */", binding)
+Ribosome.dot("mill_done:", binding)
 Ribosome.dot("    cf->mill_cfh.pc = -1;", binding)
 Ribosome.dot("    return 0;", binding)
 Ribosome.dot("}", binding)
 Ribosome.dot("", binding)
-
-hasoutargs = false
-for a in s[:args]
-    hasoutargs = true if a[:out]
-end
-
-if hasoutargs
-Ribosome.dot("/* This function copies output arguments of coroutine '@{s[:name]}'", binding)
-Ribosome.dot("   from the coframe to their final destinations. */", binding)
-Ribosome.dot("static void mill_output_@{s[:name]} (void *cfptr)", binding)
-Ribosome.dot("{", binding)
-Ribosome.dot("    struct mill_cf_@{s[:name]} *cf;", binding)
-Ribosome.dot("", binding)
-Ribosome.dot("    cf = (struct mill_cf_@{s[:name]}*) cfptr;    ", binding)
-for a in s[:args]
-    if a[:out]
-Ribosome.dot("    if (cf->mill_out_@{a[:name]})", binding)
-Ribosome.dot("        *cf->mill_out_@{a[:name]} = cf->@{a[:name]};", binding)
-    end
-end
-Ribosome.dot("}", binding)
-Ribosome.dot("", binding)
-end
-
 Ribosome.dot("/* Metadata for coroutine '@{s[:name]}'. */", binding)
 Ribosome.dot("const struct mill_type mill_type_@{s[:name]} = {", binding)
 Ribosome.dot("    mill_handler_@{s[:name]},", binding)
-if hasoutargs
-Ribosome.dot("    mill_output_@{s[:name]},", binding)
-else
-Ribosome.dot("    NULL,", binding)
-end
 Ribosome.dot("    \"@{s[:name]}\"", binding)
 Ribosome.dot("};", binding)
 Ribosome.dot("", binding)
@@ -1840,10 +1830,10 @@ Ribosome.dot("static void @{s[:name]} (", binding)
 else
 Ribosome.dot("void @{s[:name]} (", binding)
 end
-____separate_1843____ = true
+____separate_1833____ = true
 for a in s[:args]
-if(____separate_1843____)
-    ____separate_1843____ = false
+if(____separate_1833____)
+    ____separate_1833____ = false
 else
     Ribosome.add(", ", binding)
 end
@@ -1877,7 +1867,6 @@ Ribosome.dot("", binding)
     if s[:type] == :alias
 Ribosome.dot("const struct mill_type mill_type_@{s[:new]} = {", binding)
 Ribosome.dot("    mill_handler_@{s[:old]},", binding)
-Ribosome.dot("    mill_output_@{s[:old]},", binding)
 Ribosome.dot("    \"@{s[:new]}\"};", binding)
 Ribosome.dot("", binding)
 Ribosome.dot("#define mill_go_@{s[:new]} mill_go_@{s[:old]}", binding)

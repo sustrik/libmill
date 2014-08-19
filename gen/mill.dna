@@ -433,7 +433,7 @@ def epilogue(lastpc)
     res += "    cf->mill_cfh.pc = #{lastpc + 1};\n"
     res += "    goto mill_test_children;\n"
     res += "mill_pc_#{lastpc + 1}:\n"
-    res += "    mill_coframe_term (event);\n"
+    res += "    mill_coframe_term (event, 1);\n"
     res += "\n"
     res += "    /* If there are no remaining children notify the parent that\n"
     res += "       the coroutine have finished. */\n"
@@ -446,6 +446,8 @@ def epilogue(lastpc)
     res += "\n"
     res += "    /* If the finished coroutine was canceled before if was selected. */\n"
     res += "mill_pc_#{lastpc + 2}:\n"
+    res += "    if (event == cf)\n"
+    res += "        goto mill_output;\n"
     res += "    assert (!event);\n"
     return res
 end
@@ -461,7 +463,7 @@ def expand_case(pc, type, first)
         res += "else "
     end
     res += "if (mill_typeof(event) == &mill_type_#{type}) {\n"
-    res += "    mill_coframe_term (event);"
+    res += "    mill_coframe_term (event, 0);"
     return res
 end
 
@@ -761,6 +763,12 @@ end
         end
 .};
 .
+
+#hasoutargs = false
+#for a in s[:args]
+#    hasoutargs = true if a[:out]
+#end
+
 ./* Event handler for coroutine '@{s[:name]}'. */
 .static int mill_handler_@{s[:name]} (void *cfptr, void *event)
 .{
@@ -786,45 +794,27 @@ end
 if !s[:hascancel]
 .@{epilogue(s[:lastpc])}
 end
+.    goto mill_done;
+.
+.    /* Copy output parameters to their final destinations. */
+.mill_output:
+    for a in s[:args]
+        if a[:out]
+.    if (cf->mill_out_@{a[:name]})
+.        *cf->mill_out_@{a[:name]} = cf->@{a[:name]};
+        end
+    end
 .
 .    /* There is no further code in the coroutine.
 .       Set the program counter to an invalid value. */
+.mill_done:
 .    cf->mill_cfh.pc = -1;
 .    return 0;
 .}
 .
-
-hasoutargs = false
-for a in s[:args]
-    hasoutargs = true if a[:out]
-end
-
-if hasoutargs
-./* This function copies output arguments of coroutine '@{s[:name]}'
-.   from the coframe to their final destinations. */
-.static void mill_output_@{s[:name]} (void *cfptr)
-.{
-.    struct mill_cf_@{s[:name]} *cf;
-.
-.    cf = (struct mill_cf_@{s[:name]}*) cfptr;    
-for a in s[:args]
-    if a[:out]
-.    if (cf->mill_out_@{a[:name]})
-.        *cf->mill_out_@{a[:name]} = cf->@{a[:name]};
-    end
-end
-.}
-.
-end
-
 ./* Metadata for coroutine '@{s[:name]}'. */
 .const struct mill_type mill_type_@{s[:name]} = {
 .    mill_handler_@{s[:name]},
-if hasoutargs
-.    mill_output_@{s[:name]},
-else
-.    NULL,
-end
 .    "@{s[:name]}"
 .};
 .
@@ -906,7 +896,6 @@ end
     if s[:type] == :alias
 .const struct mill_type mill_type_@{s[:new]} = {
 .    mill_handler_@{s[:old]},
-.    mill_output_@{s[:old]},
 .    "@{s[:new]}"};
 .
 .#define mill_go_@{s[:new]} mill_go_@{s[:old]}
