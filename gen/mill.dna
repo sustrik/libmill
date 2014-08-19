@@ -427,8 +427,11 @@ end
 
 def epilogue(s)
     res = "\n"
-    res += "    /* The coroutine have exited. Cancel any remaining child coroutines. */\n"
+    res += "/* The main part of the coroutine is finished.\n"
+    res += "   What follows is the termination-related code. */\n"
     res += "mill_finally:\n"
+    res += "\n"
+    res += "    /* Cancel any remaining child coroutines. */\n"
     res += "    mill_cancel_children (cf);\n"
     res += "    cf->mill_cfh.pc = #{s[:lastpc] + 1};\n"
     res += "    goto mill_test_children;\n"
@@ -455,7 +458,8 @@ def epilogue(s)
     res += "            *cf->mill_out_#{a[:name]} = cf->#{a[:name]};\n"
         end
     end
-    res += "        goto mill_done;\n"
+    res += "        cf->mill_cfh.pc = -1;\n"
+    res += "        return 0;\n"
     res += "    }\n"
     return res
 end
@@ -805,9 +809,6 @@ if !s[:hascancel]
 .@{epilogue(s)}
 .
 end
-.    /* There is no further code in the coroutine.
-.       Set the program counter to an invalid value. */
-.    mill_done:
 .    cf->mill_cfh.pc = -1;
 .    return 0;
 .}

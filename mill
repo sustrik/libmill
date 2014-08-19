@@ -1388,8 +1388,11 @@ end
 
 def epilogue(s)
     res = "\n"
-    res += "    /* The coroutine have exited. Cancel any remaining child coroutines. */\n"
+    res += "/* The main part of the coroutine is finished.\n"
+    res += "   What follows is the termination-related code. */\n"
     res += "mill_finally:\n"
+    res += "\n"
+    res += "    /* Cancel any remaining child coroutines. */\n"
     res += "    mill_cancel_children (cf);\n"
     res += "    cf->mill_cfh.pc = #{s[:lastpc] + 1};\n"
     res += "    goto mill_test_children;\n"
@@ -1416,7 +1419,8 @@ def epilogue(s)
     res += "            *cf->mill_out_#{a[:name]} = cf->#{a[:name]};\n"
         end
     end
-    res += "        goto mill_done;\n"
+    res += "        cf->mill_cfh.pc = -1;\n"
+    res += "        return 0;\n"
     res += "    }\n"
     return res
 end
@@ -1689,10 +1693,10 @@ Ribosome.dot("static void @{s[:name]} (", binding)
 else
 Ribosome.dot("void @{s[:name]} (", binding)
 end
-____separate_1692____ = true
+____separate_1696____ = true
         for a in s[:args]
-if(____separate_1692____)
-    ____separate_1692____ = false
+if(____separate_1696____)
+    ____separate_1696____ = false
 else
     Ribosome.add(", ", binding)
 end
@@ -1771,9 +1775,6 @@ if !s[:hascancel]
 Ribosome.dot("@{epilogue(s)}", binding)
 Ribosome.dot("", binding)
 end
-Ribosome.dot("    /* There is no further code in the coroutine.", binding)
-Ribosome.dot("       Set the program counter to an invalid value. */", binding)
-Ribosome.dot("    mill_done:", binding)
 Ribosome.dot("    cf->mill_cfh.pc = -1;", binding)
 Ribosome.dot("    return 0;", binding)
 Ribosome.dot("}", binding)
@@ -1830,10 +1831,10 @@ Ribosome.dot("static void @{s[:name]} (", binding)
 else
 Ribosome.dot("void @{s[:name]} (", binding)
 end
-____separate_1833____ = true
+____separate_1834____ = true
 for a in s[:args]
-if(____separate_1833____)
-    ____separate_1833____ = false
+if(____separate_1834____)
+    ____separate_1834____ = false
 else
     Ribosome.add(", ", binding)
 end
