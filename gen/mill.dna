@@ -425,14 +425,14 @@ end
 # Process the executable parts of the coroutines.                              #
 ################################################################################
 
-def epilogue(lastpc)
+def epilogue(s)
     res = "\n"
     res += "    /* The coroutine have exited. Cancel any remaining child coroutines. */\n"
     res += "mill_finally:\n"
     res += "    mill_cancel_children (cf);\n"
-    res += "    cf->mill_cfh.pc = #{lastpc + 1};\n"
+    res += "    cf->mill_cfh.pc = #{s[:lastpc] + 1};\n"
     res += "    goto mill_test_children;\n"
-    res += "    mill_pc_#{lastpc + 1}:\n"
+    res += "    mill_pc_#{s[:lastpc] + 1}:\n"
     res += "    mill_coframe_term (event, 1);\n"
     res += "\n"
     res += "    /* If there are no remaining children notify the parent that\n"
@@ -441,14 +441,22 @@ def epilogue(lastpc)
     res += "    if (mill_has_children (cf))\n"
     res += "        return 0;\n"
     res += "    mill_emit (cf);\n"
-    res += "    cf->mill_cfh.pc = #{lastpc + 2};\n"
+    res += "    cf->mill_cfh.pc = #{s[:lastpc] + 2};\n"
     res += "    return 0;\n"
+    res += "    mill_pc_#{s[:lastpc] + 2}:\n"
     res += "\n"
-    res += "    /* If the finished coroutine was canceled before if was selected. */\n"
-    res += "    mill_pc_#{lastpc + 2}:\n"
-    res += "    if (event == cf)\n"
-    res += "        goto mill_output;\n"
-    res += "    assert (!event);\n"
+    res += "    /* If finished coroutine was selected\n"
+    res += "       copy the out arguments to their final destinations. */\n"
+    res += "    if (event) {\n"
+    res += "        assert (event == cf);\n"
+    for a in s[:args]
+        if a[:out]
+    res += "        if (cf->mill_out_#{a[:name]})\n"
+    res += "            *cf->mill_out_#{a[:name]} = cf->#{a[:name]};\n"
+        end
+    end
+    res += "        goto mill_done;\n"
+    res += "    }\n"
     return res
 end
 
@@ -657,7 +665,9 @@ for s in sections
                     $stderr.write "Duplicit 'cancel' clause.\n"
                     exit 1
                 end
-                replace(s[:text], s[:tokens], s[:tokens][i], epilogue(s[:lastpc]))
+                newtext = epilogue(s)
+                newtext += "\n    /* If finished coroutine was canceled. */"
+                replace(s[:text], s[:tokens], s[:tokens][i], newtext)
                 replace(s[:text], s[:tokens], s[:tokens][i + 1], "")
                 s[:hascancel] = true
             end
@@ -792,19 +802,9 @@ else
 end
 .
 if !s[:hascancel]
-.@{epilogue(s[:lastpc])}
+.@{epilogue(s)}
+.
 end
-.    goto mill_done;
-.
-.    /* Copy output parameters to their final destinations. */
-.    mill_output:
-    for a in s[:args]
-        if a[:out]
-.    if (cf->mill_out_@{a[:name]})
-.        *cf->mill_out_@{a[:name]} = cf->@{a[:name]};
-        end
-    end
-.
 .    /* There is no further code in the coroutine.
 .       Set the program counter to an invalid value. */
 .    mill_done:
