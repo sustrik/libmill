@@ -432,12 +432,12 @@ def epilogue(lastpc)
     res += "    mill_cancel_children (cf);\n"
     res += "    cf->mill_cfh.pc = #{lastpc + 1};\n"
     res += "    goto mill_test_children;\n"
-    res += "mill_pc_#{lastpc + 1}:\n"
+    res += "    mill_pc_#{lastpc + 1}:\n"
     res += "    mill_coframe_term (event, 1);\n"
     res += "\n"
     res += "    /* If there are no remaining children notify the parent that\n"
     res += "       the coroutine have finished. */\n"
-    res += "mill_test_children:\n"
+    res += "    mill_test_children:\n"
     res += "    if (mill_has_children (cf))\n"
     res += "        return 0;\n"
     res += "    mill_emit (cf);\n"
@@ -445,7 +445,7 @@ def epilogue(lastpc)
     res += "    return 0;\n"
     res += "\n"
     res += "    /* If the finished coroutine was canceled before if was selected. */\n"
-    res += "mill_pc_#{lastpc + 2}:\n"
+    res += "    mill_pc_#{lastpc + 2}:\n"
     res += "    if (event == cf)\n"
     res += "        goto mill_output;\n"
     res += "    assert (!event);\n"
@@ -797,7 +797,7 @@ end
 .    goto mill_done;
 .
 .    /* Copy output parameters to their final destinations. */
-.mill_output:
+.    mill_output:
     for a in s[:args]
         if a[:out]
 .    if (cf->mill_out_@{a[:name]})
@@ -807,7 +807,7 @@ end
 .
 .    /* There is no further code in the coroutine.
 .       Set the program counter to an invalid value. */
-.mill_done:
+.    mill_done:
 .    cf->mill_cfh.pc = -1;
 .    return 0;
 .}
