@@ -318,7 +318,7 @@ end
 ################################################################################
 
 
-# line 156 "gen/clexer.rl"
+# line 158 "gen/clexer.rl"
 
 
 
@@ -477,7 +477,7 @@ end
 self.c_en_main = 11;
 
 
-# line 159 "gen/clexer.rl"
+# line 161 "gen/clexer.rl"
 
 def parse(data)
 
@@ -498,7 +498,7 @@ begin
 	act = 0
 end
 
-# line 169 "gen/clexer.rl"
+# line 171 "gen/clexer.rl"
     
 # line 192 "gen/clexer.rb"
 begin
@@ -679,7 +679,7 @@ te = p+1
 	 end
 		end
 when 7 then
-# line 107 "gen/clexer.rl"
+# line 109 "gen/clexer.rl"
 		begin
 te = p+1
  begin 
@@ -687,7 +687,7 @@ te = p+1
      end
 		end
 when 8 then
-# line 113 "gen/clexer.rl"
+# line 115 "gen/clexer.rl"
 		begin
 te = p+1
  begin 
@@ -695,12 +695,12 @@ te = p+1
      end
 		end
 when 9 then
-# line 118 "gen/clexer.rl"
+# line 120 "gen/clexer.rl"
 		begin
 te = p+1
 		end
 when 10 then
-# line 121 "gen/clexer.rl"
+# line 123 "gen/clexer.rl"
 		begin
 te = p+1
  begin 
@@ -713,12 +713,12 @@ te = p+1
      end
 		end
 when 11 then
-# line 133 "gen/clexer.rl"
+# line 135 "gen/clexer.rl"
 		begin
 te = p+1
 		end
 when 12 then
-# line 135 "gen/clexer.rl"
+# line 137 "gen/clexer.rl"
 		begin
 te = p+1
  begin  	begin
@@ -806,13 +806,15 @@ p = p - 1; begin
             stack.last << [:return, ts, te - 1]
         elsif token == "static"
             stack.last << [:static, ts, te - 1]
+        elsif token == "do"
+            stack.last << [:do, ts, te - 1]
         else
             stack.last << [:identifier, ts, te - 1]
         end
 	 end
 		end
 when 15 then
-# line 139 "gen/clexer.rl"
+# line 141 "gen/clexer.rl"
 		begin
 te = p
 p = p - 1; begin 
@@ -820,7 +822,7 @@ p = p - 1; begin
      end
 		end
 when 16 then
-# line 145 "gen/clexer.rl"
+# line 147 "gen/clexer.rl"
 		begin
 te = p
 p = p - 1; begin 
@@ -828,7 +830,7 @@ p = p - 1; begin
      end
 		end
 when 17 then
-# line 151 "gen/clexer.rl"
+# line 153 "gen/clexer.rl"
 		begin
 te = p
 p = p - 1; begin 
@@ -887,14 +889,14 @@ when 18 then
 	 end
 		end
 when 19 then
-# line 139 "gen/clexer.rl"
+# line 141 "gen/clexer.rl"
 		begin
  begin p = ((te))-1; end
  begin 
         stack.last << [:cruft, ts, te - 1]
      end
 		end
-# line 586 "gen/clexer.rb"
+# line 588 "gen/clexer.rb"
 			end # action switch
 		end
 	end
@@ -914,7 +916,7 @@ when 2 then
 # line 1 "NONE"
 		begin
 ts = nil;		end
-# line 606 "gen/clexer.rb"
+# line 608 "gen/clexer.rb"
 		end # to state action switch
 	end
 	if _trigger_goto
@@ -945,7 +947,7 @@ end
 	end
 	end
 
-# line 170 "gen/clexer.rl"
+# line 172 "gen/clexer.rl"
 
     stack.last << [:end, data.length - 1, data.length - 1]
 
@@ -1454,9 +1456,12 @@ def expand_cancel(pc, first)
     return res
 end
 
-def beginselect(pc)
-    res = ""
-    res += "{\n"
+def beginselect(pc, wrap)
+    if wrap
+        res = "{\n"
+    else
+        res = "\n"
+    end
     res += "/* Wait for next event. */\n"
     res += "cf->mill_cfh.pc = #{pc};\n"
     res += "return 0;\n"
@@ -1464,7 +1469,7 @@ def beginselect(pc)
     return res;
 end
 
-def endselect(first, hascancelclause)
+def endselect(first, hascancelclause, wrap)
     res = ""
     if !first
         res += "}\n"
@@ -1481,8 +1486,10 @@ def endselect(first, hascancelclause)
     end
     res += "\n"
     res += "/* If the event can't be processed at the moment. */\n"
-    res += "else return -1;\n"
-    res += "}"
+    res += "else return -1;"
+    if wrap
+        res += "\n}"
+    end
     return res
 end
 
@@ -1556,8 +1563,9 @@ for s in sections
                         $stderr.write "'select' should be followed by a curly brace.\n"
                         exit 1
                     end
+                    wrap = i > 0 && (tokens[i - 1][0] == :braces || tokens[i - 1][0] == :do)
                     pc += 1
-                    replace(text, alltokens, tokens[i], beginselect(pc))
+                    replace(text, alltokens, tokens[i], beginselect(pc, wrap))
                     replacechars(text, alltokens, tokens[i + 1][1], tokens[i + 1][1], "")
                     subtokens = tokens[i + 1][3]
                     if subtokens[0][0] != :case && subtokens[0][0] != :cancel
@@ -1594,7 +1602,7 @@ for s in sections
                     end
                     replacechars(text, alltokens,
                         tokens[i + 1][2], tokens[i + 1][2],
-                        endselect(first, hascancelclause))
+                        endselect(first, hascancelclause, wrap))
 
                 elsif tokens[i][0] == :syswait && $system
                     if tokens[i + 1][0] != :semicolon
@@ -1693,10 +1701,10 @@ Ribosome.dot("static void @{s[:name]} (", binding)
 else
 Ribosome.dot("void @{s[:name]} (", binding)
 end
-____separate_1696____ = true
+____separate_1704____ = true
         for a in s[:args]
-if(____separate_1696____)
-    ____separate_1696____ = false
+if(____separate_1704____)
+    ____separate_1704____ = false
 else
     Ribosome.add(", ", binding)
 end
@@ -1831,10 +1839,10 @@ Ribosome.dot("static void @{s[:name]} (", binding)
 else
 Ribosome.dot("void @{s[:name]} (", binding)
 end
-____separate_1834____ = true
+____separate_1842____ = true
 for a in s[:args]
-if(____separate_1834____)
-    ____separate_1834____ = false
+if(____separate_1842____)
+    ____separate_1842____ = false
 else
     Ribosome.add(", ", binding)
 end

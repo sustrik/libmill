@@ -97,6 +97,8 @@
             stack.last << [:return, ts, te - 1]
         elsif token == "static"
             stack.last << [:static, ts, te - 1]
+        elsif token == "do"
+            stack.last << [:do, ts, te - 1]
         else
             stack.last << [:identifier, ts, te - 1]
         end
