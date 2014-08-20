@@ -73,10 +73,10 @@ When coroutine exits, the caller is sure that there are no lefotver threads of
 execution still running.<p>
 
 <p>Another example: Sending of messages between coroutines is reduced to the
-bare minimum. Coroutine can send a messages only to the coroutine that have
-launched it and it can send only a single "I am done" message. The message is
+bare minimum. Coroutine can send messages only to the coroutine that have
+launched it and it can send it only a single "I am done" message. The message is
 sent automatically when the coroutine completes its execution and thus the
-user doesn't have to bother about messaging at all.</p>
+user doesn't have to deal with messaging at all.</p>
 
 <p>The hope is that such constrains won't affect expressivity of the language,
 yet, they will make the code cleaner, simpler and easier to understand and
