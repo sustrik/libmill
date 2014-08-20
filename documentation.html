@@ -53,22 +53,30 @@ the concept, such as Go.</p>
 
 <p>However, sometimes there is no other option but to use C. After all, C is
 the lingua franca of programming languages. Every other language integrates
-well with C. C works on any operating system. Et c.</p>
+well with C, C works on any operating system et c.</p>
 
 <p>Writing coroutines by hand (see the link above) is an option, but once you
-move beyond the very basic functionality all the required boilerplate code is
-both annoying to write and confusing to read.</p>
+move beyond the very basic functionality all the required boilerplate code
+is both annoying to write and confusing to read.</p>
 
 <p>Mill tries to solve this problem by defining a slightly augmented version of
 C language, one with direct support for coroutines.</p>
 
 <p>Mill is more than a coroutine generator though. It tries to tame the
 complexity inherent in asynchronous programming by defining additional
-constrains on what can be done. For example, the lifetime of coroutine must be
-fully contained in the lifetime of the coroutine that launched it. In other
-words, when coroutine ends, all the child coroutines are automatically canceled.
-Another example: Each coroutine can communicate only with its parent coroutine
-and can send it only a single "I am done" message.</p>
+constrains on what can be done.
+
+<p>For example, when coroutine ends, all the coroutines that it have launched
+are automatically canceled. What it means is that there's a proper coroutine
+encapsulation, similar to the one we are used to with standard C functions:
+When coroutine exits, the caller is sure that there are no lefotver threads of
+execution still running.<p>
+
+<p>Another example: Sending of messages between coroutines is reduced to the
+bare minimum. Coroutine can send a messages only to the coroutine that have
+launched it and it can send only a single "I am done" message. The message is
+sent automatically when the coroutine completes its execution and thus the
+user doesn't have to bother about messaging at all.</p>
 
 <p>The hope is that such constrains won't affect expressivity of the language,
 yet, they will make the code cleaner, simpler and easier to understand and
@@ -76,7 +84,8 @@ maintain.</p>
 
 <h3>Usage</h3>
 
-<p>Following commands will generate foo.h from foo.mh and foo.c from foo.mc:</p>
+<p>Following commands will generate <tt>foo.h</tt> from <tt>foo.mh</tt> and
+<tt>foo.c</tt> from <tt>foo.mc</tt>:</p>
 
 <pre>
     $ mill foo.mh
@@ -85,21 +94,27 @@ maintain.</p>
 
 <h3>Defining a coroutine</h3>
 
-<p>Use "coroutine" keyword to define a new coroutine. The syntax mimics the
-syntax of standard C function, except that it has no return value:</p>
+<p>Use <tt>coroutine</tt> keyword to define a new coroutine. The syntax mimics
+the syntax of standard C function, except that it has no return value:</p>
 
 <pre>
-    coroutine foo (int a, const char *b, int *result)
+    coroutine add (int a, int b, int *result)
     {
         *result = a + b;
     }
 </pre>
 
+<t>Coroutines implement cooperative multitasking and thus single blocked
+coroutine can block all the other coroutines. Therefore, make sure that
+no blocking calls, such as <tt>sleep()</tt> or <tt>recv()</tt> are used inside
+of the coroutine.</t>
+
 <p>Mill is a simple preprocessor that doesn't do full semantic analysis of the
 source. The price for such simplicity is that it is not able to automatically
 distinguish variable declarations from the other stuff in the codebase. To help
-the parser, you must place all the local variable declarations to the beginning
-of the coroutine. The declarations must be followed by "endvars" keyword:</p>
+the parser, you must locate all the local variable declarations at the top
+of the coroutine. The declarations must be followed by <tt>endvars</tt>
+keyword:</p>
 
 <pre>
     coroutine foo ()
@@ -107,31 +122,19 @@ of the coroutine. The declarations must be followed by "endvars" keyword:</p>
         int i = 0;
         endvars;
 
-        i = i + 1
+        i = i + 1;
     }
 </pre>
 
-<p>WARNING: If you put local variable declarations elsewhere, mill won't
+<p>WARNING: If you put local variable declarations elsewhere, Mill won't
 complain about the fact but the behaviour of the coroutine will become
 undefined. Expect values of such variables to change randomly while coroutine is
 in progress.</p>
 
-<h3>Coroutine aliasing</h3>
-
-<p>You can define new coroutine to have exactly the same behaviour as a
-different coroutine:</p>
-
-<pre>
-    coroutine foo = bar;
-</pre>
-
-<p>While the construct looks a bit superfluous, it is actually quite important
-tool for keeping the codebase simple. Usage of the construct will be discussed
-in subsequent sections.</p>
-
 <h3>Launching coroutines</h3>
 
-<p>Use "go" keyword to launch a coroutine:</p>
+<p>Use <tt>go</tt> keyword to launch a coroutine. The new coroutine will run
+in parallel with its parent coroutine:</p>
 
 <pre>
     coroutine foo ()
@@ -145,11 +148,12 @@ in subsequent sections.</p>
     }
 </pre>
 
-<p>The coroutine will be executed in parallel with the parent coroutine.</p>
-
 <p>Please note that coroutines can be launched in this way only from other
-coroutines. If you want to launch a coroutine from standard C function you
-have to do so in synchornous manner:</p>
+coroutines. Trying to launch a coroutine this way from standard C funcion will
+result in a syntax error.</t>
+
+<p>If you want to launch a coroutine from a plain old C function you have to run
+it in synchornous manner:</p>
 
 <pre>
     coroutine foo ()
@@ -168,28 +172,29 @@ have to do so in synchornous manner:</p>
 function. Instead, the function will be blocked until the coroutine is
 finished.</p>
 
+<t>Given the blocking behaviour, couroutines should not be invoked like this
+from outher coroutines.</t>
+
 <h3>Waiting for coroutines</h3>
 
-<p>Use "select" keyword to wait for termination of child coroutines:</p>
+<p>Use <tt>select</tt> keyword to wait for termination of child coroutine:</p>
 
 <pre>
-    coroutine foo ()
-    {
-    }
-
     coroutine bar ()
     {
         go foo ();
+
         select {
         case foo:
-            printf ("foo is done\n");
+            printf ("foo is done!\n");
         }
     }
 </pre>
 
-<p>Note that you are waiting for a specific *type* of coroutine rather than for
-specific coroutine invocation. Thus, in the following example "select" waits
-for termination of any of the child coroutines:</p>
+<p>The construct is waiting for a specific type of coroutine (<tt>foo</tt> in
+this case) rather than for termination of specific coroutine invocation. Thus,
+in the following example <tt>select</tt> waits for termination of any of the
+child coroutines:</p>
 
 <pre>
     coroutine bar ()
@@ -202,6 +207,64 @@ for termination of any of the child coroutines:</p>
             select {
             case foo:
                 printf ("foo is done!\n");
+            }
+        }
+    }
+</pre>
+
+<p>Note that unlike with <tt>switch</tt> statement, there's no fall-through
+between individual clauses of the <tt>select</tt> statement. It's always
+exactly one clause that's executed:</p>
+
+<pre>
+    coroutine foo ()
+    {
+        go bar ();
+
+        select {
+        case bar:
+            printf ("bar is done!\n");
+        case baz:
+            printf ("this line is never executed!\n");
+        }
+    }
+</pre>
+
+<p>What is also means is that <tt>break</tt> statement within <tt>select</tt>
+construct doesn't break out of the <tt>select</tt> but rather from the next
+closest <tt>for</tt> or <tt>while</tt> loop.</p>
+
+<h3>Coroutine aliasing</h3>
+
+<t>So what if you want to distinguish between different instances of
+<tt>foo</tt> coroutine?</t>
+
+<p>Mill provides a convenience construct that kind of thing. It's called
+coroutine aliasing:</p>
+
+<pre>
+    coroutine bar = foo;
+</pre>
+
+<p>Aliased coroutine <tt>bar</tt> behaves exactly like the original coroutine
+<tt>foo</tt> but it is treated as a different coroutine by the <tt>select</tt>
+statement:</p>
+
+<pre>
+    coroutine bar = foo;
+    coroutine baz = foo;
+
+    coroutine quux ()
+    {
+        go bar ();
+        go baz ();
+
+        while (1) {
+            select {
+            case bar:
+                printf ("coroutine bar done!\n");
+            case baz:
+                printf ("coroutine baz done!\n");
             }
         }
     }
@@ -260,10 +323,10 @@ single location:</p>
     }
 </pre>
 
-<p>To address this problem "out" keyword is introduced. The coroutine argument
-marked as "out" is allocated at callee's coframe (like a stack frame, but for
-coroutines) and copied to the caller-specified destination immediately before
-coroutine termination event is processed by the caller:</p>
+<p>To address this problem <tt>out</tt> keyword is introduced. The coroutine
+argument marked with <tt>out</tt> is allocated at callee's coframe (like a stack
+frame, but for coroutines) and copied to the caller-specified destination
+immediately before coroutine termination is processed by the caller:</p>
 
 <pre>
     coroutine foo (out int *result, int i)
@@ -273,9 +336,6 @@ coroutine termination event is processed by the caller:</p>
 
     coroutine bar ()
     {
-        int i;
-        endvars;
-
         go foo (&i, 1);
         go foo (&i, 2);
         go foo (&i, 3);
@@ -298,12 +358,12 @@ exceeds the lifetime of the coroutine that have launched it.</p>
 coroutine is terminating, the former is automatically canceled. There's no need
 for any explicit action on parent's behalf.</p>
 
-<p>However, the child coroutine may want to intercept the cancelation and do
+<p>However, the child coroutine may want to intercept the cancellation and do
 any necessary cleanup.</p>
 
 <p>Given that coroutines can be interrupted only while waiting inside a select
-statement, the interception can be done by simply adding a 'cancel' clause to
-the statement:</p>
+statement, the interception can be done by simply adding a <tt>cancel</tt>
+clause to the statement:</p>
 
 <pre>
     coroutine foo (out char *result)
@@ -326,8 +386,10 @@ the statement:</p>
 <p>There's one more cancelation scenario: The child coroutine may have been
 fully executed, yet the parent coroutine may exit without selecting it. In such
 case the coroutine being canceled (the child coroutine) still needs to do
-clean-up, specifically, it needs to deallocate any dynamically allocated output
-parameters. It can be done by adding the 'cancel' clause to the coroutine
+cleaned up, specifically, it needs to deallocate any dynamically allocated
+output parameters.</p>
+
+<p>It can be done by adding the <tt>cancel</tt> clause to the coroutine
 itself:</p>
 
 <pre>
@@ -354,6 +416,7 @@ lead to memory exhaustion:</p>
 <pre>
     coroutine foo ()
     {
+        /* Don't do this at home! */
         while (1) {
             go msleep (1000);
         }
@@ -363,7 +426,7 @@ lead to memory exhaustion:</p>
 <h3>Debugging</h3>
 
 <p>To make debugging of the asynchronous system easier, mill has support for
-tracing. You can switch it on by invoking "_mill_trace();" function.</p>
+tracing. You can switch it on by invoking <tt>_mill_trace()</tt> function.</p>
 
 <p>The tracing output looks like this:</p>
 
