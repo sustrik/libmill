@@ -50,7 +50,7 @@ void _mill_trace ()
     mill_trace = 1;
 }
 
-static mill_printstack (void *cfptr)
+static void mill_printstack (void *cfptr)
 {
     struct mill_cfh *cfh;
 

@@ -20,35 +20,51 @@
 #   IN THE SOFTWARE.
 #
 
+# Initialise the build system.
 AC_PREREQ([2.53])
 AC_INIT([mill], [0.1])
+LT_INIT
 
+# The directory to store libtool macros in.
+AC_CONFIG_MACRO_DIR([m4])
+
+# Check the compiler.
+AC_PROG_CC_C99
+AM_PROG_CC_C_O
+
+# Check whether Ruby is installed.
 AC_PATH_PROG([RUBY], [ruby])
 AS_IF([test x"$RUBY" = "x"],[
     AC_MSG_ERROR([Mill requires Ruby to operate, please install it.])
 ])
 
+# Check whether libuv is installed.
 AC_CHECK_LIB([uv], [uv_close], [], [
     AC_MSG_ERROR([Mill requires libuv to operate, please install it from https://github.com/joyent/libuv.])
 ])
 
+# On demand, switch on the code generation phase of the build.
 AC_ARG_ENABLE([gen], [AS_HELP_STRING([--enable-gen],
     [Enable code generation (for Mill developers) [default=no]])])
+AM_CONDITIONAL([GEN], [test x"$enable_gen" = "xyes"])
 
+# Additional dependencies for the code generation phase.
 AS_IF([test x"$enable_gen" = "xyes"], [
+
+    # Check whether ribosome is installed.
     AC_PATH_PROG([RIBOSOME], [ribosome])
     AS_IF([test x"$RIBOSOME" = "x"],[
         AC_MSG_ERROR([Code generation requires ribosome, please install it from https://github.com/sustrik/ribosome.])
     ])
+
+    # Check whether Ragel is installed.
     AC_PATH_PROG([RAGEL], [ragel])
     AS_IF([test x"$RAGEL" = "x"],[
         AC_MSG_ERROR([Code generation requires Ragel, please install it.])
     ])
 ])
-AM_CONDITIONAL([GEN], [test x"$enable_gen" = "xyes"])
 
-AC_PROG_CC
-AC_PROG_RANLIB
-
+# Do the configuration.
 AM_INIT_AUTOMAKE([foreign])
 AC_OUTPUT([Makefile])
+
