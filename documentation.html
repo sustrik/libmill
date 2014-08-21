@@ -44,8 +44,14 @@
 <li><a href="#ch8">Returning data from coroutines</a></li>
 <li><a href="#ch9">Canceling coroutines</a></li>
 <li><a href="#ch10">Comment on memory management</a></li>
-<li><a href="#ch11">Debugging</a></li>
-<li><a href="#ch12">Avoiding the dependency on libstdmill.so</a></li>
+<li><a href="#ch11">The standard library</a></li>
+    <ul style="list-style: none;">
+    <li><a href="#ch11.1">msleep</a></li>
+    <li><a href="#ch11.2">getaddressinfo</a></li>
+    <li><a href="#ch11.3">tcpsocket</a></li>
+    </ul>
+<li><a href="#ch12">Debugging</a></li>
+<li><a href="#ch13">Avoiding the dependency on libstdmill.so</a></li>
 </ul>
 
 <a name="ch1"/><h3>Introduction to coroutines</h3>
@@ -459,7 +465,76 @@ lead to memory exhaustion:</p>
     }
 </pre>
 
-<a name="ch11"/><h3>Debugging</h3>
+<a name="ch11"/><h3>The standard library</h3>
+
+</p>Standard library (<tt>stdmill</tt>) contains atomic coroutines that can be
+used to construct more complex programs.</p>
+
+<a name="ch11.1"/><h4>msleep</h4>
+
+<pre>
+    coroutine msleep (
+        int milliseconds);
+</pre>
+
+<a name="ch11.2"/><h4>getaddressinfo</h4>
+
+<pre>
+    coroutine getaddressinfo (
+	    out int *rc,
+	    const char *node,
+	    const char *service,
+	    const struct addrinfo *hints,
+	    out struct addrinfo **res);
+
+    void freeaddressinfo (
+        struct addrinfo *ai);
+</pre>
+
+<a name="ch11.3"/><h4>tcpsocket</h4>
+
+<pre>
+    struct tcpsocket;
+
+    int tcpsocket_init (
+	    struct tcpsocket *self);
+
+    coroutine tcpsocket_term (
+	    struct tcpsocket *self);
+
+    int tcpsocket_bind (
+	    struct tcpsocket *self,
+	    struct sockaddr *addr,
+	    int flags);
+
+    int tcpsocket_listen (
+	    struct tcpsocket *self,
+	    int backlog);
+
+    coroutine tcpsocket_connect (
+	    out int *rc,
+	    struct tcpsocket *self,
+	    struct sockaddr *addr);
+
+    coroutine tcpsocket_accept (
+	    out int *rc,
+	    struct tcpsocket *self,
+	    struct tcpsocket *newsock);
+
+    coroutine tcpsocket_send (
+	    out int *rc,
+	    struct tcpsocket *self,
+	    const void *buf,
+	    size_t len);
+
+    coroutine tcpsocket_recv (
+	    out int *rc,
+	    struct tcpsocket *self,
+	    void *buf,
+	    size_t len);
+</pre>
+
+<a name="ch12"/><h3>Debugging</h3>
 
 <p>To make debugging of the asynchronous system easier, mill has support for
 tracing. You can switch it on by invoking <tt>_mill_trace()</tt> function.</p>
@@ -491,7 +566,7 @@ example:</p>
 <p>Means that coroutine <tt>fx2</tt> invoked from top-level coroutine
 <tt>test</tt> have finished execution.</p>
 
-<a name="ch12"/><h3>Avoiding the dependency on libstdmill.so</h3>
+<a name="ch13"/><h3>Avoiding the dependency on libstdmill.so</h3>
 
 <p>If you want your users not to have to install Mill runtime library, you
 can simply add the source files (<tt>stdmill.h</tt> and <tt>stdmill.c</tt>)
