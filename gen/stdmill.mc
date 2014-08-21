@@ -424,7 +424,7 @@ coroutine getaddressinfo (
     /* Wait for next event. */
     syswait;
 
-    /* If the coroutine is canceled by the caller. */
+    /* If the coroutine ibs canceled by the caller. */
     if (event == NULL) {
         *rc = uv_cancel ((uv_req_t*) &req);
         uv_assert (*rc == 0);
@@ -433,6 +433,9 @@ coroutine getaddressinfo (
 
     /* If the coroutine have finished. */
     assert (event == getaddressinfo_cb);
+
+cancel:
+    uv_freeaddrinfo (*res);
 }
 
 static void getaddressinfo_cb (

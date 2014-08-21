@@ -3,7 +3,7 @@
 
 #include "../stdmill.h"
 
-coroutine test ()
+coroutine test1 ()
 {
     int rc;
     struct addrinfo *info;
@@ -23,8 +23,25 @@ coroutine test ()
     freeaddrinfo (info);
 }
 
+coroutine test2 ()
+{
+    int rc;
+    struct addrinfo *info;
+    struct in_addr addr;
+    endvars;
+
+    go msleep (100);
+	go getaddressinfo (&rc, "127.0.0.1", NULL, NULL, &info);
+    select {
+    case msleep:
+    }
+
+    /* The resulting addrinfo structure should be automatically deallocated. */
+}
+
 int main ()
 {
-    test();
+    test1();
+    test2();
 }
 
