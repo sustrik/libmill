@@ -414,6 +414,9 @@ clause to the statement:</p>
     }
 </pre>
 
+</p>If <tt>cancel</tt> clause is not specified the coroutine is canceled
+straight away without executing any user-defined code.</p>
+
 <p>There's one more cancelation scenario: The child coroutine may have been
 fully executed, yet the parent coroutine may exit without selecting it. In such
 case the coroutine being canceled (the child coroutine) still needs to do
