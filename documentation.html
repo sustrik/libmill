@@ -241,7 +241,7 @@ closest <tt>for</tt> or <tt>while</tt> loop.</p>
 <t>So what if you want to distinguish between different instances of
 <tt>foo</tt> coroutine?</t>
 
-<p>Mill provides a convenience construct that kind of thing. It's called
+<p>Mill provides a convenience construct for that kind of thing. It's called
 coroutine aliasing:</p>
 
 <pre>
@@ -298,7 +298,8 @@ parameters and they should work as expected:</p>
 </pre>
 
 <p>There's a problem though if multiple coroutines write the result into a
-single location:</p>
+single location. The result from one instance of the coroutine can
+be overwritten by a result from another instance:</p>
 
 <pre>
     coroutine foo (int *result, int i)
@@ -328,7 +329,7 @@ single location:</p>
 <p>To address this problem <tt>out</tt> keyword is introduced. The coroutine
 argument marked with <tt>out</tt> is allocated at callee's coframe (like a stack
 frame, but for coroutines) and copied to the caller-specified destination
-immediately before coroutine termination is processed by the caller:</p>
+only when the coroutine is selected:</p>
 
 <pre>
     coroutine foo (out int *result, int i)
@@ -403,6 +404,17 @@ itself:</p>
         free (result);
     }
 </pre>
+
+<p>The <tt>cancel</tt> construct is somewhat confusing in that it has a distinct
+exception-handling feel about it. However, the feeling is misleading.</p>
+
+<p>Where the likes of <tt>catch</tt> construct handle errors in the child
+functions, Mill's <tt>cancel</tt> construct handles cancellation events in 
+the parent functions.</p>
+
+<p>In other words, while exception handling bubbles the errors up the stack
+(from callees to callers) Mill's cancellation mechanism propagates the cancel
+requests down the stack (from callers to callees).</p>
 
 <h3>Comment on memory management</h3>
 
