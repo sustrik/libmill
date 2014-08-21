@@ -481,11 +481,11 @@ used to construct more complex programs.</p>
 
 <pre>
     coroutine getaddressinfo (
-	    out int *rc,
-	    const char *node,
-	    const char *service,
-	    const struct addrinfo *hints,
-	    out struct addrinfo **res);
+        out int *rc,
+        const char *node,
+        const char *service,
+        const struct addrinfo *hints,
+        out struct addrinfo **res);
 
     void freeaddressinfo (
         struct addrinfo *ai);
