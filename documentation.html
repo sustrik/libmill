@@ -410,7 +410,7 @@ exception-handling feel about it. However, the feeling is misleading.</p>
 
 <p>Where the likes of <tt>catch</tt> construct handle errors in the child
 functions, Mill's <tt>cancel</tt> construct handles cancellation events in 
-the parent functions.</p>
+the parent coroutines.</p>
 
 <p>In other words, while exception handling bubbles the errors up the stack
 (from callees to callers) Mill's cancellation mechanism propagates the cancel
