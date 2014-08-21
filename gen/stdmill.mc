@@ -448,7 +448,8 @@ static void getaddressinfo_cb (
     mill_handler_getaddressinfo (cf, (void*) getaddressinfo_cb);
 }
 
-void freeaddressinfo (struct addrinfo *ai)
+void freeaddressinfo (
+    struct addrinfo *ai)
 {
     uv_freeaddrinfo (ai);
 }

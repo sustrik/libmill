@@ -181,7 +181,8 @@ coroutine getaddressinfo (
     const struct addrinfo *hints,
     out struct addrinfo **res);
 
-void freeaddressinfo (struct addrinfo *ai);
+void freeaddressinfo (
+    struct addrinfo *ai);
 
 struct tcpsocket {
     uv_tcp_t s;
