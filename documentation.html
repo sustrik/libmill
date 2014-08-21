@@ -109,6 +109,13 @@ maintain.</p>
     $ mill foo.mc
 </pre>
 
+<p>To build the generated code compile it as standard C and link with
+<tt>stdmill</tt> library:</p>
+
+<pre>
+    $ gcc -o foo foo.c -lstdmill
+</pre>
+
 <a name="ch4"/><h3>Defining a coroutine</h3>
 
 <p>Use <tt>coroutine</tt> keyword to define a new coroutine. The syntax mimics
