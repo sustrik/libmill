@@ -33,7 +33,22 @@
 
 <h2>Documentation</h2>
 
-<h3>Introduction to coroutines</h3>
+<ul style="list-style: none;">
+<li><a href="#ch1">Introduction to coroutines</a></li>
+<li><a href="#ch2">Introduction to Mill</a></li>
+<li><a href="#ch3">Usage</a></li>
+<li><a href="#ch4">Defining a coroutine</a></li>
+<li><a href="#ch5">Launching coroutines</a></li>
+<li><a href="#ch6">Waiting for coroutines</a></li>
+<li><a href="#ch7">Coroutine aliasing</a></li>
+<li><a href="#ch8">Returning data from coroutines</a></li>
+<li><a href="#ch9">Canceling coroutines</a></li>
+<li><a href="#ch10">Comment on memory management</a></li>
+<li><a href="#ch11">Debugging</a></li>
+<li><a href="#ch12">Avoiding the dependency on libstdmill.so</a></li>
+</ul>
+
+<a name="ch1"/><h3>Introduction to coroutines</h3>
 
 <p>Coroutines are a way to implement cooperative multitasking in a rather simple
 and developer-friendly manner.</p>
@@ -46,7 +61,7 @@ and developer-friendly manner.</p>
 
 <p><a href="http://www.chiark.greenend.org.uk/~sgtatham/coroutines.html">http://www.chiark.greenend.org.uk/~sgtatham/coroutines.html</a></p>
 
-<h3>Mill</h3>
+<a name="ch2"/><h3>Introduction to Mill</h3>
 
 <p>To use coroutines, it is best to choose a language that has direct support for
 the concept, such as Go.</p>
@@ -84,7 +99,7 @@ user doesn't have to deal with messaging at all.</p>
 yet, they will make the code cleaner, simpler and easier to understand and
 maintain.</p>
 
-<h3>Usage</h3>
+<a name="ch3"/><h3>Usage</h3>
 
 <p>Following commands will generate <tt>foo.h</tt> from <tt>foo.mh</tt> and
 <tt>foo.c</tt> from <tt>foo.mc</tt>:</p>
@@ -94,7 +109,7 @@ maintain.</p>
     $ mill foo.mc
 </pre>
 
-<h3>Defining a coroutine</h3>
+<a name="ch4"/><h3>Defining a coroutine</h3>
 
 <p>Use <tt>coroutine</tt> keyword to define a new coroutine. The syntax mimics
 the syntax of standard C function, except that it has no return value:</p>
@@ -133,7 +148,7 @@ complain about the fact but the behaviour of the coroutine will become
 undefined. Expect values of such variables to change randomly while coroutine is
 in progress.</p>
 
-<h3>Launching coroutines</h3>
+<a name="ch5"/><h3>Launching coroutines</h3>
 
 <p>Use <tt>go</tt> keyword to launch a coroutine. The new coroutine will run
 in parallel with its parent coroutine:</p>
@@ -177,7 +192,7 @@ finished.</p>
 <t>Given the blocking behaviour, couroutines should not be invoked like this
 from outher coroutines.</t>
 
-<h3>Waiting for coroutines</h3>
+<a name="ch6"/><h3>Waiting for coroutines</h3>
 
 <p>Use <tt>select</tt> keyword to wait for termination of child coroutine:</p>
 
@@ -236,7 +251,7 @@ exactly one clause that's executed:</p>
 construct doesn't break out of the <tt>select</tt> but rather from the next
 closest <tt>for</tt> or <tt>while</tt> loop.</p>
 
-<h3>Coroutine aliasing</h3>
+<a name="ch7"/><h3>Coroutine aliasing</h3>
 
 <t>So what if you want to distinguish between different instances of
 <tt>foo</tt> coroutine?</t>
@@ -272,7 +287,7 @@ statement:</p>
     }
 </pre>
 
-<h3>Returning data from coroutines</h3>
+<a name="ch8"/><h3>Returning data from coroutines</h3>
 
 <p>Coroutines have no return values. However, you can use standard output
 parameters and they should work as expected:</p>
@@ -352,7 +367,7 @@ only when the coroutine is selected:</p>
     }
 </pre>
 
-<h3>Canceling coroutines</h3>
+<a name="ch9"/><h3>Canceling coroutines</h3>
 
 <p>One of the main principles in mill is that lifetime of a coroutine never
 exceeds the lifetime of the coroutine that have launched it.</p>
@@ -416,7 +431,7 @@ the parent coroutines.</p>
 (from callees to callers) Mill's cancellation mechanism propagates the cancel
 requests down the stack (from callers to callees).</p>
 
-<h3>Comment on memory management</h3>
+<a name="ch10"/><h3>Comment on memory management</h3>
 
 <p>Keep in mind that coframes are deallocated when the child coroutine is
 selected. If you launch a coroutine without selecting it afterwards, the
@@ -437,7 +452,7 @@ lead to memory exhaustion:</p>
     }
 </pre>
 
-<h3>Debugging</h3>
+<a name="ch11"/><h3>Debugging</h3>
 
 <p>To make debugging of the asynchronous system easier, mill has support for
 tracing. You can switch it on by invoking <tt>_mill_trace()</tt> function.</p>
@@ -469,7 +484,7 @@ example:</p>
 <p>Means that coroutine <tt>fx2</tt> invoked from top-level coroutine
 <tt>test</tt> have finished execution.</p>
 
-<h3>Avoiding the dependency on libstdmill.so</h3>
+<a name="ch12"/><h3>Avoiding the dependency on libstdmill.so</h3>
 
 <p>If you want your users not to have to install Mill runtime library, you
 can simply add the source files (<tt>stdmill.h</tt> and <tt>stdmill.c</tt>)
