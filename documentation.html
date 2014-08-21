@@ -51,7 +51,6 @@
     <li><a href="#ch11.3">tcpsocket</a></li>
     </ul>
 <li><a href="#ch12">Debugging</a></li>
-<li><a href="#ch13">Avoiding the dependency on libstdmill.so</a></li>
 </ul>
 
 <a name="ch1"/><h3>Introduction to coroutines</h3>
@@ -199,7 +198,7 @@ it in synchornous manner:</p>
 </pre>
 
 <p>In this case the coroutine won't execute in parallel with the parent 
-function. Instead, the function will be blocked until the coroutine is
+function. Instead, the function will block until the coroutine is
 finished.</p>
 
 <t>Given the blocking behaviour, couroutines should not be invoked like this
@@ -624,20 +623,6 @@ example:</p>
 
 <p>Means that coroutine <tt>fx2</tt> invoked from top-level coroutine
 <tt>test</tt> have finished execution.</p>
-
-<a name="ch13"/><h3>Avoiding the dependency on libstdmill.so</h3>
-
-<p>If you want your users not to have to install Mill runtime library, you
-can simply add the source files (<tt>stdmill.h</tt> and <tt>stdmill.c</tt>)
-directly to your project.<p>
-
-<p>However, keep in mind that in such case you should set your compiler's
-include path in such a way that it points to the location of <tt>stdmill.h</tt>
-file.</p>
-
-<p>Also consider that although the above will remove dependency on
-<tt>libstdmill.so</tt> the dependency on <tt>libuv.so</tt> will remain in
-place.</p>
 
 </div>
 </body>
