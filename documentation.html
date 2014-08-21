@@ -477,6 +477,27 @@ used to construct more complex programs.</p>
         int milliseconds);
 </pre>
 
+<p>Sleep for specified amount of milliseconds.</p>
+
+<p>Given that the above is a coroutine (and thus executes asynchronously) it
+can be thought of as an alarm and used for implementing timeouts.</p>
+
+<p>Example:</p>
+
+<pre>
+    coroutine foo ()
+    {
+        go bar ();
+        go msleep (1000);
+        select {
+        case bar:
+            printf ("bar was successfully executed!\n");
+        case msleep:
+            printf ("bar have timed out!\n");
+        }
+    }
+</pre>
+
 <a name="ch11.2"/><h4>getaddressinfo</h4>
 
 <pre>
@@ -489,6 +510,32 @@ used to construct more complex programs.</p>
 
     void freeaddressinfo (
         struct addrinfo *ai);
+</pre>
+
+<p>Translate network address, similar to POSIX <a href="http://pubs.opengroup.org/onlinepubs/009695399/functions/getaddrinfo.html"><tt>getaddrinfo</tt></a> function. Check POSIX documentation
+for argument details.</p>
+
+<p>Use <tt>freeaddressinfo</tt> function to deallocate the result.</p>
+
+<p>Example:</p>
+
+<pre>
+    coroutine foo ()
+    {
+        int rc;
+        struct addrinfo *info;
+        endvars;
+
+        go getaddressinfo (&rc, "www.google.com", NULL, NULL, &info);
+        select {
+        case getaddressinfo:
+            assert (rc == 0);
+        }
+
+        /* Do stuff here. */
+
+        freeaddressinfo (info);
+    }
 </pre>
 
 <a name="ch11.3"/><h4>tcpsocket</h4>
