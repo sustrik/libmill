@@ -526,7 +526,7 @@ for argument details.</p>
         struct addrinfo *info;
         endvars;
 
-        go getaddressinfo (&rc, "www.google.com", NULL, NULL, &info);
+        go getaddressinfo (&rc, "example.org", NULL, NULL, &info);
         select {
         case getaddressinfo:
             assert (rc == 0);

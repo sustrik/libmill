@@ -65,25 +65,48 @@
 
 <h3>Understanding the toolchain</h3>
 
-<p>The files in the project are generated in the following way. Grey boxes represent target files (ones delivered to the end user):</p>
+<p>The files in the project are generated in the following way. Grey boxes
+represent target files (ones delivered to the end user):</p>
 
 <img src="toolchain.png">
 
-<p>'clexer.lr' is a file describing C tokens that is processed by Ragel to create C tokeniser. Use -R option when running Ragel to create Ruby version of the tokeniser. Note that there is no parser (except for a very simple one that does nothing but match pairs of braces -- also implemented in 'clexer.rl'). Being a simple tool, Mill does not attemp to do syntactic ananlysis of the source and relies fully on expanding  lexical tokens.</p>
+<p><tt>clexer.lr'</tt> is a file describing C tokens that is processed by Ragel
+to create C tokeniser. Use -R option when running Ragel to create Ruby version
+of the tokeniser. Note that there is no parser (except for a very simple one
+that does nothing but match pairs of braces -- also implemented in
+<tt>clexer.rl</tt>). Being a simple tool, Mill does not attemp to do syntactic
+ananlysis of the source and relies fully on expanding lexical tokens.</p>
 
-<p>'clexer.rb' is thus the source code of the tokeniser. It is included into mill.dna which means that an exact copy of the code appears in 'mill'</p>
+<p><tt>clexer.rb</tt> is thus the source code of the tokeniser. It is included
+into <tt>mill.dna</tt> which means that an exact copy of the code appears in
+<tt>mill</tt></p>
 
-<p>'mill.dna' is the source code of the Mill preprocessor. It's in essence a Ruby code with some fancy syntax for code generation. It is processed by ribosome (use --rna switch to avoid runtime dependency on ribosome) to create 'mill'.</p>
+<p><tt>mill.dna</tt> is the source code of the Mill preprocessor. It's in
+essence a Ruby code with some fancy syntax for code generation. It is processed
+by ribosome (use <tt>--rna</tt> switch to avoid runtime dependency on ribosome)
+to create <tt>mill</tt>.</p>
 
-<p>'mill' is the C preprocessor itself. It is a Ruby program, however, for convenience's sake it has no .rb extension.</p>
+<p><tt>mill</tt> is the C preprocessor itself. It is a Ruby program, however,
+for convenience's sake it has no <tt>.rb</tt> extension.</p>
 
-<p>'stdmill.mh' and 'stdmill.mc' implement the core language runtine along with the library of elementary coroutines (timers, socket operations et c.) They have to be pre-processed by 'mill' (use --system switch to provide them with more flexibility) to yield actual library source code.</p>
+<p><tt>stdmill.mh</tt> and <tt>stdmill.mc</tt> implement the core language
+runtine along with the library of elementary coroutines (timers, socket
+operations et c.) They have to be pre-processed by <tt>mill</tt> (use
+<tt>--system</tt> switch to provide them with more flexibility) to yield actual
+library source code.</p>
 
-<p>'stdmill.h' and 'stdmill.c' are generated from 'stdmill.mh' and 'stdmill.mc'. Along with 'mill.h' and 'mill.c' they are the source code for Mill runtime library.</p>
+<p><tt>stdmill.h</tt> and <tt>stdmill.c</tt> are generated from
+<tt>stdmill.mh</tt> and <tt>stdmill.mc</tt>. Along with <tt>mill.h</tt> and
+<tt>mill.c</tt> they are the source code for Mill runtime library.</p>
 
-<p>'libstdmill.so' is Mill runtime library. It has to be installed everywhere where Mill programs are being run. The library uses 'libuv.so' to interface with the operating system.</p>
+<p><tt>libstdmill.so</tt> is Mill runtime library. It has to be installed
+everywhere where Mill programs are being run. The library uses <tt>libuv.so</tt>
+to interface with the operating system.</p>
 
-<p>The part in the dotted box is done only by Mill developers (--enable-gen option). Ordinary users perform just the last step of the toolchain (generating the library from stdmill.h and stdmill.c) when building the project.</p>
+<p>The part in the dotted box is done only by Mill developers
+(<tt>--enable-gen</tt> option). Ordinary users perform just the last step of
+the toolchain (generating the library from <tt>stdmill.h</tt> and
+<tt>stdmill.c</tt>) when building the project.</p>
 
 <h3>Bug tracker</h3>
 
@@ -92,9 +115,14 @@
 
 <h3>Contributing</h3>
 
-<p>To contribute to the project send your patch to the mailing list or, alternatively, send a GitHub pull request. In either case you have to state that your patch is submitted under MIT/X11 license, so that we can incorporate it into the mainline codebase.</p>
+<p>To contribute to the project send your patch to the mailing list or,
+alternatively, send a GitHub pull request. In either case you have to state that
+your patch is submitted under MIT/X11 license, so that we can incorporate it
+into the mainline codebase.</p>
 
-<p>If you make a substantial contribution to a file, add your copyright to the file header. Irrespective of whether you do so, your name will be added to the AUTHORS file to indicate you own copyright to a part of the codebase.</p>
+<p>If you make a substantial contribution to a file, add your copyright to the
+file header. Irrespective of whether you do so, your name will be added to the
+AUTHORS file to indicate you own copyright to a part of the codebase.</p>
 
 </div>
 </body>
