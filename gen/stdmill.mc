@@ -57,9 +57,9 @@ static void mill_printstack (void *cfptr)
     cfh = (struct mill_cfh*) cfptr;
     if (cfh->parent) {
         mill_printstack (cfh->parent);
-        printf ("/");
+        fprintf (stderr, "/");
     }
-    printf ("%s", cfh->type->name);
+    fprintf (stderr, "%s", cfh->type->name);
 }
 
 /******************************************************************************/
@@ -248,9 +248,9 @@ void mill_coframe_init (
 
     /* Trace start of the new coroutine. */
     if (mill_trace) {
-        printf ("mill ==> go     ");
+        fprintf (stderr, "mill ==> go     ");
         mill_printstack (cfh);
-        printf ("\n");
+        fprintf (stderr, "\n");
     }
 }
 
@@ -266,9 +266,9 @@ void mill_coframe_term (
        as the return from the coroutine is already reported and the two are
        basically the same thing. */
     if (mill_trace && cfh->parent) {
-        printf ("mill ==> select ");
+        fprintf (stderr, "mill ==> select ");
         mill_printstack (cfh);
-        printf ("\n");
+        fprintf (stderr, "\n");
     }
 
     /* Copy the 'out' arguments to their final destinations. */
@@ -306,9 +306,9 @@ void mill_emit (
     mill_loop_emit (cfh->loop, cfh);
 
     if (mill_trace) {
-        printf ("mill ==> return ");
+        fprintf (stderr, "mill ==> return ");
         mill_printstack (cfh);
-        printf ("\n");
+        fprintf (stderr, "\n");
     }
 }
 
@@ -323,9 +323,9 @@ void mill_cancel_children (
     /* Ask all child coroutines to cancel. */
     for (child = cfh->children; child != NULL; child = child->next) {
         if (mill_trace) {
-            printf ("mill ==> cancel ");
+            fprintf (stderr, "mill ==> cancel ");
             mill_printstack (child);
-            printf ("\n");
+            fprintf (stderr, "\n");
         }
         child->type->handler (child, NULL);
     }
