@@ -95,7 +95,7 @@ encapsulation, similar to the one we are used to with standard C functions:
 When coroutine exits, the caller is sure that there are no lefotver threads of
 execution still running.<p>
 
-<p>Another example: Sending of messages between coroutines is reduced to the
+<p>Another example: Sending messages between coroutines is reduced to the
 bare minimum. Coroutine can send messages only to the coroutine that have
 launched it and it can send it only a single "I am done" message. The message is
 sent automatically when the coroutine completes its execution and thus the
