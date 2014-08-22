@@ -719,7 +719,7 @@ end
 .
 
 if !$system
-.#include "stdmill.h"
+.#include <stdmill.h>
 .
 end
 
