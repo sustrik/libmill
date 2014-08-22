@@ -89,11 +89,6 @@ CLEANFILES = mill gen/clexer.rb stdmill.h stdmill.c $(check_CLEANFILES)
 
 else
 
-mill: gen/mill.dna gen/clexer.rb
-	@echo You have modified Mill source files in gen/, reconfigure with --enable-gen and rebuild. && false
-
-gen/clexer.rb:
-
 CLEANFILES = $(check_CLEANFILES)
 
 endif
