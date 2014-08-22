@@ -145,6 +145,13 @@ the syntax of standard C function, except that it has no return value:</p>
     }
 </pre>
 
+<p>As with C functions, coroutines can be also declared to have only local
+visibility:</p>
+
+<pre>
+    static coroutine foo ();
+</pre>
+
 <t>Coroutines implement cooperative multitasking and thus single blocked
 coroutine can block all the other coroutines. Therefore, make sure that
 no blocking calls, such as <tt>sleep()</tt> or <tt>recv()</tt> are used inside
