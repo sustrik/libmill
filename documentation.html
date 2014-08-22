@@ -44,14 +44,13 @@
 <li><a href="#ch8">Returning data from coroutines</a></li>
 <li><a href="#ch9">Canceling coroutines</a></li>
 <li><a href="#ch10">Comment on memory management</a></li>
-<li><a href="#ch11">Header files</a></li>
-<li><a href="#ch12">The standard library</a></li>
+<li><a href="#ch11">The standard library</a></li>
     <ul style="list-style: none;">
-    <li><a href="#ch12.1">msleep</a></li>
-    <li><a href="#ch12.2">getaddressinfo</a></li>
-    <li><a href="#ch12.3">tcpsocket</a></li>
+    <li><a href="#ch11.1">msleep</a></li>
+    <li><a href="#ch11.2">getaddressinfo</a></li>
+    <li><a href="#ch11.3">tcpsocket</a></li>
     </ul>
-<li><a href="#ch13">Debugging</a></li>
+<li><a href="#ch12">Debugging</a></li>
 </ul>
 
 <a name="ch1"/><h3>Introduction to coroutines</h3>
@@ -486,35 +485,7 @@ lead to memory exhaustion:</p>
     }
 </pre>
 
-<a name="ch11"/><h3>Header files</h3>
-
-<p>Mill header files have <tt>.mh</tt> extension (as opposed to <tt>.mc</tt>
-for source files) and are compiled the same way as the source files.</p>
-
-<p>The only detail to keep in mind is that Mill source files should include
-generated <tt>.h</tt> headers rather than original <tt>.mh</tt> files.</p>
-
-<p>Therefore, if <tt>foo.mh</tt> looks like this:</p>
-
-<pre>
-    #define FOOTYPE_BAR 1
-    #define FOOTYPE_BAZ 2
-
-    coroutine foo (int type);
-</pre>
-
-<p>Corresponding source file <tt>foo.mc</tt> should look like this:</p>
-
-<pre>
-    #include "foo.h"
-
-    coroutine foo (int type)
-    {
-        ...
-    }
-</pre>
-
-<a name="ch12"/><h3>The standard library</h3>
+<a name="ch11"/><h3>The standard library</h3>
 
 </p>Standard library (<tt>stdmill</tt>) contains atomic coroutines that can be
 used to construct more complex programs.</p>
@@ -528,7 +499,7 @@ file:</p>
 
 The implementations are in <tt>stdmill</tt> shared library.</p>
 
-<a name="ch12.1"/><h4>msleep</h4>
+<a name="ch11.1"/><h4>msleep</h4>
 
 <pre>
     coroutine msleep (
@@ -556,7 +527,7 @@ can be thought of as an alarm and used for implementing timeouts.</p>
     }
 </pre>
 
-<a name="ch12.2"/><h4>getaddressinfo</h4>
+<a name="ch11.2"/><h4>getaddressinfo</h4>
 
 <pre>
     coroutine getaddressinfo (
@@ -596,7 +567,7 @@ for argument details.</p>
     }
 </pre>
 
-<a name="ch12.3"/><h4>tcpsocket</h4>
+<a name="ch11.3"/><h4>tcpsocket</h4>
 
 <pre>
     struct tcpsocket;
@@ -639,7 +610,7 @@ for argument details.</p>
 	    size_t len);
 </pre>
 
-<a name="ch13"/><h3>Debugging</h3>
+<a name="ch12"/><h3>Debugging</h3>
 
 <p>To make debugging of the asynchronous system easier, mill has support for
 tracing. You can switch it on by invoking <tt>_mill_trace()</tt> function.</p>
