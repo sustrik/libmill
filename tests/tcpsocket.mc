@@ -1,5 +1,5 @@
 
-#include "../stdmill.h"
+#include "../stdmill.mh"
 
 coroutine test ()
 {

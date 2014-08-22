@@ -1,7 +1,7 @@
 
 #include <assert.h>
 
-#include "../stdmill.h"
+#include "../stdmill.mh"
 
 int counter = 0;
 

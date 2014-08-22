@@ -1168,6 +1168,29 @@ begin
 end
 
 ################################################################################
+# Replace Mill includes with their C counterparts.                             #
+################################################################################
+
+begin
+    def expand_includes(text, tokens)
+        for t in tokens
+            if t[0] == :include
+                newtext = text[t[1]..t[2]].
+                    gsub(/\.mh>/, '.h>').
+                    gsub(/\.mh\"/, '.h"').
+                    gsub(/\.mc>/, '.c>').
+                    gsub(/\.mc\"/, '.c"')
+                replace(text, tokens, t, newtext)
+            end
+            if t[3] != nil
+                expand_includes(text, t[3])
+            end
+        end
+    end
+    expand_includes(text, tokens)
+end
+
+################################################################################
 #  Now we'll traverse the mill file and split it into different sections.      #
 ################################################################################
 
@@ -1701,10 +1724,10 @@ Ribosome.dot("static void @{s[:name]} (", binding)
 else
 Ribosome.dot("void @{s[:name]} (", binding)
 end
-____separate_1704____ = true
+____separate_1727____ = true
         for a in s[:args]
-if(____separate_1704____)
-    ____separate_1704____ = false
+if(____separate_1727____)
+    ____separate_1727____ = false
 else
     Ribosome.add(", ", binding)
 end
@@ -1839,10 +1862,10 @@ Ribosome.dot("static void @{s[:name]} (", binding)
 else
 Ribosome.dot("void @{s[:name]} (", binding)
 end
-____separate_1842____ = true
+____separate_1865____ = true
 for a in s[:args]
-if(____separate_1842____)
-    ____separate_1842____ = false
+if(____separate_1865____)
+    ____separate_1865____ = false
 else
     Ribosome.add(", ", binding)
 end

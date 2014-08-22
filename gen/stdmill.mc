@@ -20,7 +20,7 @@
     IN THE SOFTWARE.
 */
 
-#include "stdmill.h"
+#include "stdmill.mh"
 
 /******************************************************************************/
 /* Generic helpers.                                                           */
