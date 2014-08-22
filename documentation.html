@@ -56,9 +56,8 @@
 <a name="ch1"/><h3>Introduction to coroutines</h3>
 
 <p>Coroutines are a way to implement cooperative multitasking in a rather simple
-and developer-friendly manner.</p>
-
-<p>If you are not familiar with coroutines, check the wikipedia article here:</p>
+and developer-friendly manner. If you are not familiar with coroutines, check
+the wikipedia article here:</p>
 
 <p><a href="https://en.wikipedia.org/wiki/Coroutine">https://en.wikipedia.org/wiki/Coroutine</a></p>
 
@@ -91,8 +90,8 @@ constrains on what can be done.
 <p>For example, when coroutine ends, all the coroutines that it have launched
 are automatically canceled. What it means is that there's a proper coroutine
 encapsulation, similar to the one we are used to with standard C functions:
-When coroutine exits, the caller is sure that there are no lefotver threads of
-execution still running.<p>
+When coroutine exits, the caller is sure that there are no associated lefotver
+threads of execution still running.<p>
 
 <p>Another example: Sending messages between coroutines is reduced to the
 bare minimum. Coroutine can send messages only to the coroutine that have
@@ -106,16 +105,28 @@ maintain.</p>
 
 <a name="ch3"/><h3>Usage</h3>
 
-<p>Following commands will generate <tt>foo.h</tt> from <tt>foo.mh</tt> and
-<tt>foo.c</tt> from <tt>foo.mc</tt>:</p>
+<p>Mill is a preprocessor that generates raw C code from "augmented C" or
+"C with coroutines". Following commands will generate <tt>foo.h</tt> from
+<tt>foo.mh</tt> and <tt>foo.c</tt> from <tt>foo.mc</tt>:</p>
 
 <pre>
     $ mill foo.mh
     $ mill foo.mc
 </pre>
 
-<p>To build the generated code compile it as standard C and link it with
-<tt>stdmill</tt> library:</p>
+<p>The generated code is:</p>
+
+<ul>
+<li>Heavily commented</li>
+<li>Properly indented</li>
+<li>Not obfuscated (no macros or such)</li>
+</ul>
+
+<p>Therefore, it should be easy to read the code, understand it,
+debug it and reason about it.</p>
+
+<p>The generated code is compiled as standard C. The only additional
+requirement is to link it with <tt>stdmill</tt> library:</p>
 
 <pre>
     $ gcc -o foo foo.c -lstdmill
