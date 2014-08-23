@@ -435,7 +435,7 @@ clause to the statement:</p>
 </p>If <tt>cancel</tt> clause is not specified the coroutine is canceled
 straight away without executing any user-defined code.</p>
 
-<p>There's one more cancelation scenario: The child coroutine may have been
+<p>There's one more cancelation scenario: The child coroutine may be
 fully executed, yet the parent coroutine may exit without selecting it. In such
 case the coroutine being canceled (the child coroutine) still needs to do
 cleaned up, specifically, it needs to deallocate any dynamically allocated
@@ -469,8 +469,7 @@ requests down the stack (from callers to callees).</p>
 
 <p>Keep in mind that coframes are deallocated when the child coroutine is
 selected. If you launch a coroutine without selecting it afterwards, the
-coframe will linger on in the memory until it is deallocated when the
-caller coroutine terminates.</p>
+coframe will linger on in the memory until the caller coroutine terminates.</p>
 
 <p>The behaviour is perfectly all right in most circumstances, however,
 launching arbitrary number of coroutines in a loop without selecting them can
@@ -616,7 +615,7 @@ for argument details.</p>
     coroutine tcpsocket_accept (
 	    out int *rc,
 	    struct tcpsocket *self,
-	    struct tcpsocket *newsock);
+	    struct tcpsocket *from);
 
     coroutine tcpsocket_send (
 	    out int *rc,
