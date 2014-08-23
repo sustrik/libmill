@@ -1705,10 +1705,15 @@ Ribosome.dot("", binding)
     if s[:type] == :codecl
 Ribosome.dot("extern const struct mill_type mill_type_@{s[:name]};", binding)
 Ribosome.dot("", binding)
-if s[:static]
-Ribosome.dot("static void mill_go_@{s[:name]} (", binding)
+if $system
+Ribosome.dot("mill_export ", binding)
 else
-Ribosome.dot("void mill_go_@{s[:name]} (", binding)
+Ribosome.dot("", binding)
+end
+if s[:static]
+Ribosome.add("static void mill_go_@{s[:name]} (", binding)
+else
+Ribosome.add("void mill_go_@{s[:name]} (", binding)
 end
 Ribosome.dot("    const struct mill_type *type,", binding)
 Ribosome.dot("    struct mill_loop *loop,", binding)
@@ -1719,15 +1724,20 @@ Ribosome.dot("    @{renderarg(a)}", binding)
         end
 Ribosome.add(");", binding)
 Ribosome.dot("", binding)
-if s[:static]
-Ribosome.dot("static void @{s[:name]} (", binding)
+if $system
+Ribosome.dot("mill_export ", binding)
 else
-Ribosome.dot("void @{s[:name]} (", binding)
+Ribosome.dot("", binding)
 end
-____separate_1727____ = true
+if s[:static]
+Ribosome.add("static void @{s[:name]} (", binding)
+else
+Ribosome.add("void @{s[:name]} (", binding)
+end
+____separate_1737____ = true
         for a in s[:args]
-if(____separate_1727____)
-    ____separate_1727____ = false
+if(____separate_1737____)
+    ____separate_1737____ = false
 else
     Ribosome.add(", ", binding)
 end
@@ -1862,10 +1872,10 @@ Ribosome.dot("static void @{s[:name]} (", binding)
 else
 Ribosome.dot("void @{s[:name]} (", binding)
 end
-____separate_1865____ = true
+____separate_1875____ = true
 for a in s[:args]
-if(____separate_1865____)
-    ____separate_1865____ = false
+if(____separate_1875____)
+    ____separate_1875____ = false
 else
     Ribosome.add(", ", binding)
 end

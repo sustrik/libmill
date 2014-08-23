@@ -43,7 +43,7 @@ pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libstdmill.pc
 
 libstdmill_la_LDFLAGS = -no-undefined -version-info @MILL_LIBTOOL_VERSION@
-libstdmill_la_CFLAGS = -DMILL_EXPORTS
+libstdmill_la_CFLAGS = -Dmill_exports
 
 ################################################################################
 #  automated tests                                                             #

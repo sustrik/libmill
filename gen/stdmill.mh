@@ -48,10 +48,31 @@
 #define MILL_VERSION_AGE 0
 
 /******************************************************************************/
+/* Visibility stuff.                                                          */
+/******************************************************************************/
+
+#if defined _WIN32
+#    if defined mill_exports
+#        define mill_export __declspec(dllexport)
+#    else
+#        define mill_export __declspec(dllimport)
+#    endif
+#else
+#    if defined __SUNPRO_C
+#       define mill_export __global
+#    elif (defined __GNUC__ && __GNUC__ >= 4) || \
+          defined __INTEL_COMPILER || defined __clang__
+#       define mill_export __attribute__ ((visibility("default")))
+#    else
+#       define mill_export
+#    endif
+#endif
+
+/******************************************************************************/
 /* Tracing support.                                                           */
 /******************************************************************************/
 
-void _mill_trace ();
+mill_export void _mill_trace ();
 
 /******************************************************************************/
 /*  Coroutine metadata.                                                       */
@@ -133,17 +154,17 @@ struct mill_loop
 };
 
 /* Initialise the loop object. */
-void mill_loop_init (struct mill_loop *self);
+mill_export void mill_loop_init (struct mill_loop *self);
 
 /* Deallocate resources used by the loop. This function can be called only
    after mill_loop_run exits. */
-void mill_loop_term (struct mill_loop *self);
+mill_export void mill_loop_term (struct mill_loop *self);
 
 /* Start the loop. The loop runs until the top-level coroutine exits. */
-void mill_loop_run (struct mill_loop *self);
+mill_export void mill_loop_run (struct mill_loop *self);
 
 /* Enqueue the event to the loop's event queue. */
-void mill_loop_emit (struct mill_loop *self, struct mill_cfh *ev);
+mill_export void mill_loop_emit (struct mill_loop *self, struct mill_cfh *ev);
 
 /******************************************************************************/
 /*  Helpers used to implement mill keywords.                                  */
@@ -152,19 +173,19 @@ void mill_loop_emit (struct mill_loop *self, struct mill_cfh *ev);
 #define mill_typeof(expr)\
     ((expr) ? (((struct mill_cfh*) expr)->type) : 0)
 
-void mill_coframe_init (
+mill_export void mill_coframe_init (
     void *cfptr,
     const struct mill_type *type,
     void *parent,
     struct mill_loop *loop);
-void mill_coframe_term (
+mill_export void mill_coframe_term (
     void *cfptr,
     int canceled);
-void mill_emit (
+mill_export void mill_emit (
     void *cfptr);
-void mill_cancel_children (
+mill_export void mill_cancel_children (
     void *cfptr);
-int mill_has_children (
+mill_export int mill_has_children (
     void *cfptr);
 
 /******************************************************************************/
@@ -181,7 +202,7 @@ coroutine getaddressinfo (
     const struct addrinfo *hints,
     out struct addrinfo **res);
 
-void freeaddressinfo (
+mill_export void freeaddressinfo (
     struct addrinfo *ai);
 
 struct tcpsocket {
@@ -198,19 +219,19 @@ struct tcpsocket {
     void *sendcfptr;
 };
 
-int tcpsocket_init (
+mill_export int tcpsocket_init (
     struct tcpsocket *self,
     struct mill_loop *loop);
 
 coroutine tcpsocket_term (
     struct tcpsocket *self);
 
-int tcpsocket_bind (
+mill_export int tcpsocket_bind (
     struct tcpsocket *self,
     struct sockaddr *addr,
     int flags);
 
-int tcpsocket_listen (
+mill_export int tcpsocket_listen (
     struct tcpsocket *self,
     int backlog);
 

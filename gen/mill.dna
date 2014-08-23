@@ -742,10 +742,15 @@ for s in sections
     if s[:type] == :codecl
 .extern const struct mill_type mill_type_@{s[:name]};
 .
-if s[:static]
-.static void mill_go_@{s[:name]} (
+if $system
+.mill_export $
 else
-.void mill_go_@{s[:name]} (
+.
+end
+if s[:static]
+./+static void mill_go_@{s[:name]} (
+else
+./+void mill_go_@{s[:name]} (
 end
 .    const struct mill_type *type,
 .    struct mill_loop *loop,
@@ -756,10 +761,15 @@ end
         end
 ./+);
 .
-if s[:static]
-.static void @{s[:name]} (
+if $system
+.mill_export $
 else
-.void @{s[:name]} (
+.
+end
+if s[:static]
+./+static void @{s[:name]} (
+else
+./+void @{s[:name]} (
 end
 ./!separate ", "
         for a in s[:args]
