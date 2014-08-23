@@ -208,7 +208,9 @@ mill_export void freeaddressinfo (
 struct tcpsocket {
     uv_tcp_t s;
     uv_loop_t *loop;
-    int pc;
+
+    /* State the socket is in, see TCPSOCKET_STATE constants in stdmill.mc. */
+    int state;
 
     /* Handle of the receive coroutine currently being executed on this
        socket. Also any socket-scoped asynchronous operations such as connect,

@@ -461,6 +461,17 @@ void freeaddressinfo (
 /* tcpsocket                                                                  */
 /******************************************************************************/
 
+/* TODO: Isn't there an appropriate POSIX error? */
+#define EFSM (-123456)
+
+#define TCPSOCKET_STATE_INIT 1
+#define TCPSOCKET_STATE_LISTENING 2
+#define TCPSOCKET_STATE_CONNECTING 3
+#define TCPSOCKET_STATE_ACCEPTING 4
+#define TCPSOCKET_STATE_ACTIVE 5
+#define TCPSOCKET_STATE_TERMINATING 6
+#define TCPSOCKET_STATE_CANCELED 7
+
 /* Forward declarations. */
 static void tcpsocket_close_cb (
     uv_handle_t* handle);
@@ -489,7 +500,7 @@ int tcpsocket_init (
     int rc;
 
     self->loop = &loop->uv_loop;
-    self->pc = 0;
+    self->state = TCPSOCKET_STATE_INIT;
     self->recvcfptr = NULL;
     self->sendcfptr = NULL;
     rc = uv_tcp_init (&loop->uv_loop, &self->s);
@@ -503,6 +514,7 @@ coroutine tcpsocket_term (
     /* Initiate the termination. */
     self->recvcfptr = cf;
     uv_close ((uv_handle_t*) &self->s, tcpsocket_close_cb);
+    self->state = TCPSOCKET_STATE_TERMINATING;
 
     /* Wait till socket is closed. In the meantime ignore cancel requests. */
     while (1) {
@@ -518,6 +530,9 @@ int tcpsocket_bind (
     struct sockaddr *addr,
     int flags)
 {
+    if (self->state != TCPSOCKET_STATE_INIT)
+        return EFSM;
+
     return uv_tcp_bind (&self->s, addr, flags);
 }
 
@@ -527,9 +542,13 @@ int tcpsocket_listen (
 {
     int rc;
 
+    if (self->state != TCPSOCKET_STATE_INIT)
+        return EFSM;
+
     rc = uv_listen ((uv_stream_t*) &self->s, backlog, tcpsocket_listen_cb);
     if (rc != 0)
         return rc;
+    self->state = TCPSOCKET_STATE_LISTENING;
 }
 
 coroutine tcpsocket_connect (
@@ -540,11 +559,17 @@ coroutine tcpsocket_connect (
     uv_connect_t req;
     endvars;
 
+    if (self->state != TCPSOCKET_STATE_INIT) {
+        *rc = EFSM;
+        return;
+    }
+
     /* Start connecting. */
     self->recvcfptr = cf;
     *rc = uv_tcp_connect (&req, &self->s, addr, tcpsocket_connect_cb);
     if (*rc != 0)
         return;
+    self->state = TCPSOCKET_STATE_CONNECTING;
 
     /* Wait till connecting finishes. */
     syswait;
@@ -555,6 +580,8 @@ coroutine tcpsocket_connect (
     }
 
     assert (event == tcpsocket_connect_cb);
+    /* TODO: What about errors? */
+    self->state = TCPSOCKET_STATE_ACTIVE;
 }
 
 coroutine tcpsocket_accept (
@@ -562,19 +589,34 @@ coroutine tcpsocket_accept (
     struct tcpsocket *self,
     struct tcpsocket *from)
 {
+    if (self->state != TCPSOCKET_STATE_INIT ||
+          from->state != TCPSOCKET_STATE_LISTENING) {
+        *rc = EFSM;
+        return;
+    }
+
     /* Link the lisening socket with the accepting socket. */
     from->recvcfptr = cf;
+    self->state = TCPSOCKET_STATE_ACCEPTING;
 
     /* Wait for an incoming connection. */
     syswait;
     if (!event) {
-        *rc = ECANCELED;
+        self->state = TCPSOCKET_STATE_INIT;
         return;
     }
  
     /* There's a new incoming connection. Let's accept it. */
     assert (event == tcpsocket_listen_cb);
+    /* TODO: What about errors? */
     *rc = uv_accept ((uv_stream_t*) &from->s, (uv_stream_t*) &self->s);
+    if (*rc != 0) {
+        self->state = TCPSOCKET_STATE_INIT;
+        return;
+    }
+
+    /* Connection was successfully accepted. */
+    self->state = TCPSOCKET_STATE_ACTIVE;
 }
 
 coroutine tcpsocket_send (
@@ -586,6 +628,11 @@ coroutine tcpsocket_send (
     uv_write_t req;
     uv_buf_t buffer;
     endvars;
+
+    if (self->state != TCPSOCKET_STATE_ACTIVE) {
+        *rc = EFSM;
+        return;
+    }
 
     /* Start the send operation. */
     buffer.base = (void*) buf;
@@ -617,7 +664,12 @@ coroutine tcpsocket_recv (
     void *buf,
     size_t len)
 {
-    /* Sart the receiving. */
+    if (self->state != TCPSOCKET_STATE_ACTIVE) {
+        *rc = EFSM;
+        return;
+    }
+
+    /* Start receiving. */
     *rc = uv_read_start ((uv_stream_t*) &self->s,
         tcpsocket_alloc_cb, tcpsocket_recv_cb);
     if (*rc != 0)
@@ -635,7 +687,6 @@ coroutine tcpsocket_recv (
         if (!event) {
             uv_read_stop ((uv_stream_t*) &self->s);
             self->recvcfptr = NULL;
-            *rc = ECANCELED;
             return;
         }
 
@@ -671,7 +722,7 @@ static void tcpsocket_listen_cb (
 
     /* If nobody is accepting, close the incoming connection. */
     if (!self->recvcfptr) {
-        assert (0); 
+        assert (0);
     }
 
     /* If somebody is accepting, move the accept coroutine on. */
