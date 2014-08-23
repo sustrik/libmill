@@ -2,7 +2,7 @@
 #include <assert.h>
 #include <stddef.h>
 
-#include "../stdmill.mh"
+#include <stdmill.mh>
 
 coroutine fx1 (out int *idout, int id, int milliseconds)
 {

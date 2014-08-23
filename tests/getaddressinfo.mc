@@ -1,7 +1,7 @@
 
 #include <assert.h>
 
-#include "../stdmill.mh"
+#include <stdmill.mh>
 
 coroutine test1 ()
 {

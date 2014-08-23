@@ -33,7 +33,7 @@ dist_bin_SCRIPTS = mill
 ################################################################################
 
 millincludedir = $(includedir)
-millinclude_HEADERS = stdmill.h
+millinclude_HEADERS = stdmill.h gen/stdmill.mh
 
 lib_LTLIBRARIES = libstdmill.la
 

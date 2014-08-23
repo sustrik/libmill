@@ -590,29 +590,33 @@ coroutine tcpsocket_accept (
     struct tcpsocket *from)
 {
     if (self->state != TCPSOCKET_STATE_INIT ||
-          from->state != TCPSOCKET_STATE_LISTENING) {
+          from->state != TCPSOCKET_STATE_LISTENING ||
+          from->recvcfptr != NULL) {
         *rc = EFSM;
         return;
     }
 
-    /* Link the lisening socket with the accepting socket. */
-    from->recvcfptr = cf;
-    self->state = TCPSOCKET_STATE_ACCEPTING;
+    while (1) {
 
-    /* Wait for an incoming connection. */
-    syswait;
-    if (!event) {
-        self->state = TCPSOCKET_STATE_INIT;
-        return;
-    }
- 
-    /* There's a new incoming connection. Let's accept it. */
-    assert (event == tcpsocket_listen_cb);
-    /* TODO: What about errors? */
-    *rc = uv_accept ((uv_stream_t*) &from->s, (uv_stream_t*) &self->s);
-    if (*rc != 0) {
-        self->state = TCPSOCKET_STATE_INIT;
-        return;
+        *rc = uv_accept ((uv_stream_t*) &from->s, (uv_stream_t*) &self->s);
+        /* TODO: Handle errors. */
+        if (*rc == 0)
+           break;
+
+        /* Link the lisening socket with the accepting socket and wait
+           for incoming connection. */
+        from->recvcfptr = cf;
+        self->state = TCPSOCKET_STATE_ACCEPTING;
+
+        /* Wait for an incoming connection. */
+        syswait;
+        if (!event) {
+            self->state = TCPSOCKET_STATE_INIT;
+            return;
+        }
+
+        /* There's a new incoming connection. Let's accept it. */
+        assert (event == tcpsocket_listen_cb);
     }
 
     /* Connection was successfully accepted. */
