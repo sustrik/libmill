@@ -549,6 +549,7 @@ int tcpsocket_listen (
     if (rc != 0)
         return rc;
     self->state = TCPSOCKET_STATE_LISTENING;
+    return 0;
 }
 
 coroutine tcpsocket_connect (
