@@ -1,7 +1,8 @@
 
 #include <stdmill.mh>
 
-coroutine test ()
+/* Test accept after connection is established. */
+coroutine test1 ()
 {
     int rc;
     struct sockaddr_in addr;
@@ -33,7 +34,6 @@ coroutine test ()
     case msleep:
     }
 
-    /* Immediate accept. */
     go tcpsocket_accept (&rc, &s1, &ls);
     select {
     case tcpsocket_accept:
@@ -54,9 +54,62 @@ coroutine test ()
     }
 }
 
+/* Test accept before connection is established. */
+coroutine test2 ()
+{
+    int rc;
+    struct sockaddr_in addr;
+    struct tcpsocket ls;
+    struct tcpsocket s1;
+    struct tcpsocket s2;
+    char buf [2];
+    endvars;
+
+    rc = uv_ip4_addr ("127.0.0.1", 7000, &addr);
+    assert (rc == 0);
+    rc = tcpsocket_init (&ls);
+    assert (rc == 0);
+    rc = tcpsocket_init (&s1);
+    assert (rc == 0);
+    rc = tcpsocket_init (&s2);
+    assert (rc == 0);
+    rc = tcpsocket_bind (&ls, (struct sockaddr*) &addr, 0);
+    assert (rc == 0);
+    rc = tcpsocket_listen (&ls, 10);
+    assert (rc == 0);
+    go tcpsocket_accept (&rc, &s1, &ls);
+
+    go tcpsocket_connect(&rc, &s2, (struct sockaddr*) &addr);
+    select {
+    case tcpsocket_connect:
+    case tcpsocket_accept:
+    }
+    assert (rc == 0);
+
+    select {
+    case tcpsocket_connect:
+    case tcpsocket_accept:
+    }
+    assert (rc == 0);
+
+    go tcpsocket_term (&s2);
+    select {
+    case tcpsocket_term:
+    }
+    go tcpsocket_term (&s1);
+    select {
+    case tcpsocket_term:
+    }
+    go tcpsocket_term (&ls);
+    select {
+    case tcpsocket_term:
+    }
+}
+
 int main ()
 {
-    test ();
+    test1 ();
+    test2 ();
     return 0;
 }
 
