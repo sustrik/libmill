@@ -23,7 +23,7 @@ coroutine test ()
     assert (rc == 0);
     rc = tcpsocket_listen (&ls, 10);
     assert (rc == 0);
-    go tcpsocket_accept (&rc, &ls, &s1);
+    go tcpsocket_accept (&rc, &s1, &ls);
     go tcpsocket_connect(&rc, &s2, (struct sockaddr*) &addr);
     select {
     case tcpsocket_accept:

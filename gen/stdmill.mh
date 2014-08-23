@@ -243,7 +243,7 @@ coroutine tcpsocket_connect (
 coroutine tcpsocket_accept (
     out int *rc,
     struct tcpsocket *self,
-    struct tcpsocket *newsock);
+    struct tcpsocket *from);
 
 coroutine tcpsocket_send (
     out int *rc,

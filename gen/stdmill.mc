@@ -560,10 +560,10 @@ coroutine tcpsocket_connect (
 coroutine tcpsocket_accept (
     out int *rc,
     struct tcpsocket *self,
-    struct tcpsocket *newsock)
+    struct tcpsocket *from)
 {
     /* Link the lisening socket with the accepting socket. */
-    self->recvcfptr = cf;
+    from->recvcfptr = cf;
 
     /* Wait for an incoming connection. */
     syswait;
@@ -574,7 +574,7 @@ coroutine tcpsocket_accept (
  
     /* There's a new incoming connection. Let's accept it. */
     assert (event == tcpsocket_listen_cb);
-    *rc = uv_accept ((uv_stream_t*) &self->s, (uv_stream_t*) &newsock->s);
+    *rc = uv_accept ((uv_stream_t*) &from->s, (uv_stream_t*) &self->s);
 }
 
 coroutine tcpsocket_send (

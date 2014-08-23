@@ -59,7 +59,7 @@ coroutine server ()
         assert (conn);
         rc = tcpsocket_init (&conn->s);
         assert (rc == 0);
-        go tcpsocket_accept (&rc, &ls, &conn->s);
+        go tcpsocket_accept (&rc, &conn->s, &ls);
         while (1) {
             select {
             case tcpsocket_accept:
