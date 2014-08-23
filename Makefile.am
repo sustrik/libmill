@@ -53,7 +53,8 @@ check_PROGRAMS = \
     tests/tcpsocket \
     tests/pending \
     tests/cancel \
-    tests/getaddressinfo
+    tests/getaddressinfo \
+    tests/accept
 
 LDADD = libstdmill.la
 

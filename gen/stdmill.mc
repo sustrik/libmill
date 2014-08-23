@@ -725,10 +725,9 @@ static void tcpsocket_listen_cb (
 
     self = mill_cont (s, struct tcpsocket, s);
 
-    /* If nobody is accepting, close the incoming connection. */
-    if (!self->recvcfptr) {
-        assert (0);
-    }
+    /* If nobody is accepting, do nothing. */
+    if (!self->recvcfptr)
+        return;
 
     /* If somebody is accepting, move the accept coroutine on. */
     cf = (struct mill_cf_tcpsocket_accept*) self->recvcfptr;
