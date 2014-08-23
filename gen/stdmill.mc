@@ -612,6 +612,7 @@ coroutine tcpsocket_accept (
         /* Wait for an incoming connection. */
         syswait;
         if (!event) {
+            from->recvcfptr = NULL;
             self->state = TCPSOCKET_STATE_INIT;
             return;
         }
