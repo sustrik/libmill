@@ -75,10 +75,25 @@ coroutine test2 ()
     assert (rc == 0);
     rc = tcpsocket_bind (&ls, (struct sockaddr*) &addr, 0);
     assert (rc == 0);
+
+    /* Try accepting on a socket that's not listening. */
+    go tcpsocket_accept (&rc, &s1, &ls);
+    select {
+    case tcpsocket_accept:
+        assert (rc == -123456);
+    }
+
     rc = tcpsocket_listen (&ls, 10);
     assert (rc == 0);
     go tcpsocket_accept (&rc, &s1, &ls);
 
+    /* Test attempt to do 2 accepts in parallel. */
+    go tcpsocket_accept (&rc, &s1, &ls);
+    select {
+    case tcpsocket_accept:
+        assert (rc == -123456);
+    }
+    
     go tcpsocket_connect(&rc, &s2, (struct sockaddr*) &addr);
     select {
     case tcpsocket_connect:
