@@ -740,7 +740,12 @@ for s in sections
 ################################################################################
 
     if s[:type] == :codecl
-.extern const struct mill_type mill_type_@{s[:name]};
+if $system
+.mill_export $
+else
+.
+end
+./+extern const struct mill_type mill_type_@{s[:name]};
 .
 if $system
 .mill_export $

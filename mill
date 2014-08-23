@@ -1703,7 +1703,12 @@ Ribosome.dot("", binding)
 ################################################################################
 
     if s[:type] == :codecl
-Ribosome.dot("extern const struct mill_type mill_type_@{s[:name]};", binding)
+if $system
+Ribosome.dot("mill_export ", binding)
+else
+Ribosome.dot("", binding)
+end
+Ribosome.add("extern const struct mill_type mill_type_@{s[:name]};", binding)
 Ribosome.dot("", binding)
 if $system
 Ribosome.dot("mill_export ", binding)
@@ -1734,10 +1739,10 @@ Ribosome.add("static void @{s[:name]} (", binding)
 else
 Ribosome.add("void @{s[:name]} (", binding)
 end
-____separate_1737____ = true
+____separate_1742____ = true
         for a in s[:args]
-if(____separate_1737____)
-    ____separate_1737____ = false
+if(____separate_1742____)
+    ____separate_1742____ = false
 else
     Ribosome.add(", ", binding)
 end
@@ -1872,10 +1877,10 @@ Ribosome.dot("static void @{s[:name]} (", binding)
 else
 Ribosome.dot("void @{s[:name]} (", binding)
 end
-____separate_1875____ = true
+____separate_1880____ = true
 for a in s[:args]
-if(____separate_1875____)
-    ____separate_1875____ = false
+if(____separate_1880____)
+    ____separate_1880____ = false
 else
     Ribosome.add(", ", binding)
 end
