@@ -600,9 +600,10 @@ coroutine tcpsocket_accept (
     while (1) {
 
         *rc = uv_accept ((uv_stream_t*) &from->s, (uv_stream_t*) &self->s);
-        /* TODO: Handle errors. */
         if (*rc == 0)
-           break;
+            break;
+        if (*rc != -EAGAIN)
+            return;
 
         /* Link the lisening socket with the accepting socket and wait
            for incoming connection. */
