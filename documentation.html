@@ -324,21 +324,21 @@ statement:</p>
 parameters and they should work as expected:</p>
 
 <pre>
-    coroutine foo (int *result)
+    coroutine bar (int *res)
     {
-        *result = 1;
+        *res = 1;
     }
 
-    coroutine bar ()
+    coroutine foo ()
     {
-        int i;
+        int res;
         endvars;
 
-        go foo (&i);
+        go foo (&res);
 
         select {
-        case foo:
-            assert (i == 1);
+        case bar:
+            assert (res == 1);
         }
     }
 </pre>
@@ -348,26 +348,29 @@ single location. The result from one instance of the coroutine can
 be overwritten by a result from another instance:</p>
 
 <pre>
-    coroutine foo (int *result, int i)
+    coroutine bar (int *res)
     {
-        *result = i;
+        *res = 1;
     }
 
-    coroutine bar ()
+    coroutine baz (int *res)
     {
-        int i;
+        *res = 2;
+    }
+
+    coroutine foo ()
+    {
+        int res;
         endvars;
 
-        go foo (&i, 1);
-        go foo (&i, 2);
+        go bar (&res);
+        go baz (&res);
 
         select {
-
-        // This clause may be invoked because foo(1) have ended, thus i == 1.
-        case foo: 
-
-            // foo(2) ends here and stores value 2 into i.
-            assert (i == 1); // Assert fails.
+        /* This clause is invoked because bar() have ended, thus res == 1. */
+        case bar: 
+            /* baz() can end at this point and store value 2 into res. */
+            assert (res == 1); /* Assert fails. */
         }
     }
 </pre>
@@ -375,26 +378,20 @@ be overwritten by a result from another instance:</p>
 <p>To address this problem <tt>out</tt> keyword is introduced. The coroutine
 argument marked with <tt>out</tt> is allocated at callee's coframe (like a stack
 frame, but for coroutines) and copied to the caller-specified destination
-only when the coroutine is selected:</p>
+only when the coroutine is selected.</p>
+
+<p>To modify the above program, just add <tt>out</tt> to both <tt>bar</tt> and
+<tt>baz</tt> coroutine:</p>
 
 <pre>
-    coroutine foo (out int *result, int i)
+    coroutine bar (out int *res)
     {
-        *result = i;
+        *res = 1;
     }
 
-    coroutine bar ()
+    coroutine baz (out int *res)
     {
-        go foo (&i, 1);
-        go foo (&i, 2);
-        go foo (&i, 3);
-
-        while (1) {
-            select {
-            case foo:
-                printf ("coroutine foo returned %d\n", i);
-            }
-        }
+        *res = 2;
     }
 </pre>
 
