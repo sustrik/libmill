@@ -30,6 +30,8 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <stdarg.h>
+#include <unistd.h>
+#include <sys/time.h>
 
 static void dotrace(const char *text);
 

@@ -24,10 +24,6 @@ ACLOCAL_AMFLAGS = -I m4
 
 DISTCLEANFILES = @DOLT_CLEANFILES@
 
-EXTRA_DIST = mill
-
-dist_bin_SCRIPTS = mill
-
 ################################################################################
 #  mill library                                                                #
 ################################################################################
@@ -79,7 +75,7 @@ dist-hook:
 	fi; \
 	$(srcdir)/package_version.sh > $(distdir)/.version
 
-EXTRA_DIST += \
+EXTRA_DIST = \
     ./abi_version.sh \
     ./package_version.sh
 
