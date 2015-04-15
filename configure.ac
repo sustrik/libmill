@@ -26,9 +26,9 @@
 
 AC_PREREQ([2.53])
 
-AC_INIT([stdmill], [m4_esyscmd([./package_version.sh])],
+AC_INIT([mill], [m4_esyscmd([./package_version.sh])],
    [millc@freelists.org], [Mill], [http://millc.org/])
-AC_CONFIG_SRCDIR([libstdmill.pc.in])
+AC_CONFIG_SRCDIR([libmill.pc.in])
 AM_INIT_AUTOMAKE([1.6 foreign subdir-objects tar-ustar dist-zip])
 m4_ifdef([AM_SILENT_RULES], [
     AM_SILENT_RULES([yes])
@@ -65,10 +65,6 @@ AM_PROG_CC_C_O
 #  If --enable-debug is specified set appropriate compiler options.            #
 ################################################################################
 
-AC_ARG_ENABLE([gen], [AS_HELP_STRING([--enable-gen],
-    [Enable code generation (for Mill developers) [default=no]])])
-AM_CONDITIONAL([GEN], [test x"$enable_gen" = "xyes"])
-
 AC_ARG_ENABLE([debug], [AS_HELP_STRING([--enable-debug],
     [Enable debugging information [default=no]])])
 
@@ -85,28 +81,9 @@ fi
 #  Feature checks.                                                             #
 ################################################################################
 
-AC_PATH_PROG([RUBY], [ruby])
-AS_IF([test x"$RUBY" = "x"],[
-    AC_MSG_ERROR([Mill requires Ruby to operate, please install it.])
-])
-
-AC_CHECK_LIB([uv], [uv_close], [], [
-    AC_MSG_ERROR([Mill requires libuv to operate, please install it from https://github.com/joyent/libuv.])
-])
-
-# Additional dependencies for the code generation phase.
-AS_IF([test x"$enable_gen" = "xyes"], [
-
-    AC_PATH_PROG([RIBOSOME], [ribosome])
-    AS_IF([test x"$RIBOSOME" = "x"],[
-        AC_MSG_ERROR([Code generation requires ribosome, please install it from https://github.com/sustrik/ribosome.])
-    ])
-
-    AC_PATH_PROG([RAGEL], [ragel])
-    AS_IF([test x"$RAGEL" = "x"],[
-        AC_MSG_ERROR([Code generation requires Ragel, please install it.])
-    ])
-])
+################################################################################
+#  Libtool                                                                     #
+################################################################################
 
 LT_INIT
 
@@ -120,7 +97,7 @@ AC_CONFIG_MACRO_DIR([m4])
 
 AC_OUTPUT([
 Makefile
-libstdmill.pc
+libmill.pc
 ])
 cp confdefs.h config.h
 

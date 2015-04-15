@@ -29,70 +29,32 @@ EXTRA_DIST = mill
 dist_bin_SCRIPTS = mill
 
 ################################################################################
-#  stdmill library                                                             #
+#  mill library                                                                #
 ################################################################################
 
 millincludedir = $(includedir)
-millinclude_HEADERS = stdmill.h gen/stdmill.mh
+millinclude_HEADERS = mill.h
 
-lib_LTLIBRARIES = libstdmill.la
+lib_LTLIBRARIES = libmill.la
 
-libstdmill_la_SOURCES = stdmill.c
+libmill_la_SOURCES = mill.c
 
 pkgconfigdir = $(libdir)/pkgconfig
-pkgconfig_DATA = libstdmill.pc
+pkgconfig_DATA = libmill.pc
 
-libstdmill_la_LDFLAGS = -no-undefined -version-info @MILL_LIBTOOL_VERSION@
-libstdmill_la_CFLAGS = -Dmill_exports
+libmill_la_LDFLAGS = -no-undefined -version-info @MILL_LIBTOOL_VERSION@
+libmill_la_CFLAGS = -Dmill_exports
 
 ################################################################################
 #  automated tests                                                             #
 ################################################################################
 
 check_PROGRAMS = \
-    tests/tcpsocket \
-    tests/pending \
-    tests/cancel \
-    tests/getaddressinfo \
-    tests/accept
+    test
 
-LDADD = libstdmill.la
-
-.mc.c: mill
-	./mill $<
+LDADD = libmill.la
 
 TESTS = $(check_PROGRAMS)
-
-################################################################################
-# Following part of the build process is used only by Mill developers.         #
-# Files generated here are added to git repository so that Mill users don't    #
-# have to insall all the code generation tools (ragel, ribosome).              #
-################################################################################
-
-if GEN
-
-mill: gen/mill.dna gen/clexer.rb
-	ribosome --rna $< >$@
-	chmod +x $@
-
-gen/clexer.rb: gen/clexer.rl
-	ragel -R $< -o $@
-
-stdmill.c: gen/stdmill.mc mill
-	./mill --system $<
-	mv gen/stdmill.c .
-
-stdmill.h: gen/stdmill.mh mill
-	./mill --system $<
-	mv gen/stdmill.h .
-
-CLEANFILES = mill gen/clexer.rb stdmill.h stdmill.c $(check_CLEANFILES)
-
-else
-
-CLEANFILES = $(check_CLEANFILES)
-
-endif
 
 ################################################################################
 #  additional packaging-related stuff                                          #
