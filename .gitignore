@@ -8,3 +8,16 @@ depcomp
 install-sh
 missing
 test-driver
+.deps/*
+.libs/*
+Makefile
+Makefile.in
+config.h
+config.log
+config.status
+doltcompile
+doltlibtool
+libtool
+ltmain.sh
+m4/*
+libmill.pc
