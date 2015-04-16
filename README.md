@@ -12,7 +12,7 @@ $ sudo make install
 test.c:
 ```
 #include <stdio.h>
-#include "mill.h"
+#include <mill.h>
 
 void worker(int count, const char *test) {
     int i;
