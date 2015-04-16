@@ -1,0 +1,49 @@
+
+body {
+    width:50em;
+    padding: 5em;
+    font-family: sans-serif;
+}
+
+#toplist {
+    padding-left: 0px;
+}
+
+#toplist li {
+    display: inline;
+    list-style-type: none;
+    padding-right: 15px;
+}
+
+#toplist a {
+    font-weight: bold;
+    color: red;
+    text-decoration: none;
+}
+
+#toc {
+    list-style-type: none;
+}
+
+#toc a {
+    text-decoration: none;
+}
+
+a {
+    color: black;
+}
+
+a.download {
+    color: red;
+}
+
+p.lang {
+    font-style: italic;
+}
+
+pre {
+    padding: 20px;
+    border: 1px dotted;
+    font-size: 120%
+} 
+
