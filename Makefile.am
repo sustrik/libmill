@@ -46,7 +46,8 @@ libmill_la_CFLAGS = -Dmill_exports
 ################################################################################
 
 check_PROGRAMS = \
-    tests/go
+    tests/go\
+    tests/chan
 
 LDADD = libmill.la
 
