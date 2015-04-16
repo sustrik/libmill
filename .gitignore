@@ -22,3 +22,10 @@ ltmain.sh
 m4/*
 libmill.pc
 *.o
+*.la
+*.lo
+tests/*.log
+tests/*.trs
+tests/.*
+tests/go
+tests/chan
