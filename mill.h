@@ -31,45 +31,6 @@
 #include <sys/socket.h>
 
 /******************************************************************************/
-/*  ABI versioning support                                                    */
-/******************************************************************************/
-
-/*  Don't change this unless you know exactly what you're doing and have      */
-/*  read and understand the following documents:                              */
-/*  www.gnu.org/software/libtool/manual/html_node/Libtool-versioning.html     */
-/*  www.gnu.org/software/libtool/manual/html_node/Updating-version-info.html  */
-
-/*  The current interface version. */
-#define MILL_VERSION_CURRENT 0
-
-/*  The latest revision of the current interface. */
-#define MILL_VERSION_REVISION 0
-
-/*  How many past interface versions are still supported. */
-#define MILL_VERSION_AGE 0
-
-/******************************************************************************/
-/* Visibility stuff                                                           */
-/******************************************************************************/
-
-#if defined _WIN32
-#    if defined MILL_EXPORTS
-#        define MILL_EXPORT __declspec(dllexport)
-#    else
-#        define MILL_EXPORT __declspec(dllimport)
-#    endif
-#else
-#    if defined __SUNPRO_C
-#       define MILL_EXPORT __global
-#    elif (defined __GNUC__ && __GNUC__ >= 4) || \
-          defined __INTEL_COMPILER || defined __clang__
-#       define MILL_EXPORT __attribute__ ((visibility("default")))
-#    else
-#       define MILL_EXPORT
-#    endif
-#endif
-
-/******************************************************************************/
 /* Debugging support                                                          */
 /******************************************************************************/
 
@@ -80,7 +41,7 @@ void trace(void);
 /* goredump() dumps the current state of all coroutines in the program. */
 #define goredump goredump_(__FILE__, __LINE__)
 typedef void (*goredump_fn_)(void);
-MILL_EXPORT goredump_fn_ goredump_(const char *file, int name);
+goredump_fn_ goredump_(const char *file, int name);
 
 /******************************************************************************/
 /* Coroutines                                                                 */
@@ -111,7 +72,7 @@ MILL_EXPORT void go_epilogue_();
     }
 
 /* Yield CPU to a different coroutine. */
-MILL_EXPORT void yield(void);
+void yield(void);
 
 /******************************************************************************/
 /* Channels                                                                   */
@@ -128,10 +89,10 @@ typedef union {
     void *ptr;
 } chan_val;
 
-MILL_EXPORT chan chan_init(void);
-MILL_EXPORT void chan_send(chan ch, chan_val val);
-MILL_EXPORT chan_val chan_recv(chan ch);
-MILL_EXPORT void chan_close(chan ch);
+chan chan_init(void);
+void chan_send(chan ch, chan_val val);
+chan_val chan_recv(chan ch);
+void chan_close(chan ch);
 
 /* This family of functions waits for multiple channels. If there are channels
    ready to be received from, it chooses one of them randomly. If there are not
@@ -149,11 +110,11 @@ MILL_EXPORT void chan_close(chan ch);
 */ 
 #define chan_select(...) chan_select_(1, __VA_ARGS__, (chan)NULL);
 #define chan_tryselect(...) chan_select_(0, __VA_ARGS__, (chan)NULL);
-MILL_EXPORT int chan_selectv(chan_val *val, chan *chans, int nchans);
-MILL_EXPORT int chan_tryselectv(chan_val *val, chan *chans, int nchans);
+int chan_selectv(chan_val *val, chan *chans, int nchans);
+int chan_tryselectv(chan_val *val, chan *chans, int nchans);
 
 /* Internal function. Do not use directly. */
-MILL_EXPORT int chan_select_(int block, chan_val *val, ...);
+int chan_select_(int block, chan_val *val, ...);
 
 /******************************************************************************/
 /* Coroutine-friendly versions of system calls                                */
@@ -163,18 +124,18 @@ MILL_EXPORT int chan_select_(int block, chan_val *val, ...);
    However, when blocked they yield CPU to other coroutines rather than blocking
    the entire thread of execution. */
 
-MILL_EXPORT void msleep(unsigned int seconds);
-MILL_EXPORT void musleep(unsigned int microseconds);
+void msleep(unsigned int seconds);
+void musleep(unsigned int microseconds);
 
 /* To avoid extra system calls, sockets passed to these functions are assumed
    to be in non-blocking mode. If they are not, the behaviour is undefined.
    To create sockets in non-blocking mode you can use msocket() convenience
    function. */
-MILL_EXPORT int msocket(int domain, int type, int protocol);
-MILL_EXPORT int mconnect(int s, const struct sockaddr *addr, socklen_t addrlen);
-MILL_EXPORT int maccept(int s, struct sockaddr *addr, socklen_t *addrlen);
-MILL_EXPORT ssize_t msend(int s, const void *buf, size_t len, int flags);
-MILL_EXPORT ssize_t mrecv(int s, void *buf, size_t len, int flags);
+int msocket(int domain, int type, int protocol);
+int mconnect(int s, const struct sockaddr *addr, socklen_t addrlen);
+int maccept(int s, struct sockaddr *addr, socklen_t *addrlen);
+ssize_t msend(int s, const void *buf, size_t len, int flags);
+ssize_t mrecv(int s, void *buf, size_t len, int flags);
 
 /******************************************************************************/
 /* The library                                                                */
@@ -182,7 +143,7 @@ MILL_EXPORT ssize_t mrecv(int s, void *buf, size_t len, int flags);
 
 /* Sends an event to the returned channel after specified
    number of milliseconds. */
-MILL_EXPORT chan after(int ms);
+chan after(int ms);
 
 #endif
 
