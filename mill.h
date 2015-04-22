@@ -57,8 +57,8 @@ goredump_fn_ goredump_(const char *file, int name);
     int filler1_[unoptimisable_];\
     char filler2_[(char*)&filler1_ - (char*)(ptr)];
 
-MILL_EXPORT void *go_prologue_(const char *name);
-MILL_EXPORT void go_epilogue_();
+void *go_prologue_(const char *name);
+void go_epilogue_();
 
 #define go(fn) \
     {\

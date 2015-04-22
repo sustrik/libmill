@@ -1,7 +1,8 @@
 
+
 #include <stdio.h>
 #include <assert.h>
-#include "../mill.h"
+#include "../mill.c"
 
 void foo(chan ch) {
     chan_val val;
