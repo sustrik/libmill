@@ -110,11 +110,12 @@ void chan_close(chan ch);
 */ 
 #define chan_select(...) chan_select_(1, __VA_ARGS__, (chan)NULL);
 #define chan_tryselect(...) chan_select_(0, __VA_ARGS__, (chan)NULL);
-int chan_selectv(chan_val *val, chan *chans, int nchans);
-int chan_tryselectv(chan_val *val, chan *chans, int nchans);
 
 /* Internal function. Do not use directly. */
 int chan_select_(int block, chan_val *val, ...);
+
+/* TODO: For variable set of channels to wait for, devise a kqueue-like
+         API. select() and poll()-like APIs are just silly. */
 
 /******************************************************************************/
 /* Coroutine-friendly versions of system calls                                */
