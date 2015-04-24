@@ -104,3 +104,74 @@ void yield(void) {
     ctxswitch();
 }
 
+/******************************************************************************/
+/*  Channels                                                                  */
+/******************************************************************************/
+
+struct chan {
+    struct cr *sender;
+    struct cr *receiver;
+    void **src;
+    void **dest;
+};
+
+chan chmake(void) {
+    struct chan *ch = (struct chan*)malloc(sizeof(struct chan));
+    assert(ch);
+    ch->sender = NULL;
+    ch->receiver = NULL;
+    ch->src = NULL;
+    ch->dest = NULL;
+    return ch;
+}
+
+void chs(chan ch, void *val) {
+    /* Only one coroutine can send at a time. */
+    assert(!ch->sender);
+
+    /* If there's a receiver already waiting, we can just unblock it. */
+    if(ch->receiver) {
+        *(ch->dest) = val;
+        resume(ch->receiver);
+        ch->receiver = NULL;
+        ch->dest = NULL;
+        return;
+    }
+
+    /* Otherwise we are going to yield till the receiver arrives. */
+    ch->sender = suspend();
+    ch->src = &val;
+
+    /* Pass control to a different coroutine. */
+    ctxswitch();
+}
+
+void *chr(chan ch) {
+    /* Only one coroutine can receive from a channel at a time. */
+    assert(!ch->receiver);
+
+    /* If there's a sender already waiting, we can just unblock it. */
+    if(ch->sender) {
+        void *val = *(ch->src);
+        resume(ch->sender);
+        ch->sender = NULL;
+        ch->src = NULL;
+        return val;
+    }
+
+    /* Otherwise we are going to yield till the sender arrives. */
+    ch->receiver = suspend();
+    void *val;
+    ch->dest = &val;
+
+    /* Pass control to a different coroutine. */
+    ctxswitch();
+
+    return val;
+}	
+
+void chclose(chan ch) {
+    // TODO
+    free(ch);
+}
+

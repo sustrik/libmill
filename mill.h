@@ -46,5 +46,54 @@ void mill_go_epilogue(void);
 
 void yield(void);
 
+/******************************************************************************/
+/*  Channels                                                                  */
+/******************************************************************************/
+
+typedef struct chan *chan;
+
+chan chmake(void);
+void chs(chan ch, void *val);
+void *chr(chan ch);
+void chclose(chan ch);
+
+#define mill_concat(x,y) x##y
+
+#define chselect \
+    for(chpoll_start_();;) {\
+        if(chpoll_done_()) {\
+            if(0)
+
+#define mill_select_item(type, chan, seqnum) \
+                chpoll_end_();\
+                break;\
+            }\
+            goto concat_(label, seqnum);\
+        }\
+        chpoll_##type##_(chan, seqnum);\
+        if(0) {\
+            mill_concat(label, seqnum):\
+            if(chpoll_result_() == seqnum) {\
+                mill_concat(dummylabel, seqnum)
+
+#define in(chan) mill_select_item_(in, (chan), __COUNTER__)
+#define out(chan) mill_select_item_(out, (chan), __COUNTER__)
+
+#define end \
+                chpoll_end_();\
+                break;\
+            }\
+            assert(0);\
+        }\
+        chpoll_select_();
+
+void chpoll_start_(void);
+int chpoll_done_(void);
+int chpoll_result_(void);
+void chpoll_in_(chan ch, int idx);
+void chpoll_out_(chan ch, int idx);
+void chpoll_select_(void);
+void chpoll_end_(void);
+
 #endif
 

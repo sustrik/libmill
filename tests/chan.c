@@ -1,10 +1,11 @@
 
 #include <stdio.h>
 #include <assert.h>
-#include "../mill.c"
+#include "../mill.h"
 
 void foo(chan ch) {
-    musleep(1000000);
+    //musleep(1000000);
+yield();
     chs(ch, (void*)333);
     chclose(ch); 
 }
