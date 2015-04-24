@@ -1,6 +1,6 @@
 
 #include <stdio.h>
-#include "../mill.c"
+#include "../mill.h"
 
 void worker(int count, const char *test) {
     int i;

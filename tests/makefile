@@ -1,13 +1,11 @@
 
-all: test_go test_sleep
+all: test_go
 
-.PHONY: test_go
+.PHONY: test_go 
 test_go: go
 	./go
-
-.PHONY: test_sleep
-test_sleep: sleep
-	./sleep
+go: go.c ../mill.c ../mill.h
+	cc -o go go.c ../mill.c -g -O0
 
 .PHONY: clean
 clean:

@@ -1,24 +1,19 @@
 
-
 #include <stdio.h>
 #include <assert.h>
 #include "../mill.c"
 
 void foo(chan ch) {
-    chan_val val;
-    val.i = 333;
-    chan_send(ch, val);
-    chan_close(ch); 
+    musleep(1000000);
+    chs(ch, (void*)333);
+    chclose(ch); 
 }
 
 int main() {
-    chan ch = chan_init();
+    chan ch = chmake();
     go(foo(ch));
-    chan_val val;
-    val.i = 0;
-    int res = chan_select(&val, ch);
-    assert(res == 0);
-    assert(val.i == 333);
+    void *val = chr(ch);
+    assert(val == (void*)333);
     return 0;
 }
 

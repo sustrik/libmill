@@ -23,56 +23,28 @@
 */
 
 #ifndef MILL_H_INCLUDED
-#define MILL_H_INCLUDED
-
-#include <stddef.h>
-#include <setjmp.h>
-#include <stdlib.h>
-#include <stdint.h>
+#define MILL_H_INCLUDED 
 
 /******************************************************************************/
-/* Coroutines                                                                 */
+/*  Coroutines                                                                */
 /******************************************************************************/
 
-#define STACK_SIZE 16384
+void *mill_go_prologue(void);
+void mill_go_epilogue(void);
 
-volatile int unoptimisable_ = 1;
-
-struct cr_ {
-    struct cr_ *next;
-    char *stack;
-    jmp_buf ctx;
-    uint64_t expiry;
-};
-
-struct cr_ main_cr_ = {NULL};
-
-struct cr_ *first_cr_ = &main_cr_;
-struct cr_ *last_cr_ = &main_cr_;
-
-/* go(fx(args)) executes fuction fx as a new coroutine. */
 #define go(fn) \
     do {\
-        if(!setjmp(first_cr_->ctx)) {\
-            char *stack = malloc(STACK_SIZE);\
-            char anchor_[unoptimisable_];\
-            char filler_[&anchor_[0] - stack - STACK_SIZE];\
-            struct cr_ cr[unoptimisable_];\
-            cr->next = first_cr_;\
-            first_cr_ = cr;\
-            cr->stack = stack;\
+        void *mill_sp = mill_go_prologue();\
+        if(mill_sp) {\
+            volatile int mill_unoptimisable = 1;\
+            int mill_anchor[mill_unoptimisable];\
+            char mill_filler[(char*)&mill_anchor - (char*)(mill_sp)];\
             fn;\
-            free(cr->stack);\
-            first_cr_ = first_cr_->next;\
-            longjmp(first_cr_->ctx, 1);\
+            mill_go_epilogue();\
         }\
     } while(0)
 
-/* Yield CPU to a different coroutine. */
 void yield(void);
-
-void msleep(unsigned int sec);
-void musleep(unsigned long us);
 
 #endif
 
