@@ -112,12 +112,14 @@ void yield(void) {
 struct ep {
     struct cr *cr;
     void **val;
+    struct ep *next;
 };
 
 /* Unbuffered channel. */
 struct chan {
     struct ep sender;
     struct ep receiver;
+    int refcount;
 };
 
 chan chmake(void) {
@@ -125,9 +127,16 @@ chan chmake(void) {
     assert(ch);
     ch->sender.cr = NULL;
     ch->sender.val = NULL;
+    ch->sender.next = NULL;
     ch->receiver.cr = NULL;
     ch->receiver.val = NULL;
+    ch->receiver.next = NULL;
+    ch->refcount = 2;
     return ch;
+}
+
+void chaddref(chan ch) {
+    ++ch->refcount;
 }
 
 void chs(chan ch, void *val) {
@@ -178,7 +187,12 @@ void *chr(chan ch) {
 }	
 
 void chclose(chan ch) {
-    // TODO
-    free(ch);
+    assert(ch->refcount >= 1);
+    --ch->refcount;
+    if(!ch->refcount) {
+        assert(!ch->sender.cr);
+        assert(!ch->receiver.cr);
+        free(ch);
+    }
 }
 
