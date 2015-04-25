@@ -105,7 +105,7 @@ void yield(void) {
 }
 
 /******************************************************************************/
-/*  Channels                                                                  */
+/*  Basic channels                                                            */
 /******************************************************************************/
 
 /* Channel endpoint. */
@@ -194,5 +194,37 @@ void chclose(chan ch) {
         assert(!ch->receiver.cr);
         free(ch);
     }
+}
+
+/*****************************************************************************/
+/*  Selecting                                                                */
+/*****************************************************************************/
+
+void chpoll_start(void) {
+    assert(0);
+}
+
+int chpoll_done(void) {
+    assert(0);
+}
+
+int chpoll_result(void) {
+    assert(0);
+}
+
+void chpoll_in(chan ch, int idx) {
+    assert(0);
+}
+
+void chpoll_out(chan ch, int idx) {
+    assert(0);
+}
+
+void chpoll_select(void) {
+    assert(0);
+}
+
+void chpoll_end(void) {
+    assert(0);
 }
 

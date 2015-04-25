@@ -1,14 +1,14 @@
 
 #include <stdio.h>
 #include <assert.h>
-#include "../mill.c"
+#include "../mill.h"
 
 int main() {
     chan ch1 = chmake();
     chan ch2 = chmake();
     chs(ch2, NULL);
 
-    select {
+    chselect {
     in(ch1):
         assert(0);
     in(ch2):
