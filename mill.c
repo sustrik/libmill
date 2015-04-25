@@ -30,6 +30,15 @@
 #include <stdlib.h>
 
 /******************************************************************************/
+/*  Utilities                                                                 */
+/******************************************************************************/
+
+/*  Takes a pointer to a member variable and computes pointer to the structure
+    that contains it. 'type' is type of the structure, not the member. */
+#define cont(ptr, type, member) \
+    (ptr ? ((type*) (((char*) ptr) - offsetof(type, member))) : NULL)
+
+/******************************************************************************/
 /*  Coroutines                                                                */
 /******************************************************************************/
 
@@ -110,8 +119,10 @@ void yield(void) {
 
 /* Channel endpoint. */
 struct ep {
+    enum {SENDER, RECEIVER} type;
     struct cr *cr;
     void **val;
+    int idx;
     struct ep *next;
 };
 
@@ -122,14 +133,29 @@ struct chan {
     int refcount;
 };
 
+static struct ep *mill_getpeer(struct ep *ep) {
+    switch(ep->type) {
+    case SENDER:
+        return &cont(ep, struct chan, sender)->receiver;
+    case RECEIVER:
+        return &cont(ep, struct chan, receiver)->sender;
+    default:
+        assert(0);
+    }
+}
+
 chan chmake(void) {
     struct chan *ch = (struct chan*)malloc(sizeof(struct chan));
     assert(ch);
+    ch->sender.type = SENDER;
     ch->sender.cr = NULL;
     ch->sender.val = NULL;
+    ch->sender.idx = -1;
     ch->sender.next = NULL;
+    ch->receiver.type = RECEIVER;
     ch->receiver.cr = NULL;
     ch->receiver.val = NULL;
+    ch->receiver.idx = -1;
     ch->receiver.next = NULL;
     ch->refcount = 2;
     return ch;
@@ -200,31 +226,23 @@ void chclose(chan ch) {
 /*  Selecting                                                                */
 /*****************************************************************************/
 
-void chpoll_start(void) {
-    assert(0);
+struct ep *mill_chselect_in(struct ep *chlist, chan ch, int idx) {
+    assert(!ch->receiver.cr);
+    ch->receiver.cr = first_cr;
+    ch->receiver.idx = idx;
+    ch->receiver.next = chlist;
+    return &ch->receiver;
 }
 
-int chpoll_done(void) {
-    assert(0);
+struct ep *mill_chselect_out(struct ep *chlist, chan ch, int idx) {
+    assert(!ch->sender.cr);
+    ch->sender.cr = first_cr;
+    ch->sender.idx = idx;
+    ch->sender.next = chlist;
+    return &ch->sender;
 }
 
-int chpoll_result(void) {
-    assert(0);
-}
-
-void chpoll_in(chan ch, int idx) {
-    assert(0);
-}
-
-void chpoll_out(chan ch, int idx) {
-    assert(0);
-}
-
-void chpoll_select(void) {
-    assert(0);
-}
-
-void chpoll_end(void) {
+int mill_chselect_wait(struct ep *chlist) {
     assert(0);
 }
 

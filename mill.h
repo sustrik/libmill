@@ -61,40 +61,38 @@ void chclose(chan ch);
 #define mill_concat(x,y) x##y
 
 #define chselect \
-    for(chpoll_start();;) {\
-        if(chpoll_done()) {\
-            if(0)
+    {\
+        struct ep *mill_chlist = NULL;\
+        int mill_res = -1;\
+        while(1) {\
+            if(mill_res >= 0) {\
+                if(0)
 
-#define mill_chselect_item(type, chan, seqnum) \
-                chpoll_end();\
-                break;\
+#define mill_chselect_item(type, chan, idx) \
+                    break;\
+                }\
+                goto mill_concat(label, idx);\
             }\
-            goto mill_concat(label, seqnum);\
-        }\
-        chpoll_##type(chan, seqnum);\
-        if(0) {\
-            mill_concat(label, seqnum):\
-            if(chpoll_result() == seqnum) {\
-                mill_concat(dummylabel, seqnum)
+            mill_chlist = mill_chselect_##type(mill_chlist, chan, idx);\
+            if(0) {\
+                mill_concat(label, idx):\
+                if(mill_res == idx) {\
+                    mill_concat(dummylabel, idx)
 
 #define in(chan) mill_chselect_item(in, (chan), __COUNTER__)
 #define out(chan) mill_chselect_item(out, (chan), __COUNTER__)
 
 #define end \
-                chpoll_end();\
-                break;\
+                    break;\
+                }\
+                assert(0);\
             }\
-            assert(0);\
-        }\
-        chpoll_select();
+            mill_res = mill_chselect_wait(mill_chlist);\
+        }
 
-void chpoll_start(void);
-int chpoll_done(void);
-int chpoll_result(void);
-void chpoll_in(chan ch, int idx);
-void chpoll_out(chan ch, int idx);
-void chpoll_select(void);
-void chpoll_end(void);
+struct ep *mill_chselect_in(struct ep *chlist, chan ch, int idx);
+struct ep *mill_chselect_out(struct ep *chlist, chan ch, int idx);
+int mill_chselect_wait(struct ep *chlist);
 
 #endif
 
