@@ -139,6 +139,8 @@ void chs(chan ch, void *val) {
     }
 
     /* Otherwise we are going to yield till the receiver arrives. */
+    if(setjmp(first_cr->ctx))
+        return;
     ch->sender = suspend();
     ch->src = &val;
 
@@ -160,14 +162,14 @@ void *chr(chan ch) {
     }
 
     /* Otherwise we are going to yield till the sender arrives. */
-    ch->receiver = suspend();
     void *val;
+    if(setjmp(first_cr->ctx))
+        return val;
+    ch->receiver = suspend();
     ch->dest = &val;
 
     /* Pass control to a different coroutine. */
     ctxswitch();
-
-    return val;
 }	
 
 void chclose(chan ch) {

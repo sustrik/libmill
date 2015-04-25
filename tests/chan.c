@@ -4,10 +4,9 @@
 #include "../mill.h"
 
 void foo(chan ch) {
-    //musleep(1000000);
-yield();
+    yield();
     chs(ch, (void*)333);
-    chclose(ch); 
+    //chclose(ch); 
 }
 
 int main() {
