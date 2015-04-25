@@ -108,41 +108,46 @@ void yield(void) {
 /*  Channels                                                                  */
 /******************************************************************************/
 
+/* Channel endpoint. */
+struct ep {
+    struct cr *cr;
+    void **val;
+};
+
+/* Unbuffered channel. */
 struct chan {
-    struct cr *sender;
-    struct cr *receiver;
-    void **src;
-    void **dest;
+    struct ep sender;
+    struct ep receiver;
 };
 
 chan chmake(void) {
     struct chan *ch = (struct chan*)malloc(sizeof(struct chan));
     assert(ch);
-    ch->sender = NULL;
-    ch->receiver = NULL;
-    ch->src = NULL;
-    ch->dest = NULL;
+    ch->sender.cr = NULL;
+    ch->sender.val = NULL;
+    ch->receiver.cr = NULL;
+    ch->receiver.val = NULL;
     return ch;
 }
 
 void chs(chan ch, void *val) {
     /* Only one coroutine can send at a time. */
-    assert(!ch->sender);
+    assert(!ch->sender.cr);
 
     /* If there's a receiver already waiting, we can just unblock it. */
-    if(ch->receiver) {
-        *(ch->dest) = val;
-        resume(ch->receiver);
-        ch->receiver = NULL;
-        ch->dest = NULL;
+    if(ch->receiver.cr) {
+        *(ch->receiver.val) = val;
+        resume(ch->receiver.cr);
+        ch->receiver.cr = NULL;
+        ch->receiver.val = NULL;
         return;
     }
 
     /* Otherwise we are going to yield till the receiver arrives. */
     if(setjmp(first_cr->ctx))
         return;
-    ch->sender = suspend();
-    ch->src = &val;
+    ch->sender.cr = suspend();
+    ch->sender.val = &val;
 
     /* Pass control to a different coroutine. */
     ctxswitch();
@@ -150,14 +155,14 @@ void chs(chan ch, void *val) {
 
 void *chr(chan ch) {
     /* Only one coroutine can receive from a channel at a time. */
-    assert(!ch->receiver);
+    assert(!ch->receiver.cr);
 
     /* If there's a sender already waiting, we can just unblock it. */
-    if(ch->sender) {
-        void *val = *(ch->src);
-        resume(ch->sender);
-        ch->sender = NULL;
-        ch->src = NULL;
+    if(ch->sender.cr) {
+        void *val = *(ch->sender.val);
+        resume(ch->sender.cr);
+        ch->sender.cr = NULL;
+        ch->sender.val = NULL;
         return val;
     }
 
@@ -165,8 +170,8 @@ void *chr(chan ch) {
     void *val;
     if(setjmp(first_cr->ctx))
         return val;
-    ch->receiver = suspend();
-    ch->dest = &val;
+    ch->receiver.cr = suspend();
+    ch->receiver.val = &val;
 
     /* Pass control to a different coroutine. */
     ctxswitch();
