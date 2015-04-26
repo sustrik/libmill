@@ -38,7 +38,7 @@ int main() {
     /* Non-blocking receiver case. */
     chan ch1 = chmake();
     go(sender1(ch1));
-    chselect {
+    choose {
     in(ch1, val):
         assert(val == (void*)555);
     end
@@ -48,7 +48,7 @@ int main() {
     /* Blocking receiver case. */
     chan ch2 = chmake();
     go(sender2(ch2));
-    chselect {
+    choose {
     in(ch2, val):
         assert(val == (void*)666);
     end
@@ -58,7 +58,7 @@ int main() {
     /* Non-blocking sender case. */
     chan ch3 = chmake();
     go(receiver1(ch3));
-    chselect {
+    choose {
     out(ch3, (void*)777):
     end
     }
@@ -67,7 +67,7 @@ int main() {
     /* Blocking sender case. */
     chan ch4 = chmake();
     go(receiver2(ch4));
-    chselect {
+    choose {
     out(ch4, (void*)888):
     end
     }
@@ -77,7 +77,7 @@ int main() {
     chan ch5 = chmake();
     chan ch6 = chmake();
     go(sender1(ch6));
-    chselect {
+    choose {
     in(ch5, val):
         assert(0);
     in(ch6, val):
@@ -85,7 +85,7 @@ int main() {
     end
     }
     go(sender2(ch5));
-    chselect {
+    choose {
     in(ch5, val):
         assert(val == (void*)666);
     in(ch6, val):
@@ -104,7 +104,7 @@ int main() {
     int first = 0;
     int second = 0;
     for(i = 0; i != 100; ++i) {
-        chselect {
+        choose {
         in(ch7, val):
             assert(val == (void*)111);
             ++first;
@@ -122,7 +122,7 @@ int main() {
     /* Test 'otherwise' clause. */
     int test = 0;
     chan ch9 = chmake();
-    chselect {
+    choose {
     in(ch9, val):
         assert(0);
     otherwise:

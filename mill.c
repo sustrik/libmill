@@ -236,7 +236,7 @@ void chclose(chan ch) {
 /*  Selecting                                                                */
 /*****************************************************************************/
 
-struct ep *mill_chselect_in(struct ep *chlist, chan ch, int idx, void **val) {
+struct ep *mill_choose_in(struct ep *chlist, chan ch, int idx, void **val) {
     assert(!ch->receiver.cr);
     ch->receiver.cr = first_cr;
     ch->receiver.val = val;
@@ -245,7 +245,7 @@ struct ep *mill_chselect_in(struct ep *chlist, chan ch, int idx, void **val) {
     return &ch->receiver;
 }
 
-struct ep *mill_chselect_out(struct ep *chlist, chan ch, int idx, void **val) {
+struct ep *mill_choose_out(struct ep *chlist, chan ch, int idx, void **val) {
     assert(!ch->sender.cr);
     ch->sender.cr = first_cr;
     ch->sender.val = val;
@@ -254,7 +254,7 @@ struct ep *mill_chselect_out(struct ep *chlist, chan ch, int idx, void **val) {
     return &ch->sender;
 }
 
-int mill_chselect_wait(int blocking, struct ep *chlist) {
+int mill_choose_wait(int blocking, struct ep *chlist) {
     /* Find out wheter there are any channels that are already available. */
     int available = 0;
     struct ep *it = chlist;

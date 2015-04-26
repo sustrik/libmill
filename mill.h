@@ -60,7 +60,7 @@ void chclose(chan ch);
 
 #define mill_concat(x,y) x##y
 
-#define chselect \
+#define choose \
     {\
         struct ep *mill_chlist = NULL;\
         int mill_blocking = 1;\
@@ -78,7 +78,7 @@ void chclose(chan ch);
             }\
             {\
                 void *name = NULL;\
-                mill_chlist = mill_chselect_in(mill_chlist, chan, idx, &name);\
+                mill_chlist = mill_choose_in(mill_chlist, chan, idx, &name);\
                 if(0) {\
                     mill_concat(mill_label, idx):\
                     if(mill_res == idx) {\
@@ -94,7 +94,7 @@ void chclose(chan ch);
             }\
             {\
                 void *mill_outval##idx = (val);\
-                mill_chlist = mill_chselect_out(mill_chlist, chan, idx,\
+                mill_chlist = mill_choose_out(mill_chlist, chan, idx,\
                     &mill_outval##idx);\
                 if(0) {\
                     mill_concat(mill_label, idx):\
@@ -122,12 +122,12 @@ void chclose(chan ch);
                     assert(0);\
                 }\
             }\
-            mill_res = mill_chselect_wait(mill_blocking, mill_chlist);\
+            mill_res = mill_choose_wait(mill_blocking, mill_chlist);\
         }
 
-struct ep *mill_chselect_in(struct ep *chlist, chan ch, int idx, void **val);
-struct ep *mill_chselect_out(struct ep *chlist, chan ch, int idx, void **val);
-int mill_chselect_wait(int blocking, struct ep *chlist);
+struct ep *mill_choose_in(struct ep *chlist, chan ch, int idx, void **val);
+struct ep *mill_choose_out(struct ep *chlist, chan ch, int idx, void **val);
+int mill_choose_wait(int blocking, struct ep *chlist);
 
 #endif
 
