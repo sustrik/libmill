@@ -33,3 +33,16 @@ $ gcc -o test test.c mill.c
 This is a proof of concept project that seems to work with x86-64, gcc
 and Linux. I have no idea about different environments. Also, the project
 is in very early stage of development and not suitable for actual usage.
+
+Mailing List
+------------
+
+Discussion goes on at millc@freelists.org
+
+Subscribe here:
+
+http://www.freelists.org/list/millc
+
+Archives:
+
+http://www.freelists.org/archive/millc/
