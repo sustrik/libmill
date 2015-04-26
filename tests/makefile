@@ -1,5 +1,5 @@
 
-all: test_go test_chan test_select
+all: test_go test_chan test_chselect
 
 .PHONY: test_go 
 test_go: go
@@ -13,12 +13,12 @@ test_chan: chan
 chan: chan.c ../mill.c ../mill.h
 	cc -o chan chan.c ../mill.c -g -O0
 
-.PHONY: test_select
-test_select: select
-	./select
-chan: select.c ../mill.c ../mill.h
-	cc -o select select.c ../mill.c -g -O0
+.PHONY: test_chselect
+test_chselect: chselect
+	./chselect
+chselect: chselect.c ../mill.c ../mill.h
+	cc -o chselect chselect.c ../mill.c -g -O0
 
 .PHONY: clean
 clean:
-	rm -f go chan select
+	rm -f go chan chselect

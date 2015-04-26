@@ -68,19 +68,33 @@ void chclose(chan ch);
             if(mill_res >= 0) {\
                 if(0)
 
-#define mill_chselect_item(type, chan, idx) \
+#define mill_in(chan, name, idx) \
                     break;\
                 }\
-                goto mill_concat(label, idx);\
+                goto mill_concat(mill_label, idx);\
             }\
-            mill_chlist = mill_chselect_##type(mill_chlist, chan, idx);\
+            mill_chlist = mill_chselect_in(mill_chlist, chan, idx);\
             if(0) {\
-                mill_concat(label, idx):\
+                mill_concat(mill_label, idx):\
                 if(mill_res == idx) {\
-                    mill_concat(dummylabel, idx)
+                    void *name = chr(chan);\
+                    mill_concat(mill_dummylabel, idx)
 
-#define in(chan) mill_chselect_item(in, (chan), __COUNTER__)
-#define out(chan) mill_chselect_item(out, (chan), __COUNTER__)
+#define in(chan, name) mill_in(chan, name, __COUNTER__)
+
+#define mill_out(chan, val, idx) \
+                    break;\
+                }\
+                goto mill_concat(mill_label, idx);\
+            }\
+            mill_chlist = mill_chselect_out(mill_chlist, chan, idx);\
+            if(0) {\
+                mill_concat(mill_label, idx):\
+                if(mill_res == idx) {\
+                    chs((chan), (val));\
+                    mill_concat(mill_dummylabel, idx)
+
+#define out(chan, val) mill_out(chan, val, __COUNTER__)
 
 #define end \
                     break;\

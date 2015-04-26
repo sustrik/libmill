@@ -27,6 +27,7 @@
 #include <assert.h>
 #include <setjmp.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 /******************************************************************************/
@@ -78,6 +79,9 @@ static void resume(struct cr *cr) {
 
 /* Switch to a different coroutine. */
 static void ctxswitch(void) {
+    /* There are no ready coroutines. Deadlock. */
+    assert(first_cr);
+
     longjmp(first_cr->ctx, 1);
 }
 
@@ -243,6 +247,51 @@ struct ep *mill_chselect_out(struct ep *chlist, chan ch, int idx) {
 }
 
 int mill_chselect_wait(struct ep *chlist) {
-    assert(0);
+    /* Find out wheter there are any channels that are already available. */
+    int available = 0;
+    struct ep *it = chlist;
+    while(it) {
+        if(mill_getpeer(it)->cr)
+            ++available;
+        it = it->next;
+    }
+    printf("available: %d\n", available);
+    
+    /* If so, choose a random one. */
+    if(available > 0) {
+        int chosen = random() % available;
+        printf("chosen: %d\n", chosen);
+        int res = -1;
+        it = chlist;
+        while(it) {
+            if(mill_getpeer(it)->cr) {
+                if(!chosen)
+                    res = it->idx;
+                --chosen;
+            }
+            struct ep *tmp = it;
+            it = it->next;
+            tmp->cr = NULL;
+            tmp->idx = -1;
+            tmp->next = NULL;
+        }
+        assert(res >= 0);
+        return res;
+    }
+
+    /* If not so, block and wait for an available channel. */
+    if(!setjmp(first_cr->ctx)) {
+        suspend();
+        ctxswitch();
+    }
+    it = chlist;
+    while(it) {
+        struct ep *tmp = it;
+        it = it->next;
+        tmp->cr = NULL;
+        tmp->idx = -1;
+        tmp->next = NULL;
+    }
+    return -1;//!
 }
 
