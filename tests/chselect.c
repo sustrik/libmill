@@ -119,6 +119,18 @@ int main() {
     chclose(ch7);
     chclose(ch8);
 
+    /* Test 'otherwise' clause. */
+    chan ch9 = chmake();
+    chselect {
+    in(ch9, val):
+        assert(0);
+    otherwise:
+        printf("ok\n");
+    end
+    }
+    chclose(ch9);
+    chclose(ch9);
+
     return 0;
 }
 

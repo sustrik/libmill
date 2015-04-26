@@ -63,6 +63,7 @@ void chclose(chan ch);
 #define chselect \
     {\
         struct ep *mill_chlist = NULL;\
+        int mill_blocking = 1;\
         int mill_res = -1;\
         while(1) {\
             {\
@@ -102,18 +103,31 @@ void chclose(chan ch);
 
 #define out(chan, val) mill_out(chan, val, __COUNTER__)
 
+#define otherwise \
+                        break;\
+                    }\
+                    goto mill_concat(mill_label, idx);\
+                }\
+            }\
+            {\
+                mill_blocking = 0;\
+                if(0) {\
+                    mill_concat(mill_label, idx):\
+                    if(1) {\
+                        mill_concat(mill_dummylabel, idx)
+
 #define end \
                         break;\
                     }\
                     assert(0);\
                 }\
             }\
-            mill_res = mill_chselect_wait(mill_chlist);\
+            mill_res = mill_chselect_wait(mill_blocking, mill_chlist);\
         }
 
 struct ep *mill_chselect_in(struct ep *chlist, chan ch, int idx, void **val);
 struct ep *mill_chselect_out(struct ep *chlist, chan ch, int idx, void **val);
-int mill_chselect_wait(struct ep *chlist);
+int mill_chselect_wait(int blocking, struct ep *chlist);
 
 #endif
 

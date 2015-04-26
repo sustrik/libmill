@@ -254,7 +254,7 @@ struct ep *mill_chselect_out(struct ep *chlist, chan ch, int idx, void **val) {
     return &ch->sender;
 }
 
-int mill_chselect_wait(struct ep *chlist) {
+int mill_chselect_wait(int blocking, struct ep *chlist) {
     /* Find out wheter there are any channels that are already available. */
     int available = 0;
     struct ep *it = chlist;
@@ -296,7 +296,11 @@ int mill_chselect_wait(struct ep *chlist) {
         return res;
     }
 
-    /* If not so, block and wait for an available channel. */
+    /* If not so and there's an 'otherwise' clause we can go straight to it. */
+    if(!blocking)
+        return -1;
+
+    /* In all other cases block and wait for an available channel. */
     if(!setjmp(first_cr->ctx)) {
         suspend();
         ctxswitch();
