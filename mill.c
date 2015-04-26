@@ -48,6 +48,7 @@
 struct cr {
     struct cr *next;
     jmp_buf ctx;
+    int idx;
 };
 
 /* Fake coroutine corresponding to the main thread of execution. */
@@ -93,6 +94,7 @@ void *mill_go_prologue() {
     assert(ptr);
     struct cr *cr = (struct cr*)(ptr + STACK_SIZE - sizeof (struct cr));
     cr->next = first_cr;
+    cr->idx = -1;
     first_cr = cr;
     return (void*)cr;
 }
@@ -176,9 +178,11 @@ void chs(chan ch, void *val) {
     /* If there's a receiver already waiting, we can just unblock it. */
     if(ch->receiver.cr) {
         *(ch->receiver.val) = val;
+        ch->receiver.cr->idx = ch->receiver.idx;
         resume(ch->receiver.cr);
         ch->receiver.cr = NULL;
         ch->receiver.val = NULL;
+        ch->receiver.idx = -1;
         return;
     }
 
@@ -199,9 +203,11 @@ void *chr(chan ch) {
     /* If there's a sender already waiting, we can just unblock it. */
     if(ch->sender.cr) {
         void *val = *(ch->sender.val);
+        ch->sender.cr->idx = ch->sender.idx;
         resume(ch->sender.cr);
         ch->sender.cr = NULL;
         ch->sender.val = NULL;
+        ch->sender.idx = -1;
         return val;
     }
 
@@ -230,17 +236,19 @@ void chclose(chan ch) {
 /*  Selecting                                                                */
 /*****************************************************************************/
 
-struct ep *mill_chselect_in(struct ep *chlist, chan ch, int idx) {
+struct ep *mill_chselect_in(struct ep *chlist, chan ch, int idx, void **val) {
     assert(!ch->receiver.cr);
     ch->receiver.cr = first_cr;
+    ch->receiver.val = val;
     ch->receiver.idx = idx;
     ch->receiver.next = chlist;
     return &ch->receiver;
 }
 
-struct ep *mill_chselect_out(struct ep *chlist, chan ch, int idx) {
+struct ep *mill_chselect_out(struct ep *chlist, chan ch, int idx, void **val) {
     assert(!ch->sender.cr);
     ch->sender.cr = first_cr;
+    ch->sender.val = val;
     ch->sender.idx = idx;
     ch->sender.next = chlist;
     return &ch->sender;
@@ -255,18 +263,27 @@ int mill_chselect_wait(struct ep *chlist) {
             ++available;
         it = it->next;
     }
-    printf("available: %d\n", available);
     
     /* If so, choose a random one. */
     if(available > 0) {
         int chosen = random() % available;
-        printf("chosen: %d\n", chosen);
         int res = -1;
         it = chlist;
         while(it) {
             if(mill_getpeer(it)->cr) {
-                if(!chosen)
+                if(!chosen) {
+                    struct ep *peer = mill_getpeer(it);
+                    if(it->type == SENDER)
+                        *peer->val = *it->val;
+                    else
+                        *it->val = *peer->val;
+                    peer->cr->idx = peer->idx;
+                    resume(peer->cr);
+                    peer->cr = NULL;
+                    peer->val = NULL;
+                    peer->idx = -1;
                     res = it->idx;
+                }
                 --chosen;
             }
             struct ep *tmp = it;
@@ -292,6 +309,6 @@ int mill_chselect_wait(struct ep *chlist) {
         tmp->idx = -1;
         tmp->next = NULL;
     }
-    return -1;//!
+    return first_cr->idx;
 }
 

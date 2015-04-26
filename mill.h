@@ -65,47 +65,54 @@ void chclose(chan ch);
         struct ep *mill_chlist = NULL;\
         int mill_res = -1;\
         while(1) {\
-            if(mill_res >= 0) {\
-                if(0)
+            {\
+                if(mill_res >= 0) {\
+                    if(0)
 
 #define mill_in(chan, name, idx) \
-                    break;\
+                        break;\
+                    }\
+                    goto mill_concat(mill_label, idx);\
                 }\
-                goto mill_concat(mill_label, idx);\
             }\
-            mill_chlist = mill_chselect_in(mill_chlist, chan, idx);\
-            if(0) {\
-                mill_concat(mill_label, idx):\
-                if(mill_res == idx) {\
-                    void *name = chr(chan);\
-                    mill_concat(mill_dummylabel, idx)
+            {\
+                void *name = NULL;\
+                mill_chlist = mill_chselect_in(mill_chlist, chan, idx, &name);\
+                if(0) {\
+                    mill_concat(mill_label, idx):\
+                    if(mill_res == idx) {\
+                        mill_concat(mill_dummylabel, idx)
 
 #define in(chan, name) mill_in(chan, name, __COUNTER__)
 
 #define mill_out(chan, val, idx) \
-                    break;\
+                        break;\
+                    }\
+                    goto mill_concat(mill_label, idx);\
                 }\
-                goto mill_concat(mill_label, idx);\
             }\
-            mill_chlist = mill_chselect_out(mill_chlist, chan, idx);\
-            if(0) {\
-                mill_concat(mill_label, idx):\
-                if(mill_res == idx) {\
-                    chs((chan), (val));\
-                    mill_concat(mill_dummylabel, idx)
+            {\
+                void *mill_outval##idx = (val);\
+                mill_chlist = mill_chselect_out(mill_chlist, chan, idx,\
+                    &mill_outval##idx);\
+                if(0) {\
+                    mill_concat(mill_label, idx):\
+                    if(mill_res == idx) {\
+                        mill_concat(mill_dummylabel, idx)
 
 #define out(chan, val) mill_out(chan, val, __COUNTER__)
 
 #define end \
-                    break;\
+                        break;\
+                    }\
+                    assert(0);\
                 }\
-                assert(0);\
             }\
             mill_res = mill_chselect_wait(mill_chlist);\
         }
 
-struct ep *mill_chselect_in(struct ep *chlist, chan ch, int idx);
-struct ep *mill_chselect_out(struct ep *chlist, chan ch, int idx);
+struct ep *mill_chselect_in(struct ep *chlist, chan ch, int idx, void **val);
+struct ep *mill_chselect_out(struct ep *chlist, chan ch, int idx, void **val);
 int mill_chselect_wait(struct ep *chlist);
 
 #endif
