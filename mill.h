@@ -119,7 +119,6 @@ void chclose(chan ch);
 #define end \
                         break;\
                     }\
-                    assert(0);\
                 }\
             }\
             mill_res = mill_choose_wait(mill_blocking, mill_chlist);\

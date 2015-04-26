@@ -6,21 +6,36 @@ This project is trying to introduce Go-style concurrency to C.
 test.c:
 ```
 #include <stdio.h>
-#include "mill.h"
+#include "../mill.h"
 
-void worker(int count, const char *test) {
+void worker(int count, const char *text, chan ch) {
     int i;
     for(i = 0; i != count; ++i) {
-        printf("%s\n", test);
-        musleep(10000);
+        printf("%s\n", text);
+        yield();
     }
+    chs(ch, NULL);
+    chclose(ch);
 }
 
 int main() {
-    go(worker(3, "a"));
-    go(worker(1, "b"));
-    go(worker(2, "c"));
-    musleep(50000);
+
+    chan ch1 = chmake();
+    go(worker(4, "a", ch1));
+    chan ch2 = chmake();
+    go(worker(2, "b", ch2));
+
+    choose {
+    in(ch1, val):
+        printf ("coroutine 'a' have finished first!");
+    in(ch2, val):
+        printf ("coroutine 'b' have finished first!");
+    end
+    }
+
+    chclose(ch2);
+    chclose(ch1);
+
     return 0;
 }
 ```

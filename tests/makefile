@@ -1,5 +1,11 @@
 
-all: test_go test_chan test_choose
+all: test_example test_go test_chan test_choose
+
+.PHONY: test_example 
+test_example: example
+	./example
+example: example.c ../mill.c ../mill.h
+	cc -o example example.c ../mill.c -g -O0
 
 .PHONY: test_go 
 test_go: go
@@ -21,4 +27,4 @@ choose: choose.c ../mill.c ../mill.h
 
 .PHONY: clean
 clean:
-	rm -f go chan choose
+	rm -f example go chan choose
