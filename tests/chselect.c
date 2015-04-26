@@ -103,7 +103,7 @@ int main() {
     int i;
     int first = 0;
     int second = 0;
-    for(i = 0; i != 100; ++i)
+    for(i = 0; i != 100; ++i) {
         chselect {
         in(ch7, val):
             assert(val == (void*)111);
@@ -113,7 +113,8 @@ int main() {
             ++second;
         end
         }
-printf("%d %d\n", first, second);
+        yield();
+    }
     assert(first > 1 && second > 1);
     chclose(ch7);
     chclose(ch8);
