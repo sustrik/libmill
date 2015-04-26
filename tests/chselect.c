@@ -120,14 +120,16 @@ int main() {
     chclose(ch8);
 
     /* Test 'otherwise' clause. */
+    int test = 0;
     chan ch9 = chmake();
     chselect {
     in(ch9, val):
         assert(0);
     otherwise:
-        printf("ok\n");
+        test = 1;
     end
     }
+    assert(test == 1);
     chclose(ch9);
     chclose(ch9);
 

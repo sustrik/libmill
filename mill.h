@@ -64,10 +64,10 @@ void chclose(chan ch);
     {\
         struct ep *mill_chlist = NULL;\
         int mill_blocking = 1;\
-        int mill_res = -1;\
+        int mill_res = -2;\
         while(1) {\
             {\
-                if(mill_res >= 0) {\
+                if(mill_res != -2) {\
                     if(0)
 
 #define mill_in(chan, name, idx) \

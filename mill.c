@@ -297,14 +297,17 @@ int mill_chselect_wait(int blocking, struct ep *chlist) {
     }
 
     /* If not so and there's an 'otherwise' clause we can go straight to it. */
-    if(!blocking)
-        return -1;
+    if(!blocking) {
+        first_cr->idx = -1;
+        goto cleanup;
+    }
 
     /* In all other cases block and wait for an available channel. */
     if(!setjmp(first_cr->ctx)) {
         suspend();
         ctxswitch();
     }
+    cleanup:
     it = chlist;
     while(it) {
         struct ep *tmp = it;
