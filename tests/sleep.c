@@ -1,20 +1,30 @@
 
+#include <assert.h>
+#include <stdint.h>
 #include <stdio.h>
-#include "../mill.c"
+#include <sys/time.h>
+#include "../mill.h"
 
-void worker(int count, const char *test) {
-    int i;
-    for(i = 0; i != count; ++i) {
-        printf("%s\n", test);
-        musleep(10000);
-    }
+static uint64_t now() {
+    struct timeval tv;
+    int rc = gettimeofday(&tv, NULL);
+    assert(rc == 0);
+    return ((uint64_t)tv.tv_sec) * 1000 + (((uint64_t)tv.tv_usec) / 1000);
 }
 
 int main() {
-    go(worker(3, "a"));
-    go(worker(1, "b"));
-    go(worker(2, "c"));
-    musleep(50000);
+    /* Test msleep. */
+    uint64_t ms = now();
+    msleep(1);
+    ms = now() - ms;
+    assert(ms > 900 && ms < 1100);
+
+    /* Test musleep. */
+    ms = now();
+    musleep(1000000);
+    ms = now() - ms;
+    assert(ms > 900 && ms < 1100);
+
     return 0;
 }
 

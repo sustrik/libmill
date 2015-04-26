@@ -2,3 +2,4 @@ tests/example
 tests/go
 tests/chan
 tests/choose
+tests/sleep

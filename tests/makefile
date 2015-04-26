@@ -1,5 +1,5 @@
 
-all: test_example test_go test_chan test_choose
+all: test_example test_go test_chan test_choose test_sleep
 
 .PHONY: test_example 
 test_example: example
@@ -25,6 +25,12 @@ test_choose: choose
 choose: choose.c ../mill.c ../mill.h
 	cc -o choose choose.c ../mill.c -g -O0
 
+.PHONY: test_sleep
+test_sleep: sleep
+	./sleep
+choose: sleep.c ../mill.c ../mill.h
+	cc -o sleep sleep.c ../mill.c -g -O0
+
 .PHONY: clean
 clean:
-	rm -f example go chan choose
+	rm -f example go chan choose sleep

@@ -132,5 +132,8 @@ int mill_choose_wait(int blocking, struct ep *chlist);
 /*  Library                                                                   */
 /******************************************************************************/
 
+void msleep(unsigned int sec);
+void musleep(unsigned long us);
+
 #endif
 

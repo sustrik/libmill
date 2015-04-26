@@ -181,6 +181,32 @@ void yield(void) {
     ctxswitch();
 }
 
+/* Pause current coroutine for a specified time interval. */
+static void pause(unsigned long ms) {
+    /* No point in waiting. However, let's give other coroutines a chance. */
+    if(ms <= 0) {
+        yield();
+        return;
+    }
+
+    /* Save the current state. */
+    if(setjmp(first_cr->ctx))
+        return;
+    
+    /* Move the coroutine into the right place in the ordered list
+       of paused coroutines. */
+    struct cr *cr = suspend();
+    cr->expiry = now() + ms;
+    struct cr **it = &paused;
+    while(*it && (*it)->expiry <= cr->expiry)
+        it = &((*it)->next);
+    cr->next = *it;
+    *it = cr;
+
+    /* Pass control to a different coroutine. */
+    ctxswitch();
+}
+
 /******************************************************************************/
 /*  Channels                                                                  */
 /******************************************************************************/
@@ -380,4 +406,15 @@ int mill_choose_wait(int blocking, struct ep *chlist) {
 /******************************************************************************/
 /*  Library                                                                   */
 /******************************************************************************/
+
+void msleep(unsigned int sec) {
+    pause(sec * 1000);
+}
+
+void musleep(unsigned long us) {
+    uint64_t ms = us / 1000;
+    if(us % 1000)
+        ++ms;
+    pause(ms);
+}
 
