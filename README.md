@@ -27,9 +27,9 @@ int main() {
 
     choose {
     in(ch1, val):
-        printf ("coroutine 'a' have finished first!");
+        printf("coroutine 'a' have finished first!\n");
     in(ch2, val):
-        printf ("coroutine 'b' have finished first!");
+        printf("coroutine 'b' have finished first!\n");
     end
     }
 

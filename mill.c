@@ -25,10 +25,13 @@
 #include "mill.h"
 
 #include <assert.h>
+#include <poll.h>
 #include <setjmp.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/time.h>
 
 /******************************************************************************/
 /*  Utilities                                                                 */
@@ -38,6 +41,14 @@
     that contains it. 'type' is type of the structure, not the member. */
 #define cont(ptr, type, member) \
     (ptr ? ((type*) (((char*) ptr) - offsetof(type, member))) : NULL)
+
+/* Current time. Millisecond precision. */
+static uint64_t now() {
+    struct timeval tv;
+    int rc = gettimeofday(&tv, NULL);
+    assert(rc == 0);
+    return ((uint64_t)tv.tv_sec) * 1000 + (((uint64_t)tv.tv_usec) / 1000);
+}
 
 /******************************************************************************/
 /*  Coroutines                                                                */
@@ -49,14 +60,25 @@ struct cr {
     struct cr *next;
     jmp_buf ctx;
     int idx;
+    uint64_t expiry;
 };
 
 /* Fake coroutine corresponding to the main thread of execution. */
-struct cr main_cr = {NULL};
+static struct cr main_cr = {NULL};
 
 /* The queue of coroutines ready to run. The first one is currently running. */
-struct cr *first_cr = &main_cr;
-struct cr *last_cr = &main_cr;
+static struct cr *first_cr = &main_cr;
+static struct cr *last_cr = &main_cr;
+
+/* Linked list of all paused coroutines. The list is ordered.
+   First coroutine to be resumed comes first and so on. */
+static struct cr *paused = NULL;
+
+/* Pollset used for waiting for file descriptors. */
+static int wait_size = 0;
+static int wait_capacity = 0;
+static struct pollfd *wait_fds = NULL;
+static struct cr **wait_crs = NULL;
 
 /* Removes current coroutine from the queue and returns it to the calller. */
 static struct cr *suspend() {
@@ -80,10 +102,49 @@ static void resume(struct cr *cr) {
 
 /* Switch to a different coroutine. */
 static void ctxswitch(void) {
-    /* There are no ready coroutines. Deadlock. */
-    assert(first_cr);
+    /* If there's a coroutine ready to be executed go for it. Otherwise,
+       we are going to wait for paused coroutines and external events. */
+    if(first_cr)
+        longjmp(first_cr->ctx, 1);
 
-    longjmp(first_cr->ctx, 1);
+    /* The execution would block. Let's panic. */
+    assert(paused || wait_size);
+
+    /* Compute the time till next expired pause. */
+    int timeout = -1;
+    if(paused) {
+        uint64_t nw = now();
+        timeout = nw >= paused->expiry ? 0 : paused->expiry - nw;
+    }
+
+    /* Wait for events. */
+    int rc = poll(wait_fds, wait_size, timeout);
+    assert(rc >= 0);
+
+    /* Resume all paused coroutines that have expired. */
+    if(paused) {
+        uint64_t nw = now();
+		while(paused && paused->expiry <= nw) {
+            struct cr *cr = paused;
+            paused = cr->next;
+            resume(cr);
+		}
+    }
+
+    /* Resume coroutines waiting for file descriptors. */
+    int i;
+    for(i = 0; i != wait_size && rc; ++i) {
+        if(wait_fds[i].revents) {
+            resume(wait_crs[i]);
+            wait_fds[i] = wait_fds[wait_size - 1];
+            wait_crs[i] = wait_crs[wait_size - 1];
+            --wait_size;
+            --rc;
+        }
+    }
+
+	/* Pass control to a resumed coroutine. */
+	longjmp(first_cr->ctx, 1);
 }
 
 /* The intial part of go(). Allocates the stack for the new coroutine. */
@@ -95,6 +156,7 @@ void *mill_go_prologue() {
     struct cr *cr = (struct cr*)(ptr + STACK_SIZE - sizeof (struct cr));
     cr->next = first_cr;
     cr->idx = -1;
+    cr->expiry = 0;
     first_cr = cr;
     return (void*)cr;
 }
@@ -120,7 +182,7 @@ void yield(void) {
 }
 
 /******************************************************************************/
-/*  Basic channels                                                            */
+/*  Channels                                                                  */
 /******************************************************************************/
 
 /* Channel endpoint. */
@@ -232,10 +294,6 @@ void chclose(chan ch) {
     }
 }
 
-/*****************************************************************************/
-/*  Selecting                                                                */
-/*****************************************************************************/
-
 struct ep *mill_choose_in(struct ep *chlist, chan ch, int idx, void **val) {
     assert(!ch->receiver.cr);
     ch->receiver.cr = first_cr;
@@ -318,4 +376,8 @@ int mill_choose_wait(int blocking, struct ep *chlist) {
     }
     return first_cr->idx;
 }
+
+/******************************************************************************/
+/*  Library                                                                   */
+/******************************************************************************/
 

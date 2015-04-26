@@ -1,3 +1,4 @@
+tests/example
 tests/go
 tests/chan
-tests/chselect
+tests/choose

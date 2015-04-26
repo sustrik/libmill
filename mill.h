@@ -128,5 +128,9 @@ struct ep *mill_choose_in(struct ep *chlist, chan ch, int idx, void **val);
 struct ep *mill_choose_out(struct ep *chlist, chan ch, int idx, void **val);
 int mill_choose_wait(int blocking, struct ep *chlist);
 
+/******************************************************************************/
+/*  Library                                                                   */
+/******************************************************************************/
+
 #endif
 
