@@ -25,13 +25,14 @@
 #include "mill.h"
 
 #include <assert.h>
+#include <fcntl.h>
 #include <poll.h>
 #include <setjmp.h>
-#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/time.h>
+#include <unistd.h>
 
 /******************************************************************************/
 /*  Utilities                                                                 */
@@ -70,9 +71,9 @@ static struct cr main_cr = {NULL};
 static struct cr *first_cr = &main_cr;
 static struct cr *last_cr = &main_cr;
 
-/* Linked list of all paused coroutines. The list is ordered.
+/* Linked list of all coroutines on hold. The list is ordered.
    First coroutine to be resumed comes first and so on. */
-static struct cr *paused = NULL;
+static struct cr *onhold = NULL;
 
 /* Pollset used for waiting for file descriptors. */
 static int wait_size = 0;
@@ -103,30 +104,30 @@ static void resume(struct cr *cr) {
 /* Switch to a different coroutine. */
 static void ctxswitch(void) {
     /* If there's a coroutine ready to be executed go for it. Otherwise,
-       we are going to wait for paused coroutines and external events. */
+       we are going to wait for onhold coroutines and external events. */
     if(first_cr)
         longjmp(first_cr->ctx, 1);
 
     /* The execution would block. Let's panic. */
-    assert(paused || wait_size);
+    assert(onhold || wait_size);
 
-    /* Compute the time till next expired pause. */
+    /* Compute the time till next expired hold. */
     int timeout = -1;
-    if(paused) {
+    if(onhold) {
         uint64_t nw = now();
-        timeout = nw >= paused->expiry ? 0 : paused->expiry - nw;
+        timeout = nw >= onhold->expiry ? 0 : onhold->expiry - nw;
     }
 
     /* Wait for events. */
     int rc = poll(wait_fds, wait_size, timeout);
     assert(rc >= 0);
 
-    /* Resume all paused coroutines that have expired. */
-    if(paused) {
+    /* Resume all onhold coroutines that have expired. */
+    if(onhold) {
         uint64_t nw = now();
-		while(paused && paused->expiry <= nw) {
-            struct cr *cr = paused;
-            paused = cr->next;
+		while(onhold && onhold->expiry <= nw) {
+            struct cr *cr = onhold;
+            onhold = cr->next;
             resume(cr);
 		}
     }
@@ -181,8 +182,8 @@ void yield(void) {
     ctxswitch();
 }
 
-/* Pause current coroutine for a specified time interval. */
-static void pause(unsigned long ms) {
+/* hold current coroutine for a specified time interval. */
+static void hold(unsigned long ms) {
     /* No point in waiting. However, let's give other coroutines a chance. */
     if(ms <= 0) {
         yield();
@@ -194,10 +195,10 @@ static void pause(unsigned long ms) {
         return;
     
     /* Move the coroutine into the right place in the ordered list
-       of paused coroutines. */
+       of onhold coroutines. */
     struct cr *cr = suspend();
     cr->expiry = now() + ms;
-    struct cr **it = &paused;
+    struct cr **it = &onhold;
     while(*it && (*it)->expiry <= cr->expiry)
         it = &((*it)->next);
     cr->next = *it;
@@ -408,13 +409,30 @@ int mill_choose_wait(int blocking, struct ep *chlist) {
 /******************************************************************************/
 
 void msleep(unsigned int sec) {
-    pause(sec * 1000);
+    hold(sec * 1000);
 }
 
 void musleep(unsigned long us) {
     uint64_t ms = us / 1000;
     if(us % 1000)
         ++ms;
-    pause(ms);
+    hold(ms);
 }
+
+int msocket(int family, int type, int protocol) {
+    int s = socket(family, type, protocol);
+    int rc = fcntl(s, F_SETFL, O_NONBLOCK);
+    assert(rc != -1);
+}
+
+int mconnect(int s, const struct sockaddr *addr, socklen_t addrlen);
+int maccept(int s, struct sockaddr *address, socklen_t *addrlen);
+ssize_t msend(int s, const void *buf, size_t len, int flags);
+ssize_t msendto(int s, const void *buf, size_t len, int flags,
+    const struct sockaddr *addr, socklen_t addrlen);
+ssize_t msendmsg(int s, const struct msghdr *msg, int flags);
+ssize_t mrecv(int s, void *buf, size_t len, int flags);
+ssize_t mrecvfrom(int s, void *buf, size_t len, int flags,
+    struct sockaddr *addr, socklen_t *addrlen);
+ssize_t mrecvmsg(int s, struct msghdr *msg, int flags);
 
