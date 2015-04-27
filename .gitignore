@@ -1,4 +1,5 @@
 tests/example
+tests/example.out
 tests/go
 tests/chan
 tests/choose

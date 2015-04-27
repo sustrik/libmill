@@ -12,7 +12,7 @@ void worker(int count, const char *text, chan ch) {
     int i;
     for(i = 0; i != count; ++i) {
         printf("%s\n", text);
-        yield();
+        musleep(10000);
     }
     chs(ch, NULL);
     chclose(ch);
