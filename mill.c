@@ -25,6 +25,7 @@
 #include "mill.h"
 
 #include <assert.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <poll.h>
 #include <setjmp.h>
@@ -205,6 +206,31 @@ static void hold(unsigned long ms) {
     *it = cr;
 
     /* Pass control to a different coroutine. */
+    ctxswitch();
+}
+
+/* Wait for events from a file descriptor. */
+static void wait(int fd, short events) {
+    /* Grow the pollset as needed. */
+    if(wait_size == wait_capacity) {
+        wait_capacity = wait_capacity ? wait_capacity * 2 : 64;
+        wait_fds = realloc(wait_fds, wait_capacity * sizeof(struct pollfd));
+        wait_crs = realloc(wait_crs, wait_capacity * sizeof(struct cr*));
+    }
+
+    /* Remove the current coroutine from the queue. */
+    struct cr *cr = suspend();
+
+    /* Add the new file descriptor to the pollset. */
+    wait_fds[wait_size].fd = fd;
+    wait_fds[wait_size].events = events;
+    wait_fds[wait_size].revents = 0;
+    wait_crs[wait_size] = cr;
+    ++wait_size;
+
+    /* Save the current state and pass control to a different coroutine. */
+    if(setjmp(first_cr->ctx))
+        return;
     ctxswitch();
 }
 
@@ -421,12 +447,39 @@ void musleep(unsigned long us) {
 
 int msocket(int family, int type, int protocol) {
     int s = socket(family, type, protocol);
+    if(s == -1)
+        return -1;
     int rc = fcntl(s, F_SETFL, O_NONBLOCK);
     assert(rc != -1);
 }
 
-int mconnect(int s, const struct sockaddr *addr, socklen_t addrlen);
-int maccept(int s, struct sockaddr *address, socklen_t *addrlen);
+int mconnect(int s, const struct sockaddr *addr, socklen_t addrlen) {
+    int rc = connect(s, addr, addrlen);
+    if(rc == 0)
+        return 0;
+    assert(rc == -1);
+    if(errno != EINPROGRESS)
+        return -1;
+    wait(s, POLLOUT);
+    /* TODO: Handle errors. */
+    return 0;
+}
+
+int maccept(int s, struct sockaddr *addr, socklen_t *addrlen) {
+    while(1) {
+        int newsock = accept(s, addr, addrlen);
+        if (newsock >= 0) {
+            int rc = fcntl(newsock, F_SETFL, O_NONBLOCK);
+            assert(rc != -1);
+            return newsock;
+        }
+        assert(newsock == -1);
+        if(errno != EAGAIN && errno != EWOULDBLOCK)
+            return -1;
+        wait(s, POLLIN);
+    }
+}
+
 ssize_t msend(int s, const void *buf, size_t len, int flags);
 ssize_t msendto(int s, const void *buf, size_t len, int flags,
     const struct sockaddr *addr, socklen_t addrlen);

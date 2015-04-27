@@ -141,7 +141,7 @@ void musleep(unsigned long us);
 
 int msocket(int family, int type, int protocol);
 int mconnect(int s, const struct sockaddr *addr, socklen_t addrlen);
-int maccept(int s, struct sockaddr *address, socklen_t *addrlen);
+int maccept(int s, struct sockaddr *addr, socklen_t *addrlen);
 ssize_t msend(int s, const void *buf, size_t len, int flags);
 ssize_t msendto(int s, const void *buf, size_t len, int flags,
     const struct sockaddr *addr, socklen_t addrlen);
