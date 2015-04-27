@@ -14,7 +14,7 @@ int main() {
     go(worker(3, "a"));
     go(worker(1, "b"));
     go(worker(2, "c"));
-    worker(5,"d");
+    musleep(100000);
     return 0;
 }
 

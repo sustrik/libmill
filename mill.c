@@ -82,7 +82,7 @@ static int wait_capacity = 0;
 static struct pollfd *wait_fds = NULL;
 static struct cr **wait_crs = NULL;
 
-/* Removes current coroutine from the queue and returns it to the calller. */
+/* Removes current coroutine from the queue and returns it to the caller. */
 static struct cr *suspend() {
     struct cr *cr = first_cr;
     first_cr = first_cr->next;
@@ -112,37 +112,45 @@ static void ctxswitch(void) {
     /* The execution would block. Let's panic. */
     assert(onhold || wait_size);
 
-    /* Compute the time till next expired hold. */
-    int timeout = -1;
-    if(onhold) {
-        uint64_t nw = now();
-        timeout = nw >= onhold->expiry ? 0 : onhold->expiry - nw;
-    }
-
-    /* Wait for events. */
-    int rc = poll(wait_fds, wait_size, timeout);
-    assert(rc >= 0);
-
-    /* Resume all onhold coroutines that have expired. */
-    if(onhold) {
-        uint64_t nw = now();
-		while(onhold && onhold->expiry <= nw) {
-            struct cr *cr = onhold;
-            onhold = cr->next;
-            resume(cr);
-		}
-    }
-
-    /* Resume coroutines waiting for file descriptors. */
-    int i;
-    for(i = 0; i != wait_size && rc; ++i) {
-        if(wait_fds[i].revents) {
-            resume(wait_crs[i]);
-            wait_fds[i] = wait_fds[wait_size - 1];
-            wait_crs[i] = wait_crs[wait_size - 1];
-            --wait_size;
-            --rc;
+    while(1) {
+        /* Compute the time till next expired hold. */
+        int timeout = -1;
+        if(onhold) {
+            uint64_t nw = now();
+            timeout = nw >= onhold->expiry ? 0 : onhold->expiry - nw;
         }
+
+        /* Wait for events. */
+        int rc = poll(wait_fds, wait_size, timeout);
+        assert(rc >= 0);
+
+        /* Resume all onhold coroutines that have expired. */
+        if(onhold) {
+            uint64_t nw = now();
+		    while(onhold && (onhold->expiry <= nw)) {
+                struct cr *cr = onhold;
+                onhold = cr->next;
+                resume(cr);
+		    }
+        }
+
+        /* Resume coroutines waiting for file descriptors. */
+        int i;
+        for(i = 0; i != wait_size && rc; ++i) {
+            if(wait_fds[i].revents) {
+                resume(wait_crs[i]);
+                wait_fds[i] = wait_fds[wait_size - 1];
+                wait_crs[i] = wait_crs[wait_size - 1];
+                --wait_size;
+                --rc;
+            }
+        }
+
+        /* If no coroutine was resumed, do the poll again. This should not
+           happen in theory, but let's be ready for the case when timers
+           are not precise. */
+        if(first_cr)
+            break;
     }
 
 	/* Pass control to a resumed coroutine. */
@@ -165,8 +173,7 @@ void *mill_go_prologue() {
 
 /* The final part of go(). Cleans up when the coroutine is finished. */
 void mill_go_epilogue(void) {
-    struct cr *cr = first_cr;
-    first_cr = first_cr->next;
+    struct cr *cr = suspend();
     char *ptr = ((char*)(cr + 1)) - STACK_SIZE;
     free(ptr);
     ctxswitch();    
