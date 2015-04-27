@@ -37,7 +37,7 @@ void feeder(chan ch, void *val) {
 int main() {
     /* Non-blocking receiver case. */
     chan ch1 = chmake();
-    go(sender1(ch1));
+    go(sender1(chdup(ch1)));
     choose {
     in(ch1, val):
         assert(val == (void*)555);
@@ -47,7 +47,7 @@ int main() {
 
     /* Blocking receiver case. */
     chan ch2 = chmake();
-    go(sender2(ch2));
+    go(sender2(chdup(ch2)));
     choose {
     in(ch2, val):
         assert(val == (void*)666);
@@ -57,7 +57,7 @@ int main() {
 
     /* Non-blocking sender case. */
     chan ch3 = chmake();
-    go(receiver1(ch3));
+    go(receiver1(chdup(ch3)));
     choose {
     out(ch3, (void*)777):
     end
@@ -66,7 +66,7 @@ int main() {
 
     /* Blocking sender case. */
     chan ch4 = chmake();
-    go(receiver2(ch4));
+    go(receiver2(chdup(ch4)));
     choose {
     out(ch4, (void*)888):
     end
@@ -76,7 +76,7 @@ int main() {
     /* Check with two channels. */
     chan ch5 = chmake();
     chan ch6 = chmake();
-    go(sender1(ch6));
+    go(sender1(chdup(ch6)));
     choose {
     in(ch5, val):
         assert(0);
@@ -84,7 +84,7 @@ int main() {
         assert(val == (void*)555);
     end
     }
-    go(sender2(ch5));
+    go(sender2(chdup(ch5)));
     choose {
     in(ch5, val):
         assert(val == (void*)666);
@@ -98,8 +98,8 @@ int main() {
     /* Test whether selection of channels is random. */
     chan ch7 = chmake();
     chan ch8 = chmake();
-    go(feeder(ch7, (void*)111));
-    go(feeder(ch8, (void*)222));
+    go(feeder(chdup(ch7), (void*)111));
+    go(feeder(chdup(ch8), (void*)222));
     int i;
     int first = 0;
     int second = 0;
@@ -130,7 +130,6 @@ int main() {
     end
     }
     assert(test == 1);
-    chclose(ch9);
     chclose(ch9);
 
     return 0;

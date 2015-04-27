@@ -57,7 +57,7 @@ void yield(void);
 typedef struct chan *chan;
 
 chan chmake(void);
-void chaddref(chan ch);
+chan chdup(chan ch);
 void chs(chan ch, void *val);
 void *chr(chan ch);
 void chclose(chan ch);

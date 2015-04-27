@@ -15,9 +15,9 @@ void worker(int count, const char *text, chan ch) {
 int main() {
 
     chan ch1 = chmake();
-    go(worker(4, "a", ch1));
+    go(worker(4, "a", chdup(ch1)));
     chan ch2 = chmake();
-    go(worker(2, "b", ch2));
+    go(worker(2, "b", chdup(ch2)));
 
     choose {
     in(ch1, val):

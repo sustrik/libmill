@@ -278,12 +278,13 @@ chan chmake(void) {
     ch->receiver.val = NULL;
     ch->receiver.idx = -1;
     ch->receiver.next = NULL;
-    ch->refcount = 2;
+    ch->refcount = 1;
     return ch;
 }
 
-void chaddref(chan ch) {
+chan chdup(chan ch) {
     ++ch->refcount;
+    return ch;
 }
 
 void chs(chan ch, void *val) {

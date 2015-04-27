@@ -15,13 +15,13 @@ int main() {
 
     /* Receiver waits for sender. */
     ch = chmake();
-    go(sender(ch, 1, (void*)333));
+    go(sender(chdup(ch), 1, (void*)333));
     assert(chr(ch) == (void*)333);
     chclose(ch);
 
     /* Sender waits for receiver. */
     ch = chmake();
-    go(sender(ch, 0, (void*)444));
+    go(sender(chdup(ch), 0, (void*)444));
     assert(chr(ch) == (void*)444);
     chclose(ch);
 
