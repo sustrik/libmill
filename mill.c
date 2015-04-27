@@ -25,7 +25,6 @@
 #include "mill.h"
 
 #include <assert.h>
-#include <errno.h>
 #include <fcntl.h>
 #include <poll.h>
 #include <setjmp.h>
@@ -459,6 +458,7 @@ int msocket(int family, int type, int protocol) {
         return -1;
     int rc = fcntl(s, F_SETFL, O_NONBLOCK);
     assert(rc != -1);
+    return s;
 }
 
 int mconnect(int s, const struct sockaddr *addr, socklen_t addrlen) {

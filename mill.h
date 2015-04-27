@@ -25,6 +25,7 @@
 #ifndef MILL_H_INCLUDED
 #define MILL_H_INCLUDED
 
+#include <errno.h>
 #include <stddef.h>
 #include <sys/types.h>
 #include <sys/socket.h>
