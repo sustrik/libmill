@@ -224,19 +224,17 @@ static void wait(int fd, short events) {
         wait_crs = realloc(wait_crs, wait_capacity * sizeof(struct cr*));
     }
 
-    /* Remove the current coroutine from the queue. */
-    struct cr *cr = suspend();
-
     /* Add the new file descriptor to the pollset. */
     wait_fds[wait_size].fd = fd;
     wait_fds[wait_size].events = events;
     wait_fds[wait_size].revents = 0;
-    wait_crs[wait_size] = cr;
+    wait_crs[wait_size] = first_cr;
     ++wait_size;
 
     /* Save the current state and pass control to a different coroutine. */
     if(setjmp(first_cr->ctx))
         return;
+    suspend();
     ctxswitch();
 }
 

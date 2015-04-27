@@ -20,7 +20,6 @@ void connect_socket(void) {
 }
 
 int main() {
-    go(connect_socket());
     int ls = msocket(AF_INET, SOCK_STREAM, 0);
     assert(ls != -1);
     struct sockaddr_in addr;
@@ -32,6 +31,7 @@ int main() {
     assert(rc != -1);
     rc = listen(ls, 10);
     assert(rc != -1);
+    go(connect_socket());
     int ac = maccept(ls, NULL, NULL);
     assert(ac >= 0);
     close(ac);
