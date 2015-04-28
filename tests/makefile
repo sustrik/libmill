@@ -28,7 +28,7 @@ choose: choose.c ../mill.c ../mill.h
 .PHONY: test_sleep
 test_sleep: sleep
 	./sleep
-choose: sleep.c ../mill.c ../mill.h
+sleep: sleep.c ../mill.c ../mill.h
 	cc -o sleep sleep.c ../mill.c -g -O0
 
 .PHONY: test_socket
