@@ -469,7 +469,10 @@ int maccept(int s, struct sockaddr *addr, socklen_t *addrlen) {
     while(1) {
         int newsock = accept(s, addr, addrlen);
         if (newsock >= 0) {
-            int rc = fcntl(newsock, F_SETFL, O_NONBLOCK);
+            int opt = fcntl(s, F_GETFL, 0);
+            if (opt == -1)
+                opt = 0;
+            int rc = fcntl(s, F_SETFL, opt | O_NONBLOCK);
             assert(rc != -1);
             return newsock;
         }
