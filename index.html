@@ -9,15 +9,66 @@
 
 <h1>MILL</h1>
 
-<p>Go concurrency model in C</p>
+<p>Go-style concurrency in C</p>
 
-<h2>Documentation</h2>
+<ul id='toplist'>
+<li><a href="index.html">Home</a></li>
+<li><a href="download.html">Download</a></li>
+<li><a href="documentation.html">Documentation</a></li>
+<li><a href="development.html">Development</a></li>
+<li><a href="community.html">Community</a></li>
+</ul>
 
-<p>The project is located here:</p>
+<p>This project is trying to introduce Go-style concurrency to C.</p>
 
-<p><a href="https://github.com/sustrik/mill">https://github.com/sustrik/mill</a></p>
+<h2>Example</h2>
 
-<p>This site is under construction. Check mill.h source file in the meantime.</p>
+<p class="lang">test.c:</p>
+<pre>
+#include <stdio.h>
+#include "../mill.h"
+
+void worker(int count, const char *text, chan ch) {
+    int i;
+    for(i = 0; i != count; ++i) {
+        printf("%s\n", text);
+        musleep(10000);
+    }
+    chs(ch, NULL);
+    chclose(ch);
+}
+
+int main() {
+
+    chan ch1 = chmake();
+    go(worker(4, "a", chdup(ch1)));
+    chan ch2 = chmake();
+    go(worker(2, "b", chdup(ch2)));
+
+    choose {
+    in(ch1, val):
+        printf("coroutine 'a' have finished first!\n");
+    in(ch2, val):
+        printf("coroutine 'b' have finished first!\n");
+    end
+    }
+
+    chclose(ch2);
+    chclose(ch1);
+
+    return 0;
+}
+</pre>
+
+<p>To build the example above:</p>
+
+<pre>
+$ gcc -o test test.c mill.c
+</pre>
+
+<p>This is a proof of concept project that seems to work with x86-64, gcc
+and Linux. I have no idea about different environments. Also, the project is
+in very early stage of development and not suitable for actual usage.</p>
 
 <h2>License</h2>
 
