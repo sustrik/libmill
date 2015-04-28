@@ -505,7 +505,8 @@ ssize_t mrecv(int s, void *buf, size_t len, int flags) {
     size_t remaining = len;
     while(remaining) {
         ssize_t sz = recv(s, pos, remaining, flags);
-        assert (sz != 0); // TODO
+        if(sz == 0)
+            return len - remaining;
         if(sz == -1) {
             if(errno != EAGAIN && errno != EWOULDBLOCK)
                 return -1;
