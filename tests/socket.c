@@ -16,6 +16,8 @@ void connect_socket(void) {
     addr.sin_port = htons(5555);
     int rc = mconnect(cs, (struct sockaddr*)&addr, sizeof(addr));
     assert(rc != -1);
+    ssize_t sz = msend(cs, "ABC", 3, 0);
+    assert(sz == 3);
     close(cs);
 }
 
@@ -34,6 +36,9 @@ int main() {
     go(connect_socket());
     int ac = maccept(ls, NULL, NULL);
     assert(ac >= 0);
+    char buf[3];
+    ssize_t sz = mrecv(ac, buf, sizeof(buf), 0);
+    assert(buf[0] == 'A' && buf[1] == 'B' && buf[2] == 'C');
     close(ac);
     return 0;
 }

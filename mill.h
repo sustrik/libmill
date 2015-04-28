@@ -147,13 +147,7 @@ int msocket(int family, int type, int protocol);
 int mconnect(int s, const struct sockaddr *addr, socklen_t addrlen);
 int maccept(int s, struct sockaddr *addr, socklen_t *addrlen);
 ssize_t msend(int s, const void *buf, size_t len, int flags);
-ssize_t msendto(int s, const void *buf, size_t len, int flags,
-    const struct sockaddr *addr, socklen_t addrlen);
-ssize_t msendmsg(int s, const struct msghdr *msg, int flags);
 ssize_t mrecv(int s, void *buf, size_t len, int flags);
-ssize_t mrecvfrom(int s, void *buf, size_t len, int flags,
-    struct sockaddr *addr, socklen_t *addrlen);
-ssize_t mrecvmsg(int s, struct msghdr *msg, int flags);
 
 #endif
 
