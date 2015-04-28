@@ -57,33 +57,33 @@ static uint64_t now() {
 
 #define STACK_SIZE 16384
 
-struct cr {
-    struct cr *next;
+struct mill_cr {
+    struct mill_cr *next;
     jmp_buf ctx;
-    struct ep *res;
+    struct mill_ep *res;
     uint64_t expiry;
 };
 
 /* Fake coroutine corresponding to the main thread of execution. */
-static struct cr main_cr = {NULL};
+static struct mill_cr main_cr = {NULL};
 
 /* The queue of coroutines ready to run. The first one is currently running. */
-static struct cr *first_cr = &main_cr;
-static struct cr *last_cr = &main_cr;
+static struct mill_cr *first_cr = &main_cr;
+static struct mill_cr *last_cr = &main_cr;
 
 /* Linked list of all coroutines on hold. The list is ordered.
    First coroutine to be resumed comes first and so on. */
-static struct cr *onhold = NULL;
+static struct mill_cr *onhold = NULL;
 
 /* Pollset used for waiting for file descriptors. */
 static int wait_size = 0;
 static int wait_capacity = 0;
 static struct pollfd *wait_fds = NULL;
-static struct cr **wait_crs = NULL;
+static struct mill_cr **wait_crs = NULL;
 
 /* Removes current coroutine from the queue and returns it to the caller. */
-static struct cr *suspend() {
-    struct cr *cr = first_cr;
+static struct mill_cr *suspend() {
+    struct mill_cr *cr = first_cr;
     first_cr = first_cr->next;
     if(!first_cr)
         last_cr = NULL;
@@ -92,7 +92,7 @@ static struct cr *suspend() {
 }
 
 /* Schedules preiously suspended coroutine for execution. */
-static void resume(struct cr *cr) {
+static void resume(struct mill_cr *cr) {
     cr->next = NULL;
     if(last_cr)
         last_cr->next = cr;
@@ -127,7 +127,7 @@ static void ctxswitch(void) {
         if(onhold) {
             uint64_t nw = now();
 		    while(onhold && (onhold->expiry <= nw)) {
-                struct cr *cr = onhold;
+                struct mill_cr *cr = onhold;
                 onhold = cr->next;
                 resume(cr);
 		    }
@@ -162,7 +162,8 @@ void *mill_go_prologue() {
         return NULL;
     char *ptr = malloc(STACK_SIZE);
     assert(ptr);
-    struct cr *cr = (struct cr*)(ptr + STACK_SIZE - sizeof (struct cr));
+    struct mill_cr *cr =
+        (struct mill_cr*)(ptr + STACK_SIZE - sizeof (struct mill_cr));
     cr->next = first_cr;
     cr->res = NULL;
     cr->expiry = 0;
@@ -172,7 +173,7 @@ void *mill_go_prologue() {
 
 /* The final part of go(). Cleans up when the coroutine is finished. */
 void mill_go_epilogue(void) {
-    struct cr *cr = suspend();
+    struct mill_cr *cr = suspend();
     char *ptr = ((char*)(cr + 1)) - STACK_SIZE;
     free(ptr);
     ctxswitch();    
@@ -203,9 +204,9 @@ static void hold(unsigned long ms) {
     
     /* Move the coroutine into the right place in the ordered list
        of onhold coroutines. */
-    struct cr *cr = suspend();
+    struct mill_cr *cr = suspend();
     cr->expiry = now() + ms;
-    struct cr **it = &onhold;
+    struct mill_cr **it = &onhold;
     while(*it && (*it)->expiry <= cr->expiry)
         it = &((*it)->next);
     cr->next = *it;
@@ -221,7 +222,7 @@ static void wait(int fd, short events) {
     if(wait_size == wait_capacity) {
         wait_capacity = wait_capacity ? wait_capacity * 2 : 64;
         wait_fds = realloc(wait_fds, wait_capacity * sizeof(struct pollfd));
-        wait_crs = realloc(wait_crs, wait_capacity * sizeof(struct cr*));
+        wait_crs = realloc(wait_crs, wait_capacity * sizeof(struct mill_cr*));
     }
 
     /* Add the new file descriptor to the pollset. */
@@ -243,21 +244,21 @@ static void wait(int fd, short events) {
 /******************************************************************************/
 
 /* Channel endpoint. */
-struct ep {
+struct mill_ep {
     enum {SENDER, RECEIVER} type;
-    struct cr *cr;
+    struct mill_cr *cr;
     void **val;
-    struct ep *next;
+    struct mill_ep *next;
 };
 
 /* Unbuffered channel. */
 struct chan {
-    struct ep sender;
-    struct ep receiver;
+    struct mill_ep sender;
+    struct mill_ep receiver;
     int refcount;
 };
 
-static struct ep *mill_getpeer(struct ep *ep) {
+static struct mill_ep *mill_getpeer(struct mill_ep *ep) {
     switch(ep->type) {
     case SENDER:
         return &cont(ep, struct chan, sender)->receiver;
@@ -347,7 +348,7 @@ void chclose(chan ch) {
     }
 }
 
-struct ep *mill_choose_in(struct ep *chlist, chan ch, void **val) {
+struct mill_ep *mill_choose_in(struct mill_ep *chlist, chan ch, void **val) {
     assert(!ch->receiver.cr);
     ch->receiver.cr = first_cr;
     ch->receiver.val = val;
@@ -355,7 +356,7 @@ struct ep *mill_choose_in(struct ep *chlist, chan ch, void **val) {
     return &ch->receiver;
 }
 
-struct ep *mill_choose_out(struct ep *chlist, chan ch, void **val) {
+struct mill_ep *mill_choose_out(struct mill_ep *chlist, chan ch, void **val) {
     assert(!ch->sender.cr);
     ch->sender.cr = first_cr;
     ch->sender.val = val;
@@ -363,10 +364,10 @@ struct ep *mill_choose_out(struct ep *chlist, chan ch, void **val) {
     return &ch->sender;
 }
 
-struct ep *mill_choose_wait(int blocking, struct ep *chlist) {
+struct mill_ep *mill_choose_wait(int blocking, struct mill_ep *chlist) {
     /* Find out wheter there are any channels that are already available. */
     int available = 0;
-    struct ep *it = chlist;
+    struct mill_ep *it = chlist;
     while(it) {
         if(mill_getpeer(it)->cr)
             ++available;
@@ -376,12 +377,12 @@ struct ep *mill_choose_wait(int blocking, struct ep *chlist) {
     /* If so, choose a random one. */
     if(available > 0) {
         int chosen = random() % available;
-        struct ep *res = NULL;
+        struct mill_ep *res = NULL;
         it = chlist;
         while(it) {
             if(mill_getpeer(it)->cr) {
                 if(!chosen) {
-                    struct ep *peer = mill_getpeer(it);
+                    struct mill_ep *peer = mill_getpeer(it);
                     if(it->type == SENDER)
                         *peer->val = *it->val;
                     else
@@ -394,7 +395,7 @@ struct ep *mill_choose_wait(int blocking, struct ep *chlist) {
                 }
                 --chosen;
             }
-            struct ep *tmp = it;
+            struct mill_ep *tmp = it;
             it = it->next;
             tmp->cr = NULL;
             tmp->next = NULL;
@@ -417,7 +418,7 @@ struct ep *mill_choose_wait(int blocking, struct ep *chlist) {
     cleanup:
     it = chlist;
     while(it) {
-        struct ep *tmp = it;
+        struct mill_ep *tmp = it;
         it = it->next;
         tmp->cr = NULL;
         tmp->next = NULL;

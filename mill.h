@@ -53,7 +53,7 @@ void yield(void);
 
 /******************************************************************************/
 /*  Channels                                                                  */
-/***********xxx*******************************************************************/
+/******************************************************************************/
 
 typedef struct chan *chan;
 
@@ -67,9 +67,9 @@ void chclose(chan ch);
 
 #define choose \
     {\
-        struct ep *mill_chlist = NULL;\
+        struct mill_ep *mill_chlist = NULL;\
         int mill_blocking = 1;\
-        struct ep *mill_res = NULL;\
+        struct mill_ep *mill_res = NULL;\
         while(1) {\
             {\
                 if(mill_chlist || !mill_blocking) {\
@@ -84,7 +84,7 @@ void chclose(chan ch);
             {\
                 void *name = NULL;\
                 mill_chlist = mill_choose_in(mill_chlist, (chan), &name);\
-                struct ep *mill_ep = mill_chlist;\
+                struct mill_ep *mill_ep = mill_chlist;\
                 if(0) {\
                     mill_concat(mill_label, idx):\
                     if(mill_res == mill_ep) {\
@@ -102,7 +102,7 @@ void chclose(chan ch);
                 void *mill_outval##idx = (val);\
                 mill_chlist = mill_choose_out(mill_chlist, (chan),\
                     &mill_outval##idx);\
-                struct ep *mill_ep = mill_chlist;\
+                struct mill_ep *mill_ep = mill_chlist;\
                 if(0) {\
                     mill_concat(mill_label, idx):\
                     if(mill_res == mill_ep) {\
@@ -131,10 +131,10 @@ void chclose(chan ch);
             mill_res = mill_choose_wait(mill_blocking, mill_chlist);\
         }
 
-struct ep;
-struct ep *mill_choose_in(struct ep *chlist, chan ch, void **val);
-struct ep *mill_choose_out(struct ep *chlist, chan ch, void **val);
-struct ep *mill_choose_wait(int blocking, struct ep *chlist);
+struct mill_ep;
+struct mill_ep *mill_choose_in(struct mill_ep *chlist, chan ch, void **val);
+struct mill_ep *mill_choose_out(struct mill_ep *chlist, chan ch, void **val);
+struct mill_ep *mill_choose_wait(int blocking, struct mill_ep *chlist);
 
 /******************************************************************************/
 /*  Library                                                                   */
