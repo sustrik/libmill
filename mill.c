@@ -445,7 +445,10 @@ int msocket(int family, int type, int protocol) {
     int s = socket(family, type, protocol);
     if(s == -1)
         return -1;
-    int rc = fcntl(s, F_SETFL, O_NONBLOCK);
+    int opt = fcntl(s, F_GETFL, 0);
+    if (opt == -1)
+        opt = 0;
+    int rc = fcntl(s, F_SETFL, opt | O_NONBLOCK);
     assert(rc != -1);
     return s;
 }

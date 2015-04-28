@@ -12,7 +12,7 @@ void connect_socket(void) {
     struct sockaddr_in addr;
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = 0x7f000001;
+    addr.sin_addr.s_addr = 0x0100007f;
     addr.sin_port = htons(5555);
     int rc = mconnect(cs, (struct sockaddr*)&addr, sizeof(addr));
     assert(rc != -1);
