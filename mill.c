@@ -60,7 +60,7 @@ static uint64_t now() {
 struct cr {
     struct cr *next;
     jmp_buf ctx;
-    int idx;
+    struct ep *res;
     uint64_t expiry;
 };
 
@@ -164,7 +164,7 @@ void *mill_go_prologue() {
     assert(ptr);
     struct cr *cr = (struct cr*)(ptr + STACK_SIZE - sizeof (struct cr));
     cr->next = first_cr;
-    cr->idx = -1;
+    cr->res = NULL;
     cr->expiry = 0;
     first_cr = cr;
     return (void*)cr;
@@ -247,7 +247,6 @@ struct ep {
     enum {SENDER, RECEIVER} type;
     struct cr *cr;
     void **val;
-    int idx;
     struct ep *next;
 };
 
@@ -275,12 +274,10 @@ chan chmake(void) {
     ch->sender.type = SENDER;
     ch->sender.cr = NULL;
     ch->sender.val = NULL;
-    ch->sender.idx = -1;
     ch->sender.next = NULL;
     ch->receiver.type = RECEIVER;
     ch->receiver.cr = NULL;
     ch->receiver.val = NULL;
-    ch->receiver.idx = -1;
     ch->receiver.next = NULL;
     ch->refcount = 1;
     return ch;
@@ -298,11 +295,10 @@ void chs(chan ch, void *val) {
     /* If there's a receiver already waiting, we can just unblock it. */
     if(ch->receiver.cr) {
         *(ch->receiver.val) = val;
-        ch->receiver.cr->idx = ch->receiver.idx;
+        ch->receiver.cr->res = &ch->receiver;
         resume(ch->receiver.cr);
         ch->receiver.cr = NULL;
         ch->receiver.val = NULL;
-        ch->receiver.idx = -1;
         return;
     }
 
@@ -323,11 +319,10 @@ void *chr(chan ch) {
     /* If there's a sender already waiting, we can just unblock it. */
     if(ch->sender.cr) {
         void *val = *(ch->sender.val);
-        ch->sender.cr->idx = ch->sender.idx;
+        ch->sender.cr->res = &ch->sender;
         resume(ch->sender.cr);
         ch->sender.cr = NULL;
         ch->sender.val = NULL;
-        ch->sender.idx = -1;
         return val;
     }
 
@@ -352,25 +347,23 @@ void chclose(chan ch) {
     }
 }
 
-struct ep *mill_choose_in(struct ep *chlist, chan ch, int idx, void **val) {
+struct ep *mill_choose_in(struct ep *chlist, chan ch, void **val) {
     assert(!ch->receiver.cr);
     ch->receiver.cr = first_cr;
     ch->receiver.val = val;
-    ch->receiver.idx = idx;
     ch->receiver.next = chlist;
     return &ch->receiver;
 }
 
-struct ep *mill_choose_out(struct ep *chlist, chan ch, int idx, void **val) {
+struct ep *mill_choose_out(struct ep *chlist, chan ch, void **val) {
     assert(!ch->sender.cr);
     ch->sender.cr = first_cr;
     ch->sender.val = val;
-    ch->sender.idx = idx;
     ch->sender.next = chlist;
     return &ch->sender;
 }
 
-int mill_choose_wait(int blocking, struct ep *chlist) {
+struct ep *mill_choose_wait(int blocking, struct ep *chlist) {
     /* Find out wheter there are any channels that are already available. */
     int available = 0;
     struct ep *it = chlist;
@@ -383,7 +376,7 @@ int mill_choose_wait(int blocking, struct ep *chlist) {
     /* If so, choose a random one. */
     if(available > 0) {
         int chosen = random() % available;
-        int res = -1;
+        struct ep *res = NULL;
         it = chlist;
         while(it) {
             if(mill_getpeer(it)->cr) {
@@ -393,19 +386,17 @@ int mill_choose_wait(int blocking, struct ep *chlist) {
                         *peer->val = *it->val;
                     else
                         *it->val = *peer->val;
-                    peer->cr->idx = peer->idx;
+                    peer->cr->res = peer;
                     resume(peer->cr);
                     peer->cr = NULL;
                     peer->val = NULL;
-                    peer->idx = -1;
-                    res = it->idx;
+                    res = it;
                 }
                 --chosen;
             }
             struct ep *tmp = it;
             it = it->next;
             tmp->cr = NULL;
-            tmp->idx = -1;
             tmp->next = NULL;
         }
         assert(res >= 0);
@@ -414,7 +405,7 @@ int mill_choose_wait(int blocking, struct ep *chlist) {
 
     /* If not so and there's an 'otherwise' clause we can go straight to it. */
     if(!blocking) {
-        first_cr->idx = -1;
+        first_cr->res = NULL;
         goto cleanup;
     }
 
@@ -429,10 +420,9 @@ int mill_choose_wait(int blocking, struct ep *chlist) {
         struct ep *tmp = it;
         it = it->next;
         tmp->cr = NULL;
-        tmp->idx = -1;
         tmp->next = NULL;
     }
-    return first_cr->idx;
+    return first_cr->res;
 }
 
 /******************************************************************************/
