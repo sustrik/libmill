@@ -57,6 +57,16 @@ void yield(void);
 
 typedef struct chan *chan;
 
+struct mill_cp;
+struct mill_ep;
+
+struct mill_glue {
+    struct mill_glue *prev;
+    struct mill_glue *next;
+    struct mill_cr *cr;
+    struct mill_ep *ep;
+};
+
 chan chmake(void);
 chan chdup(chan ch);
 void chs(chan ch, void *val);
@@ -81,6 +91,7 @@ void chclose(chan ch);
                     goto mill_concat(mill_label, idx);\
                 }\
             }\
+            struct mill_glue mill_concat(mill_glue, idx);\
             {\
                 void *name = NULL;\
                 mill_chlist = mill_choose_in(mill_chlist, (chan), &name);\
@@ -98,6 +109,7 @@ void chclose(chan ch);
                     goto mill_concat(mill_label, idx);\
                 }\
             }\
+            struct mill_glue mill_concat(mill_glue, idx);\
             {\
                 void *mill_outval##idx = (val);\
                 mill_chlist = mill_choose_out(mill_chlist, (chan),\
@@ -131,7 +143,6 @@ void chclose(chan ch);
             mill_res = mill_choose_wait(mill_blocking, mill_chlist);\
         }
 
-struct mill_ep;
 struct mill_ep *mill_choose_in(struct mill_ep *chlist, chan ch, void **val);
 struct mill_ep *mill_choose_out(struct mill_ep *chlist, chan ch, void **val);
 struct mill_ep *mill_choose_wait(int blocking, struct mill_ep *chlist);
