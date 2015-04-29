@@ -60,11 +60,13 @@ typedef struct chan *chan;
 struct mill_cp;
 struct mill_ep;
 
-struct mill_glue {
-    struct mill_glue *prev;
-    struct mill_glue *next;
+struct mill_clause {
+    struct mill_clause *prev;
+    struct mill_clause *next;
     struct mill_cr *cr;
     struct mill_ep *ep;
+    void **val;
+    struct mill_clause *clauses;
 };
 
 chan chmake(void);
@@ -73,16 +75,18 @@ void chs(chan ch, void *val);
 void *chr(chan ch);
 void chclose(chan ch);
 
+#if 0
+
 #define mill_concat(x,y) x##y
 
 #define choose \
     {\
-        struct mill_ep *mill_chlist = NULL;\
+        struct mill_clause *mill_clist = NULL;\
         int mill_blocking = 1;\
         struct mill_ep *mill_res = NULL;\
         while(1) {\
             {\
-                if(mill_chlist || !mill_blocking) {\
+                if(mill_clist || !mill_blocking) {\
                     if(0)
 
 #define mill_in(chan, name, idx) \
@@ -91,11 +95,11 @@ void chclose(chan ch);
                     goto mill_concat(mill_label, idx);\
                 }\
             }\
-            struct mill_glue mill_concat(mill_glue, idx);\
+            struct mill_clause mill_concat(mill_clause, idx);\
             {\
                 void *name = NULL;\
-                mill_chlist = mill_choose_in(mill_chlist, (chan), &name);\
-                struct mill_ep *mill_ep = mill_chlist;\
+                mill_clist = mill_choose_in(mill_clist,\
+                    &mill_concat(mill_clause, idx), (chan), &name);\
                 if(0) {\
                     mill_concat(mill_label, idx):\
                     if(mill_res == mill_ep) {\
@@ -109,12 +113,11 @@ void chclose(chan ch);
                     goto mill_concat(mill_label, idx);\
                 }\
             }\
-            struct mill_glue mill_concat(mill_glue, idx);\
+            struct mill_clause mill_concat(mill_clause, idx);\
             {\
                 void *mill_outval##idx = (val);\
-                mill_chlist = mill_choose_out(mill_chlist, (chan),\
-                    &mill_outval##idx);\
-                struct mill_ep *mill_ep = mill_chlist;\
+                mill_clist = mill_choose_out(mill_clist,\
+                    &mill_concat(mill_clause, idx), (chan), &mill_outval##idx);\
                 if(0) {\
                     mill_concat(mill_label, idx):\
                     if(mill_res == mill_ep) {\
@@ -140,12 +143,16 @@ void chclose(chan ch);
                     }\
                 }\
             }\
-            mill_res = mill_choose_wait(mill_blocking, mill_chlist);\
+            mill_res = mill_choose_wait(mill_blocking, mill_clist);\
         }
 
-struct mill_ep *mill_choose_in(struct mill_ep *chlist, chan ch, void **val);
-struct mill_ep *mill_choose_out(struct mill_ep *chlist, chan ch, void **val);
-struct mill_ep *mill_choose_wait(int blocking, struct mill_ep *chlist);
+struct mill_clause *mill_choose_in(struct mill_clause *clist,
+    struct mill_clause *clause, chan ch, void **val);
+struct mill_clause *mill_choose_out(struct mill_clause *clist,
+    struct mill_clause *clause, chan ch, void **val);
+struct mill_clause *mill_choose_wait(int blocking, struct mill_clause *clist);
+
+#endif
 
 /******************************************************************************/
 /*  Library                                                                   */

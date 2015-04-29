@@ -60,7 +60,7 @@ static uint64_t now() {
 struct mill_cr {
     struct mill_cr *next;
     jmp_buf ctx;
-    struct mill_ep *res;
+    struct mill_clause *res;
     uint64_t expiry;
 };
 
@@ -246,8 +246,8 @@ static void wait(int fd, short events) {
 /* Channel endpoint. */
 struct mill_ep {
     enum {SENDER, RECEIVER} type;
-    struct mill_cr *cr;
-    void **val;
+    struct mill_clause *first_clause;
+    struct mill_clause *last_clause;
     struct mill_ep *next;
 };
 
@@ -269,16 +269,42 @@ static struct mill_ep *mill_getpeer(struct mill_ep *ep) {
     }
 }
 
+static void addclause(struct mill_ep *ep, struct mill_clause *clause) {
+    if(!ep->last_clause) {
+        assert(!ep->first_clause);
+        clause->prev = NULL;
+        clause->next = NULL;
+        ep->first_clause = clause;
+        ep->last_clause = clause;
+        return;
+    }
+    ep->last_clause->next = clause;
+    clause->prev = ep->last_clause;
+    clause->next = NULL;
+    ep->last_clause = clause;
+}
+
+static void rmclause(struct mill_ep *ep, struct mill_clause *clause) {
+    if(clause->prev)
+        clause->prev->next = clause->next;
+    else
+        ep->first_clause = clause->next;
+    if(clause->next)
+        clause->next->prev = clause->prev;
+    else
+        ep->last_clause = clause->prev;
+}
+
 chan chmake(void) {
     struct chan *ch = (struct chan*)malloc(sizeof(struct chan));
     assert(ch);
     ch->sender.type = SENDER;
-    ch->sender.cr = NULL;
-    ch->sender.val = NULL;
+    ch->sender.first_clause = NULL;
+    ch->sender.last_clause = NULL;
     ch->sender.next = NULL;
     ch->receiver.type = RECEIVER;
-    ch->receiver.cr = NULL;
-    ch->receiver.val = NULL;
+    ch->receiver.first_clause = NULL;
+    ch->receiver.last_clause = NULL;
     ch->receiver.next = NULL;
     ch->refcount = 1;
     return ch;
@@ -290,40 +316,35 @@ chan chdup(chan ch) {
 }
 
 void chs(chan ch, void *val) {
-    /* Only one coroutine can send at a time. */
-    assert(!ch->sender.cr);
-
     /* If there's a receiver already waiting, we can just unblock it. */
-    if(ch->receiver.cr) {
-        *(ch->receiver.val) = val;
-        ch->receiver.cr->res = &ch->receiver;
-        resume(ch->receiver.cr);
-        ch->receiver.cr = NULL;
-        ch->receiver.val = NULL;
+    if(ch->receiver.first_clause) {
+        *(ch->receiver.first_clause->val) = val;
+        ch->receiver.first_clause->cr->res = ch->receiver.first_clause;
+        resume(ch->receiver.first_clause->cr);
+        rmclause(&ch->receiver, ch->receiver.first_clause);
         return;
     }
 
     /* Otherwise we are going to yield till the receiver arrives. */
     if(setjmp(first_cr->ctx))
         return;
-    ch->sender.cr = suspend();
-    ch->sender.val = &val;
+    struct mill_clause clause;
+    clause.cr = suspend();
+    clause.ep = &ch->sender;
+    clause.val = &val;
+    addclause(&ch->sender, &clause);
 
     /* Pass control to a different coroutine. */
     ctxswitch();
 }
 
 void *chr(chan ch) {
-    /* Only one coroutine can receive from a channel at a time. */
-    assert(!ch->receiver.cr);
-
     /* If there's a sender already waiting, we can just unblock it. */
-    if(ch->sender.cr) {
-        void *val = *(ch->sender.val);
-        ch->sender.cr->res = &ch->sender;
-        resume(ch->sender.cr);
-        ch->sender.cr = NULL;
-        ch->sender.val = NULL;
+    if(ch->sender.first_clause) {
+        void *val = *(ch->sender.first_clause->val);
+        ch->sender.first_clause->cr->res = ch->sender.first_clause;
+        resume(ch->sender.first_clause->cr);
+        rmclause(&ch->sender, ch->sender.first_clause);
         return val;
     }
 
@@ -331,8 +352,11 @@ void *chr(chan ch) {
     void *val;
     if(setjmp(first_cr->ctx))
         return val;
-    ch->receiver.cr = suspend();
-    ch->receiver.val = &val;
+    struct mill_clause clause;
+    clause.cr = suspend();
+    clause.ep = &ch->receiver;
+    clause.val = &val;
+    addclause(&ch->receiver, &clause);
 
     /* Pass control to a different coroutine. */
     ctxswitch();
@@ -342,29 +366,31 @@ void chclose(chan ch) {
     assert(ch->refcount >= 1);
     --ch->refcount;
     if(!ch->refcount) {
-        assert(!ch->sender.cr);
-        assert(!ch->receiver.cr);
+        assert(!ch->sender.first_clause);
+        assert(!ch->receiver.first_clause);
         free(ch);
     }
 }
 
-struct mill_ep *mill_choose_in(struct mill_ep *chlist, chan ch, void **val) {
-    assert(!ch->receiver.cr);
-    ch->receiver.cr = first_cr;
-    ch->receiver.val = val;
-    ch->receiver.next = chlist;
-    return &ch->receiver;
+#if 0
+
+struct mill_clause *mill_choose_in(struct mill_clause *clist,
+      struct mill_clause *clause, chan ch, void **val) {
+    clause->val = val;
+    addclause(&ch->receiver, clause);
+    clause->clauses = clist;
+    return clause;
 }
 
-struct mill_ep *mill_choose_out(struct mill_ep *chlist, chan ch, void **val) {
-    assert(!ch->sender.cr);
-    ch->sender.cr = first_cr;
-    ch->sender.val = val;
-    ch->sender.next = chlist;
-    return &ch->sender;
+struct mill_clause *mill_choose_out(struct mill_clause *clist,
+      struct mill_clause *clause, chan ch, void **val);
+    clause->val = val;
+    addclause(&ch->sender, clause);
+    clause->clauses = clist;
+    return clause;
 }
 
-struct mill_ep *mill_choose_wait(int blocking, struct mill_ep *chlist) {
+struct mill_clause *mill_choose_wait(int blocking, struct mill_clause *clist) {
     /* Find out wheter there are any channels that are already available. */
     int available = 0;
     struct mill_ep *it = chlist;
@@ -425,6 +451,8 @@ struct mill_ep *mill_choose_wait(int blocking, struct mill_ep *chlist) {
     }
     return first_cr->res;
 }
+
+#endif
 
 /******************************************************************************/
 /*  Library                                                                   */
