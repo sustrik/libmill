@@ -66,7 +66,7 @@ struct mill_clause {
     struct mill_cr *cr;
     struct mill_ep *ep;
     void **val;
-    struct mill_clause *clauses;
+    struct mill_clause *next_clause;
 };
 
 chan chmake(void);
@@ -75,15 +75,13 @@ void chs(chan ch, void *val);
 void *chr(chan ch);
 void chclose(chan ch);
 
-#if 0
-
 #define mill_concat(x,y) x##y
 
 #define choose \
     {\
         struct mill_clause *mill_clist = NULL;\
         int mill_blocking = 1;\
-        struct mill_ep *mill_res = NULL;\
+        struct mill_clause *mill_res = NULL;\
         while(1) {\
             {\
                 if(mill_clist || !mill_blocking) {\
@@ -102,7 +100,7 @@ void chclose(chan ch);
                     &mill_concat(mill_clause, idx), (chan), &name);\
                 if(0) {\
                     mill_concat(mill_label, idx):\
-                    if(mill_res == mill_ep) {\
+                    if(mill_res == &mill_concat(mill_clause, idx)) {\
                         mill_concat(mill_dummylabel, idx)
 
 #define in(chan, name) mill_in((chan), name, __COUNTER__)
@@ -120,7 +118,7 @@ void chclose(chan ch);
                     &mill_concat(mill_clause, idx), (chan), &mill_outval##idx);\
                 if(0) {\
                     mill_concat(mill_label, idx):\
-                    if(mill_res == mill_ep) {\
+                    if(mill_res == &mill_concat(mill_clause, idx)) {\
                         mill_concat(mill_dummylabel, idx)
 
 #define out(chan, val) mill_out((chan), (val), __COUNTER__)
@@ -151,8 +149,6 @@ struct mill_clause *mill_choose_in(struct mill_clause *clist,
 struct mill_clause *mill_choose_out(struct mill_clause *clist,
     struct mill_clause *clause, chan ch, void **val);
 struct mill_clause *mill_choose_wait(int blocking, struct mill_clause *clist);
-
-#endif
 
 /******************************************************************************/
 /*  Library                                                                   */

@@ -332,6 +332,7 @@ void chs(chan ch, void *val) {
     clause.cr = suspend();
     clause.ep = &ch->sender;
     clause.val = &val;
+    clause.next_clause = NULL;
     addclause(&ch->sender, &clause);
 
     /* Pass control to a different coroutine. */
@@ -356,6 +357,7 @@ void *chr(chan ch) {
     clause.cr = suspend();
     clause.ep = &ch->receiver;
     clause.val = &val;
+    clause.next_clause = NULL;
     addclause(&ch->receiver, &clause);
 
     /* Pass control to a different coroutine. */
@@ -372,62 +374,63 @@ void chclose(chan ch) {
     }
 }
 
-#if 0
-
 struct mill_clause *mill_choose_in(struct mill_clause *clist,
       struct mill_clause *clause, chan ch, void **val) {
+    clause->cr = first_cr;
+    clause->ep = &ch->receiver;
     clause->val = val;
     addclause(&ch->receiver, clause);
-    clause->clauses = clist;
+    clause->next_clause = clist;
     return clause;
 }
 
 struct mill_clause *mill_choose_out(struct mill_clause *clist,
-      struct mill_clause *clause, chan ch, void **val);
+      struct mill_clause *clause, chan ch, void **val) {
+    clause->cr = first_cr;
+    clause->ep = &ch->sender;
     clause->val = val;
     addclause(&ch->sender, clause);
-    clause->clauses = clist;
+    clause->next_clause = clist;
     return clause;
 }
 
 struct mill_clause *mill_choose_wait(int blocking, struct mill_clause *clist) {
     /* Find out wheter there are any channels that are already available. */
     int available = 0;
-    struct mill_ep *it = chlist;
+    struct mill_clause *it = clist;
     while(it) {
-        if(mill_getpeer(it)->cr)
+        if(mill_getpeer(it->ep)->first_clause)
             ++available;
-        it = it->next;
+        it = it->next_clause;
     }
     
     /* If so, choose a random one. */
     if(available > 0) {
         int chosen = random() % available;
-        struct mill_ep *res = NULL;
-        it = chlist;
+        struct mill_clause *res = NULL;
+        it = clist;
         while(it) {
-            if(mill_getpeer(it)->cr) {
+            struct mill_ep *this_ep = it->ep;
+            struct mill_ep *peer_ep = mill_getpeer(this_ep);
+            if(peer_ep->first_clause) {
                 if(!chosen) {
-                    struct mill_ep *peer = mill_getpeer(it);
-                    if(it->type == SENDER)
-                        *peer->val = *it->val;
+                    if(this_ep->type == SENDER)
+                        *peer_ep->first_clause->val = *it->val;
                     else
-                        *it->val = *peer->val;
-                    peer->cr->res = peer;
-                    resume(peer->cr);
-                    peer->cr = NULL;
-                    peer->val = NULL;
+                        *it->val = *peer_ep->first_clause->val;
+                    peer_ep->first_clause->cr->res = peer_ep->first_clause;
+                    resume(peer_ep->first_clause->cr);
+                    rmclause(peer_ep, peer_ep->first_clause);
                     res = it;
+                    break;
                 }
                 --chosen;
             }
-            struct mill_ep *tmp = it;
-            it = it->next;
-            tmp->cr = NULL;
-            tmp->next = NULL;
+            it = it->next_clause;
         }
-        assert(res >= 0);
-        return res;
+        assert(res);
+        first_cr->res = res;
+        goto cleanup;
     }
 
     /* If not so and there's an 'otherwise' clause we can go straight to it. */
@@ -441,18 +444,13 @@ struct mill_clause *mill_choose_wait(int blocking, struct mill_clause *clist) {
         suspend();
         ctxswitch();
     }
+   
+    /* Clean-up the clause lists in queried channels. */
     cleanup:
-    it = chlist;
-    while(it) {
-        struct mill_ep *tmp = it;
-        it = it->next;
-        tmp->cr = NULL;
-        tmp->next = NULL;
-    }
+    for(it = clist; it; it = it->next_clause)
+        rmclause(it->ep, it);
     return first_cr->res;
 }
-
-#endif
 
 /******************************************************************************/
 /*  Library                                                                   */
