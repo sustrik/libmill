@@ -31,6 +31,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/time.h>
 #include <unistd.h>
 
@@ -60,7 +61,7 @@ static uint64_t now() {
 struct mill_cr {
     struct mill_cr *next;
     jmp_buf ctx;
-    struct mill_clause *res;
+    void *res;
     uint64_t expiry;
 };
 
@@ -253,6 +254,7 @@ struct mill_ep {
 
 /* Unbuffered channel. */
 struct chan {
+    size_t sz;
     struct mill_ep sender;
     struct mill_ep receiver;
     int refcount;
@@ -295,9 +297,10 @@ static void rmclause(struct mill_ep *ep, struct mill_clause *clause) {
         ep->last_clause = clause->prev;
 }
 
-chan chmake(void) {
+chan mill_chmake(size_t sz) {
     struct chan *ch = (struct chan*)malloc(sizeof(struct chan));
     assert(ch);
+    ch->sz = sz;
     ch->sender.type = SENDER;
     ch->sender.first_clause = NULL;
     ch->sender.last_clause = NULL;
@@ -315,11 +318,14 @@ chan chdup(chan ch) {
     return ch;
 }
 
-void chs(chan ch, void *val) {
+void mill_chs(chan ch, void *val, size_t sz) {
+    /* Soft type checking. */
+    assert (ch->sz == sz);
+
     /* If there's a receiver already waiting, we can just unblock it. */
-    if(ch->receiver.first_clause) {
-        *(ch->receiver.first_clause->val) = val;
-        ch->receiver.first_clause->cr->res = ch->receiver.first_clause;
+    if(ch->receiver.first_clause) { 
+        memcpy(ch->receiver.first_clause->val, val, sz);
+        ch->receiver.first_clause->cr->res = ch->receiver.first_clause->label;
         resume(ch->receiver.first_clause->cr);
         rmclause(&ch->receiver, ch->receiver.first_clause);
         return;
@@ -331,7 +337,7 @@ void chs(chan ch, void *val) {
     struct mill_clause clause;
     clause.cr = suspend();
     clause.ep = &ch->sender;
-    clause.val = &val;
+    clause.val = val;
     clause.next_clause = NULL;
     addclause(&ch->sender, &clause);
 
@@ -339,30 +345,32 @@ void chs(chan ch, void *val) {
     ctxswitch();
 }
 
-void *chr(chan ch) {
+void *mill_chr(chan ch, void *val, size_t sz) {
+    /* Soft type checking. */
+    assert (ch->sz == sz);
+
     /* If there's a sender already waiting, we can just unblock it. */
     if(ch->sender.first_clause) {
-        void *val = *(ch->sender.first_clause->val);
-        ch->sender.first_clause->cr->res = ch->sender.first_clause;
+        memcpy(val, ch->sender.first_clause->val, sz);
+        ch->sender.first_clause->cr->res = ch->sender.first_clause->label;
         resume(ch->sender.first_clause->cr);
         rmclause(&ch->sender, ch->sender.first_clause);
         return val;
     }
 
     /* Otherwise we are going to yield till the sender arrives. */
-    void *val;
     if(setjmp(first_cr->ctx))
         return val;
     struct mill_clause clause;
     clause.cr = suspend();
     clause.ep = &ch->receiver;
-    clause.val = &val;
+    clause.val = val;
     clause.next_clause = NULL;
     addclause(&ch->receiver, &clause);
 
     /* Pass control to a different coroutine. */
     ctxswitch();
-}	
+}
 
 void chclose(chan ch) {
     assert(ch->refcount >= 1);
@@ -375,26 +383,42 @@ void chclose(chan ch) {
 }
 
 struct mill_clause *mill_choose_in(struct mill_clause *clist,
-      struct mill_clause *clause, chan ch, void **val) {
+      struct mill_clause *clause, chan ch, void *val, size_t sz, void *label) {
+    /* Soft type checking. */
+    assert (ch->sz == sz);
+
+    /* Fill in the clause entry. */
     clause->cr = first_cr;
     clause->ep = &ch->receiver;
     clause->val = val;
-    addclause(&ch->receiver, clause);
+    clause->label = label;
     clause->next_clause = clist;
+
+    /* Add the clause to the channel's list of waiting clauses. */
+    addclause(&ch->receiver, clause);
+
     return clause;
 }
 
 struct mill_clause *mill_choose_out(struct mill_clause *clist,
-      struct mill_clause *clause, chan ch, void **val) {
+      struct mill_clause *clause, chan ch, void *val, size_t sz, void *label) {
+    /* Soft type checking. */
+    assert (ch->sz == sz);
+
+    /* Fill in the clause entry. */
     clause->cr = first_cr;
     clause->ep = &ch->sender;
     clause->val = val;
-    addclause(&ch->sender, clause);
     clause->next_clause = clist;
+    clause->label = label;
+
+    /* Add the clause to the channel's list of waiting clauses. */
+    addclause(&ch->sender, clause);
+
     return clause;
 }
 
-struct mill_clause *mill_choose_wait(int blocking, struct mill_clause *clist) {
+void *mill_choose_wait(struct mill_clause *clist, void *othws) {
     /* Find out wheter there are any channels that are already available. */
     int available = 0;
     struct mill_clause *it = clist;
@@ -407,7 +431,7 @@ struct mill_clause *mill_choose_wait(int blocking, struct mill_clause *clist) {
     /* If so, choose a random one. */
     if(available > 0) {
         int chosen = random() % available;
-        struct mill_clause *res = NULL;
+        void *res = NULL;
         it = clist;
         while(it) {
             struct mill_ep *this_ep = it->ep;
@@ -415,13 +439,13 @@ struct mill_clause *mill_choose_wait(int blocking, struct mill_clause *clist) {
             if(peer_ep->first_clause) {
                 if(!chosen) {
                     if(this_ep->type == SENDER)
-                        *peer_ep->first_clause->val = *it->val;
+                        memcpy(peer_ep->first_clause->val, it->val, sizeof(int));
                     else
-                        *it->val = *peer_ep->first_clause->val;
-                    peer_ep->first_clause->cr->res = peer_ep->first_clause;
+                        memcpy(it->val, peer_ep->first_clause->val, sizeof(int));
+                    peer_ep->first_clause->cr->res = peer_ep->first_clause->label;
                     resume(peer_ep->first_clause->cr);
                     rmclause(peer_ep, peer_ep->first_clause);
-                    res = it;
+                    res = it->label;
                     break;
                 }
                 --chosen;
@@ -434,8 +458,8 @@ struct mill_clause *mill_choose_wait(int blocking, struct mill_clause *clist) {
     }
 
     /* If not so and there's an 'otherwise' clause we can go straight to it. */
-    if(!blocking) {
-        first_cr->res = NULL;
+    if(othws) {
+        first_cr->res = othws;
         goto cleanup;
     }
 

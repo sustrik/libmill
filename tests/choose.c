@@ -3,100 +3,100 @@
 #include <assert.h>
 #include "../mill.h"
 
-void sender1(chan ch, void *val) {
-    chs(ch, val);
+void sender1(chan ch, int val) {
+    chs(ch, int, val);
     chclose(ch);
 }
 
-void sender2(chan ch, void *val) {
+void sender2(chan ch, int val) {
     yield();
-    chs(ch, val);
+    chs(ch, int, val);
     chclose(ch);
 }
 
-void receiver1(chan ch, void *expected) {
-    void *val = chr(ch);
+void receiver1(chan ch, int expected) {
+    int val = chr(ch, int);
     assert(val == expected);
     chclose(ch);
 }
 
-void receiver2(chan ch, void *expected) {
+void receiver2(chan ch, int expected) {
     yield();
-    void *val = chr(ch);
+    int val = chr(ch, int);
     assert(val == expected);
     chclose(ch);
 }
 
-void choosesender(chan ch, void *val) {
+void choosesender(chan ch, int val) {
     choose {
-    out(ch, val):
+    out(ch, int, val):
     end
     }
     chclose(ch);
 }
 
-void feeder(chan ch, void *val) {
+void feeder(chan ch, int val) {
     while(1) {
-        chs(ch, val);
+        chs(ch, int, val);
         yield();
     }
 }
 
 int main() {
     /* Non-blocking receiver case. */
-    chan ch1 = chmake();
-    go(sender1(chdup(ch1), (void*)555));
+    chan ch1 = chmake(int);
+    go(sender1(chdup(ch1), 555));
     choose {
-    in(ch1, val):
-        assert(val == (void*)555);
+    in(ch1, int, val):
+        assert(val == 555);
     end
     }
     chclose(ch1);
 
     /* Blocking receiver case. */
-    chan ch2 = chmake();
-    go(sender2(chdup(ch2), (void*)666));
+    chan ch2 = chmake(int);
+    go(sender2(chdup(ch2), 666));
     choose {
-    in(ch2, val):
-        assert(val == (void*)666);
+    in(ch2, int, val):
+        assert(val == 666);
     end
     }
     chclose(ch2);
 
     /* Non-blocking sender case. */
-    chan ch3 = chmake();
-    go(receiver1(chdup(ch3), (void*)777));
+    chan ch3 = chmake(int);
+    go(receiver1(chdup(ch3), 777));
     choose {
-    out(ch3, (void*)777):
+    out(ch3, int, 777):
     end
     }
     chclose(ch3);
 
     /* Blocking sender case. */
-    chan ch4 = chmake();
-    go(receiver2(chdup(ch4), (void*)888));
+    chan ch4 = chmake(int);
+    go(receiver2(chdup(ch4), 888));
     choose {
-    out(ch4, (void*)888):
+    out(ch4, int, 888):
     end
     }
     chclose(ch4);
 
     /* Check with two channels. */
-    chan ch5 = chmake();
-    chan ch6 = chmake();
-    go(sender1(chdup(ch6), (void*)555));
+    chan ch5 = chmake(int);
+    chan ch6 = chmake(int);
+    go(sender1(chdup(ch6), 555));
     choose {
-    in(ch5, val):
+    in(ch5, int, val):
         assert(0);
-    in(ch6, val):
-        assert(val == (void*)555);
+    in(ch6, int, val):
+        assert(val == 555);
     end
     }
-    go(sender2(chdup(ch5), (void*)666));
+    go(sender2(chdup(ch5), 666));
     choose {
-    in(ch5, val):
-        assert(val == (void*)666);
-    in(ch6, val):
+    in(ch5, int, val):
+        assert(val == 666);
+    in(ch6, int, val):
         assert(0);
     end
     }
@@ -104,20 +104,20 @@ int main() {
     chclose(ch6);
 
     /* Test whether selection of channels is random. */
-    chan ch7 = chmake();
-    chan ch8 = chmake();
-    go(feeder(chdup(ch7), (void*)111));
-    go(feeder(chdup(ch8), (void*)222));
+    chan ch7 = chmake(int);
+    chan ch8 = chmake(int);
+    go(feeder(chdup(ch7), 111));
+    go(feeder(chdup(ch8), 222));
     int i;
     int first = 0;
     int second = 0;
     for(i = 0; i != 100; ++i) {
         choose {
-        in(ch7, val):
-            assert(val == (void*)111);
+        in(ch7, int, val):
+            assert(val == 111);
             ++first;
-        in(ch8, val):
-            assert(val == (void*)222);
+        in(ch8, int, val):
+            assert(val == 222);
             ++second;
         end
         }
@@ -129,9 +129,9 @@ int main() {
 
     /* Test 'otherwise' clause. */
     int test = 0;
-    chan ch9 = chmake();
+    chan ch9 = chmake(int);
     choose {
-    in(ch9, val):
+    in(ch9, int, val):
         assert(0);
     otherwise:
         test = 1;
@@ -141,46 +141,46 @@ int main() {
     chclose(ch9);
 
     /* Test two simultaneous senders vs. choose statement. */
-    void *val;
-    chan ch10 = chmake();
-    go(sender1(chdup(ch10), (void*)888));
-    go(sender1(chdup(ch10), (void*)999));
-    val = NULL;
+    int val;
+    chan ch10 = chmake(int);
+    go(sender1(chdup(ch10), 888));
+    go(sender1(chdup(ch10), 999));
+    val = 0;
     choose {
-    in(ch10, v):
+    in(ch10, int, v):
         val = v;
     end
     }
-    assert(val == (void*)888);
-    val = NULL;
+    assert(val == 888);
+    val = 0;
     choose {
-    in(ch10, v):
+    in(ch10, int, v):
         val = v;
     end
     }
-    assert(val == (void*)999);
+    assert(val == 999);
     chclose(ch10);
 
     /* Test two simultaneous receivers vs. choose statement. */
-    chan ch11 = chmake();
-    go(receiver1(chdup(ch11), (void*)333));
-    go(receiver1(chdup(ch11), (void*)444));
+    chan ch11 = chmake(int);
+    go(receiver1(chdup(ch11), 333));
+    go(receiver1(chdup(ch11), 444));
     choose {
-    out(ch11, (void*)333):
+    out(ch11, int, 333):
     end
     }
     choose {
-    out(ch11, (void*)444):
+    out(ch11, int, 444):
     end
     }
     chclose(ch11);
 
     /* Choose vs. choose. */
-    chan ch12 = chmake();
-    go(choosesender(chdup(ch12), (void*)111));
+    chan ch12 = chmake(int);
+    go(choosesender(chdup(ch12), 111));
     choose {
-    in(ch12, v):
-        assert(v == (void*)111);
+    in(ch12, int, v):
+        assert(v == 111);
     end
     }
     chclose(ch12);

@@ -1,11 +1,11 @@
 
-all: test_go test_chan test_choose test_sleep test_socket
+all: test_example test_go test_chan test_choose test_sleep test_socket
 
-#.PHONY: test_example 
-#test_example: example
-#	./example > example.out
-#example: example.c ../mill.c ../mill.h
-#	cc -o example example.c ../mill.c -g -O0
+.PHONY: test_example 
+test_example: example
+	./example > example.out
+example: example.c ../mill.c ../mill.h
+	cc -o example example.c ../mill.c -g -O0
 
 .PHONY: test_go 
 test_go: go

@@ -25,6 +25,7 @@
 #ifndef MILL_H_INCLUDED
 #define MILL_H_INCLUDED
 
+#include <alloca.h>
 #include <errno.h>
 #include <stddef.h>
 #include <sys/types.h>
@@ -65,92 +66,93 @@ struct mill_clause {
     struct mill_clause *next;
     struct mill_cr *cr;
     struct mill_ep *ep;
-    void **val;
+    void *val;
+    void *label;
     struct mill_clause *next_clause;
 };
 
-chan chmake(void);
+#define chmake(type) mill_chmake(sizeof(type))
+
+#define chs(channel, type, value) \
+    do {\
+        type mill_val = (value);\
+        mill_chs((channel), &mill_val, sizeof(type));\
+    } while(0)
+
+#define chr(channel, type) \
+    (*(int*)mill_chr((channel), alloca(sizeof(type)), sizeof(type)))
+
+chan mill_chmake(size_t sz);
 chan chdup(chan ch);
-void chs(chan ch, void *val);
-void *chr(chan ch);
+void mill_chs(chan ch, void *val, size_t sz);
+void *mill_chr(chan ch, void *val, size_t sz);
 void chclose(chan ch);
 
 #define mill_concat(x,y) x##y
 
 #define choose \
-    {\
+    while(1) {\
         struct mill_clause *mill_clist = NULL;\
-        int mill_blocking = 1;\
-        struct mill_clause *mill_res = NULL;\
-        void *mill_val = NULL;\
-        while(1) {\
-            {\
-                if(mill_clist || !mill_blocking) {\
-                    if(0)
+        void *mill_othws = NULL;\
+        if(0)
 
-#define mill_in(chan, name, idx) \
-                        break;\
-                    }\
-                    goto mill_concat(mill_label, idx);\
-                }\
-            }\
-            struct mill_clause mill_concat(mill_clause, idx);\
-            {\
-                mill_clist = mill_choose_in(mill_clist,\
-                    &mill_concat(mill_clause, idx), (chan), &mill_val);\
-                if(0) {\
-                    mill_concat(mill_label, idx):\
-                    if(mill_res == &mill_concat(mill_clause, idx)) {\
-                        void *name = mill_val;\
-                        mill_concat(mill_dummylabel, idx)\
+#define mill_in(chan, type, name, idx) \
+            break;\
+        }\
+        struct mill_clause mill_concat(mill_clause, idx);\
+        type mill_concat(mill_val, idx);\
+        mill_clist = mill_choose_in(\
+            mill_clist,\
+            &mill_concat(mill_clause, idx),\
+            (chan),\
+            &mill_concat(mill_val, idx),\
+            sizeof(type),\
+            &&mill_concat(mill_label, idx));\
+        if(0) {\
+            type name;\
+            mill_concat(mill_label, idx):\
+            name = mill_concat(mill_val, idx);\
+            mill_concat(mill_dummylabel, idx)
 
-#define in(chan, name) mill_in((chan), name, __COUNTER__)
+#define in(chan, type, name) mill_in((chan), type, name, __COUNTER__)
 
-#define mill_out(chan, val, idx) \
-                        break;\
-                    }\
-                    goto mill_concat(mill_label, idx);\
-                }\
-            }\
-            struct mill_clause mill_concat(mill_clause, idx);\
-            void *mill_concat(mill_outval, idx) = (val);\
-            {\
-                mill_clist = mill_choose_out(mill_clist,\
-                    &mill_concat(mill_clause, idx), (chan),\
-                    &mill_concat(mill_outval, idx));\
-                if(0) {\
-                    mill_concat(mill_label, idx):\
-                    if(mill_res == &mill_concat(mill_clause, idx)) {\
-                        mill_concat(mill_dummylabel, idx)
+#define mill_out(chan, type, val, idx) \
+            break;\
+        }\
+        struct mill_clause mill_concat(mill_clause, idx);\
+        type mill_concat(mill_val, idx) = (val);\
+        mill_clist = mill_choose_out(\
+            mill_clist,\
+            &mill_concat(mill_clause, idx),\
+            (chan),\
+            &mill_concat(mill_val, idx),\
+            sizeof(type),\
+            &&mill_concat(mill_label, idx));\
+        if(0) {\
+            mill_concat(mill_label, idx):\
+            mill_concat(mill_dummylabel, idx)
 
-#define out(chan, val) mill_out((chan), (val), __COUNTER__)
+#define out(chan, type, val) mill_out((chan), type, (val), __COUNTER__)
 
-#define otherwise \
-                        break;\
-                    }\
-                    goto mill_concat(mill_label, idx);\
-                }\
-            }\
-            {\
-                mill_blocking = 0;\
-                if(0) {\
-                    mill_concat(mill_label, idx):\
-                    if(1) {\
-                        mill_concat(mill_dummylabel, idx)
+#define mill_otherwise(idx) \
+            break;\
+        }\
+        mill_othws = &&mill_concat(mill_label, idx);\
+        if(0) {\
+            mill_concat(mill_label, idx)
+
+#define otherwise mill_otherwise(__COUNTER__)
 
 #define end \
-                        break;\
-                    }\
-                }\
-            }\
-            mill_res = mill_choose_wait(mill_blocking, mill_clist);\
-        }
+            break;\
+        }\
+        goto *mill_choose_wait(mill_clist, mill_othws);
 
 struct mill_clause *mill_choose_in(struct mill_clause *clist,
-    struct mill_clause *clause, chan ch, void **val);
+    struct mill_clause *clause, chan ch, void *val, size_t sz, void *label);
 struct mill_clause *mill_choose_out(struct mill_clause *clist,
-    struct mill_clause *clause, chan ch, void **val);
-struct mill_clause *mill_choose_wait(int blocking, struct mill_clause *clist);
+    struct mill_clause *clause, chan ch, void *val, size_t sz, void *label);
+void *mill_choose_wait(struct mill_clause *clist, void *othws);
 
 /******************************************************************************/
 /*  Library                                                                   */
