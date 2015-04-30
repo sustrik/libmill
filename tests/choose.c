@@ -132,17 +132,6 @@ int main() {
     assert(test == 1);
     chclose(ch9);
 
-    /* Test two simultaneous senders. */
-    void *val;
-    chan ch10 = chmake();
-    go(sender1(chdup(ch10), (void*)888));
-    go(sender1(chdup(ch10), (void*)999));
-    val = chr(ch10);
-    assert(val == (void*)888);
-    val = chr(ch10);
-    assert(val == (void*)999);
-    chclose(ch10);
-
     /* Test two simultaneous senders vs. choose statement. */
     chan ch11 = chmake();
     go(sender1(chdup(ch11), (void*)888));
@@ -162,14 +151,6 @@ int main() {
     }
     assert(val == (void*)999);
     chclose(ch11);
-
-    /* Test two simultaneous receivers. */
-    chan ch12 = chmake();
-    go(receiver1(chdup(ch12), (void*)333));
-    go(receiver1(chdup(ch12), (void*)444));
-    chs(ch12, (void*)333);
-    chs(ch12, (void*)444);
-    chclose(ch12);
 
     /* Test two simultaneous receivers vs. choose statement. */
     chan ch13 = chmake();
