@@ -82,6 +82,7 @@ void chclose(chan ch);
         struct mill_clause *mill_clist = NULL;\
         int mill_blocking = 1;\
         struct mill_clause *mill_res = NULL;\
+        void *mill_val = NULL;\
         while(1) {\
             {\
                 if(mill_clist || !mill_blocking) {\
@@ -95,13 +96,13 @@ void chclose(chan ch);
             }\
             struct mill_clause mill_concat(mill_clause, idx);\
             {\
-                void *name = NULL;\
                 mill_clist = mill_choose_in(mill_clist,\
-                    &mill_concat(mill_clause, idx), (chan), &name);\
+                    &mill_concat(mill_clause, idx), (chan), &mill_val);\
                 if(0) {\
                     mill_concat(mill_label, idx):\
                     if(mill_res == &mill_concat(mill_clause, idx)) {\
-                        mill_concat(mill_dummylabel, idx)
+                        void *name = mill_val;\
+                        mill_concat(mill_dummylabel, idx)\
 
 #define in(chan, name) mill_in((chan), name, __COUNTER__)
 
@@ -113,9 +114,9 @@ void chclose(chan ch);
             }\
             struct mill_clause mill_concat(mill_clause, idx);\
             {\
-                void *mill_outval##idx = (val);\
+                mill_val = (val);\
                 mill_clist = mill_choose_out(mill_clist,\
-                    &mill_concat(mill_clause, idx), (chan), &mill_outval##idx);\
+                    &mill_concat(mill_clause, idx), (chan), &mill_val);\
                 if(0) {\
                     mill_concat(mill_label, idx):\
                     if(mill_res == &mill_concat(mill_clause, idx)) {\

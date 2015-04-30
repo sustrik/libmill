@@ -420,7 +420,6 @@ struct mill_clause *mill_choose_wait(int blocking, struct mill_clause *clist) {
                         *it->val = *peer_ep->first_clause->val;
                     peer_ep->first_clause->cr->res = peer_ep->first_clause;
                     resume(peer_ep->first_clause->cr);
-                    rmclause(peer_ep, peer_ep->first_clause);
                     res = it;
                     break;
                 }
