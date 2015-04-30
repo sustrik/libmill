@@ -21,7 +21,88 @@
 
 <h2>Documentation</h2>
 
-<p>This site is under construction. Check <a href="https://raw.githubusercontent.com/sustrik/mill/master/mill.h">mill.h</a> source file in the meantime.</p>
+<h3>Build</h3>
+
+<p>To use Mill, include mill.h and add mill.c to your project.</p>
+
+<h3>Coroutines</h3>
+
+<p>Any function can be executed as a coroutine:</p>
+
+<pre>
+void foo(int i, int j) {
+    ...
+}
+
+int main() {
+    go(foo(1, 2));
+    return 0;
+}
+</pre>
+
+<p>Even functions with exotic argument lists can be executed as coroutines:</p>
+
+<pre>
+go(printf("%d + %d = %d\n", 2, 2, 4));
+</pre>
+
+<p>However, keep in mind that coroutines are executed in parallel and thus
+any return values will be lost.</p>
+
+<h3>Channels</h3>
+
+Channels are typed communication pipes. To create a channel specify the type
+of values that will be passed through it:</p>
+
+<pre>
+chan ch = chmake(int);
+</pre>
+
+<p>To send a value to the channel use 'chs' statement:</p>
+
+<pre>
+chs(ch, int, 42);
+</pre>
+
+<p>To receive a value from the channel use 'chr' expression:</p>
+
+<pre>
+int i = chr(ch, int);
+</pre>
+
+<p>To deallocate the channel use 'chclose' function:</p>
+
+<pre>
+chclose(ch);
+</pre>
+
+<p>When sharing a channel between two or more coroutines it is good practice
+to duplicate the channel handle. Channel is deallocated only after all its
+handles are closed:</p>
+
+<pre>
+void sender(chan ch) {
+    chs(ch, int, 42);
+    chclose(ch);
+}
+
+int main() {
+    chan ch = chmake(int);
+    go(sender(ch));
+    int i = chr(ch, int);
+    assert(i == 42);
+    chclose(ch);
+    return 0;
+}
+</pre>
+
+<h3>'choose' statement</h3>
+
+<t>TODO</t>
+
+<h3>Library</h3>
+
+<t>TODO</t>
 
 </body>
 </html>
