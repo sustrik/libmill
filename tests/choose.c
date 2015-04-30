@@ -3,27 +3,27 @@
 #include <assert.h>
 #include "../mill.h"
 
-void sender1(chan ch) {
-    chs(ch, (void*)555);
+void sender1(chan ch, void *val) {
+    chs(ch, val);
     chclose(ch);
 }
 
-void sender2(chan ch) {
+void sender2(chan ch, void *val) {
     yield();
-    chs(ch, (void*)666);
+    chs(ch, val);
     chclose(ch);
 }
 
-void receiver1(chan ch) {
+void receiver1(chan ch, void *expected) {
     void *val = chr(ch);
-    assert(val == (void*)777);
+    assert(val == expected);
     chclose(ch);
 }
 
-void receiver2(chan ch) {
+void receiver2(chan ch, void *expected) {
     yield();
     void *val = chr(ch);
-    assert(val == (void*)888);
+    assert(val == expected);
     chclose(ch);
 }
 
@@ -37,7 +37,7 @@ void feeder(chan ch, void *val) {
 int main() {
     /* Non-blocking receiver case. */
     chan ch1 = chmake();
-    go(sender1(chdup(ch1)));
+    go(sender1(chdup(ch1), (void*)555));
     choose {
     in(ch1, val):
         assert(val == (void*)555);
@@ -47,7 +47,7 @@ int main() {
 
     /* Blocking receiver case. */
     chan ch2 = chmake();
-    go(sender2(chdup(ch2)));
+    go(sender2(chdup(ch2), (void*)666));
     choose {
     in(ch2, val):
         assert(val == (void*)666);
@@ -57,7 +57,7 @@ int main() {
 
     /* Non-blocking sender case. */
     chan ch3 = chmake();
-    go(receiver1(chdup(ch3)));
+    go(receiver1(chdup(ch3), (void*)777));
     choose {
     out(ch3, (void*)777):
     end
@@ -66,7 +66,7 @@ int main() {
 
     /* Blocking sender case. */
     chan ch4 = chmake();
-    go(receiver2(chdup(ch4)));
+    go(receiver2(chdup(ch4), (void*)888));
     choose {
     out(ch4, (void*)888):
     end
@@ -76,7 +76,7 @@ int main() {
     /* Check with two channels. */
     chan ch5 = chmake();
     chan ch6 = chmake();
-    go(sender1(chdup(ch6)));
+    go(sender1(chdup(ch6), (void*)555));
     choose {
     in(ch5, val):
         assert(0);
@@ -84,7 +84,7 @@ int main() {
         assert(val == (void*)555);
     end
     }
-    go(sender2(chdup(ch5)));
+    go(sender2(chdup(ch5), (void*)666));
     choose {
     in(ch5, val):
         assert(val == (void*)666);
@@ -131,6 +131,25 @@ int main() {
     }
     assert(test == 1);
     chclose(ch9);
+
+    /* Test two simultaneous senders. */
+    void *val;
+    chan ch10 = chmake();
+    go(sender1(chdup(ch10), (void*)888));
+    go(sender1(chdup(ch10), (void*)999));
+    val = chr(ch10);
+    assert(val == (void*)888);
+    val = chr(ch10);
+    assert(val == (void*)999);
+    chclose(ch10);
+
+    /* Test two simultaneous receivers. */
+    chan ch11 = chmake();
+    go(receiver1(chdup(ch10), (void*)333));
+    go(receiver1(chdup(ch10), (void*)444));
+    chs(ch10, (void*)333);
+    chs(ch10, (void*)444);
+    chclose(ch10);
 
     return 0;
 }
