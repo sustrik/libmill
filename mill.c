@@ -260,6 +260,17 @@ struct chan {
     int refcount;
 };
 
+static chan mill_getchan(struct mill_ep *ep) {
+    switch(ep->type) {
+    case SENDER:
+        return cont(ep, struct chan, sender);
+    case RECEIVER:
+        return cont(ep, struct chan, receiver);
+    default:
+        assert(0);
+    }
+}
+
 static struct mill_ep *mill_getpeer(struct mill_ep *ep) {
     switch(ep->type) {
     case SENDER:
@@ -439,10 +450,13 @@ void *mill_choose_wait(struct mill_clause *clist, void *othws) {
             if(peer_ep->first_clause) {
                 if(!chosen) {
                     if(this_ep->type == SENDER)
-                        memcpy(peer_ep->first_clause->val, it->val, sizeof(int));
+                        memcpy(peer_ep->first_clause->val, it->val,
+                            mill_getchan(it->ep)->sz);
                     else
-                        memcpy(it->val, peer_ep->first_clause->val, sizeof(int));
-                    peer_ep->first_clause->cr->res = peer_ep->first_clause->label;
+                        memcpy(it->val, peer_ep->first_clause->val,
+                            mill_getchan(it->ep)->sz);
+                    peer_ep->first_clause->cr->res =
+                        peer_ep->first_clause->label;
                     resume(peer_ep->first_clause->cr);
                     rmclause(peer_ep, peer_ep->first_clause);
                     res = it->label;
