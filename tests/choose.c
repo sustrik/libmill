@@ -27,6 +27,14 @@ void receiver2(chan ch, void *expected) {
     chclose(ch);
 }
 
+void choosesender(chan ch, void *val) {
+    choose {
+    out(ch, val):
+    end
+    }
+    chclose(ch);
+}
+
 void feeder(chan ch, void *val) {
     while(1) {
         chs(ch, val);
@@ -133,38 +141,49 @@ int main() {
     chclose(ch9);
 
     /* Test two simultaneous senders vs. choose statement. */
-    chan ch11 = chmake();
-    go(sender1(chdup(ch11), (void*)888));
-    go(sender1(chdup(ch11), (void*)999));
+    void *val;
+    chan ch10 = chmake();
+    go(sender1(chdup(ch10), (void*)888));
+    go(sender1(chdup(ch10), (void*)999));
     val = NULL;
     choose {
-    in(ch11, v):
+    in(ch10, v):
         val = v;
     end
     }
     assert(val == (void*)888);
     val = NULL;
     choose {
-    in(ch11, v):
+    in(ch10, v):
         val = v;
     end
     }
     assert(val == (void*)999);
-    chclose(ch11);
+    chclose(ch10);
 
     /* Test two simultaneous receivers vs. choose statement. */
-    chan ch13 = chmake();
-    go(receiver1(chdup(ch13), (void*)333));
-    go(receiver1(chdup(ch13), (void*)444));
+    chan ch11 = chmake();
+    go(receiver1(chdup(ch11), (void*)333));
+    go(receiver1(chdup(ch11), (void*)444));
     choose {
-    out(ch13, (void*)333):
+    out(ch11, (void*)333):
     end
     }
     choose {
-    out(ch13, (void*)444):
+    out(ch11, (void*)444):
     end
     }
     chclose(ch11);
+
+    /* Choose vs. choose. */
+    chan ch12 = chmake();
+    go(choosesender(chdup(ch12), (void*)111));
+    choose {
+    in(ch12, v):
+        assert(v == (void*)111);
+    end
+    }
+    chclose(ch12);
 
     return 0;
 }
