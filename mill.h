@@ -113,10 +113,11 @@ void chclose(chan ch);
                 }\
             }\
             struct mill_clause mill_concat(mill_clause, idx);\
+            void *mill_concat(mill_outval, idx) = (val);\
             {\
-                mill_val = (val);\
                 mill_clist = mill_choose_out(mill_clist,\
-                    &mill_concat(mill_clause, idx), (chan), &mill_val);\
+                    &mill_concat(mill_clause, idx), (chan),\
+                    &mill_concat(mill_outval, idx));\
                 if(0) {\
                     mill_concat(mill_label, idx):\
                     if(mill_res == &mill_concat(mill_clause, idx)) {\
