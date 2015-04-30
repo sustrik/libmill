@@ -98,7 +98,17 @@ int main() {
 
 <h3>'choose' statement</h3>
 
-<t>TODO</t>
+<pre>
+choose {
+in(ch1, int, val):
+    printf("Value %d received from ch1.\n", val);
+out(ch2, int, 42):
+    printf("Value 42 sent to ch2.\n");
+otherwise:
+    printf("Neither ch1 nor ch2 can be used at the moment.\n");
+end
+}
+</pre>
 
 <h3>Library</h3>
 
