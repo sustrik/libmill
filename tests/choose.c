@@ -145,11 +145,11 @@ int main() {
 
     /* Test two simultaneous receivers. */
     chan ch11 = chmake();
-    go(receiver1(chdup(ch10), (void*)333));
-    go(receiver1(chdup(ch10), (void*)444));
-    chs(ch10, (void*)333);
-    chs(ch10, (void*)444);
-    chclose(ch10);
+    go(receiver1(chdup(ch11), (void*)333));
+    go(receiver1(chdup(ch11), (void*)444));
+    chs(ch11, (void*)333);
+    chs(ch11, (void*)444);
+    chclose(ch11);
 
     return 0;
 }
