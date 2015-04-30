@@ -35,7 +35,6 @@ void feeder(chan ch, void *val) {
 }
 
 int main() {
-#if 0
     /* Non-blocking receiver case. */
     chan ch1 = chmake();
     go(sender1(chdup(ch1)));
@@ -73,7 +72,6 @@ int main() {
     end
     }
     chclose(ch4);
-#endif
 
     /* Check with two channels. */
     chan ch5 = chmake();
@@ -97,7 +95,6 @@ int main() {
     chclose(ch5);
     chclose(ch6);
 
-#if 0
     /* Test whether selection of channels is random. */
     chan ch7 = chmake();
     chan ch8 = chmake();
@@ -134,7 +131,6 @@ int main() {
     }
     assert(test == 1);
     chclose(ch9);
-#endif
 
     return 0;
 }
