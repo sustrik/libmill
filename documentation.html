@@ -51,11 +51,12 @@ any return values will be lost.</p>
 
 <h3>Channels</h3>
 
-Channels are typed communication pipes. To create a channel specify the type
-of values that will be passed through it:</p>
+Channels are typed communication pipes. To create a channel specify what kind
+of values are meant to be passed through it. The second parameter is the
+buffer size:</p>
 
 <pre>
-chan ch = chmake(int);
+chan ch = chmake(int, 0);
 </pre>
 
 <p>To send a value to the channel use 'chs' statement:</p>
@@ -87,7 +88,7 @@ void sender(chan ch) {
 }
 
 int main() {
-    chan ch = chmake(int);
+    chan ch = chmake(int, 0);
     go(sender(ch));
     int i = chr(ch, int);
     assert(i == 42);
