@@ -208,6 +208,19 @@ int main() {
     }
     chclose(ch12);
 
+    /* Choose vs. buffered channels. */
+    chan ch13 = chmake(int, 2);
+    choose {
+    out(ch13, int, 999):
+    end
+    }
+    choose {
+    in(ch13, int, val):
+        assert(val == 999);
+    end
+    }
+    chclose(ch13);
+
     return 0;
 }
 

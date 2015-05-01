@@ -463,12 +463,27 @@ struct mill_clause *mill_choose_out(struct mill_clause *clist,
     return clause;
 }
 
+static int mill_isavailable(struct mill_ep *ep) {
+    if(mill_getpeer(ep)->first_clause)
+        return 1;
+    chan ch = mill_getchan(ep);
+    if(ep->type == SENDER) {
+        if(ch->items < ch->bufsz)
+            return 1;
+    }
+    else {
+        if(ch->items)
+            return 1;
+    }
+    return 0;
+}
+
 void *mill_choose_wait(struct mill_clause *clist, void *othws) {
     /* Find out wheter there are any channels that are already available. */
     int available = 0;
     struct mill_clause *it = clist;
     while(it) {
-        if(mill_getpeer(it->ep)->first_clause)
+        if(mill_isavailable(it->ep))
             ++available;
         it = it->next_clause;
     }
@@ -481,18 +496,35 @@ void *mill_choose_wait(struct mill_clause *clist, void *othws) {
         while(it) {
             struct mill_ep *this_ep = it->ep;
             struct mill_ep *peer_ep = mill_getpeer(this_ep);
-            if(peer_ep->first_clause) {
+            chan ch = mill_getchan(this_ep);
+            if(mill_isavailable(it->ep)) {
                 if(!chosen) {
-                    if(this_ep->type == SENDER)
-                        memcpy(peer_ep->first_clause->val, it->val,
-                            mill_getchan(it->ep)->sz);
-                    else
-                        memcpy(it->val, peer_ep->first_clause->val,
-                            mill_getchan(it->ep)->sz);
-                    peer_ep->first_clause->cr->res =
-                        peer_ep->first_clause->label;
-                    resume(peer_ep->first_clause->cr);
-                    mill_rmclause(peer_ep, peer_ep->first_clause);
+                    if(this_ep->type == SENDER) {
+                        if(peer_ep->first_clause) {
+                            memcpy(peer_ep->first_clause->val, it->val,
+                                mill_getchan(it->ep)->sz);
+                            peer_ep->first_clause->cr->res =
+                                peer_ep->first_clause->label;
+                            resume(peer_ep->first_clause->cr);
+                            mill_rmclause(peer_ep, peer_ep->first_clause);
+                        }
+                        else {
+                            mill_enqueue(ch, it->val);
+                        }
+                    }
+                    else {
+                        if(peer_ep->first_clause) {
+                            memcpy(it->val, peer_ep->first_clause->val,
+                                mill_getchan(it->ep)->sz);
+                            peer_ep->first_clause->cr->res =
+                                peer_ep->first_clause->label;
+                            resume(peer_ep->first_clause->cr);
+                            mill_rmclause(peer_ep, peer_ep->first_clause);
+                        }
+                        else {
+                            mill_dequeue(ch, it->val);
+                        }
+                    }
                     res = it->label;
                     break;
                 }
