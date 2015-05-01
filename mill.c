@@ -385,6 +385,8 @@ void *mill_chr(chan ch, void *val, size_t sz) {
 
     /* Pass control to a different coroutine. */
     ctxswitch();
+    /* NOTREACHED */
+    return NULL;
 }
 
 void chclose(chan ch) {
