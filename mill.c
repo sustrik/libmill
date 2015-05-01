@@ -218,7 +218,7 @@ static void hold(unsigned long ms) {
 }
 
 /* Wait for events from a file descriptor. */
-static void wait(int fd, short events) {
+static void mill_wait(int fd, short events) {
     /* Grow the pollset as needed. */
     if(wait_size == wait_capacity) {
         wait_capacity = wait_capacity ? wait_capacity * 2 : 64;
@@ -385,6 +385,8 @@ void *mill_chr(chan ch, void *val, size_t sz) {
 
     /* Pass control to a different coroutine. */
     ctxswitch();
+    /* NOTREACHED */
+    return NULL;
 }
 
 void chclose(chan ch) {
@@ -528,7 +530,7 @@ int mconnect(int s, const struct sockaddr *addr, socklen_t addrlen) {
     assert(rc == -1);
     if(errno != EINPROGRESS)
         return -1;
-    wait(s, POLLOUT);
+    mill_wait(s, POLLOUT);
     /* TODO: Handle errors. */
     return 0;
 }
@@ -547,7 +549,7 @@ int maccept(int s, struct sockaddr *addr, socklen_t *addrlen) {
         assert(newsock == -1);
         if(errno != EAGAIN && errno != EWOULDBLOCK)
             return -1;
-        wait(s, POLLIN);
+        mill_wait(s, POLLIN);
     }
 }
 
@@ -559,7 +561,7 @@ ssize_t msend(int s, const void *buf, size_t len, int flags) {
         if(sz == -1) {
             if(errno != EAGAIN && errno != EWOULDBLOCK)
                 return -1;
-            wait(s, POLLOUT);
+            mill_wait(s, POLLOUT);
             continue;
         }
         pos += sz;
@@ -578,7 +580,7 @@ ssize_t mrecv(int s, void *buf, size_t len, int flags) {
         if(sz == -1) {
             if(errno != EAGAIN && errno != EWOULDBLOCK)
                 return -1;
-            wait(s, POLLIN);
+            mill_wait(s, POLLIN);
             continue;
         }
         pos += sz;
