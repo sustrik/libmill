@@ -80,7 +80,7 @@ struct mill_clause {
     } while(0)
 
 #define chr(channel, type) \
-    (*(int*)mill_chr((channel), alloca(sizeof(type)), sizeof(type)))
+    (*(type*)mill_chr((channel), alloca(sizeof(type)), sizeof(type)))
 
 chan mill_chmake(size_t sz, size_t bufsz);
 chan chdup(chan ch);

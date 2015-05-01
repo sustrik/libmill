@@ -26,6 +26,11 @@
 #include <stdio.h>
 #include "../mill.h"
 
+struct foo {
+    int first;
+    int second;
+};
+
 void sender(chan ch, int doyield, int val) {
     if(doyield)
         yield();
@@ -33,14 +38,19 @@ void sender(chan ch, int doyield, int val) {
     chclose(ch); 
 }
 
-void sender1(chan ch, int val) {
-    chs(ch, int, val);
+void receiver(chan ch, int expected) {
+    int val = chr(ch, int);
+    assert(val == expected);
     chclose(ch);
 }
 
-void receiver1(chan ch, int expected) {
-    int val = chr(ch, int);
-    assert(val == expected);
+void charsender(chan ch, char val) {
+    chs(ch, char, val);
+    chclose(ch);
+}
+
+void structsender(chan ch, struct foo val) {
+    chs(ch, struct foo, val);
     chclose(ch);
 }
 
@@ -63,8 +73,8 @@ int main() {
 
     /* Test two simultaneous senders. */
     chan ch3 = chmake(int, 0);
-    go(sender1(chdup(ch3), 888));
-    go(sender1(chdup(ch3), 999));
+    go(sender(chdup(ch3), 0, 888));
+    go(sender(chdup(ch3), 0, 999));
     val = chr(ch3, int);
     assert(val == 888);
     val = chr(ch3, int);
@@ -73,11 +83,25 @@ int main() {
 
     /* Test two simultaneous receivers. */
     chan ch4 = chmake(int, 0);
-    go(receiver1(chdup(ch4), 333));
-    go(receiver1(chdup(ch4), 444));
+    go(receiver(chdup(ch4), 333));
+    go(receiver(chdup(ch4), 444));
     chs(ch4, int, 333);
     chs(ch4, int, 444);
     chclose(ch4);
+
+    /* Test typed channels. */
+    chan ch5 = chmake(char, 0);
+    go(charsender(chdup(ch5), 111));
+    char charval = chr(ch5, char);
+    assert(charval == 111);
+    chclose(ch5);
+
+    chan ch6 = chmake(struct foo, 0);
+    struct foo foo1 = {555, 222};
+    go(structsender(chdup(ch6), foo1));
+    struct foo foo2 = chr(ch6, struct foo);
+    assert(foo2.first == 555 && foo2.second == 222);
+    chclose(ch6);
 
     return 0;
 }

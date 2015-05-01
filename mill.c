@@ -41,11 +41,11 @@
 
 /*  Takes a pointer to a member variable and computes pointer to the structure
     that contains it. 'type' is type of the structure, not the member. */
-#define cont(ptr, type, member) \
+#define mill_cont(ptr, type, member) \
     (ptr ? ((type*) (((char*) ptr) - offsetof(type, member))) : NULL)
 
 /* Current time. Millisecond precision. */
-static uint64_t now() {
+static uint64_t mill_now() {
     struct timeval tv;
     int rc = gettimeofday(&tv, NULL);
     assert(rc == 0);
@@ -116,7 +116,7 @@ static void ctxswitch(void) {
         /* Compute the time till next expired hold. */
         int timeout = -1;
         if(onhold) {
-            uint64_t nw = now();
+            uint64_t nw = mill_now();
             timeout = nw >= onhold->expiry ? 0 : onhold->expiry - nw;
         }
 
@@ -126,7 +126,7 @@ static void ctxswitch(void) {
 
         /* Resume all onhold coroutines that have expired. */
         if(onhold) {
-            uint64_t nw = now();
+            uint64_t nw = mill_now();
 		    while(onhold && (onhold->expiry <= nw)) {
                 struct mill_cr *cr = onhold;
                 onhold = cr->next;
@@ -206,7 +206,7 @@ static void hold(unsigned long ms) {
     /* Move the coroutine into the right place in the ordered list
        of onhold coroutines. */
     struct mill_cr *cr = suspend();
-    cr->expiry = now() + ms;
+    cr->expiry = mill_now() + ms;
     struct mill_cr **it = &onhold;
     while(*it && (*it)->expiry <= cr->expiry)
         it = &((*it)->next);
@@ -263,9 +263,9 @@ struct chan {
 static chan mill_getchan(struct mill_ep *ep) {
     switch(ep->type) {
     case SENDER:
-        return cont(ep, struct chan, sender);
+        return mill_cont(ep, struct chan, sender);
     case RECEIVER:
-        return cont(ep, struct chan, receiver);
+        return mill_cont(ep, struct chan, receiver);
     default:
         assert(0);
     }
@@ -274,9 +274,9 @@ static chan mill_getchan(struct mill_ep *ep) {
 static struct mill_ep *mill_getpeer(struct mill_ep *ep) {
     switch(ep->type) {
     case SENDER:
-        return &cont(ep, struct chan, sender)->receiver;
+        return &mill_cont(ep, struct chan, sender)->receiver;
     case RECEIVER:
-        return &cont(ep, struct chan, receiver)->sender;
+        return &mill_cont(ep, struct chan, receiver)->sender;
     default:
         assert(0);
     }
