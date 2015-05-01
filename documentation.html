@@ -23,11 +23,12 @@
 
 <h3>Build</h3>
 
-<p>To use Mill, include mill.h and add mill.c to your project.</p>
+<p>To use Mill, add mill.c to your project. Whichever files need
+Mill's functionality should then include mill.h header file. </p>
 
 <h3>Coroutines</h3>
 
-<p>Any function can be executed as a coroutine:</p>
+<p>Any function can be executed as a coroutine using 'go' keyword:</p>
 
 <pre>
 void foo(int i, int j) {
@@ -46,13 +47,14 @@ int main() {
 go(printf("%d + %d = %d\n", 2, 2, 4));
 </pre>
 
-<p>However, keep in mind that coroutines are executed in parallel and thus
-any return values will be lost.</p>
+<p>However, keep in mind that coroutines are executed asynchronously and thus,
+even if the function returns value, there is now way to retrieve it.</p>
 
 <h3>Channels</h3>
 
-Channels are typed communication pipes. To create a channel specify what kind
-of values are meant to be passed through it. The second parameter is the
+Channels are typed pipes used for communication between coroutines. To create
+a channel specify what kind of values are meant to be passed through it.
+The second parameter is the
 buffer size:</p>
 
 <pre>
@@ -100,7 +102,7 @@ int main() {
 <h3>'choose' statement</h3>
 
 <p>Choose statement is equivalent to Go's select statement. The name was
-changed to prevent clashes with POSIX API of the same name.</p>
+changed to prevent clashes with POSIX function of the same name.</p>
 
 <pre>
 choose {
