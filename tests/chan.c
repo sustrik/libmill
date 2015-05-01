@@ -113,6 +113,12 @@ int main() {
     chs(ch7, int, 444);
     val = chr(ch7, int);
     assert(val == 444);
+    chs(ch7, int, 555);
+    chs(ch7, int, 666);
+    val = chr(ch7, int);
+    assert(val == 555);
+    val = chr(ch7, int);
+    assert(val == 666);
     chclose(ch7);
 
     return 0;
