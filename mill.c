@@ -308,7 +308,11 @@ static void rmclause(struct mill_ep *ep, struct mill_clause *clause) {
         ep->last_clause = clause->prev;
 }
 
-chan mill_chmake(size_t sz) {
+chan mill_chmake(size_t sz, size_t bufsz) {
+
+    /* TODO: Implement buffered channels. */
+    assert(bufsz == 0);
+
     struct chan *ch = (struct chan*)malloc(sizeof(struct chan));
     assert(ch);
     ch->sz = sz;

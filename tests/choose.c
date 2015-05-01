@@ -44,7 +44,7 @@ void feeder(chan ch, int val) {
 
 int main() {
     /* Non-blocking receiver case. */
-    chan ch1 = chmake(int);
+    chan ch1 = chmake(int, 0);
     go(sender1(chdup(ch1), 555));
     choose {
     in(ch1, int, val):
@@ -54,7 +54,7 @@ int main() {
     chclose(ch1);
 
     /* Blocking receiver case. */
-    chan ch2 = chmake(int);
+    chan ch2 = chmake(int, 0);
     go(sender2(chdup(ch2), 666));
     choose {
     in(ch2, int, val):
@@ -64,7 +64,7 @@ int main() {
     chclose(ch2);
 
     /* Non-blocking sender case. */
-    chan ch3 = chmake(int);
+    chan ch3 = chmake(int, 0);
     go(receiver1(chdup(ch3), 777));
     choose {
     out(ch3, int, 777):
@@ -73,7 +73,7 @@ int main() {
     chclose(ch3);
 
     /* Blocking sender case. */
-    chan ch4 = chmake(int);
+    chan ch4 = chmake(int, 0);
     go(receiver2(chdup(ch4), 888));
     choose {
     out(ch4, int, 888):
@@ -82,8 +82,8 @@ int main() {
     chclose(ch4);
 
     /* Check with two channels. */
-    chan ch5 = chmake(int);
-    chan ch6 = chmake(int);
+    chan ch5 = chmake(int, 0);
+    chan ch6 = chmake(int, 0);
     go(sender1(chdup(ch6), 555));
     choose {
     in(ch5, int, val):
@@ -104,8 +104,8 @@ int main() {
     chclose(ch6);
 
     /* Test whether selection of channels is random. */
-    chan ch7 = chmake(int);
-    chan ch8 = chmake(int);
+    chan ch7 = chmake(int, 0);
+    chan ch8 = chmake(int, 0);
     go(feeder(chdup(ch7), 111));
     go(feeder(chdup(ch8), 222));
     int i;
@@ -129,7 +129,7 @@ int main() {
 
     /* Test 'otherwise' clause. */
     int test = 0;
-    chan ch9 = chmake(int);
+    chan ch9 = chmake(int, 0);
     choose {
     in(ch9, int, val):
         assert(0);
@@ -142,7 +142,7 @@ int main() {
 
     /* Test two simultaneous senders vs. choose statement. */
     int val;
-    chan ch10 = chmake(int);
+    chan ch10 = chmake(int, 0);
     go(sender1(chdup(ch10), 888));
     go(sender1(chdup(ch10), 999));
     val = 0;
@@ -162,7 +162,7 @@ int main() {
     chclose(ch10);
 
     /* Test two simultaneous receivers vs. choose statement. */
-    chan ch11 = chmake(int);
+    chan ch11 = chmake(int, 0);
     go(receiver1(chdup(ch11), 333));
     go(receiver1(chdup(ch11), 444));
     choose {
@@ -176,7 +176,7 @@ int main() {
     chclose(ch11);
 
     /* Choose vs. choose. */
-    chan ch12 = chmake(int);
+    chan ch12 = chmake(int, 0);
     go(choosesender(chdup(ch12), 111));
     choose {
     in(ch12, int, v):
