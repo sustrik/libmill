@@ -91,7 +91,7 @@ void sender(chan ch) {
 
 int main() {
     chan ch = chmake(int, 0);
-    go(sender(ch));
+    go(sender(chdup(ch)));
     int i = chr(ch, int);
     assert(i == 42);
     chclose(ch);
