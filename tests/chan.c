@@ -95,13 +95,25 @@ int main() {
     char charval = chr(ch5, char);
     assert(charval == 111);
     chclose(ch5);
-
     chan ch6 = chmake(struct foo, 0);
     struct foo foo1 = {555, 222};
     go(structsender(chdup(ch6), foo1));
     struct foo foo2 = chr(ch6, struct foo);
     assert(foo2.first == 555 && foo2.second == 222);
     chclose(ch6);
+
+    /* Test buffering. */
+    chan ch7 = chmake(int, 2);
+    chs(ch7, int, 222);
+    chs(ch7, int, 333);
+    val = chr(ch7, int);
+    assert(val == 222);
+    val = chr(ch7, int);
+    assert(val == 333);
+    chs(ch7, int, 444);
+    val = chr(ch7, int);
+    assert(val == 444);
+    chclose(ch7);
 
     return 0;
 }

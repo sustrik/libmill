@@ -164,7 +164,7 @@ void *mill_go_prologue() {
     char *ptr = malloc(STACK_SIZE);
     assert(ptr);
     struct mill_cr *cr =
-        (struct mill_cr*)(ptr + STACK_SIZE - sizeof (struct mill_cr));
+        (struct mill_cr*)(ptr + STACK_SIZE - sizeof(struct mill_cr));
     cr->next = first_cr;
     cr->res = NULL;
     cr->expiry = 0;
@@ -252,12 +252,15 @@ struct mill_ep {
     struct mill_ep *next;
 };
 
-/* Unbuffered channel. */
+/* Channel. */
 struct chan {
     size_t sz;
     struct mill_ep sender;
     struct mill_ep receiver;
     int refcount;
+    size_t bufsz;
+    size_t items;
+    size_t first;
 };
 
 static chan mill_getchan(struct mill_ep *ep) {
@@ -308,12 +311,26 @@ static void rmclause(struct mill_ep *ep, struct mill_clause *clause) {
         ep->last_clause = clause->prev;
 }
 
+static int mill_enqueue(chan ch, void *val) {
+    if(ch->items >= ch->bufsz)
+        return 0;
+    size_t pos = (ch->first + ch->items) % ch->bufsz;
+    memcpy(((char*)(ch + 1)) + (pos * ch->sz) , val, ch->sz);
+    ++ch->items;
+    return 1;
+}
+
+static int mill_dequeue(chan ch, void *val) {
+    if(!ch->items)
+        return 0;
+    memcpy(val, ((char*)(ch + 1)) + (ch->first * ch->sz), ch->sz);
+    ch->first = (ch->first + 1) % ch->bufsz;
+    --ch->items;
+    return 1;
+}
+
 chan mill_chmake(size_t sz, size_t bufsz) {
-
-    /* TODO: Implement buffered channels. */
-    assert(bufsz == 0);
-
-    struct chan *ch = (struct chan*)malloc(sizeof(struct chan));
+    struct chan *ch = (struct chan*)malloc(sizeof(struct chan) + (sz * bufsz));
     assert(ch);
     ch->sz = sz;
     ch->sender.type = SENDER;
@@ -325,6 +342,9 @@ chan mill_chmake(size_t sz, size_t bufsz) {
     ch->receiver.last_clause = NULL;
     ch->receiver.next = NULL;
     ch->refcount = 1;
+    ch->bufsz = bufsz;
+    ch->items = 0;
+    ch->first = 0;
     return ch;
 }
 
@@ -345,6 +365,10 @@ void mill_chs(chan ch, void *val, size_t sz) {
         rmclause(&ch->receiver, ch->receiver.first_clause);
         return;
     }
+
+    /* Write the message to the buffer. */
+    if(mill_enqueue(ch, val))
+       return;
 
     /* Otherwise we are going to yield till the receiver arrives. */
     if(setjmp(first_cr->ctx))
@@ -372,6 +396,10 @@ void *mill_chr(chan ch, void *val, size_t sz) {
         rmclause(&ch->sender, ch->sender.first_clause);
         return val;
     }
+
+    /* Get a message from the buffer. */
+    if(mill_dequeue(ch, val))
+        return val;
 
     /* Otherwise we are going to yield till the sender arrives. */
     if(setjmp(first_cr->ctx))
