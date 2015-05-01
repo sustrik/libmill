@@ -285,7 +285,7 @@ static struct mill_ep *mill_getpeer(struct mill_ep *ep) {
     }
 }
 
-static void addclause(struct mill_ep *ep, struct mill_clause *clause) {
+static void mill_addclause(struct mill_ep *ep, struct mill_clause *clause) {
     if(!ep->last_clause) {
         assert(!ep->first_clause);
         clause->prev = NULL;
@@ -300,7 +300,7 @@ static void addclause(struct mill_ep *ep, struct mill_clause *clause) {
     ep->last_clause = clause;
 }
 
-static void rmclause(struct mill_ep *ep, struct mill_clause *clause) {
+static void mill_rmclause(struct mill_ep *ep, struct mill_clause *clause) {
     if(clause->prev)
         clause->prev->next = clause->next;
     else
@@ -362,7 +362,7 @@ void mill_chs(chan ch, void *val, size_t sz) {
         memcpy(ch->receiver.first_clause->val, val, sz);
         ch->receiver.first_clause->cr->res = ch->receiver.first_clause->label;
         resume(ch->receiver.first_clause->cr);
-        rmclause(&ch->receiver, ch->receiver.first_clause);
+        mill_rmclause(&ch->receiver, ch->receiver.first_clause);
         return;
     }
 
@@ -378,7 +378,7 @@ void mill_chs(chan ch, void *val, size_t sz) {
     clause.ep = &ch->sender;
     clause.val = val;
     clause.next_clause = NULL;
-    addclause(&ch->sender, &clause);
+    mill_addclause(&ch->sender, &clause);
 
     /* Pass control to a different coroutine. */
     ctxswitch();
@@ -393,7 +393,7 @@ void *mill_chr(chan ch, void *val, size_t sz) {
         memcpy(val, ch->sender.first_clause->val, sz);
         ch->sender.first_clause->cr->res = ch->sender.first_clause->label;
         resume(ch->sender.first_clause->cr);
-        rmclause(&ch->sender, ch->sender.first_clause);
+        mill_rmclause(&ch->sender, ch->sender.first_clause);
         return val;
     }
 
@@ -409,7 +409,7 @@ void *mill_chr(chan ch, void *val, size_t sz) {
     clause.ep = &ch->receiver;
     clause.val = val;
     clause.next_clause = NULL;
-    addclause(&ch->receiver, &clause);
+    mill_addclause(&ch->receiver, &clause);
 
     /* Pass control to a different coroutine. */
     ctxswitch();
@@ -440,7 +440,7 @@ struct mill_clause *mill_choose_in(struct mill_clause *clist,
     clause->next_clause = clist;
 
     /* Add the clause to the channel's list of waiting clauses. */
-    addclause(&ch->receiver, clause);
+    mill_addclause(&ch->receiver, clause);
 
     return clause;
 }
@@ -458,7 +458,7 @@ struct mill_clause *mill_choose_out(struct mill_clause *clist,
     clause->label = label;
 
     /* Add the clause to the channel's list of waiting clauses. */
-    addclause(&ch->sender, clause);
+    mill_addclause(&ch->sender, clause);
 
     return clause;
 }
@@ -492,7 +492,7 @@ void *mill_choose_wait(struct mill_clause *clist, void *othws) {
                     peer_ep->first_clause->cr->res =
                         peer_ep->first_clause->label;
                     resume(peer_ep->first_clause->cr);
-                    rmclause(peer_ep, peer_ep->first_clause);
+                    mill_rmclause(peer_ep, peer_ep->first_clause);
                     res = it->label;
                     break;
                 }
@@ -520,7 +520,7 @@ void *mill_choose_wait(struct mill_clause *clist, void *othws) {
     /* Clean-up the clause lists in queried channels. */
     cleanup:
     for(it = clist; it; it = it->next_clause)
-        rmclause(it->ep, it);
+        mill_rmclause(it->ep, it);
     return first_cr->res;
 }
 
