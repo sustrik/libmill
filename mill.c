@@ -274,17 +274,28 @@ static void mill_wait(int fd, short events) {
 
 /* Channel endpoint. */
 struct mill_ep {
-    enum {SENDER, RECEIVER} type;
+    /* Thanks to this flag we can cast from ep pointer to chan pointer. */
+    enum {MILL_SENDER, MILL_RECEIVER} type;
+    /* DOuble-linked list of clauses waiting for this endpoint. */
     struct mill_clause *first_clause;
     struct mill_clause *last_clause;
 };
 
 /* Channel. */
 struct chan {
+    /* The size of the elements stored in the channel, in bytes. */
     size_t sz;
+    /* Channel holds two lists, the list of clauses waiting to send and list
+       of clauses waiting to receive. */
     struct mill_ep sender;
     struct mill_ep receiver;
+    /* Number of open handles to this channel. */
     int refcount;
+
+    /* The message buffer directly follows the chan structure. 'bufsz' specifies
+       the maximum capacity of the buffer. 'items' is the number of messages
+       currently in the buffer. 'first' is the index of the next message to
+       receive from the buffer. */
     size_t bufsz;
     size_t items;
     size_t first;
@@ -292,9 +303,9 @@ struct chan {
 
 static chan mill_getchan(struct mill_ep *ep) {
     switch(ep->type) {
-    case SENDER:
+    case MILL_SENDER:
         return mill_cont(ep, struct chan, sender);
-    case RECEIVER:
+    case MILL_RECEIVER:
         return mill_cont(ep, struct chan, receiver);
     default:
         assert(0);
@@ -303,9 +314,9 @@ static chan mill_getchan(struct mill_ep *ep) {
 
 static struct mill_ep *mill_getpeer(struct mill_ep *ep) {
     switch(ep->type) {
-    case SENDER:
+    case MILL_SENDER:
         return &mill_cont(ep, struct chan, sender)->receiver;
-    case RECEIVER:
+    case MILL_RECEIVER:
         return &mill_cont(ep, struct chan, receiver)->sender;
     default:
         assert(0);
@@ -360,10 +371,10 @@ chan mill_chmake(size_t sz, size_t bufsz) {
     struct chan *ch = (struct chan*)malloc(sizeof(struct chan) + (sz * bufsz));
     assert(ch);
     ch->sz = sz;
-    ch->sender.type = SENDER;
+    ch->sender.type = MILL_SENDER;
     ch->sender.first_clause = NULL;
     ch->sender.last_clause = NULL;
-    ch->receiver.type = RECEIVER;
+    ch->receiver.type = MILL_RECEIVER;
     ch->receiver.first_clause = NULL;
     ch->receiver.last_clause = NULL;
     ch->refcount = 1;
@@ -500,7 +511,7 @@ static int mill_isavailable(struct mill_ep *ep) {
     if(mill_getpeer(ep)->first_clause)
         return 1;
     chan ch = mill_getchan(ep);
-    if(ep->type == SENDER) {
+    if(ep->type == MILL_SENDER) {
         if(ch->items < ch->bufsz)
             return 1;
     }
@@ -532,7 +543,7 @@ void *mill_choose_wait(void) {
             chan ch = mill_getchan(this_ep);
             if(mill_isavailable(it->ep)) {
                 if(!chosen) {
-                    if(this_ep->type == SENDER) {
+                    if(this_ep->type == MILL_SENDER) {
                         if(peer_ep->first_clause) {
                             memcpy(peer_ep->first_clause->val, it->val,
                                 mill_getchan(it->ep)->sz);

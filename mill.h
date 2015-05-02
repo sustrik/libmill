@@ -61,13 +61,20 @@ typedef struct chan *chan;
 struct mill_cp;
 struct mill_ep;
 
+/* This structure represents a single clause in a choose statement.
+   Similarly, both chs() and chr() each create a single clause. */
 struct mill_clause {
+    /* Double-linked list of clauses waiting for a channel endpoint. */
     struct mill_clause *prev;
     struct mill_clause *next;
+    /* The coroutine which created the clause. */
     struct mill_cr *cr;
+    /* Channel endpoint the clause is waiting for. */
     struct mill_ep *ep;
     void *val;
+    /* The case statement to jump to when the clause is chosen. */
     void *label;
+    /* Linked list of clauses in the choose statement. */
     struct mill_clause *next_clause;
 };
 
