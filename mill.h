@@ -156,6 +156,7 @@ void *mill_choose_wait(void);
 /******************************************************************************/
 
 void msleep(unsigned long ms);
+chan after(unsigned long ms);
 
 int msocket(int family, int type, int protocol);
 int mconnect(int s, const struct sockaddr *addr, socklen_t addrlen);

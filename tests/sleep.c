@@ -36,11 +36,19 @@ static uint64_t now() {
 }
 
 int main() {
-    /* Test msleep. */
+    /* Test 'msleep'. */
     uint64_t ms = now();
     msleep(100);
     ms = now() - ms;
     assert(ms > 90 && ms < 110);
+
+    /* Test 'after'. */
+    ms = now();
+    chan a = after(100);
+    chr(a, int);
+    ms = now() - ms;
+    assert(ms > 90 && ms < 110);
+    chclose(a);
 
     return 0;
 }

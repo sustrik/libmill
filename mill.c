@@ -583,6 +583,18 @@ void msleep(unsigned long ms) {
     mill_hold(ms);
 }
 
+static void mill_after(chan ch, unsigned long ms) {
+    mill_hold(ms);
+    chs(ch, int, 0);
+    chclose(ch);
+}
+
+chan after(unsigned long ms) {
+    chan ch = chmake(int, 1);
+    go(mill_after(chdup(ch), ms));
+    return ch;
+}
+
 int msocket(int family, int type, int protocol) {
     int s = socket(family, type, protocol);
     if(s == -1)
