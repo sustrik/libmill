@@ -92,8 +92,6 @@ void chclose(chan ch);
 
 #define choose \
     while(1) {\
-        struct mill_clause *mill_clist = NULL;\
-        void *mill_othws = NULL;\
         if(0)
 
 #define mill_in(chan, type, name, idx) \
@@ -101,8 +99,7 @@ void chclose(chan ch);
         }\
         struct mill_clause mill_concat(mill_clause, idx);\
         type mill_concat(mill_val, idx);\
-        mill_clist = mill_choose_in(\
-            mill_clist,\
+        mill_choose_in(\
             &mill_concat(mill_clause, idx),\
             (chan),\
             &mill_concat(mill_val, idx),\
@@ -121,8 +118,7 @@ void chclose(chan ch);
         }\
         struct mill_clause mill_concat(mill_clause, idx);\
         type mill_concat(mill_val, idx) = (val);\
-        mill_clist = mill_choose_out(\
-            mill_clist,\
+        mill_choose_out(\
             &mill_concat(mill_clause, idx),\
             (chan),\
             &mill_concat(mill_val, idx),\
@@ -137,7 +133,7 @@ void chclose(chan ch);
 #define mill_otherwise(idx) \
             break;\
         }\
-        mill_othws = &&mill_concat(mill_label, idx);\
+        mill_choose_otherwise(&&mill_concat(mill_label, idx));\
         if(0) {\
             mill_concat(mill_label, idx)
 
@@ -146,13 +142,14 @@ void chclose(chan ch);
 #define end \
             break;\
         }\
-        goto *mill_choose_wait(mill_clist, mill_othws);
+        goto *mill_choose_wait();
 
-struct mill_clause *mill_choose_in(struct mill_clause *clist,
-    struct mill_clause *clause, chan ch, void *val, size_t sz, void *label);
-struct mill_clause *mill_choose_out(struct mill_clause *clist,
-    struct mill_clause *clause, chan ch, void *val, size_t sz, void *label);
-void *mill_choose_wait(struct mill_clause *clist, void *othws);
+void mill_choose_in(struct mill_clause *clause,
+    chan ch, void *val, size_t sz, void *label);
+void mill_choose_out(struct mill_clause *clause,
+    chan ch, void *val, size_t sz, void *label);
+void mill_choose_otherwise(void *label);
+void *mill_choose_wait(void);
 
 /******************************************************************************/
 /*  Library                                                                   */

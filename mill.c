@@ -61,7 +61,18 @@ static uint64_t mill_now() {
 struct mill_cr {
     struct mill_cr *next;
     jmp_buf ctx;
-    void *res;
+
+    /* Following variables are used as a state for the choose statement being
+       executed in the coroutine at the moment. */
+    struct mill_clause *clist;
+    void *othws;
+
+    /* When this coroutine is blocked in choose and a different coroutine
+       unblocks it, it copies the label from the clause that caused the
+       resumption of execution to this field. */
+    void *label;
+
+    /* When coroutine is on hold, the time when it should resume execution. */
     uint64_t expiry;
 };
 
@@ -166,7 +177,9 @@ void *mill_go_prologue() {
     struct mill_cr *cr =
         (struct mill_cr*)(ptr + STACK_SIZE - sizeof(struct mill_cr));
     cr->next = first_cr;
-    cr->res = NULL;
+    cr->clist = NULL;
+    cr->othws = NULL;
+    cr->label = NULL;
     cr->expiry = 0;
     first_cr = cr;
     return (void*)cr;
@@ -360,7 +373,7 @@ void mill_chs(chan ch, void *val, size_t sz) {
     /* If there's a receiver already waiting, we can just unblock it. */
     if(ch->receiver.first_clause) { 
         memcpy(ch->receiver.first_clause->val, val, sz);
-        ch->receiver.first_clause->cr->res = ch->receiver.first_clause->label;
+        ch->receiver.first_clause->cr->label = ch->receiver.first_clause->label;
         resume(ch->receiver.first_clause->cr);
         mill_rmclause(&ch->receiver, ch->receiver.first_clause);
         return;
@@ -391,7 +404,7 @@ void *mill_chr(chan ch, void *val, size_t sz) {
     /* If there's a sender already waiting, we can just unblock it. */
     if(ch->sender.first_clause) {
         memcpy(val, ch->sender.first_clause->val, sz);
-        ch->sender.first_clause->cr->res = ch->sender.first_clause->label;
+        ch->sender.first_clause->cr->label = ch->sender.first_clause->label;
         resume(ch->sender.first_clause->cr);
         mill_rmclause(&ch->sender, ch->sender.first_clause);
         return val;
@@ -427,8 +440,8 @@ void chclose(chan ch) {
     }
 }
 
-struct mill_clause *mill_choose_in(struct mill_clause *clist,
-      struct mill_clause *clause, chan ch, void *val, size_t sz, void *label) {
+void mill_choose_in(struct mill_clause *clause,
+      chan ch, void *val, size_t sz, void *label) {
     /* Soft type checking. */
     assert (ch->sz == sz);
 
@@ -437,16 +450,15 @@ struct mill_clause *mill_choose_in(struct mill_clause *clist,
     clause->ep = &ch->receiver;
     clause->val = val;
     clause->label = label;
-    clause->next_clause = clist;
+    clause->next_clause = first_cr->clist;
+    first_cr->clist = clause;
 
     /* Add the clause to the channel's list of waiting clauses. */
     mill_addclause(&ch->receiver, clause);
-
-    return clause;
 }
 
-struct mill_clause *mill_choose_out(struct mill_clause *clist,
-      struct mill_clause *clause, chan ch, void *val, size_t sz, void *label) {
+void mill_choose_out(struct mill_clause *clause,
+      chan ch, void *val, size_t sz, void *label) {
     /* Soft type checking. */
     assert (ch->sz == sz);
 
@@ -454,13 +466,18 @@ struct mill_clause *mill_choose_out(struct mill_clause *clist,
     clause->cr = first_cr;
     clause->ep = &ch->sender;
     clause->val = val;
-    clause->next_clause = clist;
+    clause->next_clause = first_cr->clist;
     clause->label = label;
+    first_cr->clist = clause;
 
     /* Add the clause to the channel's list of waiting clauses. */
     mill_addclause(&ch->sender, clause);
+}
 
-    return clause;
+void mill_choose_otherwise(void *label) {
+    /* Check for multiple 'otherwise' cases. */
+    assert(!first_cr->othws);
+    first_cr->othws = label;
 }
 
 static int mill_isavailable(struct mill_ep *ep) {
@@ -478,10 +495,10 @@ static int mill_isavailable(struct mill_ep *ep) {
     return 0;
 }
 
-void *mill_choose_wait(struct mill_clause *clist, void *othws) {
+void *mill_choose_wait(void) {
     /* Find out wheter there are any channels that are already available. */
     int available = 0;
-    struct mill_clause *it = clist;
+    struct mill_clause *it = first_cr->clist;
     while(it) {
         if(mill_isavailable(it->ep))
             ++available;
@@ -492,7 +509,7 @@ void *mill_choose_wait(struct mill_clause *clist, void *othws) {
     if(available > 0) {
         int chosen = random() % available;
         void *res = NULL;
-        it = clist;
+        it = first_cr->clist;
         while(it) {
             struct mill_ep *this_ep = it->ep;
             struct mill_ep *peer_ep = mill_getpeer(this_ep);
@@ -503,7 +520,7 @@ void *mill_choose_wait(struct mill_clause *clist, void *othws) {
                         if(peer_ep->first_clause) {
                             memcpy(peer_ep->first_clause->val, it->val,
                                 mill_getchan(it->ep)->sz);
-                            peer_ep->first_clause->cr->res =
+                            peer_ep->first_clause->cr->label =
                                 peer_ep->first_clause->label;
                             resume(peer_ep->first_clause->cr);
                             mill_rmclause(peer_ep, peer_ep->first_clause);
@@ -516,7 +533,7 @@ void *mill_choose_wait(struct mill_clause *clist, void *othws) {
                         if(peer_ep->first_clause) {
                             memcpy(it->val, peer_ep->first_clause->val,
                                 mill_getchan(it->ep)->sz);
-                            peer_ep->first_clause->cr->res =
+                            peer_ep->first_clause->cr->label =
                                 peer_ep->first_clause->label;
                             resume(peer_ep->first_clause->cr);
                             mill_rmclause(peer_ep, peer_ep->first_clause);
@@ -533,13 +550,13 @@ void *mill_choose_wait(struct mill_clause *clist, void *othws) {
             it = it->next_clause;
         }
         assert(res);
-        first_cr->res = res;
+        first_cr->label = res;
         goto cleanup;
     }
 
     /* If not so and there's an 'otherwise' clause we can go straight to it. */
-    if(othws) {
-        first_cr->res = othws;
+    if(first_cr->othws) {
+        first_cr->label = first_cr->othws;
         goto cleanup;
     }
 
@@ -551,9 +568,11 @@ void *mill_choose_wait(struct mill_clause *clist, void *othws) {
    
     /* Clean-up the clause lists in queried channels. */
     cleanup:
-    for(it = clist; it; it = it->next_clause)
+    for(it = first_cr->clist; it; it = it->next_clause)
         mill_rmclause(it->ep, it);
-    return first_cr->res;
+    first_cr->clist = NULL;
+    first_cr->othws = NULL;
+    return first_cr->label;
 }
 
 /******************************************************************************/
