@@ -39,6 +39,16 @@
 /*  Utilities                                                                 */
 /******************************************************************************/
 
+#define mill_assert(x, text) \
+    do {\
+        if (!(x)) {\
+            fprintf(stderr, "%s (%s:%d)\n", text, \
+                __FILE__, __LINE__);\
+            fflush(stderr);\
+            abort();\
+        }\
+    } while (0)
+
 /*  Takes a pointer to a member variable and computes pointer to the structure
     that contains it. 'type' is type of the structure, not the member. */
 #define mill_cont(ptr, type, member) \
@@ -121,7 +131,8 @@ static void ctxswitch(void) {
         longjmp(first_cr->ctx, 1);
 
     /* The execution would block. Let's panic. */
-    assert(onhold || wait_size);
+    mill_assert(onhold || wait_size, "There are no coroutines eligible for "
+        "resumption. The process would block forever.");
 
     while(1) {
         /* Compute the time till next expired hold. */
@@ -368,7 +379,8 @@ chan chdup(chan ch) {
 
 void mill_chs(chan ch, void *val, size_t sz) {
     /* Soft type checking. */
-    assert (ch->sz == sz);
+    mill_assert(ch->sz == sz,
+        "Sending a value of incorrect type to a channel.");
 
     /* If there's a receiver already waiting, we can just unblock it. */
     if(ch->receiver.first_clause) { 
@@ -399,7 +411,8 @@ void mill_chs(chan ch, void *val, size_t sz) {
 
 void *mill_chr(chan ch, void *val, size_t sz) {
     /* Soft type checking. */
-    assert (ch->sz == sz);
+    mill_assert(ch->sz == sz,
+        "Receiving a value of incorrect type from a channel");
 
     /* If there's a sender already waiting, we can just unblock it. */
     if(ch->sender.first_clause) {
@@ -443,7 +456,8 @@ void chclose(chan ch) {
 void mill_choose_in(struct mill_clause *clause,
       chan ch, void *val, size_t sz, void *label) {
     /* Soft type checking. */
-    assert (ch->sz == sz);
+    mill_assert(ch->sz == sz,
+        "Receiving a value of incorrect type from a channel.");
 
     /* Fill in the clause entry. */
     clause->cr = first_cr;
@@ -460,7 +474,8 @@ void mill_choose_in(struct mill_clause *clause,
 void mill_choose_out(struct mill_clause *clause,
       chan ch, void *val, size_t sz, void *label) {
     /* Soft type checking. */
-    assert (ch->sz == sz);
+    mill_assert(ch->sz == sz,
+        "Sending a value of incorrect type to a channel.");
 
     /* Fill in the clause entry. */
     clause->cr = first_cr;
@@ -475,8 +490,8 @@ void mill_choose_out(struct mill_clause *clause,
 }
 
 void mill_choose_otherwise(void *label) {
-    /* Check for multiple 'otherwise' cases. */
-    assert(!first_cr->othws);
+    mill_assert(!first_cr->othws,
+        "Multiple 'otherwise' clauses in a choose statement.");
     first_cr->othws = label;
 }
 
