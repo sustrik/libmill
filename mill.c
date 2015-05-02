@@ -98,7 +98,7 @@ static struct mill_cr *first_cr = &main_cr;
 static struct mill_cr *last_cr = &main_cr;
 
 /* Linked list of all sleeping coroutines. The list is ordered.
-   First coroutine to be resumed comes first and so on. */
+   First coroutine to be resume comes first and so on. */
 static struct mill_cr *sleeping = NULL;
 
 /* Pollset used for waiting for file descriptors. */
@@ -108,7 +108,7 @@ static struct pollfd *wait_fds = NULL;
 static struct mill_cr **wait_crs = NULL;
 
 /* Removes current coroutine from the queue and returns it to the caller. */
-static struct mill_cr *suspend() {
+static struct mill_cr *mill_suspend() {
     struct mill_cr *cr = first_cr;
     first_cr = first_cr->next;
     if(!first_cr)
@@ -118,7 +118,7 @@ static struct mill_cr *suspend() {
 }
 
 /* Schedules preiously suspended coroutine for execution. */
-static void resume(struct mill_cr *cr) {
+static void mill_resume(struct mill_cr *cr) {
     cr->next = NULL;
     if(last_cr)
         last_cr->next = cr;
@@ -156,7 +156,7 @@ static void ctxswitch(void) {
 		    while(sleeping && (sleeping->expiry <= nw)) {
                 struct mill_cr *cr = sleeping;
                 sleeping = cr->next;
-                resume(cr);
+                mill_resume(cr);
 		    }
         }
 
@@ -164,7 +164,7 @@ static void ctxswitch(void) {
         int i;
         for(i = 0; i != wait_size && rc; ++i) {
             if(wait_fds[i].revents) {
-                resume(wait_crs[i]);
+                mill_resume(wait_crs[i]);
                 wait_fds[i] = wait_fds[wait_size - 1];
                 wait_crs[i] = wait_crs[wait_size - 1];
                 --wait_size;
@@ -202,7 +202,7 @@ void *mill_go_prologue() {
 
 /* The final part of go(). Cleans up when the coroutine is finished. */
 void mill_go_epilogue(void) {
-    struct mill_cr *cr = suspend();
+    struct mill_cr *cr = mill_suspend();
     char *ptr = ((char*)(cr + 1)) - STACK_SIZE;
     free(ptr);
     ctxswitch();    
@@ -215,7 +215,7 @@ void yield(void) {
         return;
     if(setjmp(first_cr->ctx))
         return;
-    resume(suspend());
+    mill_resume(mill_suspend());
     ctxswitch();
 }
 
@@ -233,7 +233,7 @@ void msleep(unsigned long ms) {
     
     /* Move the coroutine into the right place in the ordered list
        of sleeping coroutines. */
-    struct mill_cr *cr = suspend();
+    struct mill_cr *cr = mill_suspend();
     cr->expiry = mill_now() + ms;
     struct mill_cr **it = &sleeping;
     while(*it && (*it)->expiry <= cr->expiry)
@@ -264,7 +264,7 @@ static void mill_wait(int fd, short events) {
     /* Save the current state and pass control to a different coroutine. */
     if(setjmp(first_cr->ctx))
         return;
-    suspend();
+    mill_suspend();
     ctxswitch();
 }
 
@@ -398,7 +398,7 @@ void mill_chs(chan ch, void *val, size_t sz) {
     if(ch->receiver.first_clause) { 
         memcpy(ch->receiver.first_clause->val, val, sz);
         ch->receiver.first_clause->cr->label = ch->receiver.first_clause->label;
-        resume(ch->receiver.first_clause->cr);
+        mill_resume(ch->receiver.first_clause->cr);
         mill_rmclause(&ch->receiver, ch->receiver.first_clause);
         return;
     }
@@ -411,7 +411,7 @@ void mill_chs(chan ch, void *val, size_t sz) {
     if(setjmp(first_cr->ctx))
         return;
     struct mill_clause clause;
-    clause.cr = suspend();
+    clause.cr = mill_suspend();
     clause.ep = &ch->sender;
     clause.val = val;
     clause.next_clause = NULL;
@@ -430,7 +430,7 @@ void *mill_chr(chan ch, void *val, size_t sz) {
     if(ch->sender.first_clause) {
         memcpy(val, ch->sender.first_clause->val, sz);
         ch->sender.first_clause->cr->label = ch->sender.first_clause->label;
-        resume(ch->sender.first_clause->cr);
+        mill_resume(ch->sender.first_clause->cr);
         mill_rmclause(&ch->sender, ch->sender.first_clause);
         return val;
     }
@@ -443,7 +443,7 @@ void *mill_chr(chan ch, void *val, size_t sz) {
     if(setjmp(first_cr->ctx))
         return val;
     struct mill_clause clause;
-    clause.cr = suspend();
+    clause.cr = mill_suspend();
     clause.ep = &ch->receiver;
     clause.val = val;
     clause.next_clause = NULL;
@@ -549,7 +549,7 @@ void *mill_choose_wait(void) {
                                 mill_getchan(it->ep)->sz);
                             peer_ep->first_clause->cr->label =
                                 peer_ep->first_clause->label;
-                            resume(peer_ep->first_clause->cr);
+                            mill_resume(peer_ep->first_clause->cr);
                             mill_rmclause(peer_ep, peer_ep->first_clause);
                         }
                         else {
@@ -562,7 +562,7 @@ void *mill_choose_wait(void) {
                                 mill_getchan(it->ep)->sz);
                             peer_ep->first_clause->cr->label =
                                 peer_ep->first_clause->label;
-                            resume(peer_ep->first_clause->cr);
+                            mill_resume(peer_ep->first_clause->cr);
                             mill_rmclause(peer_ep, peer_ep->first_clause);
                         }
                         else {
@@ -589,7 +589,7 @@ void *mill_choose_wait(void) {
 
     /* In all other cases block and wait for an available channel. */
     if(!setjmp(first_cr->ctx)) {
-        suspend();
+        mill_suspend();
         ctxswitch();
     }
    
