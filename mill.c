@@ -69,7 +69,11 @@ static uint64_t mill_now() {
 #define STACK_SIZE 16384
 
 struct mill_cr {
+    /* A link list the coroutine is in. It can be either the list of coroutines
+       ready for execution, list of sleeping coroutines or NULL. */
     struct mill_cr *next;
+
+    /* Stored coroutine context while it is not executing. */
     jmp_buf ctx;
 
     /* Following variables are used as a state for the choose statement being
@@ -273,7 +277,6 @@ struct mill_ep {
     enum {SENDER, RECEIVER} type;
     struct mill_clause *first_clause;
     struct mill_clause *last_clause;
-    struct mill_ep *next;
 };
 
 /* Channel. */
@@ -360,11 +363,9 @@ chan mill_chmake(size_t sz, size_t bufsz) {
     ch->sender.type = SENDER;
     ch->sender.first_clause = NULL;
     ch->sender.last_clause = NULL;
-    ch->sender.next = NULL;
     ch->receiver.type = RECEIVER;
     ch->receiver.first_clause = NULL;
     ch->receiver.last_clause = NULL;
-    ch->receiver.next = NULL;
     ch->refcount = 1;
     ch->bufsz = bufsz;
     ch->items = 0;
