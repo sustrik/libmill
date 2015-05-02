@@ -50,6 +50,17 @@ go(printf("%d + %d = %d\n", 2, 2, 4));
 <p>However, keep in mind that coroutines are executed asynchronously and thus,
 even if the function returns value, there is now way to retrieve it.</p>
 
+<p>Also keep in mind that coroutines are scheduled in a cooperative fashion.
+If one coroutine block, for example by calling sleep(), it blocks the whole
+process. Therefore, coroutine-friendly versions of blocking functions (such
+as mconnect() or msend()) should be used.</p>
+
+<p>Additionally, you can yield CPU to other coroutines explicitly:</p>
+
+<pre>
+yield();
+</pre>
+
 <h3>Channels</h3>
 
 Channels are typed pipes used for communication between coroutines. To create
