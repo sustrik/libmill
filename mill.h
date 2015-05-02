@@ -51,6 +51,7 @@ void mill_go_epilogue(void);
     } while(0)
 
 void yield(void);
+void msleep(unsigned long ms);
 
 /******************************************************************************/
 /*  Channels                                                                  */
@@ -162,7 +163,6 @@ void *mill_choose_wait(void);
 /*  Library                                                                   */
 /******************************************************************************/
 
-void msleep(unsigned long ms);
 chan after(unsigned long ms);
 
 int msocket(int family, int type, int protocol);

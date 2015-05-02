@@ -69,8 +69,8 @@ static uint64_t mill_now() {
 #define STACK_SIZE 16384
 
 struct mill_cr {
-    /* A link list the coroutine is in. It can be either the list of coroutines
-       ready for execution, list of sleeping coroutines or NULL. */
+    /* A linked list the coroutine is in. It can be either the list of
+       coroutines ready for execution, list of sleeping coroutines or NULL. */
     struct mill_cr *next;
 
     /* Stored coroutine context while it is not executing. */
@@ -86,7 +86,7 @@ struct mill_cr {
        resumption of execution to this field. */
     void *label;
 
-    /* When coroutine is on hold, the time when it should resume execution. */
+    /* When coroutine is sleeping, the time when it should resume execution. */
     uint64_t expiry;
 };
 
@@ -97,9 +97,9 @@ static struct mill_cr main_cr = {NULL};
 static struct mill_cr *first_cr = &main_cr;
 static struct mill_cr *last_cr = &main_cr;
 
-/* Linked list of all coroutines on hold. The list is ordered.
+/* Linked list of all sleeping coroutines. The list is ordered.
    First coroutine to be resumed comes first and so on. */
-static struct mill_cr *onhold = NULL;
+static struct mill_cr *sleeping = NULL;
 
 /* Pollset used for waiting for file descriptors. */
 static int wait_size = 0;
@@ -130,32 +130,32 @@ static void resume(struct mill_cr *cr) {
 /* Switch to a different coroutine. */
 static void ctxswitch(void) {
     /* If there's a coroutine ready to be executed go for it. Otherwise,
-       we are going to wait for onhold coroutines and external events. */
+       we are going to wait for sleeping coroutines and for external events. */
     if(first_cr)
         longjmp(first_cr->ctx, 1);
 
     /* The execution would block. Let's panic. */
-    mill_assert(onhold || wait_size, "There are no coroutines eligible for "
+    mill_assert(sleeping || wait_size, "There are no coroutines eligible for "
         "resumption. The process would block forever.");
 
     while(1) {
-        /* Compute the time till next expired hold. */
+        /* Compute the time till next expired sleeping coroutine. */
         int timeout = -1;
-        if(onhold) {
+        if(sleeping) {
             uint64_t nw = mill_now();
-            timeout = nw >= onhold->expiry ? 0 : onhold->expiry - nw;
+            timeout = nw >= sleeping->expiry ? 0 : sleeping->expiry - nw;
         }
 
         /* Wait for events. */
         int rc = poll(wait_fds, wait_size, timeout);
         assert(rc >= 0);
 
-        /* Resume all onhold coroutines that have expired. */
-        if(onhold) {
+        /* Resume all sleeping coroutines that have expired. */
+        if(sleeping) {
             uint64_t nw = mill_now();
-		    while(onhold && (onhold->expiry <= nw)) {
-                struct mill_cr *cr = onhold;
-                onhold = cr->next;
+		    while(sleeping && (sleeping->expiry <= nw)) {
+                struct mill_cr *cr = sleeping;
+                sleeping = cr->next;
                 resume(cr);
 		    }
         }
@@ -220,7 +220,7 @@ void yield(void) {
 }
 
 /* Pause current coroutine for a specified time interval. */
-static void mill_hold(unsigned long ms) {
+void msleep(unsigned long ms) {
     /* No point in waiting. However, let's give other coroutines a chance. */
     if(ms <= 0) {
         yield();
@@ -232,10 +232,10 @@ static void mill_hold(unsigned long ms) {
         return;
     
     /* Move the coroutine into the right place in the ordered list
-       of onhold coroutines. */
+       of sleeping coroutines. */
     struct mill_cr *cr = suspend();
     cr->expiry = mill_now() + ms;
-    struct mill_cr **it = &onhold;
+    struct mill_cr **it = &sleeping;
     while(*it && (*it)->expiry <= cr->expiry)
         it = &((*it)->next);
     cr->next = *it;
@@ -606,12 +606,8 @@ void *mill_choose_wait(void) {
 /*  Library                                                                   */
 /******************************************************************************/
 
-void msleep(unsigned long ms) {
-    mill_hold(ms);
-}
-
 static void mill_after(chan ch, unsigned long ms) {
-    mill_hold(ms);
+    msleep(ms);
     chs(ch, int, 0);
     chclose(ch);
 }
