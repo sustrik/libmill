@@ -40,7 +40,7 @@ int main() {
     go(worker(3, 7));
     go(worker(1, 11));
     go(worker(2, 5));
-    musleep(100000);
+    msleep(100);
     assert(sum == 42);
     return 0;
 }

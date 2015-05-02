@@ -38,15 +38,9 @@ static uint64_t now() {
 int main() {
     /* Test msleep. */
     uint64_t ms = now();
-    msleep(1);
+    msleep(100);
     ms = now() - ms;
-    assert(ms > 900 && ms < 1100);
-
-    /* Test musleep. */
-    ms = now();
-    musleep(1000000);
-    ms = now() - ms;
-    assert(ms > 900 && ms < 1100);
+    assert(ms > 90 && ms < 110);
 
     return 0;
 }

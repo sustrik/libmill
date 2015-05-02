@@ -155,8 +155,7 @@ void *mill_choose_wait(void);
 /*  Library                                                                   */
 /******************************************************************************/
 
-void msleep(unsigned int sec);
-void musleep(unsigned long us);
+void msleep(unsigned long ms);
 
 int msocket(int family, int type, int protocol);
 int mconnect(int s, const struct sockaddr *addr, socklen_t addrlen);

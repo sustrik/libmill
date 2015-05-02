@@ -204,8 +204,8 @@ void yield(void) {
     ctxswitch();
 }
 
-/* hold current coroutine for a specified time interval. */
-static void hold(unsigned long ms) {
+/* Pause current coroutine for a specified time interval. */
+static void mill_hold(unsigned long ms) {
     /* No point in waiting. However, let's give other coroutines a chance. */
     if(ms <= 0) {
         yield();
@@ -579,15 +579,8 @@ void *mill_choose_wait(void) {
 /*  Library                                                                   */
 /******************************************************************************/
 
-void msleep(unsigned int sec) {
-    hold(sec * 1000);
-}
-
-void musleep(unsigned long us) {
-    uint64_t ms = us / 1000;
-    if(us % 1000)
-        ++ms;
-    hold(ms);
+void msleep(unsigned long ms) {
+    mill_hold(ms);
 }
 
 int msocket(int family, int type, int protocol) {
