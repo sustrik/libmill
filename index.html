@@ -32,7 +32,7 @@ void worker(int count, const char *text, chan ch) {
     int i;
     for(i = 0; i != count; ++i) {
         printf("%s\n", text);
-        musleep(10000);
+        msleep(10);
     }
     chs(ch, int, 0);
     chclose(ch);
