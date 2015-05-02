@@ -245,7 +245,7 @@ void msleep(unsigned long ms) {
     ctxswitch();
 }
 
-/* Wait for events from a file descriptor. */
+/* Start waiting for the events from a file descriptor. */
 static void mill_wait(int fd, short events) {
     /* Grow the pollset as needed. */
     if(wait_size == wait_capacity) {
@@ -323,6 +323,7 @@ static struct mill_ep *mill_getpeer(struct mill_ep *ep) {
     }
 }
 
+/* Add the clause to the endpoint's list of waiting clauses. */
 static void mill_addclause(struct mill_ep *ep, struct mill_clause *clause) {
     if(!ep->last_clause) {
         assert(!ep->first_clause);
@@ -338,6 +339,7 @@ static void mill_addclause(struct mill_ep *ep, struct mill_clause *clause) {
     ep->last_clause = clause;
 }
 
+/* Remove the clause from the endpoint's list of waiting clauses. */
 static void mill_rmclause(struct mill_ep *ep, struct mill_clause *clause) {
     if(clause->prev)
         clause->prev->next = clause->next;
@@ -349,6 +351,7 @@ static void mill_rmclause(struct mill_ep *ep, struct mill_clause *clause) {
         ep->last_clause = clause->prev;
 }
 
+/* Add new item to the channel buffer. */
 static int mill_enqueue(chan ch, void *val) {
     if(ch->items >= ch->bufsz)
         return 0;
@@ -358,6 +361,7 @@ static int mill_enqueue(chan ch, void *val) {
     return 1;
 }
 
+/* Pop one value from the channel buffer. */
 static int mill_dequeue(chan ch, void *val) {
     if(!ch->items)
         return 0;
@@ -407,7 +411,8 @@ void mill_chs(chan ch, void *val, size_t sz) {
     if(mill_enqueue(ch, val))
        return;
 
-    /* Otherwise we are going to yield till the receiver arrives. */
+    /* If there's no free space in the buffer we are going to yield
+       till the receiver arrives. */
     if(setjmp(first_cr->ctx))
         return;
     struct mill_clause clause;
@@ -439,7 +444,8 @@ void *mill_chr(chan ch, void *val, size_t sz) {
     if(mill_dequeue(ch, val))
         return val;
 
-    /* Otherwise we are going to yield till the sender arrives. */
+    /* If there's no message in the buffer we are going to yield
+       till the sender arrives. */
     if(setjmp(first_cr->ctx))
         return val;
     struct mill_clause clause;
@@ -451,7 +457,7 @@ void *mill_chr(chan ch, void *val, size_t sz) {
 
     /* Pass control to a different coroutine. */
     ctxswitch();
-    /* NOTREACHED */
+    /* Unreachable, but let's make XCode happy. */
     return NULL;
 }
 
