@@ -66,7 +66,7 @@ static uint64_t mill_now() {
 /*  Coroutines                                                                */
 /******************************************************************************/
 
-#define STACK_SIZE 16384
+#define MILL_STACK_SIZE 16384
 
 struct mill_cr {
     /* A linked list the coroutine is in. It can be either the list of
@@ -187,10 +187,10 @@ static void ctxswitch(void) {
 void *mill_go_prologue() {
     if(setjmp(first_cr->ctx))
         return NULL;
-    char *ptr = malloc(STACK_SIZE);
+    char *ptr = malloc(MILL_STACK_SIZE);
     assert(ptr);
     struct mill_cr *cr =
-        (struct mill_cr*)(ptr + STACK_SIZE - sizeof(struct mill_cr));
+        (struct mill_cr*)(ptr + MILL_STACK_SIZE - sizeof(struct mill_cr));
     cr->next = first_cr;
     cr->clist = NULL;
     cr->othws = NULL;
@@ -203,7 +203,7 @@ void *mill_go_prologue() {
 /* The final part of go(). Cleans up when the coroutine is finished. */
 void mill_go_epilogue(void) {
     struct mill_cr *cr = mill_suspend();
-    char *ptr = ((char*)(cr + 1)) - STACK_SIZE;
+    char *ptr = ((char*)(cr + 1)) - MILL_STACK_SIZE;
     free(ptr);
     ctxswitch();    
 }
