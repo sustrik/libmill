@@ -4,7 +4,7 @@ MILL
 This project is trying to introduce Go-style concurrency to C.
 
 test.c:
-```
+```c
 #include <stdio.h>
 #include <mill.h>
 
