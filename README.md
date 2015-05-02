@@ -42,7 +42,7 @@ int main() {
 
 To build the test above:
 ```
-$ gcc -o test test.c mill.c
+$ gcc -o test test.c mill.c -g -O0
 ```
 
 This is a proof of concept project that seems to work with x86-64, gcc
