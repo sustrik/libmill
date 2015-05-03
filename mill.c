@@ -83,6 +83,12 @@ struct mill_chstate {
     void *label;
 };
 
+static void mill_chstate_init(struct mill_chstate *chstate) {
+    chstate->clauses = NULL;
+    chstate->othws = NULL;
+    /* 'label' is not nullified as it will be used later on. */
+}
+
 /* The coroutine. This structure is held on the top of the coroutine's stack. */
 struct mill_cr {
     /* A linked list the coroutine is in. It can be either the list of
@@ -201,9 +207,7 @@ void *mill_go_prologue() {
     struct mill_cr *cr =
         (struct mill_cr*)(ptr + MILL_STACK_SIZE - sizeof(struct mill_cr));
     cr->next = first_cr;
-    cr->chstate.clauses = NULL;
-    cr->chstate.othws = NULL;
-    cr->chstate.label = NULL;
+    mill_chstate_init(&cr->chstate);
     cr->expiry = 0;
     first_cr = cr;
     return (void*)cr;
@@ -584,8 +588,7 @@ void *mill_choose_wait(void) {
     cleanup:
     for(it = chstate->clauses; it; it = it->next_clause)
         mill_rmclause(it->ep, it);
-    chstate->clauses = NULL;
-    chstate->othws = NULL;
+    mill_chstate_init(chstate);
     return chstate->label;
 }
 
