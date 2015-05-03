@@ -541,6 +541,7 @@ static int mill_isavailable(struct mill_ep *ep) {
 
 void *mill_choose_wait(void) {
     struct mill_chstate *chstate = &first_cr->chstate;
+
     /* Find out wheter there are any channels that are already available. */
     int available = 0;
     struct mill_clause *it = chstate->clauses;
