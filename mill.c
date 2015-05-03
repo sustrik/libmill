@@ -380,18 +380,20 @@ static int mill_dequeue(chan ch, void *val) {
     return 1;
 }
 
-static void mill_resume_receiver(struct mill_ep *ep, void *val) {
+static int mill_resume_receiver(struct mill_ep *ep, void *val) {
     memcpy(ep->first_clause->val, val, mill_getchan(ep)->sz);
     ep->first_clause->cr->chstate.label = ep->first_clause->label;
     mill_resume(ep->first_clause->cr);
     mill_rmclause(ep, ep->first_clause);
+    return 1;
 }
 
-static void mill_resume_sender(struct mill_ep *ep, void *val) {
+static int mill_resume_sender(struct mill_ep *ep, void *val) {
     memcpy(val, ep->first_clause->val, mill_getchan(ep)->sz);
     ep->first_clause->cr->chstate.label = ep->first_clause->label;
     mill_resume(ep->first_clause->cr);
     mill_rmclause(ep, ep->first_clause);
+    return 1;
 }
 
 chan mill_chmake(size_t sz, size_t bufsz) {
@@ -423,8 +425,8 @@ void mill_chs(chan ch, void *val, size_t sz) {
 
     /* If there's a receiver already waiting, we can just unblock it. */
     if(ch->receiver.first_clause) {
-        mill_resume_receiver(&ch->receiver, val);
-        return;
+        if(mill_resume_receiver(&ch->receiver, val))
+            return;
     }
 
     /* Write the message to the buffer. */
@@ -453,8 +455,8 @@ void *mill_chr(chan ch, void *val, size_t sz) {
 
     /* If there's a sender already waiting, we can just unblock it. */
     if(ch->sender.first_clause) {
-        mill_resume_sender(&ch->sender, val);
-        return val;
+        if(mill_resume_sender(&ch->sender, val))
+            return val;
     }
 
     /* Get a message from the buffer. */
@@ -567,20 +569,16 @@ void *mill_choose_wait(void) {
             if(mill_isavailable(it->ep)) {
                 if(!chosen) {
                     if(it->ep->type == MILL_SENDER) {
-                        if(peer_ep->first_clause) {
-                            mill_resume_receiver(peer_ep, it->val);
-                        }
-                        else {
+                        int ok = peer_ep->first_clause ?
+                            mill_resume_receiver(peer_ep, it->val) :
                             mill_enqueue(mill_getchan(it->ep), it->val);
-                        }
+                        assert(ok);
                     }
                     else {
-                        if(peer_ep->first_clause) {
-                            mill_resume_sender(peer_ep, it->val);
-                        }
-                        else {
+                        int ok = peer_ep->first_clause ?
+                            mill_resume_sender(peer_ep, it->val) :
                             mill_dequeue(mill_getchan(it->ep), it->val);
-                        }
+                        assert(ok);
                     }
                     res = it->label;
                     break;
