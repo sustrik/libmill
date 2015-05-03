@@ -499,6 +499,10 @@ void mill_choose_in(struct mill_clause *clause,
     if(available)
         ++first_cr->chstate.available;
 
+    /* If there are available clauses don't bother with non-available ones. */
+    if(!available && first_cr->chstate.available)
+        return;
+
     /* Fill in the clause entry. */
     clause->cr = first_cr;
     clause->ep = &ch->receiver;
@@ -522,6 +526,10 @@ void mill_choose_out(struct mill_clause *clause,
     int available = ch->receiver.first_clause || ch->items < ch->bufsz ? 1 : 0;
     if(available)
         ++first_cr->chstate.available;
+
+    /* If there are available clauses don't bother with non-available ones. */
+    if(!available && first_cr->chstate.available)
+        return;
 
     /* Fill in the clause entry. */
     clause->cr = first_cr;
