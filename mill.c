@@ -77,17 +77,17 @@ struct mill_chstate {
     /* List of clauses in the 'choose' statement. */
     struct mill_clause *clauses;
 
-    /* Label pointing to the 'otherwise' clause. NULL if there is none. */
-    void *othws;
+    /* 1 if there is 'otherwise' clause. 0 if there is not. */
+    int othws;
 
     /* Number of clauses that are immediately available. */
     int available;
 
     /* When coroutine is blocked in choose and a different coroutine
-       unblocks it, it copies the label from the clause that caused the
+       unblocks it, it copies the index from the clause that caused the
        resumption of execution to this field, so that 'choose' statement
        can find out what exactly have happened. */
-    void *label;
+    int idx;
 
     /* Place to store the value received value when doing choose. */
     char val[MILL_MAXCHVALSIZE];
@@ -95,9 +95,9 @@ struct mill_chstate {
 
 static void mill_chstate_init(struct mill_chstate *chstate) {
     chstate->clauses = NULL;
-    chstate->othws = NULL;
+    chstate->othws = 0;
     chstate->available = 0;
-    chstate->label = NULL;
+    chstate->idx = -2;
 }
 
 /* The coroutine. This structure is held on the top of the coroutine's stack. */
@@ -369,8 +369,8 @@ static int mill_enqueue(chan ch, void *val) {
     /* If there's a receiver already waiting, let's resume it. */
     if(ch->receiver.first_clause) {
         memcpy(ch->receiver.first_clause->val, val, ch->sz);
-        ch->receiver.first_clause->cr->chstate.label =
-            ch->receiver.first_clause->label;
+        ch->receiver.first_clause->cr->chstate.idx =
+            ch->receiver.first_clause->idx;
         mill_resume(ch->receiver.first_clause->cr);
         mill_rmclause(&ch->receiver, ch->receiver.first_clause);
         return 1;
@@ -390,8 +390,8 @@ static int mill_dequeue(chan ch, void *val) {
     /* If there's a sender already waiting, let's resume it. */
     if(ch->sender.first_clause) {
         memcpy(val, ch->sender.first_clause->val, ch->sz);
-        ch->sender.first_clause->cr->chstate.label =
-            ch->sender.first_clause->label;
+        ch->sender.first_clause->cr->chstate.idx =
+            ch->sender.first_clause->idx;
         mill_resume(ch->sender.first_clause->cr);
         mill_rmclause(&ch->sender, ch->sender.first_clause);
         return 1;
@@ -489,7 +489,7 @@ void chclose(chan ch) {
 }
 
 void mill_choose_in(struct mill_clause *clause,
-      chan ch, size_t sz, void *label) {
+      chan ch, size_t sz, int idx) {
     /* Soft type checking. */
     mill_assert(ch->sz == sz,
         "Receiving a value of incorrect type from a channel.");
@@ -507,7 +507,7 @@ void mill_choose_in(struct mill_clause *clause,
     clause->cr = first_cr;
     clause->ep = &ch->receiver;
     clause->val = &first_cr->chstate.val;
-    clause->label = label;
+    clause->idx = idx;
     clause->available = available;
     clause->next_clause = first_cr->chstate.clauses;
     first_cr->chstate.clauses = clause;
@@ -517,7 +517,7 @@ void mill_choose_in(struct mill_clause *clause,
 }
 
 void mill_choose_out(struct mill_clause *clause,
-      chan ch, void *val, size_t sz, void *label) {
+      chan ch, void *val, size_t sz, int idx) {
     /* Soft type checking. */
     mill_assert(ch->sz == sz,
         "Sending a value of incorrect type to a channel.");
@@ -537,22 +537,22 @@ void mill_choose_out(struct mill_clause *clause,
     clause->val = val;
     clause->next_clause = first_cr->chstate.clauses;
     clause->available = available;
-    clause->label = label;
+    clause->idx = idx;
     first_cr->chstate.clauses = clause;
 
     /* Add the clause to the channel's list of waiting clauses. */
     mill_addclause(&ch->sender, clause);
 }
 
-void mill_choose_otherwise(void *label) {
-    mill_assert(!first_cr->chstate.othws,
+void mill_choose_otherwise(void) {
+    mill_assert(first_cr->chstate.othws == 0,
         "Multiple 'otherwise' clauses in a choose statement.");
-    first_cr->chstate.othws = label;
+    first_cr->chstate.othws = 1;
 }
 
-void *mill_choose_wait(void) {
+int mill_choose_wait(void) {
     struct mill_chstate *chstate = &first_cr->chstate;
-    void *res = NULL;
+    int res = -1;
     struct mill_clause *it;
     
     /* If there are clauses that are immediately available,
@@ -567,7 +567,7 @@ void *mill_choose_wait(void) {
                         mill_enqueue(mill_getchan(it->ep), it->val) :
                         mill_dequeue(mill_getchan(it->ep), it->val);
                     assert(ok);
-                    res = it->label;
+                    res = it->idx;
                     break;
                 }
                 --chosen;
@@ -579,7 +579,7 @@ void *mill_choose_wait(void) {
 
     /* If not so and there's an 'otherwise' clause we can go straight to it. */
     if(chstate->othws) {
-        res = chstate->othws;
+        res = -1;
         goto cleanup;
     }
 
@@ -590,7 +590,7 @@ void *mill_choose_wait(void) {
     }
     /* Get the result clause as set up by the coroutine that just unblocked
        this choose statement. */
-    res = chstate->label;
+    res = chstate->idx;
    
     /* Clean-up the clause lists in queried channels. */
     cleanup:
@@ -598,7 +598,7 @@ void *mill_choose_wait(void) {
         mill_rmclause(it->ep, it);
     mill_chstate_init(chstate);
 
-    assert(res);
+    assert(res >= -1);
     return res;
 }
 

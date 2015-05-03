@@ -73,8 +73,8 @@ struct mill_clause {
     /* Channel endpoint the clause is waiting for. */
     struct mill_ep *ep;
     void *val;
-    /* The case statement to jump to when the clause is chosen. */
-    void *label;
+    /* The index to jump to when the clause is executed. */
+    int idx;
     /* If 0, there's no peer waiting for the clause at the moment.
        If 1, there is one. */
     int available;
@@ -102,63 +102,78 @@ void chclose(chan ch);
 #define mill_concat(x,y) x##y
 
 #define choose \
-    while(1) {\
-        if(0)
+    {\
+        int mill_idx = -2;\
+        while(1) {\
+            if(mill_idx != -2) {\
+                if(0)
 
 #define mill_in(chan, type, name, idx) \
-            break;\
-        }\
-        struct mill_clause mill_concat(mill_clause, idx);\
-        mill_choose_in(\
-            &mill_concat(mill_clause, idx),\
-            (chan),\
-            sizeof(type),\
-            &&mill_concat(mill_label, idx));\
-        if(0) {\
-            type name;\
-            mill_concat(mill_label, idx):\
-            name = *(type*)mill_choose_val();\
-            mill_concat(mill_dummylabel, idx)
+                    break;\
+                }\
+                goto mill_concat(mill_label, idx);\
+            }\
+            struct mill_clause mill_concat(mill_clause, idx);\
+            mill_choose_in(\
+                &mill_concat(mill_clause, idx),\
+                (chan),\
+                sizeof(type),\
+                idx);\
+            if(0) {\
+                type name;\
+                mill_concat(mill_label, idx):\
+                if(mill_idx == idx) {\
+                    name = *(type*)mill_choose_val();\
+                    mill_concat(mill_dummylabel, idx)
 
 #define in(chan, type, name) mill_in((chan), type, name, __COUNTER__)
 
 #define mill_out(chan, type, val, idx) \
-            break;\
-        }\
-        struct mill_clause mill_concat(mill_clause, idx);\
-        type mill_concat(mill_val, idx) = (val);\
-        mill_choose_out(\
-            &mill_concat(mill_clause, idx),\
-            (chan),\
-            &mill_concat(mill_val, idx),\
-            sizeof(type),\
-            &&mill_concat(mill_label, idx));\
-        if(0) {\
-            mill_concat(mill_label, idx):\
-            mill_concat(mill_dummylabel, idx)
+                    break;\
+                }\
+                goto mill_concat(mill_label, idx);\
+            }\
+            struct mill_clause mill_concat(mill_clause, idx);\
+            type mill_concat(mill_val, idx) = (val);\
+            mill_choose_out(\
+                &mill_concat(mill_clause, idx),\
+                (chan),\
+                &mill_concat(mill_val, idx),\
+                sizeof(type),\
+                idx);\
+            if(0) {\
+                mill_concat(mill_label, idx):\
+                if(mill_idx == idx) {\
+                    mill_concat(mill_dummylabel, idx)
 
 #define out(chan, type, val) mill_out((chan), type, (val), __COUNTER__)
 
 #define mill_otherwise(idx) \
-            break;\
-        }\
-        mill_choose_otherwise(&&mill_concat(mill_label, idx));\
-        if(0) {\
-            mill_concat(mill_label, idx)
+                    break;\
+                }\
+                goto mill_concat(mill_label, idx);\
+            }\
+            mill_choose_otherwise();\
+            if(0) {\
+                mill_concat(mill_label, idx):\
+                if(mill_idx == -1) {\
+                    mill_concat(mill_dummylabel, idx)
 
 #define otherwise mill_otherwise(__COUNTER__)
 
 #define end \
-            break;\
-        }\
-        goto *mill_choose_wait();
+                    break;\
+                }\
+            }\
+            mill_idx = mill_choose_wait();\
+        }
 
 void mill_choose_in(struct mill_clause *clause,
-    chan ch, size_t sz, void *label);
+    chan ch, size_t sz, int idx);
 void mill_choose_out(struct mill_clause *clause,
-    chan ch, void *val, size_t sz, void *label);
-void mill_choose_otherwise(void *label);
-void *mill_choose_wait(void);
+    chan ch, void *val, size_t sz, int idx);
+void mill_choose_otherwise(void);
+int mill_choose_wait(void);
 void *mill_choose_val(void);
 
 /******************************************************************************/
