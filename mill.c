@@ -362,8 +362,8 @@ static void mill_rmclause(struct mill_ep *ep, struct mill_clause *clause) {
 
 /* Add new item to the channel buffer. */
 static int mill_enqueue(chan ch, void *val) {
+    /* If there's a receiver already waiting, let's resume it. */
     if(ch->receiver.first_clause) {
-        //return mill_resume_receiver(&ch->receiver, val);
         memcpy(ch->receiver.first_clause->val, val, ch->sz);
         ch->receiver.first_clause->cr->chstate.label =
             ch->receiver.first_clause->label;
@@ -371,8 +371,10 @@ static int mill_enqueue(chan ch, void *val) {
         mill_rmclause(&ch->receiver, ch->receiver.first_clause);
         return 1;
     }
+    /* The buffer is full. */
     if(ch->items >= ch->bufsz)
         return 0;
+    /* Write the value to the buffer. */
     size_t pos = (ch->first + ch->items) % ch->bufsz;
     memcpy(((char*)(ch + 1)) + (pos * ch->sz) , val, ch->sz);
     ++ch->items;
@@ -381,6 +383,7 @@ static int mill_enqueue(chan ch, void *val) {
 
 /* Pop one value from the channel buffer. */
 static int mill_dequeue(chan ch, void *val) {
+    /* If there's a sender already waiting, let's resume it. */
     if(ch->sender.first_clause) {
         memcpy(val, ch->sender.first_clause->val, ch->sz);
         ch->sender.first_clause->cr->chstate.label =
@@ -389,8 +392,10 @@ static int mill_dequeue(chan ch, void *val) {
         mill_rmclause(&ch->sender, ch->sender.first_clause);
         return 1;
     }
+    /* The buffer is empty. */
     if(!ch->items)
         return 0;
+    /* Get the value from the buffer. */
     memcpy(val, ((char*)(ch + 1)) + (ch->first * ch->sz), ch->sz);
     ch->first = (ch->first + 1) % ch->bufsz;
     --ch->items;
