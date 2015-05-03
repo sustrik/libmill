@@ -360,26 +360,17 @@ static void mill_rmclause(struct mill_ep *ep, struct mill_clause *clause) {
         ep->last_clause = clause->prev;
 }
 
-static int mill_resume_receiver(struct mill_ep *ep, void *val) {
-    memcpy(ep->first_clause->val, val, mill_getchan(ep)->sz);
-    ep->first_clause->cr->chstate.label = ep->first_clause->label;
-    mill_resume(ep->first_clause->cr);
-    mill_rmclause(ep, ep->first_clause);
-    return 1;
-}
-
-static int mill_resume_sender(struct mill_ep *ep, void *val) {
-    memcpy(val, ep->first_clause->val, mill_getchan(ep)->sz);
-    ep->first_clause->cr->chstate.label = ep->first_clause->label;
-    mill_resume(ep->first_clause->cr);
-    mill_rmclause(ep, ep->first_clause);
-    return 1;
-}
-
 /* Add new item to the channel buffer. */
 static int mill_enqueue(chan ch, void *val) {
-    if(ch->receiver.first_clause)
-        return mill_resume_receiver(&ch->receiver, val);
+    if(ch->receiver.first_clause) {
+        //return mill_resume_receiver(&ch->receiver, val);
+        memcpy(ch->receiver.first_clause->val, val, ch->sz);
+        ch->receiver.first_clause->cr->chstate.label =
+            ch->receiver.first_clause->label;
+        mill_resume(ch->receiver.first_clause->cr);
+        mill_rmclause(&ch->receiver, ch->receiver.first_clause);
+        return 1;
+    }
     if(ch->items >= ch->bufsz)
         return 0;
     size_t pos = (ch->first + ch->items) % ch->bufsz;
@@ -390,8 +381,14 @@ static int mill_enqueue(chan ch, void *val) {
 
 /* Pop one value from the channel buffer. */
 static int mill_dequeue(chan ch, void *val) {
-    if(ch->sender.first_clause)
-        return mill_resume_sender(&ch->sender, val);
+    if(ch->sender.first_clause) {
+        memcpy(val, ch->sender.first_clause->val, ch->sz);
+        ch->sender.first_clause->cr->chstate.label =
+            ch->sender.first_clause->label;
+        mill_resume(ch->sender.first_clause->cr);
+        mill_rmclause(&ch->sender, ch->sender.first_clause);
+        return 1;
+    }
     if(!ch->items)
         return 0;
     memcpy(val, ((char*)(ch + 1)) + (ch->first * ch->sz), ch->sz);
