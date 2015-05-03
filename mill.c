@@ -555,14 +555,10 @@ void *mill_choose_wait(void) {
             struct mill_ep *peer_ep = mill_getpeer(it->ep);
             if(mill_isavailable(it->ep)) {
                 if(!chosen) {
-                    if(it->ep->type == MILL_SENDER) {
-                        int ok = mill_enqueue(mill_getchan(it->ep), it->val);
-                        assert(ok);
-                    }
-                    else {
-                        int ok = mill_dequeue(mill_getchan(it->ep), it->val);
-                        assert(ok);
-                    }
+                    int ok = it->ep->type == MILL_SENDER ?
+                        mill_enqueue(mill_getchan(it->ep), it->val) :
+                        mill_dequeue(mill_getchan(it->ep), it->val);
+                    assert(ok);
                     res = it->label;
                     break;
                 }
