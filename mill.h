@@ -75,6 +75,9 @@ struct mill_clause {
     void *val;
     /* The case statement to jump to when the clause is chosen. */
     void *label;
+    /* If 0, there's no peer waiting for the clause at the moment.
+       If 1, there is one. */
+    int available;
     /* Linked list of clauses in the choose statement. */
     struct mill_clause *next_clause;
 };

@@ -482,6 +482,21 @@ void chclose(chan ch) {
     }
 }
 
+static int mill_is_available(struct mill_ep *ep) {
+    if(mill_getpeer(ep)->first_clause)
+        return 1;
+    chan ch = mill_getchan(ep);
+    if(ep->type == MILL_SENDER) {
+        if(ch->items < ch->bufsz)
+            return 1;
+    }
+    else {
+        if(ch->items)
+            return 1;
+    }
+    return 0;
+}
+
 void mill_choose_in(struct mill_clause *clause,
       chan ch, void *val, size_t sz, void *label) {
     /* Soft type checking. */
@@ -493,6 +508,7 @@ void mill_choose_in(struct mill_clause *clause,
     clause->ep = &ch->receiver;
     clause->val = val;
     clause->label = label;
+    clause->available = mill_is_available(&ch->receiver);
     clause->next_clause = first_cr->chstate.clauses;
     first_cr->chstate.clauses = clause;
 
@@ -511,6 +527,7 @@ void mill_choose_out(struct mill_clause *clause,
     clause->ep = &ch->sender;
     clause->val = val;
     clause->next_clause = first_cr->chstate.clauses;
+    clause->available = mill_is_available(&ch->sender);
     clause->label = label;
     first_cr->chstate.clauses = clause;
 
@@ -524,21 +541,6 @@ void mill_choose_otherwise(void *label) {
     first_cr->chstate.othws = label;
 }
 
-static int mill_isavailable(struct mill_ep *ep) {
-    if(mill_getpeer(ep)->first_clause)
-        return 1;
-    chan ch = mill_getchan(ep);
-    if(ep->type == MILL_SENDER) {
-        if(ch->items < ch->bufsz)
-            return 1;
-    }
-    else {
-        if(ch->items)
-            return 1;
-    }
-    return 0;
-}
-
 void *mill_choose_wait(void) {
     struct mill_chstate *chstate = &first_cr->chstate;
 
@@ -546,7 +548,7 @@ void *mill_choose_wait(void) {
     int available = 0;
     struct mill_clause *it = chstate->clauses;
     while(it) {
-        if(mill_isavailable(it->ep))
+        if(it->available)
             ++available;
         it = it->next_clause;
     }
@@ -557,8 +559,7 @@ void *mill_choose_wait(void) {
         void *res = NULL;
         it = chstate->clauses;
         while(it) {
-            struct mill_ep *peer_ep = mill_getpeer(it->ep);
-            if(mill_isavailable(it->ep)) {
+            if(it->available) {
                 if(!chosen) {
                     int ok = it->ep->type == MILL_SENDER ?
                         mill_enqueue(mill_getchan(it->ep), it->val) :
