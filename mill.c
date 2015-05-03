@@ -360,26 +360,6 @@ static void mill_rmclause(struct mill_ep *ep, struct mill_clause *clause) {
         ep->last_clause = clause->prev;
 }
 
-/* Add new item to the channel buffer. */
-static int mill_enqueue(chan ch, void *val) {
-    if(ch->items >= ch->bufsz)
-        return 0;
-    size_t pos = (ch->first + ch->items) % ch->bufsz;
-    memcpy(((char*)(ch + 1)) + (pos * ch->sz) , val, ch->sz);
-    ++ch->items;
-    return 1;
-}
-
-/* Pop one value from the channel buffer. */
-static int mill_dequeue(chan ch, void *val) {
-    if(!ch->items)
-        return 0;
-    memcpy(val, ((char*)(ch + 1)) + (ch->first * ch->sz), ch->sz);
-    ch->first = (ch->first + 1) % ch->bufsz;
-    --ch->items;
-    return 1;
-}
-
 static int mill_resume_receiver(struct mill_ep *ep, void *val) {
     memcpy(ep->first_clause->val, val, mill_getchan(ep)->sz);
     ep->first_clause->cr->chstate.label = ep->first_clause->label;
@@ -393,6 +373,30 @@ static int mill_resume_sender(struct mill_ep *ep, void *val) {
     ep->first_clause->cr->chstate.label = ep->first_clause->label;
     mill_resume(ep->first_clause->cr);
     mill_rmclause(ep, ep->first_clause);
+    return 1;
+}
+
+/* Add new item to the channel buffer. */
+static int mill_enqueue(chan ch, void *val) {
+    if(ch->receiver.first_clause)
+        return mill_resume_receiver(&ch->receiver, val);
+    if(ch->items >= ch->bufsz)
+        return 0;
+    size_t pos = (ch->first + ch->items) % ch->bufsz;
+    memcpy(((char*)(ch + 1)) + (pos * ch->sz) , val, ch->sz);
+    ++ch->items;
+    return 1;
+}
+
+/* Pop one value from the channel buffer. */
+static int mill_dequeue(chan ch, void *val) {
+    if(ch->sender.first_clause)
+        return mill_resume_sender(&ch->sender, val);
+    if(!ch->items)
+        return 0;
+    memcpy(val, ((char*)(ch + 1)) + (ch->first * ch->sz), ch->sz);
+    ch->first = (ch->first + 1) % ch->bufsz;
+    --ch->items;
     return 1;
 }
 
@@ -423,10 +427,7 @@ void mill_chs(chan ch, void *val, size_t sz) {
     mill_assert(ch->sz == sz,
         "Sending a value of incorrect type to a channel.");
 
-    int ok = ch->receiver.first_clause ?
-        mill_resume_receiver(&ch->receiver, val) :
-        mill_enqueue(ch, val);
-    if(ok)
+    if(mill_enqueue(ch, val))
         return;
 
     /* If there's no free space in the buffer we are going to yield
@@ -449,10 +450,7 @@ void *mill_chr(chan ch, void *val, size_t sz) {
     mill_assert(ch->sz == sz,
         "Receiving a value of incorrect type from a channel");
 
-    int ok = ch->sender.first_clause ?
-        mill_resume_sender(&ch->sender, val) :
-        mill_dequeue(ch, val);
-    if(ok)
+    if(mill_dequeue(ch, val))
         return val;
 
     /* If there's no message in the buffer we are going to yield
@@ -561,15 +559,11 @@ void *mill_choose_wait(void) {
             if(mill_isavailable(it->ep)) {
                 if(!chosen) {
                     if(it->ep->type == MILL_SENDER) {
-                        int ok = peer_ep->first_clause ?
-                            mill_resume_receiver(peer_ep, it->val) :
-                            mill_enqueue(mill_getchan(it->ep), it->val);
+                        int ok = mill_enqueue(mill_getchan(it->ep), it->val);
                         assert(ok);
                     }
                     else {
-                        int ok = peer_ep->first_clause ?
-                            mill_resume_sender(peer_ep, it->val) :
-                            mill_dequeue(mill_getchan(it->ep), it->val);
+                        int ok = mill_dequeue(mill_getchan(it->ep), it->val);
                         assert(ok);
                     }
                     res = it->label;
