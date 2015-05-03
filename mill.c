@@ -482,33 +482,21 @@ void chclose(chan ch) {
     }
 }
 
-static int mill_is_available(struct mill_ep *ep) {
-    if(mill_getpeer(ep)->first_clause)
-        return 1;
-    chan ch = mill_getchan(ep);
-    if(ep->type == MILL_SENDER) {
-        if(ch->items < ch->bufsz)
-            return 1;
-    }
-    else {
-        if(ch->items)
-            return 1;
-    }
-    return 0;
-}
-
 void mill_choose_in(struct mill_clause *clause,
       chan ch, void *val, size_t sz, void *label) {
     /* Soft type checking. */
     mill_assert(ch->sz == sz,
         "Receiving a value of incorrect type from a channel.");
 
+    /* Find out whether the clause is immediately available. */
+    int available = ch->sender.first_clause || ch->items ? 1 : 0;
+
     /* Fill in the clause entry. */
     clause->cr = first_cr;
     clause->ep = &ch->receiver;
     clause->val = val;
     clause->label = label;
-    clause->available = mill_is_available(&ch->receiver);
+    clause->available = available;
     clause->next_clause = first_cr->chstate.clauses;
     first_cr->chstate.clauses = clause;
 
@@ -522,12 +510,15 @@ void mill_choose_out(struct mill_clause *clause,
     mill_assert(ch->sz == sz,
         "Sending a value of incorrect type to a channel.");
 
+    /* Find out whether the clause is immediately available. */
+    int available = ch->receiver.first_clause || ch->items < ch->bufsz ? 1 : 0;
+
     /* Fill in the clause entry. */
     clause->cr = first_cr;
     clause->ep = &ch->sender;
     clause->val = val;
     clause->next_clause = first_cr->chstate.clauses;
-    clause->available = mill_is_available(&ch->sender);
+    clause->available = available;
     clause->label = label;
     first_cr->chstate.clauses = clause;
 
