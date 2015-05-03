@@ -137,7 +137,7 @@ static void mill_resume(struct mill_cr *cr) {
 }
 
 /* Switch to a different coroutine. */
-static void ctxswitch(void) {
+static void mill_ctxswitch(void) {
     /* If there's a coroutine ready to be executed go for it. Otherwise,
        we are going to wait for sleeping coroutines and for external events. */
     if(first_cr)
@@ -214,7 +214,7 @@ void mill_go_epilogue(void) {
     struct mill_cr *cr = mill_suspend();
     char *ptr = ((char*)(cr + 1)) - MILL_STACK_SIZE;
     free(ptr);
-    ctxswitch();    
+    mill_ctxswitch();
 }
 
 /* Move the current coroutine to the end of the queue.
@@ -225,7 +225,7 @@ void yield(void) {
     if(setjmp(first_cr->ctx))
         return;
     mill_resume(mill_suspend());
-    ctxswitch();
+    mill_ctxswitch();
 }
 
 /* Pause current coroutine for a specified time interval. */
@@ -251,7 +251,7 @@ void msleep(unsigned long ms) {
     *it = cr;
 
     /* Pass control to a different coroutine. */
-    ctxswitch();
+    mill_ctxswitch();
 }
 
 /* Start waiting for the events from a file descriptor. */
@@ -274,7 +274,7 @@ static void mill_wait(int fd, short events) {
     if(setjmp(first_cr->ctx))
         return;
     mill_suspend();
-    ctxswitch();
+    mill_ctxswitch();
 }
 
 /******************************************************************************/
@@ -444,7 +444,7 @@ void mill_chs(chan ch, void *val, size_t sz) {
     mill_addclause(&ch->sender, &clause);
 
     /* Pass control to a different coroutine. */
-    ctxswitch();
+    mill_ctxswitch();
 }
 
 void *mill_chr(chan ch, void *val, size_t sz) {
@@ -467,7 +467,7 @@ void *mill_chr(chan ch, void *val, size_t sz) {
     mill_addclause(&ch->receiver, &clause);
 
     /* Pass control to a different coroutine. */
-    ctxswitch();
+    mill_ctxswitch();
     /* Unreachable, but let's make XCode happy. */
     return NULL;
 }
@@ -577,7 +577,7 @@ void *mill_choose_wait(void) {
     /* In all other cases block and wait for an available channel. */
     if(!setjmp(first_cr->ctx)) {
         mill_suspend();
-        ctxswitch();
+        mill_ctxswitch();
     }
    
     /* Clean-up the clause lists in queried channels. */
