@@ -66,7 +66,11 @@ static uint64_t mill_now() {
 /*  Coroutines                                                                */
 /******************************************************************************/
 
+/* Size of stack for new coroutines. In bytes. */
 #define MILL_STACK_SIZE 16384
+
+/* Maximum size of an item in a channel. In bytes. */
+#define MILL_MAXCHVALSIZE 256
 
 /* This structure keeps the state of a 'choose' operation. */
 struct mill_chstate {
@@ -84,6 +88,9 @@ struct mill_chstate {
        resumption of execution to this field, so that 'choose' statement
        can find out what exactly have happened. */
     void *label;
+
+    /* Place to store the value received value when doing choose. */
+    char val[MILL_MAXCHVALSIZE];
 };
 
 static void mill_chstate_init(struct mill_chstate *chstate) {
@@ -480,7 +487,7 @@ void chclose(chan ch) {
 }
 
 void mill_choose_in(struct mill_clause *clause,
-      chan ch, void *val, size_t sz, void *label) {
+      chan ch, size_t sz, void *label) {
     /* Soft type checking. */
     mill_assert(ch->sz == sz,
         "Receiving a value of incorrect type from a channel.");
@@ -493,7 +500,7 @@ void mill_choose_in(struct mill_clause *clause,
     /* Fill in the clause entry. */
     clause->cr = first_cr;
     clause->ep = &ch->receiver;
-    clause->val = val;
+    clause->val = &first_cr->chstate.val;
     clause->label = label;
     clause->available = available;
     clause->next_clause = first_cr->chstate.clauses;
@@ -583,6 +590,10 @@ void *mill_choose_wait(void) {
 
     assert(res);
     return res;
+}
+
+void *mill_choose_val(void) {
+    return &first_cr->chstate.val;
 }
 
 /******************************************************************************/

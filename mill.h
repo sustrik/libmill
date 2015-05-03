@@ -109,17 +109,15 @@ void chclose(chan ch);
             break;\
         }\
         struct mill_clause mill_concat(mill_clause, idx);\
-        type mill_concat(mill_val, idx);\
         mill_choose_in(\
             &mill_concat(mill_clause, idx),\
             (chan),\
-            &mill_concat(mill_val, idx),\
             sizeof(type),\
             &&mill_concat(mill_label, idx));\
         if(0) {\
             type name;\
             mill_concat(mill_label, idx):\
-            name = mill_concat(mill_val, idx);\
+            name = *(type*)mill_choose_val();\
             mill_concat(mill_dummylabel, idx)
 
 #define in(chan, type, name) mill_in((chan), type, name, __COUNTER__)
@@ -156,11 +154,12 @@ void chclose(chan ch);
         goto *mill_choose_wait();
 
 void mill_choose_in(struct mill_clause *clause,
-    chan ch, void *val, size_t sz, void *label);
+    chan ch, size_t sz, void *label);
 void mill_choose_out(struct mill_clause *clause,
     chan ch, void *val, size_t sz, void *label);
 void mill_choose_otherwise(void *label);
 void *mill_choose_wait(void);
+void *mill_choose_val(void);
 
 /******************************************************************************/
 /*  Library                                                                   */
