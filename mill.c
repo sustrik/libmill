@@ -407,6 +407,8 @@ static int mill_dequeue(chan ch, void *val) {
 }
 
 chan mill_chmake(size_t sz, size_t bufsz) {
+    mill_assert(sz <= MILL_MAXCHVALSIZE,
+        "Type too large to be stored in a channel.");
     struct chan *ch = (struct chan*)malloc(sizeof(struct chan) + (sz * bufsz));
     assert(ch);
     ch->sz = sz;
