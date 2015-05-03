@@ -329,17 +329,6 @@ static chan mill_getchan(struct mill_ep *ep) {
     }
 }
 
-static struct mill_ep *mill_getpeer(struct mill_ep *ep) {
-    switch(ep->type) {
-    case MILL_SENDER:
-        return &mill_cont(ep, struct chan, sender)->receiver;
-    case MILL_RECEIVER:
-        return &mill_cont(ep, struct chan, receiver)->sender;
-    default:
-        assert(0);
-    }
-}
-
 /* Add the clause to the endpoint's list of waiting clauses. */
 static void mill_addclause(struct mill_ep *ep, struct mill_clause *clause) {
     if(!ep->last_clause) {
