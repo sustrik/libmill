@@ -76,6 +76,9 @@ struct mill_chstate {
     /* Label pointing to the 'otherwise' clause. NULL if there is none. */
     void *othws;
 
+    /* Number of clauses that are immediately available. */
+    int available;
+
     /* When coroutine is blocked in choose and a different coroutine
        unblocks it, it copies the label from the clause that caused the
        resumption of execution to this field, so that 'choose' statement
@@ -86,7 +89,8 @@ struct mill_chstate {
 static void mill_chstate_init(struct mill_chstate *chstate) {
     chstate->clauses = NULL;
     chstate->othws = NULL;
-    /* 'label' is not nullified as it will be used later on. */
+    chstate->available = 0;
+    chstate->label = NULL;
 }
 
 /* The coroutine. This structure is held on the top of the coroutine's stack. */
@@ -494,6 +498,8 @@ void mill_choose_in(struct mill_clause *clause,
 
     /* Find out whether the clause is immediately available. */
     int available = ch->sender.first_clause || ch->items ? 1 : 0;
+    if(available)
+        ++first_cr->chstate.available;
 
     /* Fill in the clause entry. */
     clause->cr = first_cr;
@@ -516,6 +522,8 @@ void mill_choose_out(struct mill_clause *clause,
 
     /* Find out whether the clause is immediately available. */
     int available = ch->receiver.first_clause || ch->items < ch->bufsz ? 1 : 0;
+    if(available)
+        ++first_cr->chstate.available;
 
     /* Fill in the clause entry. */
     clause->cr = first_cr;
@@ -539,19 +547,12 @@ void mill_choose_otherwise(void *label) {
 void *mill_choose_wait(void) {
     struct mill_chstate *chstate = &first_cr->chstate;
     void *res = NULL;
-
-    /* Find out wheter there are any channels that are already available. */
-    int available = 0;
-    struct mill_clause *it = chstate->clauses;
-    while(it) {
-        if(it->available)
-            ++available;
-        it = it->next_clause;
-    }
+    struct mill_clause *it;
     
-    /* If so, choose a random one. */
-    if(available > 0) {
-        int chosen = random() % available;
+    /* If there are clauses that are immediately available,
+       choose a random one. */
+    if(chstate->available > 0) {
+        int chosen = random() % (chstate->available);
         it = chstate->clauses;
         while(it) {
             if(it->available) {
