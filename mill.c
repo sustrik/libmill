@@ -69,7 +69,7 @@ static uint64_t mill_now() {
 #define MILL_STACK_SIZE 16384
 
 /* This structure keeps the state of a 'choose' operation. */
-struct mill_choose {
+struct mill_chstate {
     /* List of clauses in the 'choose' statement. */
     struct mill_clause *clauses;
 
@@ -93,7 +93,7 @@ struct mill_cr {
     jmp_buf ctx;
 
     /* Ongoing choose operation. */
-    struct mill_choose chstate;
+    struct mill_chstate chstate;
 
     /* When coroutine is sleeping, the time when it should resume execution. */
     uint64_t expiry;
@@ -540,9 +540,10 @@ static int mill_isavailable(struct mill_ep *ep) {
 }
 
 void *mill_choose_wait(void) {
+    struct mill_chstate *chstate = &first_cr->chstate;
     /* Find out wheter there are any channels that are already available. */
     int available = 0;
-    struct mill_clause *it = first_cr->chstate.clauses;
+    struct mill_clause *it = chstate->clauses;
     while(it) {
         if(mill_isavailable(it->ep))
             ++available;
@@ -553,7 +554,7 @@ void *mill_choose_wait(void) {
     if(available > 0) {
         int chosen = random() % available;
         void *res = NULL;
-        it = first_cr->chstate.clauses;
+        it = chstate->clauses;
         while(it) {
             struct mill_ep *peer_ep = mill_getpeer(it->ep);
             if(mill_isavailable(it->ep)) {
@@ -592,13 +593,13 @@ void *mill_choose_wait(void) {
             it = it->next_clause;
         }
         assert(res);
-        first_cr->chstate.label = res;
+        chstate->label = res;
         goto cleanup;
     }
 
     /* If not so and there's an 'otherwise' clause we can go straight to it. */
-    if(first_cr->chstate.othws) {
-        first_cr->chstate.label = first_cr->chstate.othws;
+    if(chstate->othws) {
+        chstate->label = chstate->othws;
         goto cleanup;
     }
 
@@ -610,11 +611,11 @@ void *mill_choose_wait(void) {
    
     /* Clean-up the clause lists in queried channels. */
     cleanup:
-    for(it = first_cr->chstate.clauses; it; it = it->next_clause)
+    for(it = chstate->clauses; it; it = it->next_clause)
         mill_rmclause(it->ep, it);
-    first_cr->chstate.clauses = NULL;
-    first_cr->chstate.othws = NULL;
-    return first_cr->chstate.label;
+    chstate->clauses = NULL;
+    chstate->othws = NULL;
+    return chstate->label;
 }
 
 /******************************************************************************/
