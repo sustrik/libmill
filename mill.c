@@ -380,6 +380,20 @@ static int mill_dequeue(chan ch, void *val) {
     return 1;
 }
 
+static void mill_resume_receiver(struct mill_ep *ep, void *val) {
+    memcpy(ep->first_clause->val, val, mill_getchan(ep)->sz);
+    ep->first_clause->cr->chstate.label = ep->first_clause->label;
+    mill_resume(ep->first_clause->cr);
+    mill_rmclause(ep, ep->first_clause);
+}
+
+static void mill_resume_sender(struct mill_ep *ep, void *val) {
+    memcpy(val, ep->first_clause->val, mill_getchan(ep)->sz);
+    ep->first_clause->cr->chstate.label = ep->first_clause->label;
+    mill_resume(ep->first_clause->cr);
+    mill_rmclause(ep, ep->first_clause);
+}
+
 chan mill_chmake(size_t sz, size_t bufsz) {
     struct chan *ch = (struct chan*)malloc(sizeof(struct chan) + (sz * bufsz));
     assert(ch);
@@ -408,12 +422,8 @@ void mill_chs(chan ch, void *val, size_t sz) {
         "Sending a value of incorrect type to a channel.");
 
     /* If there's a receiver already waiting, we can just unblock it. */
-    if(ch->receiver.first_clause) { 
-        memcpy(ch->receiver.first_clause->val, val, sz);
-        ch->receiver.first_clause->cr->chstate.label =
-            ch->receiver.first_clause->label;
-        mill_resume(ch->receiver.first_clause->cr);
-        mill_rmclause(&ch->receiver, ch->receiver.first_clause);
+    if(ch->receiver.first_clause) {
+        mill_resume_receiver(&ch->receiver, val);
         return;
     }
 
@@ -443,11 +453,7 @@ void *mill_chr(chan ch, void *val, size_t sz) {
 
     /* If there's a sender already waiting, we can just unblock it. */
     if(ch->sender.first_clause) {
-        memcpy(val, ch->sender.first_clause->val, sz);
-        ch->sender.first_clause->cr->chstate.label =
-            ch->sender.first_clause->label;
-        mill_resume(ch->sender.first_clause->cr);
-        mill_rmclause(&ch->sender, ch->sender.first_clause);
+        mill_resume_sender(&ch->sender, val);
         return val;
     }
 
@@ -562,12 +568,7 @@ void *mill_choose_wait(void) {
                 if(!chosen) {
                     if(it->ep->type == MILL_SENDER) {
                         if(peer_ep->first_clause) {
-                            memcpy(peer_ep->first_clause->val, it->val,
-                                mill_getchan(it->ep)->sz);
-                            peer_ep->first_clause->cr->chstate.label =
-                                peer_ep->first_clause->label;
-                            mill_resume(peer_ep->first_clause->cr);
-                            mill_rmclause(peer_ep, peer_ep->first_clause);
+                            mill_resume_receiver(peer_ep, it->val);
                         }
                         else {
                             mill_enqueue(mill_getchan(it->ep), it->val);
@@ -575,12 +576,7 @@ void *mill_choose_wait(void) {
                     }
                     else {
                         if(peer_ep->first_clause) {
-                            memcpy(it->val, peer_ep->first_clause->val,
-                                mill_getchan(it->ep)->sz);
-                            peer_ep->first_clause->cr->chstate.label =
-                                peer_ep->first_clause->label;
-                            mill_resume(peer_ep->first_clause->cr);
-                            mill_rmclause(peer_ep, peer_ep->first_clause);
+                            mill_resume_sender(peer_ep, it->val);
                         }
                         else {
                             mill_dequeue(mill_getchan(it->ep), it->val);
