@@ -538,6 +538,7 @@ void mill_choose_otherwise(void *label) {
 
 void *mill_choose_wait(void) {
     struct mill_chstate *chstate = &first_cr->chstate;
+    void *res = NULL;
 
     /* Find out wheter there are any channels that are already available. */
     int available = 0;
@@ -551,7 +552,6 @@ void *mill_choose_wait(void) {
     /* If so, choose a random one. */
     if(available > 0) {
         int chosen = random() % available;
-        void *res = NULL;
         it = chstate->clauses;
         while(it) {
             if(it->available) {
@@ -567,14 +567,12 @@ void *mill_choose_wait(void) {
             }
             it = it->next_clause;
         }
-        assert(res);
-        chstate->label = res;
         goto cleanup;
     }
 
     /* If not so and there's an 'otherwise' clause we can go straight to it. */
     if(chstate->othws) {
-        chstate->label = chstate->othws;
+        res = chstate->othws;
         goto cleanup;
     }
 
@@ -583,13 +581,18 @@ void *mill_choose_wait(void) {
         mill_suspend();
         mill_ctxswitch();
     }
+    /* Get the result clause as set up by the coroutine that just unblocked
+       this choose statement. */
+    res = chstate->label;
    
     /* Clean-up the clause lists in queried channels. */
     cleanup:
     for(it = chstate->clauses; it; it = it->next_clause)
         mill_rmclause(it->ep, it);
     mill_chstate_init(chstate);
-    return chstate->label;
+
+    assert(res);
+    return res;
 }
 
 /******************************************************************************/
