@@ -423,15 +423,11 @@ void mill_chs(chan ch, void *val, size_t sz) {
     mill_assert(ch->sz == sz,
         "Sending a value of incorrect type to a channel.");
 
-    /* If there's a receiver already waiting, we can just unblock it. */
-    if(ch->receiver.first_clause) {
-        if(mill_resume_receiver(&ch->receiver, val))
-            return;
-    }
-
-    /* Write the message to the buffer. */
-    if(mill_enqueue(ch, val))
-       return;
+    int ok = ch->receiver.first_clause ?
+        mill_resume_receiver(&ch->receiver, val) :
+        mill_enqueue(ch, val);
+    if(ok)
+        return;
 
     /* If there's no free space in the buffer we are going to yield
        till the receiver arrives. */
@@ -453,14 +449,10 @@ void *mill_chr(chan ch, void *val, size_t sz) {
     mill_assert(ch->sz == sz,
         "Receiving a value of incorrect type from a channel");
 
-    /* If there's a sender already waiting, we can just unblock it. */
-    if(ch->sender.first_clause) {
-        if(mill_resume_sender(&ch->sender, val))
-            return val;
-    }
-
-    /* Get a message from the buffer. */
-    if(mill_dequeue(ch, val))
+    int ok = ch->sender.first_clause ?
+        mill_resume_sender(&ch->sender, val) :
+        mill_dequeue(ch, val);
+    if(ok)
         return val;
 
     /* If there's no message in the buffer we are going to yield
