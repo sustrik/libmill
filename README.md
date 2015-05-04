@@ -46,7 +46,8 @@ $ gcc -o test test.c mill.c -g -O0
 ```
 
 This is a proof of concept project that seems to work with x86-64, gcc
-and Linux. I have no idea about different environments. Also, the project
+and Linux. OSX requires a true gcc (for example, from MacPorts or Homebrew)
+and not clang. I have no idea about different environments. Also, the project
 is in very early stage of development and not suitable for actual usage.
 
 Mailing List
