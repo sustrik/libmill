@@ -362,6 +362,8 @@ static void mill_rmclause(struct mill_ep *ep, struct mill_clause *clause) {
         clause->next->prev = clause->prev;
     else
         ep->last_clause = clause->prev;
+    clause->prev = NULL;
+    clause->next = NULL;
 }
 
 /* Add new item to the channel buffer. */

@@ -65,6 +65,16 @@ void feeder(chan ch, int val) {
     }
 }
 
+void feeder2(chan ch, int first, int second) {
+    while(1) {
+        choose {
+        out(ch, int, first):
+        out(ch, int, second):
+        end
+        }
+    }
+}
+
 int main() {
     /* Non-blocking receiver case. */
     chan ch1 = chmake(int, 0);
@@ -126,7 +136,7 @@ int main() {
     chclose(ch5);
     chclose(ch6);
 
-    /* Test whether selection of channels is random. */
+    /* Test whether selection of in channels is random. */
     chan ch7 = chmake(int, 0);
     chan ch8 = chmake(int, 0);
     go(feeder(chdup(ch7), 111));
@@ -220,6 +230,23 @@ int main() {
     end
     }
     chclose(ch13);
+
+    /* Test whether selection of out channels is random. */
+    chan ch14 = chmake(int, 0);
+    go(feeder2(chdup(ch14), 666, 777));
+    first = 0;
+    second = 0;
+    for(i = 0; i != 100; ++i) {
+        int v = chr(ch14, int);
+        if(v == 666)
+            ++first;
+        else if(v == 777)
+            ++second;
+        else
+            assert(0);
+    }
+    assert(first > 1 && second > 1);
+    chclose(ch14);
 
     return 0;
 }
