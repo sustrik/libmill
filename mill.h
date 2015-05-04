@@ -31,6 +31,12 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
+/* When compiling with glibc we want to disable fancy longjmp checking
+   which happens to panic when faced with coroutines. */
+#ifdef _FORTIFY_SOURCE
+#undef _FORTIFY_SOURCE
+#endif
+
 /******************************************************************************/
 /*  Coroutines                                                                */
 /******************************************************************************/
