@@ -75,6 +75,13 @@ void feeder2(chan ch, int first, int second) {
     }
 }
 
+/* Test whether choose with no clauses whatsoever compiles. */
+void unused(void) {
+    choose {
+    end
+    }
+}
+
 int main() {
     /* Non-blocking receiver case. */
     chan ch1 = chmake(int, 0);
@@ -172,6 +179,14 @@ int main() {
     }
     assert(test == 1);
     chclose(ch9);
+    test = 0;
+    choose {
+    otherwise:
+        test = 1;
+    end
+    }
+    assert(test == 1);
+
 
     /* Test two simultaneous senders vs. choose statement. */
     int val;
