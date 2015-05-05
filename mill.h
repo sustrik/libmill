@@ -35,6 +35,7 @@
    which happens to panic when faced with coroutines. */
 #ifdef _FORTIFY_SOURCE
 #undef _FORTIFY_SOURCE
+#define _FORTIFY_SOURCE 0
 #endif
 
 /******************************************************************************/
