@@ -612,7 +612,7 @@ int mill_choose_wait(void) {
         goto cleanup;
     }
 
-    /* If not so and there's an 'otherwise' clause we can go straight to it. */
+    /* If not so but there's an 'otherwise' clause we can go straight to it. */
     if(chstate->othws) {
         res = -1;
         goto cleanup;
