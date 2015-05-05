@@ -78,6 +78,9 @@ struct mill_clause {
     struct mill_cr *cr;
     /* Channel endpoint the clause is waiting for. */
     struct mill_ep *ep;
+    /* For out clauses, pointer to the value to send. For in clauses it is
+       either point to the value to receive to or NULL. In the latter case
+       the value should be received into coroutines in buffer. */
     void *val;
     /* The index to jump to when the clause is executed. */
     int idx;

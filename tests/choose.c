@@ -267,15 +267,29 @@ int main() {
     assert(first > 1 && second > 1);
     chclose(ch14);
 
-    /* Test transferring a large object. */
+    /* Test whether allocating larger in buffer breaks previous in clause. */
     chan ch15 = chmake(struct large, 1);
-    struct large large = {0};
-    chs(ch15, struct large, large);
+    chan ch16 = chmake(int, 1);
+    go(sender2(chdup(ch16), 1111));
     choose {
-    in(ch15, struct large, v):
+    in(ch16, int, val):
+        assert(val == 1111);
+    in(ch15, struct large, val):
+        assert(0);
     end
     }
+    chclose(ch16);
     chclose(ch15);
+
+    /* Test transferring a large object. */
+    chan ch17 = chmake(struct large, 1);
+    struct large large = {0};
+    chs(ch17, struct large, large);
+    choose {
+    in(ch17, struct large, v):
+    end
+    }
+    chclose(ch17);
 
     return 0;
 }

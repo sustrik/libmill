@@ -110,7 +110,9 @@ struct mill_cr {
     /* Ongoing choose operation. */
     struct mill_chstate chstate;
 
-    /* Place to store the value received value when doing choose. */
+    /* Place to store the received value when doing choose. 'ptr' doesn't get
+       deallocated for the main coroutine, however, we don't care as the
+       process is terminating at that point anyway. */
     struct {
         void *ptr;
         size_t capacity;
@@ -361,6 +363,21 @@ static void mill_addclause(struct mill_ep *ep, struct mill_clause *clause) {
     ep->last_clause = clause;
 }
 
+static void *mill_getvalbuf(struct mill_cr *cr, size_t sz) {
+    size_t capacity = cr->val.capacity ?
+          cr->val.capacity :
+          MILL_MAXINLINECHVALSIZE;
+    /* If there's enough capacity for the type available, return either
+       dynamically allocated buffer, if present, or the static buffer. */
+    if(capacity >= sz)
+        return cr->val.ptr ? cr->val.ptr : cr->val.buf;
+    /* Allocate or grow the dyncamic buffer to accommodate the type. */
+    cr->val.ptr = realloc(cr->val.ptr, sz);
+    assert(cr->val.ptr);
+    cr->val.capacity = sz;
+    return cr->val.ptr;
+}
+
 /* Remove the clause from the endpoint's list of waiting clauses. */
 static void mill_rmclause(struct mill_ep *ep, struct mill_clause *clause) {
     if(clause->prev)
@@ -379,7 +396,10 @@ static void mill_rmclause(struct mill_ep *ep, struct mill_clause *clause) {
 static int mill_enqueue(chan ch, void *val) {
     /* If there's a receiver already waiting, let's resume it. */
     if(ch->receiver.first_clause) {
-        memcpy(ch->receiver.first_clause->val, val, ch->sz);
+        void *dst = ch->receiver.first_clause->val;
+        if(!dst)
+            dst = mill_getvalbuf(ch->receiver.first_clause->cr, ch->sz);
+        memcpy(dst, val, ch->sz);
         ch->receiver.first_clause->cr->chstate.idx =
             ch->receiver.first_clause->idx;
         mill_resume(ch->receiver.first_clause->cr);
@@ -400,7 +420,10 @@ static int mill_enqueue(chan ch, void *val) {
 static int mill_dequeue(chan ch, void *val) {
     /* If there's a sender already waiting, let's resume it. */
     if(ch->sender.first_clause) {
-        memcpy(val, ch->sender.first_clause->val, ch->sz);
+        void *dst = val;
+        if(!dst)
+            dst = mill_getvalbuf(ch->receiver.first_clause->cr, ch->sz);
+        memcpy(dst, ch->sender.first_clause->val, ch->sz);
         ch->sender.first_clause->cr->chstate.idx =
             ch->sender.first_clause->idx;
         mill_resume(ch->sender.first_clause->cr);
@@ -411,7 +434,10 @@ static int mill_dequeue(chan ch, void *val) {
     if(!ch->items)
         return 0;
     /* Get the value from the buffer. */
-    memcpy(val, ((char*)(ch + 1)) + (ch->first * ch->sz), ch->sz);
+    void *dst = val;
+    if(!dst)
+        dst = mill_getvalbuf(ch->receiver.first_clause->cr, ch->sz);
+    memcpy(dst, ((char*)(ch + 1)) + (ch->first * ch->sz), ch->sz);
     ch->first = (ch->first + 1) % ch->bufsz;
     --ch->items;
     return 1;
@@ -497,16 +523,6 @@ void chclose(chan ch) {
     }
 }
 
-static void *mill_getvalbuf(size_t sz) {
-    if((first_cr->val.capacity ? first_cr->val.capacity :
-          MILL_MAXINLINECHVALSIZE) >= sz)
-        return first_cr->val.ptr ? first_cr->val.ptr : first_cr->val.buf;
-    first_cr->val.ptr = realloc(first_cr->val.ptr, sz);
-    assert(first_cr->val.ptr);
-    first_cr->val.capacity = sz;
-    return first_cr->val.ptr;
-}
-
 void mill_choose_in(struct mill_clause *clause,
       chan ch, size_t sz, int idx) {
     /* Soft type checking. */
@@ -525,7 +541,7 @@ void mill_choose_in(struct mill_clause *clause,
     /* Fill in the clause entry. */
     clause->cr = first_cr;
     clause->ep = &ch->receiver;
-    clause->val = mill_getvalbuf(sz);
+    clause->val = NULL;
     clause->idx = idx;
     clause->available = available;
     clause->next_clause = first_cr->chstate.clauses;
@@ -584,7 +600,7 @@ int mill_choose_wait(void) {
                 if(!chosen) {
                     int ok = it->ep->type == MILL_SENDER ?
                         mill_enqueue(mill_getchan(it->ep), it->val) :
-                        mill_dequeue(mill_getchan(it->ep), it->val);
+                        mill_dequeue(mill_getchan(it->ep), NULL);
                     assert(ok);
                     res = it->idx;
                     break;
