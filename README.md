@@ -50,6 +50,13 @@ and Linux. OSX requires a true gcc (for example, from MacPorts or Homebrew)
 and not clang. I have no idea about different environments. Also, the project
 is in very early stage of development and not suitable for actual usage.
 
+Documentation
+-------------
+
+For the documentation (under construction) check this page:
+
+http://millc.org/documentation.html
+
 Mailing List
 ------------
 
