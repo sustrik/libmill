@@ -69,8 +69,9 @@ static uint64_t mill_now() {
 /* Size of stack for new coroutines. In bytes. */
 #define MILL_STACK_SIZE 16384
 
-/* Maximum size of an item in a channel. In bytes. */
-#define MILL_MAXCHVALSIZE 256
+/* Maximum size of an item in a channel that we can handle without
+   extra memory allocation. */
+#define MILL_MAXINLINECHVALSIZE 128
 
 /* This structure keeps the state of a 'choose' operation. */
 struct mill_chstate {
@@ -88,9 +89,6 @@ struct mill_chstate {
        resumption of execution to this field, so that 'choose' statement
        can find out what exactly have happened. */
     int idx;
-
-    /* Place to store the value received value when doing choose. */
-    char val[MILL_MAXCHVALSIZE];
 };
 
 static void mill_chstate_init(struct mill_chstate *chstate) {
@@ -111,6 +109,13 @@ struct mill_cr {
 
     /* Ongoing choose operation. */
     struct mill_chstate chstate;
+
+    /* Place to store the value received value when doing choose. */
+    struct {
+        void *ptr;
+        size_t capacity;
+        char buf[MILL_MAXINLINECHVALSIZE];
+    } val;
 
     /* When coroutine is sleeping, the time when it should resume execution. */
     uint64_t expiry;
@@ -219,6 +224,8 @@ void *mill_go_prologue() {
         (struct mill_cr*)(ptr + MILL_STACK_SIZE - sizeof(struct mill_cr));
     cr->next = first_cr;
     mill_chstate_init(&cr->chstate);
+    cr->val.ptr = NULL;
+    cr->val.capacity = MILL_MAXINLINECHVALSIZE;
     cr->expiry = 0;
     first_cr = cr;
     return (void*)cr;
@@ -227,6 +234,8 @@ void *mill_go_prologue() {
 /* The final part of go(). Cleans up when the coroutine is finished. */
 void mill_go_epilogue(void) {
     struct mill_cr *cr = mill_suspend();
+    if(cr->val.ptr)
+        free(cr->val.ptr);
     char *ptr = ((char*)(cr + 1)) - MILL_STACK_SIZE;
     free(ptr);
     mill_ctxswitch();
@@ -409,8 +418,6 @@ static int mill_dequeue(chan ch, void *val) {
 }
 
 chan mill_chmake(size_t sz, size_t bufsz) {
-    mill_assert(sz <= MILL_MAXCHVALSIZE,
-        "Type too large to be stored in a channel.");
     struct chan *ch = (struct chan*)malloc(sizeof(struct chan) + (sz * bufsz));
     assert(ch);
     ch->sz = sz;
@@ -490,6 +497,16 @@ void chclose(chan ch) {
     }
 }
 
+static void *mill_getvalbuf(size_t sz) {
+    if((first_cr->val.capacity ? first_cr->val.capacity :
+          MILL_MAXINLINECHVALSIZE) >= sz)
+        return first_cr->val.ptr ? first_cr->val.ptr : first_cr->val.buf;
+    first_cr->val.ptr = realloc(first_cr->val.ptr, sz);
+    assert(first_cr->val.ptr);
+    first_cr->val.capacity = sz;
+    return first_cr->val.ptr;
+}
+
 void mill_choose_in(struct mill_clause *clause,
       chan ch, size_t sz, int idx) {
     /* Soft type checking. */
@@ -508,7 +525,7 @@ void mill_choose_in(struct mill_clause *clause,
     /* Fill in the clause entry. */
     clause->cr = first_cr;
     clause->ep = &ch->receiver;
-    clause->val = &first_cr->chstate.val;
+    clause->val = mill_getvalbuf(sz);
     clause->idx = idx;
     clause->available = available;
     clause->next_clause = first_cr->chstate.clauses;
@@ -605,7 +622,7 @@ int mill_choose_wait(void) {
 }
 
 void *mill_choose_val(void) {
-    return &first_cr->chstate.val;
+    return first_cr->val.ptr ? first_cr->val.ptr : first_cr->val.buf;
 }
 
 /******************************************************************************/

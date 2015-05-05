@@ -75,6 +75,10 @@ void feeder2(chan ch, int first, int second) {
     }
 }
 
+struct large {
+    char buf[1024];
+};
+
 /* Test whether choose with no clauses whatsoever compiles. */
 void unused(void) {
     choose {
@@ -262,6 +266,16 @@ int main() {
     }
     assert(first > 1 && second > 1);
     chclose(ch14);
+
+    /* Test transferring a large object. */
+    chan ch15 = chmake(struct large, 1);
+    struct large large = {0};
+    chs(ch15, struct large, large);
+    choose {
+    in(ch15, struct large, v):
+    end
+    }
+    chclose(ch15);
 
     return 0;
 }
