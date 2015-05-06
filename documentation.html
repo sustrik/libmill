@@ -21,14 +21,29 @@
 
 <h2>Documentation</h2>
 
-<h3>Build</h3>
+<ul id="toc">
+  <li><a href="#build">Build</a></li>
+  <li><a href="#coroutines">Coroutines</a></li>
+  <li><a href="#channels">Channels</a></li>
+  <li><a href="#choose">Choose statement</a></li>
+  <li><a href="#library">Library</a></li>
 
-<p>To use Mill, add mill.c to your project. Whichever files need
-Mill's functionality should then include mill.h header file. </p>
+</ul>
 
-<h3>Coroutines</h3>
+<h3 id="build">Build</h3>
 
-<p>Any function can be executed as a coroutine using 'go' keyword:</p>
+<p>To use Mill add <tt>mill.c</tt> to your project. Whichever files need
+Mill's functionality should then include <tt>mill.h</tt> header file. </p>
+
+<p>Mill works with x86-64, gcc and Linux. OSX requires a true gcc (for example,
+from MacPorts or Homebrew) and not clang.</p>
+
+<p>Whether it works in different environments is not known. Please, do report
+any successes as well as failures on the mailing list.</p>
+
+<h3 id="coroutines">Coroutines</h3>
+
+<p>Any function can be executed as a coroutine using <tt>go</tt> keyword:</p>
 
 <pre>
 void foo(int i, int j) {
@@ -48,51 +63,56 @@ go(printf("%d + %d = %d\n", 2, 2, 4));
 </pre>
 
 <p>However, keep in mind that coroutines are executed asynchronously and thus,
-even if the function returns value, there is now way to retrieve it.</p>
+even if the function returns a value, there is now way to retrieve it.</p>
 
 <p>Also keep in mind that coroutines are scheduled in a cooperative fashion.
-If one coroutine block, for example by calling sleep(), it blocks the whole
-process. Therefore, coroutine-friendly versions of blocking functions (such
-as mconnect() or msend()) should be used.</p>
+If one coroutine block, for example by calling <tt>sleep()</tt>, it blocks
+the whole process. Therefore, coroutine-friendly versions of blocking functions
+(such as <tt>mconnect()</tt> or <tt>msend()</tt>, see below) should be used.</p>
 
-<p>Additionally, you can yield CPU to other coroutines explicitly:</p>
+<p>In addition, you can yield CPU to other coroutines explicitly:</p>
 
 <pre>
 yield();
 </pre>
 
-<h3>Channels</h3>
+<h3 id="channels">Channels</h3>
 
 Channels are typed pipes used for communication between coroutines. To create
-a channel specify what kind of values are meant to be passed through it.
-The second parameter is the
-buffer size:</p>
+a channel you have to specify what kind of values are meant to be passed
+through it. The second parameter is the buffer size. Setting this argument
+to zero yields unbuffered channel:</p>
 
 <pre>
 chan ch = chmake(int, 0);
 </pre>
 
-<p>To send a value to the channel use 'chs' statement:</p>
+<p>To send a value to the channel use <tt>chs</tt> construct. Note that
+this is a statement, not a function returning a value. The type specified
+as the second parameter must match the type of the channel otherwise you'll
+get runtime exception.</p>
 
 <pre>
 chs(ch, int, 42);
 </pre>
 
-<p>To receive a value from the channel use 'chr' expression:</p>
+<p>To receive a value from the channel use <tt>chr</tt> expression. The type
+specified as the second parameter must match the type of the channel otherwise
+you'll get runtime exception.</p>
 
 <pre>
 int i = chr(ch, int);
 </pre>
 
-<p>To deallocate the channel use 'chclose' function:</p>
+<p>To deallocate the channel use <tt>chclose</tt> function:</p>
 
 <pre>
 chclose(ch);
 </pre>
 
-<p>When sharing a channel between two or more coroutines it is good practice
-to duplicate the channel handle. Channel is deallocated only after all its
-handles are closed:</p>
+<p>When sharing a channel between two or more coroutines you can duplicate
+the channel handle. Channel is deallocated only after all its handles
+are closed. For example:</p>
 
 <pre>
 void sender(chan ch) {
@@ -110,10 +130,14 @@ int main() {
 }
 </pre>
 
-<h3>'choose' statement</h3>
+<h3 id="choose">Choose statement</h3>
 
-<p>Choose statement is equivalent to Go's select statement. The name was
-changed to prevent clashes with POSIX function of the same name.</p>
+<p>Choose statement is equivalent to Go's <tt>select</tt> statement.</p>
+
+</p>Command name is different to prevent clashes with POSIX function of
+the same name. For exactly the same reason there are no <tt>case</tt> or
+<tt>default</tt> statements. Use <tt>in</tt>, <tt>out</tt> and
+<tt>otherwise</tt> clauses instead:</p>
 
 <pre>
 choose {
@@ -127,13 +151,33 @@ end
 }
 </pre>
 
-<h3>Library</h3>
+<p>Don't forget to add <tt>end</tt> keyword before the closing parenthesis.
+The need for <tt>end</tt> makes the syntax look ugly. If you can think of
+some clever hack to get rid of it, you'll get a free Mill T-shirt.</p>
 
-<t>Coroutine-friendly versions of system blocking functions:</t>
+<h3 id="library">Library</h3>
+
+<t>The library contains coroutine-friendly versions of system blocking
+functions as well as some convenience stuff.</t>
+
+<p>To sleep without blocking the entire process:</p>
 
 <pre>
 void msleep(unsigned long ms);
+</pre>
 
+<p>This function returns an int-type channel that will become available for
+receiving after specified amount of time. Don't forget to close the channel
+after using it.</p>
+
+<pre>
+chan after(unsigned long ms);
+</pre>
+
+<p>To deal with sockets use the following functions. Except for being
+coroutine-friendly they behave exactly the same as their POSIX counterparts:</p>
+
+<pre>
 int msocket(int family, int type, int protocol);
 int mconnect(int s, const struct sockaddr *addr, socklen_t addrlen);
 int maccept(int s, struct sockaddr *addr, socklen_t *addrlen);
