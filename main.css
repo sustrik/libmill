@@ -41,6 +41,10 @@ p.lang {
     font-style: italic;
 }
 
+tt {
+    font-size: 120%
+}
+
 pre {
     padding: 20px;
     border: 1px dotted;
