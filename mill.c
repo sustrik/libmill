@@ -107,7 +107,7 @@ struct mill_cr {
     /* Stored coroutine context while it is not executing. */
     jmp_buf ctx;
 
-    /* Ongoing choose operation. */
+    /* State for the choose operation that's underway in this coroutine. */
     struct mill_chstate chstate;
 
     /* Place to store the received value when doing choose. 'ptr' doesn't get
@@ -591,7 +591,7 @@ int mill_choose_wait(void) {
     struct mill_clause *it;
     
     /* If there are clauses that are immediately available,
-       choose a random one. */
+       randomly choose one of them. */
     if(chstate->available > 0) {
         int chosen = random() % (chstate->available);
         it = chstate->clauses;
