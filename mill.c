@@ -121,6 +121,9 @@ struct mill_cr {
 
     /* When coroutine is sleeping, the time when it should resume execution. */
     uint64_t expiry;
+
+    /* Coroutine-local storage. */
+    void *cls;
 };
 
 /* Fake coroutine corresponding to the main thread of execution. */
@@ -301,6 +304,14 @@ static void mill_wait(int fd, short events) {
         return;
     mill_suspend();
     mill_ctxswitch();
+}
+
+void *cls(void) {
+    return first_cr->cls;
+}
+
+void setcls(void *val) {
+    first_cr->cls = val;
 }
 
 /******************************************************************************/

@@ -6,7 +6,7 @@ MILLFILES = $(MILLHDRS) $(MILLSRC)
 CCFLAGS = -g -O0
 CC = cc
 
-all: test_example test_go test_chan test_choose test_sleep test_socket
+all: test_example test_go test_cls test_chan test_choose test_sleep test_socket
 
 .PHONY: test_example 
 test_example: example
@@ -19,6 +19,12 @@ test_go: go
 	./go
 go: go.c $(MILLFILES)
 	$(CC) -o go go.c $(MILLSRC) $(CCFLAGS)
+
+.PHONY: test_cls
+test_cls: cls
+	./cls
+cls: cls.c $(MILLFILES)
+	$(CC) -o cls cls.c $(MILLSRC) $(CCFLAGS)
 
 .PHONY: test_chan
 test_chan: chan
@@ -46,4 +52,5 @@ socket: socket.c $(MILLFILES)
 
 .PHONY: clean
 clean:
-	rm -f example go chan choose sleep socket
+	rm -f example go cls chan choose sleep socket
+

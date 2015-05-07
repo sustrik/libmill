@@ -1,6 +1,7 @@
 tests/example
 tests/example.out
 tests/go
+tests/cls
 tests/chan
 tests/choose
 tests/sleep

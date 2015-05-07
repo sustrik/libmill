@@ -59,6 +59,8 @@ void mill_go_epilogue(void);
 
 void yield(void);
 void msleep(unsigned long ms);
+void *cls(void);
+void setcls(void *val);
 
 /******************************************************************************/
 /*  Channels                                                                  */
