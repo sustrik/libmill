@@ -36,7 +36,8 @@
 Mill's functionality should then include <tt>mill.h</tt> header file. </p>
 
 <p>Mill works with x86-64, gcc and Linux. OSX requires a true gcc (for example,
-from MacPorts or Homebrew) and not clang.</p>
+from MacPorts or Homebrew) and not clang. Turn the optimiser off using
+<tt>-O0</tt> option.</p>
 
 <p>Whether it works in different environments is not known. Please, do report
 any successes as well as failures on the mailing list.</p>
@@ -132,12 +133,35 @@ int main() {
 
 <h3 id="choose">Choose statement</h3>
 
-<p>Choose statement is equivalent to Go's <tt>select</tt> statement.</p>
+<p>Choose statement is equivalent to Go's <tt>select</tt> statement. It can be
+used for waiting to send or receive data from multiple channels.</p>
 
-</p>Command name is different to prevent clashes with POSIX function of
-the same name. For exactly the same reason there are no <tt>case</tt> or
-<tt>default</tt> statements. Use <tt>in</tt>, <tt>out</tt> and
-<tt>otherwise</tt> clauses instead:</p>
+<p>Within <tt>choose</tt> there's a list of clauses containing multiple
+<tt>in</tt> and <tt>out</tt> statements and at most one <tt>otherwise</tt>
+statement. Don't forget to add <tt>end</tt> statement before the closing
+parenthesis.</p>
+
+<p>Clause <tt>in</tt> causes <tt>choose</tt> to wait for a message coming
+from channel <tt>ch</tt>. The clause declares variable <tt>var</tt> of type
+<tt>type</tt> and stores the incoming message into it. If <tt>type</tt> doesn't
+match the actual type of the channel you'll get a runtime exception.</p>
+
+<pre>
+in(ch, type, var):
+</pre>
+
+<p>Clause <tt>out</tt> causes <tt>choose</tt> to wait while value <tt>val</tt>
+of type <tt>type</tt> can be sent to channel <tt>ch</tt>. Same way as with
+</tt>in</tt>, if <tt>type</tt> doesn't match the actual type of channel
+<tt>ch</tt> runtime exception is generated.</p>
+
+<pre>
+out(ch, type, val):
+</pre>
+
+<p>Clause <tt>otherwise</tt> is optional. It is executed only if no other
+clauses can be matched immediately. Therefore, <tt>choose</tt> statement
+with <tt>otherwise</tt> clause will never block.</p>
 
 <pre>
 choose {
@@ -151,9 +175,11 @@ end
 }
 </pre>
 
-<p>Don't forget to add <tt>end</tt> keyword before the closing parenthesis.
-The need for <tt>end</tt> makes the syntax look ugly. If you can think of
-some clever hack to get rid of it, you'll get a free Mill T-shirt.</p>
+<p><tt>choose</tt> statement waits for the first available clause and executes
+the code that follows it. If there are multiple clauses available
+one of them is chosen at random.</p>
+
+<p>There's no fall-through among the clauses.</p>
 
 <h3 id="library">Library</h3>
 
