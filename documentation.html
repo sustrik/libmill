@@ -27,7 +27,7 @@
   <li><a href="#channels">Channels</a></li>
   <li><a href="#choose">Choose statement</a></li>
   <li><a href="#library">Library</a></li>
-
+  <li><a href="#cls">Coroutine-local storage</a></li>
 </ul>
 
 <h3 id="build">Build</h3>
@@ -210,6 +210,32 @@ int maccept(int s, struct sockaddr *addr, socklen_t *addrlen);
 ssize_t msend(int s, const void *buf, size_t len, int flags);
 ssize_t mrecv(int s, void *buf, size_t len, int flags);
 </pre>
+
+<h3 id="cls">Coroutine-local storage</h3>
+
+<p>User can allocate coroutine-local data and attach it to the coroutine
+using <tt>setcls</tt> function. For example:</p>
+
+<pre>
+struct mycls {
+    int a;
+    int b;
+};
+
+void *data = malloc(sizeof(struct mycls));
+setcls(data);
+</pre>
+
+<p>Later on the data can be accessed anywhere within the coroutine using
+<tt>cls</tt> function:</p>
+
+<pre>
+struct mycls *data = cls();
+printf("CLS: a=%d b=%d\n", data->a, data->b);
+</pre>
+
+<p>It can be safely assumed that before coroutine-local data are set,
+<tt>cls</tt> function will return <tt>NULL</tt>.</p>
 
 </body>
 </html>
