@@ -347,6 +347,23 @@ static chan mill_getchan(struct mill_ep *ep) {
     }
 }
 
+/* Returns pointer to the coroutinr'd in-buffer. The buffer is reallocated
+   as needed to accommodate 'sz' bytes of content. */
+static void *mill_getvalbuf(struct mill_cr *cr, size_t sz) {
+    size_t capacity = cr->val.capacity ?
+          cr->val.capacity :
+          MILL_MAXINLINECHVALSIZE;
+    /* If there's enough capacity for the type available, return either
+       dynamically allocated buffer, if present, or the static buffer. */
+    if(capacity >= sz)
+        return cr->val.ptr ? cr->val.ptr : cr->val.buf;
+    /* Allocate or grow the dyncamic buffer to accommodate the type. */
+    cr->val.ptr = realloc(cr->val.ptr, sz);
+    assert(cr->val.ptr);
+    cr->val.capacity = sz;
+    return cr->val.ptr;
+}
+
 /* Add the clause to the endpoint's list of waiting clauses. */
 static void mill_addclause(struct mill_ep *ep, struct mill_clause *clause) {
     if(!ep->last_clause) {
@@ -361,21 +378,6 @@ static void mill_addclause(struct mill_ep *ep, struct mill_clause *clause) {
     clause->prev = ep->last_clause;
     clause->next = NULL;
     ep->last_clause = clause;
-}
-
-static void *mill_getvalbuf(struct mill_cr *cr, size_t sz) {
-    size_t capacity = cr->val.capacity ?
-          cr->val.capacity :
-          MILL_MAXINLINECHVALSIZE;
-    /* If there's enough capacity for the type available, return either
-       dynamically allocated buffer, if present, or the static buffer. */
-    if(capacity >= sz)
-        return cr->val.ptr ? cr->val.ptr : cr->val.buf;
-    /* Allocate or grow the dyncamic buffer to accommodate the type. */
-    cr->val.ptr = realloc(cr->val.ptr, sz);
-    assert(cr->val.ptr);
-    cr->val.capacity = sz;
-    return cr->val.ptr;
 }
 
 /* Remove the clause from the endpoint's list of waiting clauses. */
