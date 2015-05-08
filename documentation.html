@@ -83,10 +83,11 @@ yield();
 Channels are typed pipes used for communication between coroutines. To create
 a channel you have to specify what kind of values are meant to be passed
 through it. The second parameter is the buffer size. Setting this argument
-to zero yields unbuffered channel:</p>
+to zero yields unbuffered channel. Third argument is 'zero' value of the same
+type as channel elements. It is not used at the moment.</p>
 
 <pre>
-chan ch = chmake(int, 0);
+chan ch = chmake(int, 0, -1);
 </pre>
 
 <p>To send a value to the channel use <tt>chs</tt> construct. Note that
