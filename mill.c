@@ -124,6 +124,9 @@ struct mill_cr {
 
     /* Coroutine-local storage. */
     void *cls;
+
+    /* This field is used as a short-term storage by chmake macro. */
+    void *tmpptr;
 };
 
 /* Fake coroutine corresponding to the main thread of execution. */
@@ -456,7 +459,11 @@ static int mill_dequeue(chan ch, void *val) {
     return 1;
 }
 
-chan mill_chmake(size_t sz, size_t bufsz) {
+void **mill_tmpptr(void) {
+    return &first_cr->tmpptr;
+}
+
+chan mill_chmake(size_t sz, size_t bufsz, void *zero) {
     struct chan *ch = (struct chan*)malloc(sizeof(struct chan) + (sz * bufsz));
     assert(ch);
     ch->sz = sz;
@@ -665,7 +672,7 @@ static void mill_after(chan ch, unsigned long ms) {
 }
 
 chan after(unsigned long ms) {
-    chan ch = chmake(int, 1);
+    chan ch = chmake(int, 1, 0);
     go(mill_after(chdup(ch), ms));
     return ch;
 }

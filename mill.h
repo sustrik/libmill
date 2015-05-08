@@ -94,7 +94,9 @@ struct mill_clause {
     struct mill_clause *next_clause;
 };
 
-#define chmake(type, bufsz) mill_chmake(sizeof(type), bufsz)
+#define chmake(type, bufsz, zero) mill_chmake(sizeof(type), bufsz,\
+    (*(type*)((*mill_tmpptr()) = alloca(sizeof(type))) = zero,\
+    *mill_tmpptr()))
 
 #define chs(channel, type, value) \
     do {\
@@ -105,7 +107,8 @@ struct mill_clause {
 #define chr(channel, type) \
     (*(type*)mill_chr((channel), alloca(sizeof(type)), sizeof(type)))
 
-chan mill_chmake(size_t sz, size_t bufsz);
+void **mill_tmpptr(void);
+chan mill_chmake(size_t sz, size_t bufsz, void *zero);
 chan chdup(chan ch);
 void mill_chs(chan ch, void *val, size_t sz);
 void *mill_chr(chan ch, void *val, size_t sz);
