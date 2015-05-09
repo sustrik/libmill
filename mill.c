@@ -39,15 +39,11 @@
 /*  Utilities                                                                 */
 /******************************************************************************/
 
-#define mill_assert(x, text) \
-    do {\
-        if (!(x)) {\
-            fprintf(stderr, "%s (%s:%d)\n", text, \
-                __FILE__, __LINE__);\
-            fflush(stderr);\
-            abort();\
-        }\
-    } while (0)
+static void mill_panic(const char *text) {
+    fprintf(stderr, "panic: %s\n", text);
+    fflush(stderr);
+    exit(1);
+}
 
 /*  Takes a pointer to a member variable and computes pointer to the structure
     that contains it. 'type' is type of the structure, not the member. */
@@ -171,8 +167,9 @@ static void mill_ctxswitch(void) {
         longjmp(first_cr->ctx, 1);
 
     /* The execution would block. Let's panic. */
-    mill_assert(sleeping || wait_size, "There are no coroutines eligible for "
-        "resumption. The process would block forever.");
+    if(!sleeping && !wait_size)
+        mill_panic("there are no coroutines eligible for "
+        "resumption - the process would block forever");
 
     while(1) {
         /* Compute the time till next expired sleeping coroutine. */
@@ -490,10 +487,10 @@ chan chdup(chan ch) {
 }
 
 void mill_chs(chan ch, void *val, size_t sz) {
-    mill_assert(!ch->done, "Attempt to send to a done-with channel.");
-    /* Soft type checking. */
-    mill_assert(ch->sz == sz,
-        "Sending a value of incorrect type to a channel.");
+    if(ch->done)
+        mill_panic("send to done-with channel");
+    if(ch->sz != sz)
+        mill_panic("send of a type not matching the channel");
 
     if(mill_enqueue(ch, val))
         return;
@@ -514,9 +511,8 @@ void mill_chs(chan ch, void *val, size_t sz) {
 }
 
 void *mill_chr(chan ch, void *val, size_t sz) {
-    /* Soft type checking. */
-    mill_assert(ch->sz == sz,
-        "Receiving a value of incorrect type from a channel");
+    if(ch->sz != sz)
+        mill_panic("receive of a type not matching the channel");
 
     if(mill_dequeue(ch, val))
         return val;
@@ -539,13 +535,14 @@ void *mill_chr(chan ch, void *val, size_t sz) {
 }
 
 void mill_chdone(chan ch, void *val, size_t sz) {
-    mill_assert(!ch->done , "Attempt to call chdone() on a channel twice.");
+    if(ch->done)
+        mill_panic("chdone on already done-with channel");
+    if(ch->sz != sz)
+        mill_panic("send of a type not matching the channel");
+
     /* Panic if there are other senders on the same channel. */
-    mill_assert(!ch->sender.first_clause,
-        "Attempt to send to a done-with channel.");
-    /* Soft type checking. */
-    mill_assert(ch->sz == sz,
-        "Sendinf a value of incorrect type to a channel");
+    if(ch->sender.first_clause)
+        mill_panic("send to done-with channel");
 
     /* Put the channel into done-with mode. */
     ch->done = 1;
@@ -576,9 +573,8 @@ void chclose(chan ch) {
 
 void mill_choose_in(struct mill_clause *clause,
       chan ch, size_t sz, int idx) {
-    /* Soft type checking. */
-    mill_assert(ch->sz == sz,
-        "Receiving a value of incorrect type from a channel.");
+    if(ch->sz != sz)
+        mill_panic("receive of a type not matching the channel");
 
     /* Find out whether the clause is immediately available. */
     int available = ch->done || ch->sender.first_clause || ch->items ? 1 : 0;
@@ -604,10 +600,10 @@ void mill_choose_in(struct mill_clause *clause,
 
 void mill_choose_out(struct mill_clause *clause,
       chan ch, void *val, size_t sz, int idx) {
-    mill_assert(!ch->done, "Attempt to send to a done-with channel.");
-    /* Soft type checking. */
-    mill_assert(ch->sz == sz,
-        "Sending a value of incorrect type to a channel.");
+    if(ch->done)
+        mill_panic("send to done-with channel");
+    if(ch->sz != sz)
+        mill_panic("send of a type not matching the channel");
 
     /* Find out whether the clause is immediately available. */
     int available = ch->receiver.first_clause || ch->items < ch->bufsz ? 1 : 0;
@@ -632,8 +628,8 @@ void mill_choose_out(struct mill_clause *clause,
 }
 
 void mill_choose_otherwise(void) {
-    mill_assert(first_cr->chstate.othws == 0,
-        "Multiple 'otherwise' clauses in a choose statement.");
+    if(first_cr->chstate.othws != 0)
+        mill_panic("multiple 'otherwise' clauses in a choose statement");
     first_cr->chstate.othws = 1;
 }
 
