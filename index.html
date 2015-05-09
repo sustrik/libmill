@@ -21,57 +21,50 @@
 
 <p>This project is trying to introduce Go-style concurrency to C.</p>
 
-<h2>Example</h2>
-
-<p class="lang">test.c:</p>
 <pre>
-#include &lt;stdio.h&gt;
-#include &lt;mill.h&gt;
-
-void worker(int count, const char *text, chan ch) {
-    int i;
-    for(i = 0; i != count; ++i) {
-        printf("%s\n", text);
-        msleep(10);
-    }
-    chs(ch, int, 0);
-    chclose(ch);
-}
-
-int main() {
-
-    chan ch1 = chmake(int, 0);
-    go(worker(4, "a", chdup(ch1)));
-    chan ch2 = chmake(int, 0);
-    go(worker(2, "b", chdup(ch2)));
-
-    choose {
-    in(ch1, int, val):
-        printf("coroutine 'a' have finished first!\n");
-    in(ch2, int, val):
-        printf("coroutine 'b' have finished first!\n");
-    end
-    }
-
-    chclose(ch2);
-    chclose(ch1);
-
-    return 0;
-}
+<table width="100%" cellspacing="20px">
+  <col width="50%">
+  <col width="50%">
+  <tr>
+    <td><b>Go</b></td>
+    <td><b>C</b></td>
+  </tr>
+  <tr>
+    <td>go foo(arg1, arg2, arg3)</td>
+    <td>go(foo(arg1, arg2, arg3));</td> 
+  </tr>
+  <tr>
+    <td>ch := make(chan int)</td>
+    <td>chan ch = chmake(int, 0);</td> 
+  </tr>
+  <tr>
+    <td>ch := make(chan int, 1000)</td>
+    <td>chan ch = chmake(int, 1000);</td> 
+  </tr>
+  <tr>
+    <td>ch <- 42</td>
+    <td>chs(ch, int, 42);</td> 
+  </tr>
+  <tr>
+    <td>i := <- ch</td>
+    <td>int i = chr(ch, int);</td> 
+  </tr>
+  <tr>
+    <td>close(ch)</td>
+    <td>chdone(ch);</td> 
+  </tr>
+  <tr>
+    <td><i>&lt;garbage collector&gt;</i></td>
+    <td>chclose(ch);</td> 
+  </tr>
+  <tr>
+    <td>select {<br>case ch <- 42:<br>    foo()<br>case i := <- ch:<br>    bar(i)<br>default:<br>    baz()<br>}</td>
+    <td>choose {<br>out(ch, int, 42):<br>    foo();<br>in(ch, int, i):<br>    bar(i);<br>otherwise:<br>    baz();</br>end<br>}</td> 
+  </tr>
+</table>
 </pre>
 
-<p>To build the example above:</p>
-
-<pre>
-$ gcc -o test test.c mill.c -O0
-</pre>
-
-<p>Mill works with x86-64, gcc and Linux or OSX.</p>
-
-<p>The project is in very early stage of development and not suitable for
-actual usage.</p>
-
-<h2>License</h2>
+<p>Mill is one C source file and one C header file to be added to your project.</p>
 
 <p>Mill is licensed under MIT/X11 license.</p>
 

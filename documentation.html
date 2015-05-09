@@ -33,12 +33,16 @@
 
 <h3 id="build">Build</h3>
 
-<p>To use Mill add <tt>mill.c</tt> to your project. Whichever files need
-Mill's functionality should then include <tt>mill.h</tt> header file. </p>
+<p>Add <tt>mill.h</tt> and <tt>mill.c</tt> to your project. Whichever files need
+the functionality should include <tt>mill.h</tt>.</p>
 
 <p>Mill works with x86-64, gcc and Linux. OSX requires a true gcc (for example,
 from MacPorts or Homebrew) and not clang. Turn the optimiser off using
 <tt>-O0</tt> option.</p>
+
+<pre>
+$ gcc -o test test.c mill.c -O0
+</pre>
 
 <p>Whether it works in different environments is not known. Please, do report
 any successes as well as failures on the mailing list.</p>
