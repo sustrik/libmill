@@ -539,7 +539,10 @@ void *mill_chr(chan ch, void *val, size_t sz) {
 }
 
 void mill_chdone(chan ch, void *val, size_t sz) {
-    mill_assert(!ch->done, "Attempt to call chdone() on a channel twice.");
+    mill_assert(!ch->done , "Attempt to call chdone() on a channel twice.");
+    /* Panic if there are other senders on the same channel. */
+    mill_assert(!ch->sender.first_clause,
+        "Attempt to send to a done-with channel.");
     /* Soft type checking. */
     mill_assert(ch->sz == sz,
         "Sendinf a value of incorrect type to a channel");
