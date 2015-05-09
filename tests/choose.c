@@ -301,17 +301,6 @@ int main() {
     }
     chclose(ch18);
 
-    /* Test that 'out' on done-with channel doesn't fire. */
-    chan ch19 = chmake(int, 0);
-    chdone(ch19, int, 2222);
-    choose {
-    out(ch19, int, 0):
-        assert(0);
-    otherwise:
-    end
-    }
-    chclose(ch19);
-
     return 0;
 }
 

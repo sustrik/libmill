@@ -601,13 +601,13 @@ void mill_choose_in(struct mill_clause *clause,
 
 void mill_choose_out(struct mill_clause *clause,
       chan ch, void *val, size_t sz, int idx) {
+    mill_assert(!ch->done, "Attempt to send to a done-with channel.");
     /* Soft type checking. */
     mill_assert(ch->sz == sz,
         "Sending a value of incorrect type to a channel.");
 
     /* Find out whether the clause is immediately available. */
-    int available = !ch->done &&
-        (ch->receiver.first_clause || ch->items < ch->bufsz) ? 1 : 0;
+    int available = ch->receiver.first_clause || ch->items < ch->bufsz ? 1 : 0;
     if(available)
         ++first_cr->chstate.available;
 
