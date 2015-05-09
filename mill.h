@@ -105,10 +105,17 @@ struct mill_clause {
 #define chr(channel, type) \
     (*(type*)mill_chr((channel), alloca(sizeof(type)), sizeof(type)))
 
+#define chdone(channel, type, value) \
+    do {\
+        type mill_val = (value);\
+        mill_chdone((channel), &mill_val, sizeof(type));\
+    } while(0)
+
 chan mill_chmake(size_t sz, size_t bufsz);
 chan chdup(chan ch);
 void mill_chs(chan ch, void *val, size_t sz);
 void *mill_chr(chan ch, void *val, size_t sz);
+void mill_chdone(chan ch, void *val, size_t sz);
 void chclose(chan ch);
 
 #define mill_concat(x,y) x##y

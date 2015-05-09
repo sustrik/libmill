@@ -291,6 +291,27 @@ int main() {
     }
     chclose(ch17);
 
+    /* Test that 'in' on done-with channel fires. */
+    chan ch18 = chmake(int, 0);
+    chdone(ch18, int, 2222);
+    choose {
+    in(ch18, int, val):
+        assert(val == 2222);
+    end
+    }
+    chclose(ch18);
+
+    /* Test that 'out' on done-with channel doesn't fire. */
+    chan ch19 = chmake(int, 0);
+    chdone(ch19, int, 2222);
+    choose {
+    out(ch19, int, 0):
+        assert(0);
+    otherwise:
+    end
+    }
+    chclose(ch19);
+
     return 0;
 }
 

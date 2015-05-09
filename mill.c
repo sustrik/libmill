@@ -337,6 +337,8 @@ struct chan {
     struct mill_ep receiver;
     /* Number of open handles to this channel. */
     int refcount;
+    /* 1 is chdone() was already called. 0 otherwise. */
+    int done;
 
     /* The message buffer directly follows the chan structure. 'bufsz' specifies
        the maximum capacity of the buffer. 'items' is the number of messages
@@ -431,11 +433,12 @@ static int mill_enqueue(chan ch, void *val) {
 
 /* Pop one value from the channel buffer. */
 static int mill_dequeue(chan ch, void *val) {
+    void *dst = val;
+    if(!dst)
+        dst = mill_getvalbuf(ch->receiver.first_clause->cr, ch->sz);
+
     /* If there's a sender already waiting, let's resume it. */
     if(ch->sender.first_clause) {
-        void *dst = val;
-        if(!dst)
-            dst = mill_getvalbuf(ch->receiver.first_clause->cr, ch->sz);
         memcpy(dst, ch->sender.first_clause->val, ch->sz);
         ch->sender.first_clause->cr->chstate.idx =
             ch->sender.first_clause->idx;
@@ -443,13 +446,16 @@ static int mill_dequeue(chan ch, void *val) {
         mill_rmclause(&ch->sender, ch->sender.first_clause);
         return 1;
     }
+
     /* The buffer is empty. */
-    if(!ch->items)
-        return 0;
+    if(!ch->items) {
+        if(!ch->done)
+            return 0;
+        /* Receiving from a closed channel yields done-with value. */
+        memcpy(dst, ((char*)(ch + 1)) + (ch->bufsz * ch->sz), ch->sz);
+        return 1;
+    }
     /* Get the value from the buffer. */
-    void *dst = val;
-    if(!dst)
-        dst = mill_getvalbuf(ch->receiver.first_clause->cr, ch->sz);
     memcpy(dst, ((char*)(ch + 1)) + (ch->first * ch->sz), ch->sz);
     ch->first = (ch->first + 1) % ch->bufsz;
     --ch->items;
@@ -457,7 +463,11 @@ static int mill_dequeue(chan ch, void *val) {
 }
 
 chan mill_chmake(size_t sz, size_t bufsz) {
-    struct chan *ch = (struct chan*)malloc(sizeof(struct chan) + (sz * bufsz));
+    /* We are allocating 1 additional element after the channel buffer to
+       store the done-with value. It can't be stored in the regular buffer
+       because that would mean chdone() would block when buffer is full. */
+    struct chan *ch = (struct chan*)malloc(sizeof(struct chan) +
+        (sz * (bufsz + 1)));
     assert(ch);
     ch->sz = sz;
     ch->sender.type = MILL_SENDER;
@@ -467,6 +477,7 @@ chan mill_chmake(size_t sz, size_t bufsz) {
     ch->receiver.first_clause = NULL;
     ch->receiver.last_clause = NULL;
     ch->refcount = 1;
+    ch->done = 0;
     ch->bufsz = bufsz;
     ch->items = 0;
     ch->first = 0;
@@ -479,6 +490,7 @@ chan chdup(chan ch) {
 }
 
 void mill_chs(chan ch, void *val, size_t sz) {
+    mill_assert(!ch->done, "Attempt to send to a done-with channel.");
     /* Soft type checking. */
     mill_assert(ch->sz == sz,
         "Sending a value of incorrect type to a channel.");
@@ -526,6 +538,29 @@ void *mill_chr(chan ch, void *val, size_t sz) {
     return NULL;
 }
 
+void mill_chdone(chan ch, void *val, size_t sz) {
+    mill_assert(!ch->done, "Attempt to call chdone() on a channel twice.");
+    /* Soft type checking. */
+    mill_assert(ch->sz == sz,
+        "Sendinf a value of incorrect type to a channel");
+
+    /* Put the channel into done-with mode. */
+    ch->done = 1;
+    memcpy(((char*)(ch + 1)) + (ch->bufsz * ch->sz) , val, ch->sz);
+
+    /* Resume all the receivers currently waiting on the channel. */
+    while(ch->receiver.first_clause) {
+        void *dst = ch->receiver.first_clause->val;
+        if(!dst)
+            dst = mill_getvalbuf(ch->receiver.first_clause->cr, ch->sz);
+        memcpy(dst, val, ch->sz);
+        ch->receiver.first_clause->cr->chstate.idx =
+            ch->receiver.first_clause->idx;
+        mill_resume(ch->receiver.first_clause->cr);
+        mill_rmclause(&ch->receiver, ch->receiver.first_clause);
+    }
+}
+
 void chclose(chan ch) {
     assert(ch->refcount >= 1);
     --ch->refcount;
@@ -543,7 +578,7 @@ void mill_choose_in(struct mill_clause *clause,
         "Receiving a value of incorrect type from a channel.");
 
     /* Find out whether the clause is immediately available. */
-    int available = ch->sender.first_clause || ch->items ? 1 : 0;
+    int available = ch->done || ch->sender.first_clause || ch->items ? 1 : 0;
     if(available)
         ++first_cr->chstate.available;
 
@@ -571,7 +606,8 @@ void mill_choose_out(struct mill_clause *clause,
         "Sending a value of incorrect type to a channel.");
 
     /* Find out whether the clause is immediately available. */
-    int available = ch->receiver.first_clause || ch->items < ch->bufsz ? 1 : 0;
+    int available = !ch->done &&
+        (ch->receiver.first_clause || ch->items < ch->bufsz) ? 1 : 0;
     if(available)
         ++first_cr->chstate.available;
 

@@ -44,6 +44,14 @@ void receiver(chan ch, int expected) {
     chclose(ch);
 }
 
+void receiver2(chan ch, int expected, chan back) {
+    int val = chr(ch, int);
+    assert(val == expected);
+    chclose(ch);
+    chs(back, int, 0);
+    chclose(back);
+}
+
 void charsender(chan ch, char val) {
     chs(ch, char, val);
     chclose(ch);
@@ -120,6 +128,55 @@ int main() {
     val = chr(ch7, int);
     assert(val == 666);
     chclose(ch7);
+
+    /* Test simple chdone() scenarios. */
+    chan ch8 = chmake(int, 0);
+    chdone(ch8, int, 777);
+    val = chr(ch8, int);
+    assert(val == 777);
+    val = chr(ch8, int);
+    assert(val == 777);
+    val = chr(ch8, int);
+    assert(val == 777);
+    chclose(ch8);
+    chan ch9 = chmake(int, 10);
+    chdone(ch9, int, 888);
+    val = chr(ch9, int);
+    assert(val == 888);
+    val = chr(ch9, int);
+    assert(val == 888);
+    chclose(ch9);
+    chan ch10 = chmake(int, 10);
+    chs(ch10, int, 999);
+    chdone(ch10, int, 111);
+    val = chr(ch10, int);
+    assert(val == 999);
+    val = chr(ch10, int);
+    assert(val == 111);
+    val = chr(ch10, int);
+    assert(val == 111);
+    chclose(ch10);
+    chan ch11 = chmake(int, 1);
+    chs(ch11, int, 222);
+    chdone(ch11, int, 333);
+    val = chr(ch11, int);
+    assert(val == 222);
+    val = chr(ch11, int);
+    assert(val == 333);
+    chclose(ch11);
+
+    /* Test whether chdone() unblocks all receivers. */
+    chan ch12 = chmake(int, 0);
+    chan ch13 = chmake(int, 0);
+    go(receiver2(chdup(ch12), 444, chdup(ch13)));
+    go(receiver2(chdup(ch12), 444, chdup(ch13)));
+    chdone(ch12, int, 444);
+    val = chr(ch13, int);
+    assert(val == 0);
+    val = chr(ch13, int);
+    assert(val == 0);    
+    chclose(ch13);
+    chclose(ch12);
 
     return 0;
 }
