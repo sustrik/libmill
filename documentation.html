@@ -106,6 +106,14 @@ you'll get runtime exception.</p>
 int i = chr(ch, int);
 </pre>
 
+<p>When you are done with sending you can announce it using <tt>chdone</tt>
+function. It will cause all the receivers on the channel to receive the
+specified value indefinitely.</p>
+
+<pre>
+chdone(ch, int, -1);
+</pre>
+
 <p>To deallocate the channel use <tt>chclose</tt> function:</p>
 
 <pre>
