@@ -25,22 +25,19 @@
 #include <stdio.h>
 #include "../mill.h"
 
-void worker(int count, const char *text, chan ch) {
+void worker(int count, const char *text) {
     int i;
     for(i = 0; i != count; ++i) {
         printf("%s\n", text);
         msleep(10);
     }
-    chclose(ch);
 }
 
 int main() {
-    chan ch = chmake(int, 0);
-    go(worker(4, "a", chdup(ch)));
-    go(worker(2, "b", chdup(ch)));
-    go(worker(3, "c", chdup(ch)));
+    go(worker(4, "a"));
+    go(worker(2, "b"));
+    go(worker(3, "c"));
     msleep(100);
-    chclose(ch);
     return 0;
 }
 
