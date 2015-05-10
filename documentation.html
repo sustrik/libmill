@@ -34,11 +34,35 @@
 <h3 id="build">Build</h3>
 
 <p>Add <tt>mill.h</tt> and <tt>mill.c</tt> to your project. Whichever files need
-the functionality should include <tt>mill.h</tt>.</p>
+the functionality should include <tt>mill.h</tt>. For example:</p>
+
+<pre>
+#include &lt;stdio.h&gt;
+#include "mill.h"
+
+void worker(int count, const char *text, chan ch) {
+    int i;
+    for(i = 0; i != count; ++i) {
+        printf("%s\n", text);
+        msleep(10);
+    }
+    chclose(ch);
+}
+
+int main() {
+    chan ch = chmake(int, 0);
+    go(worker(4, "a", chdup(ch)));
+    go(worker(2, "b", chdup(ch)));
+    go(worker(3, "c", chdup(ch)));
+    msleep(100);
+    chclose(ch);
+    return 0;
+}
+</pre>
 
 <p>Mill works with x86-64, gcc and Linux. OSX requires a true gcc (for example,
 from MacPorts or Homebrew) and not clang. Turn the optimiser off using
-<tt>-O0</tt> option.</p>
+<tt>-O0</tt> option:</p>
 
 <pre>
 $ gcc -o test test.c mill.c -O0
