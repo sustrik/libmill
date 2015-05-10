@@ -166,10 +166,9 @@ static void mill_ctxswitch(void) {
     if(first_cr)
         longjmp(first_cr->ctx, 1);
 
-    /* The execution would block. Let's panic. */
+    /* The execution of the entore process would block. Let's panic. */
     if(!sleeping && !wait_size)
-        mill_panic("there are no coroutines eligible for "
-        "resumption - the process would block forever");
+        mill_panic("global hang-up");
 
     while(1) {
         /* Compute the time till next expired sleeping coroutine. */
