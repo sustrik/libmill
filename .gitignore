@@ -5,4 +5,4 @@ tests/cls
 tests/chan
 tests/choose
 tests/sleep
-tests/socket
+tests/fdwait

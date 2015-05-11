@@ -6,7 +6,7 @@ MILLFILES = $(MILLHDRS) $(MILLSRC)
 CCFLAGS = -g -O0
 CC = cc
 
-all: test_example test_go test_cls test_chan test_choose test_sleep test_socket
+all: test_example test_go test_cls test_chan test_choose test_sleep test_fdwait
 
 .PHONY: test_example 
 test_example: example
@@ -44,13 +44,13 @@ test_sleep: sleep
 sleep: sleep.c $(MILLFILES)
 	$(CC) -o sleep sleep.c $(MILLSRC) $(CCFLAGS)
 
-.PHONY: test_socket
-test_socket: socket
-	./socket
-socket: socket.c $(MILLFILES)
-	$(CC) -o socket socket.c $(MILLSRC) $(CCFLAGS)
+.PHONY: test_fdwait
+test_fdwait: fdwait
+	./fdwait
+fdwait: fdwait.c $(MILLFILES)
+	$(CC) -o fdwait fdwait.c $(MILLSRC) $(CCFLAGS)
 
 .PHONY: clean
 clean:
-	rm -f example go cls chan choose sleep socket
+	rm -f example go cls chan choose sleep fdwait
 

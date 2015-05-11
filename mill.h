@@ -58,7 +58,14 @@ void mill_go_epilogue(void);
     } while(0)
 
 void yield(void);
+
 void msleep(unsigned long ms);
+
+#define FDW_IN 1
+#define FDW_OUT 2
+#define FDW_ERR 4
+int fdwait(int fd, int events);
+
 void *cls(void);
 void setcls(void *val);
 
@@ -194,18 +201,6 @@ void mill_choose_out(struct mill_clause *clause,
 void mill_choose_otherwise(void);
 int mill_choose_wait(void);
 void *mill_choose_val(void);
-
-/******************************************************************************/
-/*  Library                                                                   */
-/******************************************************************************/
-
-chan after(unsigned long ms);
-
-int msocket(int family, int type, int protocol);
-int mconnect(int s, const struct sockaddr *addr, socklen_t addrlen);
-int maccept(int s, struct sockaddr *addr, socklen_t *addrlen);
-ssize_t msend(int s, const void *buf, size_t len, int flags);
-ssize_t mrecv(int s, void *buf, size_t len, int flags);
 
 #endif
 

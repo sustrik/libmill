@@ -279,8 +279,8 @@ void msleep(unsigned long ms) {
     mill_ctxswitch();
 }
 
-/* Start waiting for the events from a file descriptor. */
-static void mill_wait(int fd, short events) {
+/* Waiting for events from a file descriptor. */
+int fdwait(int fd, int events) {
     /* Grow the pollset as needed. */
     if(wait_size == wait_capacity) {
         wait_capacity = wait_capacity ? wait_capacity * 2 : 64;
@@ -290,14 +290,18 @@ static void mill_wait(int fd, short events) {
 
     /* Add the new file descriptor to the pollset. */
     wait_fds[wait_size].fd = fd;
-    wait_fds[wait_size].events = events;
+    wait_fds[wait_size].events = 0;
+    if(events & FDW_IN)
+        wait_fds[wait_size].events |= POLLIN;
+    if(events & FDW_OUT)
+        wait_fds[wait_size].events |= POLLOUT;
     wait_fds[wait_size].revents = 0;
     wait_crs[wait_size] = first_cr;
     ++wait_size;
 
     /* Save the current state and pass control to a different coroutine. */
     if(setjmp(first_cr->ctx))
-        return;
+        return -1;
     mill_suspend();
     mill_ctxswitch();
 }
@@ -686,99 +690,5 @@ int mill_choose_wait(void) {
 
 void *mill_choose_val(void) {
     return first_cr->val.ptr ? first_cr->val.ptr : first_cr->val.buf;
-}
-
-/******************************************************************************/
-/*  Library                                                                   */
-/******************************************************************************/
-
-static void mill_after(chan ch, unsigned long ms) {
-    msleep(ms);
-    chs(ch, int, 0);
-    chclose(ch);
-}
-
-chan after(unsigned long ms) {
-    chan ch = chmake(int, 1);
-    go(mill_after(chdup(ch), ms));
-    return ch;
-}
-
-int msocket(int family, int type, int protocol) {
-    int s = socket(family, type, protocol);
-    if(s == -1)
-        return -1;
-    int opt = fcntl(s, F_GETFL, 0);
-    if (opt == -1)
-        opt = 0;
-    int rc = fcntl(s, F_SETFL, opt | O_NONBLOCK);
-    assert(rc != -1);
-    return s;
-}
-
-int mconnect(int s, const struct sockaddr *addr, socklen_t addrlen) {
-    int rc = connect(s, addr, addrlen);
-    if(rc == 0)
-        return 0;
-    assert(rc == -1);
-    if(errno != EINPROGRESS)
-        return -1;
-    mill_wait(s, POLLOUT);
-    /* TODO: Handle errors. */
-    return 0;
-}
-
-int maccept(int s, struct sockaddr *addr, socklen_t *addrlen) {
-    while(1) {
-        int newsock = accept(s, addr, addrlen);
-        if (newsock >= 0) {
-            int opt = fcntl(newsock, F_GETFL, 0);
-            if (opt == -1)
-                opt = 0;
-            int rc = fcntl(newsock, F_SETFL, opt | O_NONBLOCK);
-            assert(rc != -1);
-            return newsock;
-        }
-        assert(newsock == -1);
-        if(errno != EAGAIN && errno != EWOULDBLOCK)
-            return -1;
-        mill_wait(s, POLLIN);
-    }
-}
-
-ssize_t msend(int s, const void *buf, size_t len, int flags) {
-    char *pos = (char*)buf;
-    size_t remaining = len;
-    while(remaining) {
-        ssize_t sz = send(s, pos, remaining, flags);
-        if(sz == -1) {
-            if(errno != EAGAIN && errno != EWOULDBLOCK)
-                return -1;
-            mill_wait(s, POLLOUT);
-            continue;
-        }
-        pos += sz;
-        remaining -= sz;
-    }
-    return len;
-}
-
-ssize_t mrecv(int s, void *buf, size_t len, int flags) {
-    char *pos = (char*)buf;
-    size_t remaining = len;
-    while(remaining) {
-        ssize_t sz = recv(s, pos, remaining, flags);
-        if(sz == 0)
-            return len - remaining;
-        if(sz == -1) {
-            if(errno != EAGAIN && errno != EWOULDBLOCK)
-                return -1;
-            mill_wait(s, POLLIN);
-            continue;
-        }
-        pos += sz;
-        remaining -= sz;
-    }
-    return len;
 }
 
