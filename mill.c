@@ -118,6 +118,10 @@ struct mill_cr {
     /* When coroutine is sleeping, the time when it should resume execution. */
     uint64_t expiry;
 
+    /* When doing fdwait() this field is used to transfer the result to the
+       blocked coroutine. */
+    int fdwres;
+
     /* Coroutine-local storage. */
     void *cls;
 };
@@ -197,6 +201,13 @@ static void mill_ctxswitch(void) {
         for(i = 0; i != wait_size && rc; ++i) {
             if(wait_fds[i].revents) {
                 mill_resume(wait_crs[i]);
+                wait_crs[i]->fdwres = 0;
+                if(wait_fds[i].revents & POLLIN)
+                    wait_crs[i]->fdwres |= FDW_IN;
+                if(wait_fds[i].revents & POLLOUT)
+                    wait_crs[i]->fdwres |= FDW_OUT;
+                if(wait_fds[i].revents & (POLLERR | POLLHUP | POLLNVAL))
+                    wait_crs[i]->fdwres |= FDW_ERR;
                 wait_fds[i] = wait_fds[wait_size - 1];
                 wait_crs[i] = wait_crs[wait_size - 1];
                 --wait_size;
@@ -228,6 +239,8 @@ void *mill_go_prologue() {
     cr->val.ptr = NULL;
     cr->val.capacity = MILL_MAXINLINECHVALSIZE;
     cr->expiry = 0;
+    cr->fdwres = 0;
+    cr->cls = NULL;
     first_cr = cr;
     return (void*)cr;
 }
@@ -300,10 +313,15 @@ int fdwait(int fd, int events) {
     ++wait_size;
 
     /* Save the current state and pass control to a different coroutine. */
-    if(setjmp(first_cr->ctx))
-        return -1;
-    mill_suspend();
-    mill_ctxswitch();
+    if(!setjmp(first_cr->ctx)) {
+        mill_suspend();
+        mill_ctxswitch();
+    }
+
+    /* Return the value sent by the polling coroutine. */
+    int res = first_cr->fdwres;
+    first_cr->fdwres = 0;
+    return res;
 }
 
 void *cls(void) {
