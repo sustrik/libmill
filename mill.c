@@ -141,7 +141,11 @@ static struct mill_cr *sleeping = NULL;
 static int wait_size = 0;
 static int wait_capacity = 0;
 static struct pollfd *wait_fds = NULL;
-static struct mill_cr **wait_crs = NULL;
+struct mill_fdwitem {
+    struct mill_cr *in;
+    struct mill_cr *out;
+};
+static struct mill_fdwitem *wait_items = NULL;
 
 /* Removes current coroutine from the queue and returns it to the caller. */
 static struct mill_cr *mill_suspend() {
@@ -199,17 +203,37 @@ static void mill_ctxswitch(void) {
         /* Resume coroutines waiting for file descriptors. */
         int i;
         for(i = 0; i != wait_size && rc; ++i) {
-            if(wait_fds[i].revents) {
-                mill_resume(wait_crs[i]);
-                wait_crs[i]->fdwres = 0;
-                if(wait_fds[i].revents & POLLIN)
-                    wait_crs[i]->fdwres |= FDW_IN;
-                if(wait_fds[i].revents & POLLOUT)
-                    wait_crs[i]->fdwres |= FDW_OUT;
-                if(wait_fds[i].revents & (POLLERR | POLLHUP | POLLNVAL))
-                    wait_crs[i]->fdwres |= FDW_ERR;
+            /* Set the result values. */
+            if(wait_fds[i].revents & POLLIN) {
+                assert(wait_items[i].in);
+                wait_items[i].in->fdwres |= FDW_IN;
+            }
+            if(wait_fds[i].revents & POLLOUT) {
+                assert(wait_items[i].out);
+                wait_items[i].out->fdwres |= FDW_OUT;
+            }
+            if(wait_fds[i].revents & (POLLERR | POLLHUP | POLLNVAL)) {
+                if(wait_items[i].in)
+                    wait_items[i].in->fdwres |= FDW_ERR;
+                if(wait_items[i].out)
+                    wait_items[i].out->fdwres |= FDW_ERR;
+            }
+            /* Unblock waiting coroutines. */
+            if(wait_items[i].in && wait_items[i].in->fdwres) {
+                mill_resume(wait_items[i].in);
+                wait_fds[i].events &= ~POLLIN;
+                wait_items[i].in = NULL;
+            }
+            if(wait_items[i].out && wait_items[i].out->fdwres) {
+                mill_resume(wait_items[i].out);
+                wait_fds[i].events &= ~POLLOUT;
+                wait_items[i].out = NULL;
+            }
+            /* If nobody is waiting for the fd remove it from the pollset. */
+            if(!wait_fds[i].events) {
+                assert(!wait_items[i].in && !wait_items[i].out);
                 wait_fds[i] = wait_fds[wait_size - 1];
-                wait_crs[i] = wait_crs[wait_size - 1];
+                wait_items[i] = wait_items[wait_size - 1];
                 --wait_size;
                 --rc;
             }
@@ -294,23 +318,45 @@ void msleep(unsigned long ms) {
 
 /* Waiting for events from a file descriptor. */
 int fdwait(int fd, int events) {
-    /* Grow the pollset as needed. */
-    if(wait_size == wait_capacity) {
-        wait_capacity = wait_capacity ? wait_capacity * 2 : 64;
-        wait_fds = realloc(wait_fds, wait_capacity * sizeof(struct pollfd));
-        wait_crs = realloc(wait_crs, wait_capacity * sizeof(struct mill_cr*));
+    /* Find the fd in the pollset. TODO: This is O(n)! */
+    int i;
+    for(i = 0; i != wait_size; ++i) {
+        if(wait_fds[i].fd == fd)
+            break;
     }
 
-    /* Add the new file descriptor to the pollset. */
-    wait_fds[wait_size].fd = fd;
-    wait_fds[wait_size].events = 0;
-    if(events & FDW_IN)
-        wait_fds[wait_size].events |= POLLIN;
-    if(events & FDW_OUT)
-        wait_fds[wait_size].events |= POLLOUT;
-    wait_fds[wait_size].revents = 0;
-    wait_crs[wait_size] = first_cr;
-    ++wait_size;
+    /* Grow the pollset as needed. */
+    if(i == wait_size) { 
+		if(wait_size == wait_capacity) {
+		    wait_capacity = wait_capacity ? wait_capacity * 2 : 64;
+		    wait_fds = realloc(wait_fds,
+		        wait_capacity * sizeof(struct pollfd));
+		    wait_items = realloc(wait_items,
+		        wait_capacity * sizeof(struct mill_fdwitem));
+		}
+        ++wait_size;
+        wait_fds[i].fd = fd;
+        wait_fds[i].events = 0;
+        wait_fds[i].revents = 0;
+        wait_items[i].in = NULL;
+        wait_items[i].out = NULL;
+    }
+
+    /* Register the waiting coroutine in the pollset. */
+    if(events & FDW_IN) {
+        if(wait_items[i].in)
+            mill_panic(
+                "multiple coroutines waiting for a single file descriptor");
+        wait_fds[i].events |= POLLIN;
+        wait_items[i].in = first_cr;
+    }
+    if(events & FDW_OUT) {
+        if(wait_items[i].out)
+            mill_panic(
+                "multiple coroutines waiting for a single file descriptor");
+        wait_fds[i].events |= POLLOUT;
+        wait_items[i].out = first_cr;
+    }
 
     /* Save the current state and pass control to a different coroutine. */
     if(!setjmp(first_cr->ctx)) {

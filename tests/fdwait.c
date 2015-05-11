@@ -26,10 +26,16 @@
 #include "../mill.h"
 
 int main() {
-    /* Test whether stdout is writeable. */
+    /* Wait while stdout is writeable. */
     int rc = fdwait(1, FDW_OUT);
     assert(rc & FDW_OUT);
     assert(!(rc & ~FDW_OUT));
+
+    /* Wait for both directions. */
+    rc = fdwait(1, FDW_IN | FDW_OUT);
+    assert(rc & FDW_OUT);
+    assert(!(rc & ~FDW_OUT));
+
     return 0;
 }
 
