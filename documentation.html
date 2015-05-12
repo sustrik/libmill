@@ -26,7 +26,6 @@
   <li><a href="#coroutines">Coroutines</a></li>
   <li><a href="#channels">Channels</a></li>
   <li><a href="#choose">Choose statement</a></li>
-  <li><a href="#library">Library</a></li>
   <li><a href="#cls">Coroutine-local storage</a></li>
   <li><a href="#performance">Performance considerations</a></li>
 </ul>
@@ -101,6 +100,27 @@ the whole process. Therefore, coroutine-friendly versions of blocking functions
 
 <pre>
 yield();
+</pre>
+
+<p>To sleep without blocking the entire process:</p>
+
+<pre>
+void msleep(unsigned long ms);
+</pre>
+
+<p>To wait for an event from a file descriptor use <tt>fdwait</tt> function:</p>
+
+<pre>
+int events = fdwait(FDW_IN | FDW_OUT);
+if(events & FDW_IN) {
+    ...
+}
+if(events & FDW_OUT) {
+    ...
+}
+if(events & FDW_ERR) {
+    ...
+}
 </pre>
 
 <h3 id="channels">Channels</h3>
@@ -214,36 +234,6 @@ the code that follows it. If there are multiple clauses available
 one of them is chosen at random.</p>
 
 <p>There's no fall-through among the clauses.</p>
-
-<h3 id="library">Library</h3>
-
-<t>The library contains coroutine-friendly versions of system blocking
-functions as well as some convenience stuff.</t>
-
-<p>To sleep without blocking the entire process:</p>
-
-<pre>
-void msleep(unsigned long ms);
-</pre>
-
-<p>This function returns an int-type channel that will become available for
-receiving after specified amount of time. Don't forget to close the channel
-after using it.</p>
-
-<pre>
-chan after(unsigned long ms);
-</pre>
-
-<p>To deal with sockets use the following functions. Except for being
-coroutine-friendly they behave exactly the same as their POSIX counterparts:</p>
-
-<pre>
-int msocket(int family, int type, int protocol);
-int mconnect(int s, const struct sockaddr *addr, socklen_t addrlen);
-int maccept(int s, struct sockaddr *addr, socklen_t *addrlen);
-ssize_t msend(int s, const void *buf, size_t len, int flags);
-ssize_t mrecv(int s, void *buf, size_t len, int flags);
-</pre>
 
 <h3 id="cls">Coroutine-local storage</h3>
 
