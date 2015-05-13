@@ -175,6 +175,15 @@ ssize_t tcpread(tcpconn conn, void *buf, size_t len) {
 }
 
 ssize_t tcpreaduntil(tcpconn conn, void *buf, size_t len, char until) {
-    assert(0);
+    char *pos = (char*)buf;
+    size_t i;
+    for(i = 0; i != len; ++i, ++pos) {
+        ssize_t res = tcpread(conn, pos, 1);
+        if (res != 0)
+            return -1;
+        if(*pos == until)
+            return i + 1;
+    }
+    return 0;
 }
 
