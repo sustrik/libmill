@@ -6,3 +6,4 @@ tests/chan
 tests/choose
 tests/sleep
 tests/fdwait
+tests/tcp

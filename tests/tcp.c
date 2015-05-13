@@ -22,22 +22,45 @@
 
 */
 
-#ifndef MILL_TCP_H_INCLUDED
-#define MILL_TCP_H_INCLUDED
+#include <assert.h>
+#include <netinet/in.h>
+#include <string.h>
 
-#include <sys/types.h>
-#include <sys/socket.h>
+#include "../mill.h"
+#include "../tcp.h"
 
-typedef struct tcplistener *tcplistener;
-typedef struct tcpconn *tcpconn;
+void connect_socket(void) {
+    struct sockaddr_in addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = 0x0100007f;
+    addr.sin_port = htons(5555);
+    tcpconn cs = tcpdial((struct sockaddr*)&addr, sizeof(addr));
+    assert(cs);
 
-tcplistener tcplisten(const struct sockaddr *addr, socklen_t addrlen);
-tcpconn tcpaccept(tcplistener listener);
-void tcplistener_close(tcplistener listener);
-tcpconn tcpdial(const struct sockaddr *addr, socklen_t addrlen);
-void tcpconn_close(tcpconn conn);
-ssize_t tcpwrite(tcpconn conn, const void *buf, size_t len);
-ssize_t tcpread(tcpconn conn, void *buf, size_t len);
-ssize_t tcpreaduntil(tcpconn conn, void *buf, size_t len, char until);
+    ssize_t sz = tcpwrite(cs, "ABC", 3);
+    assert(sz == 0);
+    tcpconn_close(cs);
+}
 
-#endif
+int main() {
+    struct sockaddr_in addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = INADDR_ANY;
+    addr.sin_port = htons(5555);
+    tcplistener ls = tcplisten((struct sockaddr*)&addr, sizeof(addr));
+    assert(ls);
+
+    go(connect_socket());
+
+    tcpconn as = tcpaccept(ls);
+
+    char buf[3];
+    ssize_t sz = tcpread(as, buf, sizeof(buf));
+    assert(buf[0] == 'A' && buf[1] == 'B' && buf[2] == 'C');
+    tcpconn_close(as);
+    tcplistener_close(ls);
+    return 0;
+}
+
