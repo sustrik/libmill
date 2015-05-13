@@ -25,7 +25,6 @@
 #include "mill.h"
 
 #include <assert.h>
-#include <fcntl.h>
 #include <poll.h>
 #include <setjmp.h>
 #include <stdint.h>

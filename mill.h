@@ -28,8 +28,6 @@
 #include <alloca.h>
 #include <errno.h>
 #include <stddef.h>
-#include <sys/types.h>
-#include <sys/socket.h>
 
 /* When compiling with glibc we want to disable fancy longjmp checking
    which happens to panic when faced with coroutines. */
