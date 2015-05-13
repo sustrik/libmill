@@ -27,7 +27,7 @@
   <li><a href="#channels">Channels</a></li>
   <li><a href="#choose">Choose statement</a></li>
   <li><a href="#cls">Coroutine-local storage</a></li>
-  <li><a href="#performance">Performance considerations</a></li>
+  <li><a href="#tcp">TCP library</a></li>
 </ul>
 
 <h3 id="build">Build</h3>
@@ -261,15 +261,78 @@ printf("CLS: a=%d b=%d\n", data->a, data->b);
 <p>It can be safely assumed that before coroutine-local data are set,
 <tt>cls</tt> function will return <tt>NULL</tt>.</p>
 
-<h3 id="performance">Performance considerations</h3>
+<h3 id="tcp">TCP library</h3>
 
-<p>In general, Mill is extremely lightweight. There are no memory allocations,
-except int the following cases:</p>
+<p>TCP can be accessed via standard POSIX functions. However, Mill provides
+a simple convenience wrapper for the functionality. To use it, add
+<tt>tcp.h</tt> and <tt>tcp.c</tt> to your project.</p>
 
-<ol>
-  <li>When new coroutine is started.</li>
-  <li>When new channel is created.</li>
-</ol>
+<p>To connect to a remote server, use <tt>tcpdial</tt> function:
+
+<pre>
+struct sockaddr_in addr;
+addr.sin_family = AF_INET;
+addr.sin_addr.s_addr = htonl(0x7f000001);
+addr.sin_port = htons(5555);
+tcpconn conn = tcpdial((struct sockaddr*)&addr, sizeof(addr));
+</pre>
+
+<p>To start listening for incoming TCP connections use <tt>tcplisten</tt>
+function. To accept next connection use <tt>tcpaccept</tt>function:</p>
+
+<pre>
+struct sockaddr_in addr;
+addr.sin_family = AF_INET;
+addr.sin_addr.s_addr = INADDR_ANY;
+addr.sin_port = htons(5555);
+tcplistener listener = tcplisten((struct sockaddr*)&addr, sizeof(addr));
+while(1) {
+    tcpconn conn = tcpaccept(listener);
+    ...
+}
+</pre>
+
+<p>To send data to the connection use <tt>tcpwrite</tt> function:</p>
+
+<pre>
+ssize_t res = tcpwrite(conn, "ABC", 3);
+</pre>
+
+</p>The function returns 0 in case of success and -1 in case of error.</p>
+
+<p>To read data from a conneciton use <tt>tcpread</tt> function:</p>
+
+<pre>
+char buf[3];
+ssize_t res = tcpread(conn, buf, sizeof(buf));
+</pre>
+
+</p>The function returns 0 in case of success and -1 in case of error.</p>
+
+<p><tt>tcpreaduntil</tt> function is the same as <tt>tcpread</tt> except
+that the reading stops when a specific character is encountered:</p>
+
+<pre>
+char buf[256];
+ssize_t res = tcpreaduntil(conn, buf, sizeof(buf), '\n');
+</pre>
+
+</p>If function managed to fill the entire buffer it returns 0. If the delimiter
+character was encountered in the process return value is total amount of
+characters read including the delimiter character. In case of error the function
+returns -1.</p>
+
+<p>To close the connection use <tt>tcpconn_close</tt> function:</p>
+
+<pre>
+tcpconn_close(conn);
+</pre>
+
+<p>To close the listener use <tt>tcplistener_close</tt> function:</p>
+
+<pre>
+tcplistener_close(listener);
+</pre>
 
 </body>
 </html>
