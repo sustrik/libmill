@@ -68,6 +68,9 @@ static uint64_t mill_now() {
    extra memory allocation. */
 #define MILL_MAXINLINECHVALSIZE 128
 
+/* Maximum number of unused cached stacks. */
+#define MILL_MAX_CACHED_STACKS 64
+
 /* This structure keeps the state of a 'choose' operation. */
 struct mill_chstate {
     /* List of clauses in the 'choose' statement. */
@@ -145,6 +148,11 @@ struct mill_fdwitem {
     struct mill_cr *out;
 };
 static struct mill_fdwitem *wait_items = NULL;
+
+/* A stack of unused coroutine stacks. This allows for extra-fast allocation
+   of a new stack. The FIFO nature of this structure minimises cache misses. */
+static int num_cached_crs = 0;
+static struct mill_cr *cached_crs = NULL;
 
 /* Removes current coroutine from the queue and returns it to the caller. */
 static struct mill_cr *mill_suspend() {
@@ -253,10 +261,17 @@ static void mill_ctxswitch(void) {
 void *mill_go_prologue() {
     if(setjmp(first_cr->ctx))
         return NULL;
-    char *ptr = malloc(MILL_STACK_SIZE);
-    assert(ptr);
-    struct mill_cr *cr =
-        (struct mill_cr*)(ptr + MILL_STACK_SIZE - sizeof(struct mill_cr));
+    struct mill_cr *cr;
+    if(cached_crs) {
+        cr = cached_crs;
+        cached_crs = cached_crs->next;
+        --num_cached_crs;
+    }
+    else {
+        char *ptr = malloc(MILL_STACK_SIZE);
+        assert(ptr);
+        cr = (struct mill_cr*)(ptr + MILL_STACK_SIZE - sizeof(struct mill_cr));
+    }
     cr->next = first_cr;
     mill_chstate_init(&cr->chstate);
     cr->val.ptr = NULL;
@@ -271,10 +286,19 @@ void *mill_go_prologue() {
 /* The final part of go(). Cleans up when the coroutine is finished. */
 void mill_go_epilogue(void) {
     struct mill_cr *cr = mill_suspend();
-    if(cr->val.ptr)
+    if(cr->val.ptr) {
         free(cr->val.ptr);
-    char *ptr = ((char*)(cr + 1)) - MILL_STACK_SIZE;
-    free(ptr);
+        cr->val.ptr = NULL;
+    }
+    if(num_cached_crs >= MILL_MAX_CACHED_STACKS) {
+        char *ptr = ((char*)(cr + 1)) - MILL_STACK_SIZE;
+        free(ptr);
+    }
+    else {
+        cr->next = cached_crs;
+        cached_crs = cr;
+        ++num_cached_crs;
+    }
     mill_ctxswitch();
 }
 
