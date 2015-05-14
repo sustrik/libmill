@@ -48,6 +48,9 @@ void connect_socket(void) {
     sz = tcpreaduntil(cs, buf, sizeof(buf), '\n');
     assert(sz == 3);
     assert(buf[0] == '4' && buf[1] == '5' && buf[2] == '\n');
+    sz = tcpreaduntil(cs, buf, 3, '\n');
+    assert(sz == 0);
+    assert(buf[0] == '6' && buf[1] == '7' && buf[2] == '8');
 
     tcpconn_close(cs);
 }
@@ -69,7 +72,7 @@ int main() {
     ssize_t sz = tcpread(as, buf, 3);
     assert(buf[0] == 'A' && buf[1] == 'B' && buf[2] == 'C');
 
-    sz = tcpwrite(as, "123\n45\n89", 9);
+    sz = tcpwrite(as, "123\n45\n6789", 9);
     assert(sz == 0);
 
     tcpconn_close(as);
