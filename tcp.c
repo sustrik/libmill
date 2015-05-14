@@ -26,11 +26,14 @@
 #include <fcntl.h>
 #include <stddef.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "tcp.h"
 #include "mill.h"
 
 #define MILL_TCP_LISTEN_BACKLOG 10
+
+#define MILL_TCP_BUFLEN 1500
 
 struct tcplistener {
     int fd;
@@ -38,7 +41,19 @@ struct tcplistener {
 
 struct tcpconn {
     int fd;
-};	
+    int first;
+    int len;
+    char buf[MILL_TCP_BUFLEN];
+};
+
+static struct tcpconn *tcpconn_create(int fd) {
+    struct tcpconn *conn = malloc(sizeof(struct tcpconn));
+    assert(conn);
+    conn->fd = fd;
+    conn->first = 0;
+    conn->len = 0;
+    return conn;
+}
 
 tcplistener tcplisten(const struct sockaddr *addr, socklen_t addrlen) {
     /* Open the listening socket. */
@@ -79,10 +94,7 @@ tcpconn tcpaccept(tcplistener listener) {
             assert(rc != -1);
 
             /* Create the object. */
-			struct tcpconn *conn = malloc(sizeof(struct tcpconn));
-			assert(conn);
-			conn->fd = s;
-			return conn;
+			return tcpconn_create(s);
         }
         assert(s == -1);
         if(errno != EAGAIN && errno != EWOULDBLOCK)
@@ -124,10 +136,7 @@ tcpconn tcpdial(const struct sockaddr *addr, socklen_t addrlen) {
     }
 
     /* Create the object. */
-	struct tcpconn *conn = malloc(sizeof(struct tcpconn));
-	assert(conn);
-	conn->fd = s;
-	return conn;
+	return tcpconn_create(s);
 }
 
 void tcpconn_close(tcpconn conn) {
@@ -155,23 +164,67 @@ ssize_t tcpwrite(tcpconn conn, const void *buf, size_t len) {
 }
 
 ssize_t tcpread(tcpconn conn, void *buf, size_t len) {
+    /* If there's enough data in the buffer it's easy. */
+    if(conn->len >= len) {
+        memcpy(buf, &conn->buf[conn->first], len);
+        conn->first += len;
+        conn->len -= len;
+        return 0;
+    }
+
+    /* Let's move all the data from the buffer first. */
     char *pos = (char*)buf;
     size_t remaining = len;
-    while(remaining) {
-        ssize_t sz = recv(conn->fd, pos, remaining, 0);
-        if(sz == 0)
-            return len - remaining;
-        if(sz == -1) {
-            if(errno != EAGAIN && errno != EWOULDBLOCK)
-                return -1;
-            int rc = fdwait(conn->fd, FDW_IN);
-            assert(rc == FDW_IN);
-            continue;
+    memcpy(pos, &conn->buf[conn->first], conn->len);
+    pos += conn->len;
+    remaining -= conn->len;
+    conn->first = 0;
+    conn->len = 0;
+
+    assert(remaining);
+    while(1) {
+        if(remaining > MILL_TCP_BUFLEN) {
+            /* If we still have a lot to read try to read it in one go directly
+               into the destination buffer. */
+            ssize_t sz = recv(conn->fd, pos, remaining, 0);
+            assert(sz != 0); // TODO
+            if(sz == -1) {
+                assert(errno == EAGAIN && errno == EWOULDBLOCK); // TODO
+                sz = 0;
+            }
+            if(sz == remaining)
+                return 0;
+            pos += sz;
+            remaining -= sz;
         }
-        pos += sz;
-        remaining -= sz;
+        else {
+            /* If we have just a little to read try to read the full connection
+               buffer to minimise the number of system calls. */    
+            ssize_t sz = recv(conn->fd, conn->buf, MILL_TCP_BUFLEN, 0);
+            assert(sz != 0); // TODO
+            if(sz == -1) {
+                assert(errno == EAGAIN && errno == EWOULDBLOCK); // TODO
+                sz = 0;
+            }
+            if(sz < remaining) {
+                memcpy(pos, conn->buf, sz);
+                pos += sz;
+                remaining -= sz;
+                conn->first = 0;
+                conn->len = 0;
+            }
+            else {
+                memcpy(pos, conn->buf, remaining);
+                conn->first = remaining;
+                conn->len = sz - remaining;
+                return 0;
+            }
+        }
+
+        /* Wait till there's more data to read. */
+        int res = fdwait(conn->fd, FDW_IN);
+        assert(res == FDW_IN);
     }
-    return 0;
 }
 
 ssize_t tcpreaduntil(tcpconn conn, void *buf, size_t len, char until) {

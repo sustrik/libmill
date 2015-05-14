@@ -60,7 +60,7 @@ fdwait: fdwait.c $(MILLFILES)
 .PHONY: test_tcp
 test_tcp: tcp
 	./tcp
-tcp: tcp.c $(MILLFILES)
+tcp: tcp.c $(MILLFILES) ../tcp.h ../tcp.c
 	$(CC) -o tcp tcp.c $(MILLSRC) ../tcp.c $(CCFLAGS)
 
 .PHONY: clean
