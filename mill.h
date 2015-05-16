@@ -40,6 +40,9 @@
 /*  Coroutines                                                                */
 /******************************************************************************/
 
+extern volatile int mill_unoptimisable1;
+extern volatile void *mill_unoptimisable2;
+
 void *mill_go_prologue(void);
 void mill_go_epilogue(void);
 
@@ -47,9 +50,10 @@ void mill_go_epilogue(void);
     do {\
         void *mill_sp = mill_go_prologue();\
         if(mill_sp) {\
-            volatile int mill_unoptimisable = 1;\
-            int mill_anchor[mill_unoptimisable];\
+            int mill_anchor[mill_unoptimisable1];\
+            mill_unoptimisable2 = &mill_anchor;\
             char mill_filler[(char*)&mill_anchor - (char*)(mill_sp)];\
+            mill_unoptimisable2 = &mill_filler;\
             fn;\
             mill_go_epilogue();\
         }\

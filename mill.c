@@ -71,6 +71,9 @@ static uint64_t mill_now() {
 /* Maximum number of unused cached stacks. */
 #define MILL_MAX_CACHED_STACKS 64
 
+volatile int mill_unoptimisable1 = 1;
+volatile void *mill_unoptimisable2 = NULL;
+
 /* This structure keeps the state of a 'choose' operation. */
 struct mill_chstate {
     /* List of clauses in the 'choose' statement. */
