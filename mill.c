@@ -57,6 +57,14 @@ static uint64_t mill_now() {
     return ((uint64_t)tv.tv_sec) * 1000 + (((uint64_t)tv.tv_usec) / 1000);
 }
 
+struct mill_ctx {
+    jmp_buf jbuf;
+};
+
+#define mill_setjmp(ctx) setjmp((ctx)->jbuf)
+
+#define mill_jmp(ctx) longjmp((ctx)->jbuf, 1)
+
 /******************************************************************************/
 /*  Coroutines                                                                */
 /******************************************************************************/
@@ -106,7 +114,7 @@ struct mill_cr {
     struct mill_cr *next;
 
     /* Stored coroutine context while it is not executing. */
-    jmp_buf ctx;
+    struct mill_ctx ctx;
 
     /* State for the choose operation that's underway in this coroutine. */
     struct mill_chstate chstate;
@@ -182,7 +190,7 @@ static void mill_ctxswitch(void) {
     /* If there's a coroutine ready to be executed go for it. Otherwise,
        we are going to wait for sleeping coroutines and for external events. */
     if(first_cr)
-        longjmp(first_cr->ctx, 1);
+        mill_jmp(&first_cr->ctx);
 
     /* The execution of the entore process would block. Let's panic. */
     if(!sleeping && !wait_size)
@@ -257,12 +265,12 @@ static void mill_ctxswitch(void) {
     }
 
 	/* Pass control to a resumed coroutine. */
-	longjmp(first_cr->ctx, 1);
+	mill_jmp(&first_cr->ctx);
 }
 
 /* The intial part of go(). Allocates the stack for the new coroutine. */
 void *mill_go_prologue() {
-    if(setjmp(first_cr->ctx))
+    if(mill_setjmp(&first_cr->ctx))
         return NULL;
     struct mill_cr *cr;
     if(cached_crs) {
@@ -310,7 +318,7 @@ void mill_go_epilogue(void) {
 void yield(void) {
     if(first_cr == last_cr)
         return;
-    if(setjmp(first_cr->ctx))
+    if(mill_setjmp(&first_cr->ctx))
         return;
     mill_resume(mill_suspend());
     mill_ctxswitch();
@@ -325,7 +333,7 @@ void msleep(unsigned long ms) {
     }
 
     /* Save the current state. */
-    if(setjmp(first_cr->ctx))
+    if(mill_setjmp(&first_cr->ctx))
         return;
     
     /* Move the coroutine into the right place in the ordered list
@@ -385,7 +393,7 @@ int fdwait(int fd, int events) {
     }
 
     /* Save the current state and pass control to a different coroutine. */
-    if(!setjmp(first_cr->ctx)) {
+    if(!mill_setjmp(&first_cr->ctx)) {
         mill_suspend();
         mill_ctxswitch();
     }
@@ -590,7 +598,7 @@ void mill_chs(chan ch, void *val, size_t sz) {
 
     /* If there's no free space in the buffer we are going to yield
        till the receiver arrives. */
-    if(setjmp(first_cr->ctx))
+    if(mill_setjmp(&first_cr->ctx))
         return;
     struct mill_clause clause;
     clause.cr = mill_suspend();
@@ -612,7 +620,7 @@ void *mill_chr(chan ch, void *val, size_t sz) {
 
     /* If there's no message in the buffer we are going to yield
        till the sender arrives. */
-    if(setjmp(first_cr->ctx))
+    if(mill_setjmp(&first_cr->ctx))
         return val;
     struct mill_clause clause;
     clause.cr = mill_suspend();
@@ -760,7 +768,7 @@ int mill_choose_wait(void) {
     }
 
     /* In all other cases block and wait for an available channel. */
-    if(!setjmp(first_cr->ctx)) {
+    if(!mill_setjmp(&first_cr->ctx)) {
         mill_suspend();
         mill_ctxswitch();
     }
