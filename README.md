@@ -1,7 +1,7 @@
 Mill
 ====
 
-Mill introduces Go-style concurrency to C.
+Mill is a library that introduces Go-style concurrency to C.
 
 Mill works with x86-64, gcc and Linux/OSX.
 
