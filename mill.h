@@ -30,6 +30,24 @@
 #include <stddef.h>
 
 /******************************************************************************/
+/*  ABI versioning support                                                    */
+/******************************************************************************/
+
+/*  Don't change this unless you know exactly what you're doing and have      */
+/*  read and understand the following documents:                              */
+/*  www.gnu.org/software/libtool/manual/html_node/Libtool-versioning.html     */
+/*  www.gnu.org/software/libtool/manual/html_node/Updating-version-info.html  */
+
+/*  The current interface version. */
+#define MILL_VERSION_CURRENT 0
+
+/*  The latest revision of the current interface. */
+#define MILL_VERSION_REVISION 0
+
+/*  How many past interface versions are still supported. */
+#define MILL_VERSION_AGE 0
+
+/******************************************************************************/
 /*  Coroutines                                                                */
 /******************************************************************************/
 

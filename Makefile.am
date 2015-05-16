@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2014 Martin Sustrik  All rights reserved.
+# Copyright (c) 2015 Martin Sustrik  All rights reserved.
 # Copyright (c) 2013 Luca Barbato
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -29,25 +29,34 @@ DISTCLEANFILES = @DOLT_CLEANFILES@
 ################################################################################
 
 millincludedir = $(includedir)
-millinclude_HEADERS = mill.h
+millinclude_HEADERS = mill.h tcp.h
 
 lib_LTLIBRARIES = libmill.la
 
-libmill_la_SOURCES = mill.c
+libmill_la_SOURCES = mill.c tcp.c
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libmill.pc
 
 libmill_la_LDFLAGS = -no-undefined -version-info @MILL_LIBTOOL_VERSION@
-libmill_la_CFLAGS = -Dmill_exports
+
+# Turn the stack checking in glibc off - otherwise it would panic
+# because of the stack pointer black magic in 'go' macro.
+libmill_la_CFLAGS = -DMILL_EXPORTS -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0
 
 ################################################################################
 #  automated tests                                                             #
 ################################################################################
 
 check_PROGRAMS = \
+    tests/example\
     tests/go\
-    tests/chan
+    tests/cls\
+    tests/chan\
+    tests/choose\
+    tests/sleep\
+    tests/fdwait\
+    tests/tcp
 
 LDADD = libmill.la
 
