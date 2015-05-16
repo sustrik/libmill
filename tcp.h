@@ -36,7 +36,8 @@ tcpconn tcpaccept(tcplistener listener);
 void tcplistener_close(tcplistener listener);
 tcpconn tcpconnect(const struct sockaddr *addr, socklen_t addrlen);
 void tcpconn_close(tcpconn conn);
-ssize_t tcpwrite(tcpconn conn, const void *buf, size_t len);
+void tcpwrite(tcpconn conn, const void *buf, size_t len);
+int tcpflush(tcpconn conn);
 ssize_t tcpread(tcpconn conn, void *buf, size_t len);
 ssize_t tcpreaduntil(tcpconn conn, void *buf, size_t len, char until);
 

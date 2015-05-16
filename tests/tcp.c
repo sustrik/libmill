@@ -38,11 +38,12 @@ void connect_socket(void) {
     tcpconn cs = tcpconnect((struct sockaddr*)&addr, sizeof(addr));
     assert(cs);
 
-    ssize_t sz = tcpwrite(cs, "ABC", 3);
-    assert(sz == 0);
+    tcpwrite(cs, "ABC", 3);
+    int rc = tcpflush(cs);
+    assert(rc == 0);
 
     char buf[16];
-    sz = tcpreaduntil(cs, buf, sizeof(buf), '\n');
+    ssize_t sz = tcpreaduntil(cs, buf, sizeof(buf), '\n');
     assert(sz == 4);
     assert(buf[0] == '1' && buf[1] == '2' && buf[2] == '3' && buf[3] == '\n');
     sz = tcpreaduntil(cs, buf, sizeof(buf), '\n');
@@ -72,8 +73,9 @@ int main() {
     ssize_t sz = tcpread(as, buf, 3);
     assert(buf[0] == 'A' && buf[1] == 'B' && buf[2] == 'C');
 
-    sz = tcpwrite(as, "123\n45\n6789", 9);
-    assert(sz == 0);
+    tcpwrite(as, "123\n45\n6789", 9);
+    int rc = tcpflush(as);
+    assert(rc == 0);
 
     tcpconn_close(as);
     tcplistener_close(ls);

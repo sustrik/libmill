@@ -41,17 +41,22 @@ struct tcplistener {
 
 struct tcpconn {
     int fd;
-    int first;
-    int len;
-    char buf[MILL_TCP_BUFLEN];
+    int ifirst;
+    int ilen;
+    int olen;
+    int oerr;
+    char ibuf[MILL_TCP_BUFLEN];
+    char obuf[MILL_TCP_BUFLEN];
 };
 
 static struct tcpconn *tcpconn_create(int fd) {
     struct tcpconn *conn = malloc(sizeof(struct tcpconn));
     assert(conn);
     conn->fd = fd;
-    conn->first = 0;
-    conn->len = 0;
+    conn->ifirst = 0;
+    conn->ilen = 0;
+    conn->olen = 0;
+    conn->oerr = 0;
     return conn;
 }
 
@@ -145,9 +150,59 @@ void tcpconn_close(tcpconn conn) {
     free(conn);
 }
 
-ssize_t tcpwrite(tcpconn conn, const void *buf, size_t len) {
+void tcpwrite(tcpconn conn, const void *buf, size_t len) {
+    /* If there was already an error don't even try again. */
+    if(conn->oerr)
+        return;
+
+    /* If it fits into the output buffer copy it there and be done. */
+    if(conn->olen + len <= MILL_TCP_BUFLEN) {
+        memcpy(&conn->obuf[conn->olen], buf, len);
+        conn->olen += len;
+        return;
+    }
+
+    /* Flush the output buffer. */
+    tcpflush(conn);
+
+    /* Try to fit it into the buffer once again. */
+    if(conn->olen + len <= MILL_TCP_BUFLEN) {
+        memcpy(&conn->obuf[conn->olen], buf, len);
+        conn->olen += len;
+        return;
+    }
+
+    /* The data chunk to send is longer than the output buffer.
+       Let's do the sending in-place. */
     char *pos = (char*)buf;
     size_t remaining = len;
+    while(remaining) {
+        ssize_t sz = send(conn->fd, pos, remaining, 0);
+        if(sz == -1) {
+            if(errno != EAGAIN && errno != EWOULDBLOCK) {
+                conn->oerr = errno;
+                return;
+            }
+            int rc = fdwait(conn->fd, FDW_OUT);
+            assert(rc == FDW_OUT);
+            continue;
+        }
+        pos += sz;
+        remaining -= sz;
+    }
+}
+
+int tcpflush(tcpconn conn) {
+    if(conn->oerr) {
+        errno = conn->oerr;
+        conn->oerr = 0;
+        conn->olen = 0;
+        return -1;
+    }
+    if(!conn->olen)
+        return 0;
+    char *pos = conn->obuf;
+    size_t remaining = conn->olen;
     while(remaining) {
         ssize_t sz = send(conn->fd, pos, remaining, 0);
         if(sz == -1) {
@@ -160,26 +215,27 @@ ssize_t tcpwrite(tcpconn conn, const void *buf, size_t len) {
         pos += sz;
         remaining -= sz;
     }
+    conn->olen = 0;
     return 0;
 }
 
 ssize_t tcpread(tcpconn conn, void *buf, size_t len) {
     /* If there's enough data in the buffer it's easy. */
-    if(conn->len >= len) {
-        memcpy(buf, &conn->buf[conn->first], len);
-        conn->first += len;
-        conn->len -= len;
+    if(conn->ilen >= len) {
+        memcpy(buf, &conn->ibuf[conn->ifirst], len);
+        conn->ifirst += len;
+        conn->ilen -= len;
         return 0;
     }
 
     /* Let's move all the data from the buffer first. */
     char *pos = (char*)buf;
     size_t remaining = len;
-    memcpy(pos, &conn->buf[conn->first], conn->len);
-    pos += conn->len;
-    remaining -= conn->len;
-    conn->first = 0;
-    conn->len = 0;
+    memcpy(pos, &conn->ibuf[conn->ifirst], conn->ilen);
+    pos += conn->ilen;
+    remaining -= conn->ilen;
+    conn->ifirst = 0;
+    conn->ilen = 0;
 
     assert(remaining);
     while(1) {
@@ -200,23 +256,23 @@ ssize_t tcpread(tcpconn conn, void *buf, size_t len) {
         else {
             /* If we have just a little to read try to read the full connection
                buffer to minimise the number of system calls. */    
-            ssize_t sz = recv(conn->fd, conn->buf, MILL_TCP_BUFLEN, 0);
+            ssize_t sz = recv(conn->fd, conn->ibuf, MILL_TCP_BUFLEN, 0);
             assert(sz != 0); // TODO
             if(sz == -1) {
                 assert(errno == EAGAIN && errno == EWOULDBLOCK); // TODO
                 sz = 0;
             }
             if(sz < remaining) {
-                memcpy(pos, conn->buf, sz);
+                memcpy(pos, conn->ibuf, sz);
                 pos += sz;
                 remaining -= sz;
-                conn->first = 0;
-                conn->len = 0;
+                conn->ifirst = 0;
+                conn->ilen = 0;
             }
             else {
-                memcpy(pos, conn->buf, remaining);
-                conn->first = remaining;
-                conn->len = sz - remaining;
+                memcpy(pos, conn->ibuf, remaining);
+                conn->ifirst = remaining;
+                conn->ilen = sz - remaining;
                 return 0;
             }
         }
