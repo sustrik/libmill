@@ -48,14 +48,39 @@
 #define MILL_VERSION_AGE 0
 
 /******************************************************************************/
+/*  Symbol visibility                                                         */
+/******************************************************************************/
+
+#if defined MILL_NO_EXPORTS
+#   define MILL_EXPORT
+#else
+#   if defined _WIN32
+#      if defined MILL_EXPORTS
+#          define MILL_EXPORT __declspec(dllexport)
+#      else
+#          define MILL_EXPORT __declspec(dllimport)
+#      endif
+#   else
+#      if defined __SUNPRO_C
+#          define MILL_EXPORT __global
+#      elif (defined __GNUC__ && __GNUC__ >= 4) || \
+             defined __INTEL_COMPILER || defined __clang__
+#          define MILL_EXPORT __attribute__ ((visibility("default")))
+#      else
+#          define MILL_EXPORT
+#      endif
+#   endif
+#endif
+
+/******************************************************************************/
 /*  Coroutines                                                                */
 /******************************************************************************/
 
-extern volatile int mill_unoptimisable1;
-extern volatile void *mill_unoptimisable2;
+MILL_EXPORT extern volatile int mill_unoptimisable1;
+MILL_EXPORT extern volatile void *mill_unoptimisable2;
 
-void *mill_go_prologue(void);
-void mill_go_epilogue(void);
+MILL_EXPORT void *mill_go_prologue(void);
+MILL_EXPORT void mill_go_epilogue(void);
 
 #define go(fn) \
     do {\
@@ -70,17 +95,17 @@ void mill_go_epilogue(void);
         }\
     } while(0)
 
-void yield(void);
+MILL_EXPORT void yield(void);
 
-void msleep(unsigned long ms);
+MILL_EXPORT void msleep(unsigned long ms);
 
 #define FDW_IN 1
 #define FDW_OUT 2
 #define FDW_ERR 4
-int fdwait(int fd, int events);
+MILL_EXPORT int fdwait(int fd, int events);
 
-void *cls(void);
-void setcls(void *val);
+MILL_EXPORT void *cls(void);
+MILL_EXPORT void setcls(void *val);
 
 /******************************************************************************/
 /*  Channels                                                                  */
@@ -131,12 +156,12 @@ struct mill_clause {
         mill_chdone((channel), &mill_val, sizeof(type));\
     } while(0)
 
-chan mill_chmake(size_t sz, size_t bufsz);
-chan chdup(chan ch);
-void mill_chs(chan ch, void *val, size_t sz);
-void *mill_chr(chan ch, void *val, size_t sz);
-void mill_chdone(chan ch, void *val, size_t sz);
-void chclose(chan ch);
+MILL_EXPORT chan mill_chmake(size_t sz, size_t bufsz);
+MILL_EXPORT chan chdup(chan ch);
+MILL_EXPORT void mill_chs(chan ch, void *val, size_t sz);
+MILL_EXPORT void *mill_chr(chan ch, void *val, size_t sz);
+MILL_EXPORT void mill_chdone(chan ch, void *val, size_t sz);
+MILL_EXPORT void chclose(chan ch);
 
 #define mill_concat(x,y) x##y
 
@@ -207,13 +232,13 @@ void chclose(chan ch);
             mill_idx = mill_choose_wait();\
         }
 
-void mill_choose_in(struct mill_clause *clause,
+MILL_EXPORT void mill_choose_in(struct mill_clause *clause,
     chan ch, size_t sz, int idx);
-void mill_choose_out(struct mill_clause *clause,
+MILL_EXPORT void mill_choose_out(struct mill_clause *clause,
     chan ch, void *val, size_t sz, int idx);
-void mill_choose_otherwise(void);
-int mill_choose_wait(void);
-void *mill_choose_val(void);
+MILL_EXPORT void mill_choose_otherwise(void);
+MILL_EXPORT int mill_choose_wait(void);
+MILL_EXPORT void *mill_choose_val(void);
 
 #endif
 

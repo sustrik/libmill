@@ -40,9 +40,12 @@ pkgconfig_DATA = libmill.pc
 
 libmill_la_LDFLAGS = -no-undefined -version-info @MILL_LIBTOOL_VERSION@
 
-# Turn the stack checking in glibc off - otherwise it would panic
+# Turn the source fortification in glibc off - otherwise it would panic
 # because of the stack pointer black magic in 'go' macro.
-libmill_la_CFLAGS = -DMILL_EXPORTS -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0
+libmill_la_CFLAGS = \
+    -fvisibility=hidden\
+    -DMILL_EXPORTS \
+    -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0
 
 ################################################################################
 #  automated tests                                                             #
