@@ -26,6 +26,8 @@
 #include "../mill.h"
 
 int main() {
+
+#if 0
     /* Wait while stdout is writeable. */
     int rc = fdwait(1, FDW_OUT);
     assert(rc & FDW_OUT);
@@ -35,6 +37,7 @@ int main() {
     rc = fdwait(1, FDW_IN | FDW_OUT);
     assert(rc & FDW_OUT);
     assert(!(rc & ~FDW_OUT));
+#endif
 
     return 0;
 }
