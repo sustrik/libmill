@@ -3,7 +3,7 @@
 MILLHDRS = ../mill.h
 MILLSRC = ../mill.c
 MILLFILES = $(MILLHDRS) $(MILLSRC)
-CCFLAGS = -g -O0
+CCFLAGS = -g -O2 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0
 CC = cc
 
 all: test_example \

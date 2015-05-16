@@ -29,13 +29,6 @@
 #include <errno.h>
 #include <stddef.h>
 
-/* When compiling with glibc we want to disable fancy longjmp checking
-   which happens to panic when faced with coroutines. */
-#ifdef _FORTIFY_SOURCE
-#undef _FORTIFY_SOURCE
-#define _FORTIFY_SOURCE 0
-#endif
-
 /******************************************************************************/
 /*  Coroutines                                                                */
 /******************************************************************************/
