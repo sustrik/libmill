@@ -57,11 +57,14 @@ int main() {
 </pre>
 
 <p>Mill works with x86-64, gcc and Linux. OSX requires a true gcc (for example,
-from MacPorts or Homebrew) and not clang. Turn the optimiser off using
-<tt>-O0</tt> option:</p>
+from MacPorts or Homebrew) and not clang.</p>
+
+<p>Turn off paranoid stack checking in glibc by adding
+<tt>-U_FORTIFY_SOURCE</tt> and <tt>-D_FORTIFY_SOURCE=0</tt>
+options:</p>
 
 <pre>
-$ gcc -o test test.c mill.c -O0
+$ gcc -o test test.c mill.c -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0
 </pre>
 
 <p>Whether it works in different environments is not known. Please, do report
