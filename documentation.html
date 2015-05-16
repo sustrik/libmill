@@ -27,7 +27,6 @@
   <li><a href="#channels">Channels</a></li>
   <li><a href="#choose">Choose statement</a></li>
   <li><a href="#cls">Coroutine-local storage</a></li>
-  <li><a href="#tcp">TCP library</a></li>
 </ul>
 
 <h3 id="build">Build</h3>
@@ -274,6 +273,8 @@ printf("CLS: a=%d b=%d\n", data->a, data->b);
 <p>It can be safely assumed that before coroutine-local data are set,
 <tt>cls</tt> function will return <tt>NULL</tt>.</p>
 
+<!--
+
 <h3 id="tcp">TCP library</h3>
 
 <p>TCP can be accessed via standard POSIX functions. However, Mill provides
@@ -355,6 +356,8 @@ tcpconn_close(conn);
 <pre>
 tcplistener_close(listener);
 </pre>
+
+-->
 
 </body>
 </html>
