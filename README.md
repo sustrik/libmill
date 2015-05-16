@@ -1,11 +1,18 @@
 Mill
 ====
 
-Mill introduces Go-style concurrency to C. It is one source file and one header
-file to be added to your project.
+Mill introduces Go-style concurrency to C.
 
-Mill works with x86-64, gcc and Linux. OSX requires a true gcc (for example,
-from MacPorts or Homebrew) and not clang.
+Mill works with x86-64, gcc and Linux/OSX.
+
+Install
+-------
+
+$ ./autogen.sh
+$ ./configure
+$ make
+$ make check
+$ sudo make install
 
 Documentation
 -------------
