@@ -8,11 +8,13 @@ Mill works with x86-64, gcc and Linux/OSX.
 Install
 -------
 
+```
 $ ./autogen.sh
 $ ./configure
 $ make
 $ make check
 $ sudo make install
+```
 
 Documentation
 -------------
