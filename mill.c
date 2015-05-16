@@ -61,8 +61,9 @@ struct mill_ctx {
     jmp_buf jbuf;
 };
 
+/* For now use longjmp. This may be replaced by a different mechanism
+   as needed. */
 #define mill_setjmp(ctx) setjmp((ctx)->jbuf)
-
 #define mill_jmp(ctx) longjmp((ctx)->jbuf, 1)
 
 /******************************************************************************/
