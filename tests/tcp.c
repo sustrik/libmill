@@ -35,7 +35,7 @@ void connect_socket(void) {
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = 0x0100007f;
     addr.sin_port = htons(5555);
-    tcpconn cs = tcpdial((struct sockaddr*)&addr, sizeof(addr));
+    tcpconn cs = tcpconnect((struct sockaddr*)&addr, sizeof(addr));
     assert(cs);
 
     ssize_t sz = tcpwrite(cs, "ABC", 3);

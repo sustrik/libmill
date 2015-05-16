@@ -111,7 +111,7 @@ void tcplistener_close(tcplistener listener) {
     free(listener);
 }
 
-tcpconn tcpdial(const struct sockaddr *addr, socklen_t addrlen) {
+tcpconn tcpconnect(const struct sockaddr *addr, socklen_t addrlen) {
     /* Open a socket. */
     int s = socket(AF_INET, SOCK_STREAM, 0);
     if(s == -1)
