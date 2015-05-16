@@ -267,14 +267,14 @@ printf("CLS: a=%d b=%d\n", data->a, data->b);
 a simple convenience wrapper for the functionality. To use it, add
 <tt>tcp.h</tt> and <tt>tcp.c</tt> to your project.</p>
 
-<p>To connect to a remote server, use <tt>tcpdial</tt> function:
+<p>To connect to a remote server, use <tt>tcpconnect</tt> function:
 
 <pre>
 struct sockaddr_in addr;
 addr.sin_family = AF_INET;
 addr.sin_addr.s_addr = htonl(0x7f000001);
 addr.sin_port = htons(5555);
-tcpconn conn = tcpdial((struct sockaddr*)&addr, sizeof(addr));
+tcpconn conn = tcpconnect((struct sockaddr*)&addr, sizeof(addr));
 </pre>
 
 <p>To start listening for incoming TCP connections use <tt>tcplisten</tt>
@@ -295,12 +295,21 @@ while(1) {
 <p>To send data to the connection use <tt>tcpwrite</tt> function:</p>
 
 <pre>
-ssize_t res = tcpwrite(conn, "ABC", 3);
+tcpwrite(conn, "ABC", 3);
 </pre>
 
-</p>The function returns 0 in case of success and -1 in case of error.</p>
+<p>To optimise the throughput <tt>tcpwrite</tt> may store the data into output
+buffer and not flush it into the network immediately. To force actual sending
+of the data use <tt>tcpflush</tt> function.</p>
 
-<p>To read data from a conneciton use <tt>tcpread</tt> function:</p>
+</p>The function returns 0 in case of success and -1 in case of error:</p>
+
+<pre>
+int rc = tcpflush(conn);
+assert(rc == 0);
+</pre>
+
+<p>To read data from a connection use <tt>tcpread</tt> function:</p>
 
 <pre>
 char buf[3];
