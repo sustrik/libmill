@@ -32,8 +32,26 @@
 
 <h3 id="build">Build</h3>
 
-<p>Add <tt>mill.h</tt> and <tt>mill.c</tt> to your project. Whichever files need
-the functionality should include <tt>mill.h</tt>. For example:</p>
+<p>Mill runs with x86_64, gcc and Linux/OSX.</p>
+
+<p>Whether it works in different environments is not known - please, do report
+any successes or failures on the project mailing list.</p>
+
+<t>Build and install Mill as follows:</p>
+
+<pre>
+$ ./autogen.sh
+$ ./configure
+$ make
+$ make check
+$ sudo make install
+</pre>
+
+<p>After the installation there's <tt>mill.h</tt> available as well
+as dynamic library <tt>libmill.so</tt> and static library
+<tt>libmill.a</tt>.</p>
+
+<p>A program using the library can look for example like this:</p>
 
 <pre>
 #include &lt;stdio.h&gt;
@@ -56,19 +74,11 @@ int main() {
 }
 </pre>
 
-<p>Mill works with x86-64, gcc and Linux. OSX requires a true gcc (for example,
-from MacPorts or Homebrew) and not clang.</p>
-
-<p>Turn off paranoid stack checking in glibc by adding
-<tt>-U_FORTIFY_SOURCE</tt> and <tt>-D_FORTIFY_SOURCE=0</tt>
-options:</p>
+<p>To build the example:</p>
 
 <pre>
-$ gcc -o test test.c mill.c -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0
+gcc -o example example.c -lmill
 </pre>
-
-<p>Whether it works in different environments is not known. Please, do report
-any successes as well as failures on the mailing list.</p>
 
 <h3 id="coroutines">Coroutines</h3>
 
