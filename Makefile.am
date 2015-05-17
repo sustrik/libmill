@@ -92,3 +92,6 @@ EXTRA_DIST = \
     ./abi_version.sh \
     ./package_version.sh
 
+distclean-local:
+	-rm -f config.h
+
