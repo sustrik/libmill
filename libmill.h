@@ -22,8 +22,8 @@
 
 */
 
-#ifndef MILL_H_INCLUDED
-#define MILL_H_INCLUDED
+#ifndef LIBMILL_H_INCLUDED
+#define LIBMILL_H_INCLUDED
 
 #include <alloca.h>
 #include <errno.h>

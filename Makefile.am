@@ -34,12 +34,14 @@ millinclude_HEADERS = libmill.h
 lib_LTLIBRARIES = libmill.la
 
 libmill_la_SOURCES = \
-    coroutine.h\
-    coroutine.c\
     channel.h\
     channel.c\
+    coroutine.h\
+    coroutine.c\
     tcp.h\
-    tcp.c
+    tcp.c\
+    utils.h\
+    utils.c
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libmill.pc

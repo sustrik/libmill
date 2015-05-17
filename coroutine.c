@@ -23,6 +23,7 @@
 */
 
 #include "libmill.h"
+#include "utils.h"
 
 #include <assert.h>
 #include <poll.h>
@@ -33,38 +34,6 @@
 #include <string.h>
 #include <sys/time.h>
 #include <unistd.h>
-
-/******************************************************************************/
-/*  Utilities                                                                 */
-/******************************************************************************/
-
-static void mill_panic(const char *text) {
-    fprintf(stderr, "panic: %s\n", text);
-    fflush(stderr);
-    exit(1);
-}
-
-/*  Takes a pointer to a member variable and computes pointer to the structure
-    that contains it. 'type' is type of the structure, not the member. */
-#define mill_cont(ptr, type, member) \
-    (ptr ? ((type*) (((char*) ptr) - offsetof(type, member))) : NULL)
-
-/* Current time. Millisecond precision. */
-static uint64_t mill_now() {
-    struct timeval tv;
-    int rc = gettimeofday(&tv, NULL);
-    assert(rc == 0);
-    return ((uint64_t)tv.tv_sec) * 1000 + (((uint64_t)tv.tv_usec) / 1000);
-}
-
-struct mill_ctx {
-    jmp_buf jbuf;
-};
-
-/* For now use longjmp. This may be replaced by a different mechanism
-   as needed. */
-#define mill_setjmp(ctx) setjmp((ctx)->jbuf)
-#define mill_jmp(ctx) longjmp((ctx)->jbuf, 1)
 
 /******************************************************************************/
 /*  Coroutines                                                                */
