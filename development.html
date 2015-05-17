@@ -24,6 +24,7 @@
 <ul id="toc">
   <li><a href="#bugs">Reporting bugs</a></li>
   <li><a href="#source">Accessing source code</a></li>
+  <li><a href="#build">Building from source</a></li>
   <li><a href="#debug">Debugging</a></li>
   <li><a href="#contribute">Contributing</a></li>
   <li><a href="#release">Release process</a></li>
@@ -41,6 +42,16 @@
 
 <pre>
 $ git clone https://github.com/sustrik/mill.git
+</pre>
+
+<h3="build">Building from source</h3>
+
+<pre>
+$ ./autogen.sh
+$ ./configure
+$ make
+$ make check
+$ sudo make install
 </pre>
 
 <h3 id="debug">Debugging</h3>
@@ -79,7 +90,7 @@ Commit it and push it back to the master on GitHub.</li>
 <li>Tag the new version and push the tag to GitHub (e.g. <tt>git tag -a
 0.3-beta; git push origin 0.3-beta</tt>).</li>
 <li>Clone a clean repo from GitHub.</li>
-<li>Build the package (<tt>make distcheck</tt>).</li>
+<li>Build the package (<tt>./autogen.sh; ./configure; make distcheck</tt>).</li>
 <li>Get the checksums (<tt>sha1sum</tt>) of the packages.</li>
 <li>Add the packages to <tt>gh-pages</tt> branch.</li>
 <li>Adjust the download.html web page in <tt>gh-pages</tt> branch.</li>
