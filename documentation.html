@@ -131,21 +131,23 @@ if(events & FDW_ERR) {
 }
 </pre>
 
+<p>Note that error (<tt>FDW_ERR</tt>) can be returned from the function
+irrespective of whether you polled for it or not.</p>
+
 <h3 id="channels">Channels</h3>
 
-Channels are typed pipes used for communication between coroutines. To create
+<p>Channels are typed pipes used for communication between coroutines. To create
 a channel you have to specify what kind of values are meant to be passed
 through it. The second parameter is the buffer size. Setting this argument
-to zero yields unbuffered channel:</p>
+to zero creates an unbuffered channel:</p>
 
 <pre>
 chan ch = chmake(int, 0);
 </pre>
 
-<p>To send a value to the channel use <tt>chs</tt> construct. Note that
-this is a statement, not a function returning a value. The type specified
-as the second parameter must match the type of the channel otherwise you'll
-get runtime exception.</p>
+<p>To send a value to the channel use <tt>chs</tt>. Note that it is a statement,
+not a function returning a value. The type specified as the second parameter
+must match the type of the channel otherwise you'll get runtime exception.</p>
 
 <pre>
 chs(ch, int, 42);
@@ -159,9 +161,9 @@ you'll get runtime exception.</p>
 int i = chr(ch, int);
 </pre>
 
-<p>When you are done with sending you can announce it using <tt>chdone</tt>
-function. It will cause all the receivers on the channel to receive the
-specified value indefinitely.</p>
+<p>When the sender is done with sending it can announce the fact using
+<tt>chdone</tt> function. It will cause all the receivers on the channel to
+receive the specified value indefinitely.</p>
 
 <pre>
 chdone(ch, int, -1);
@@ -238,12 +240,17 @@ end
 </pre>
 
 <p><tt>choose</tt> statement waits for the first available clause and executes
-the code that follows it. If there are multiple clauses available
-one of them is chosen at random.</p>
+the code that follows it. If there are multiple clauses available one of them
+is chosen at random.</p>
 
 <p>There's no fall-through among the clauses.</p>
 
 <h3 id="cls">Coroutine-local storage</h3>
+
+<p>Coroutine-local storage is an advanced mechanism meant to be used in
+special cases. Avoid using it if possible. In general, use it where you would
+use thread-local storage in a threaded program. TLS itself cannot be used with
+Mill as multiple coroutines can share the same OS thread.</p>
 
 <p>User can allocate coroutine-local data and attach it to the coroutine
 using <tt>setcls</tt> function. For example:</p>
@@ -258,8 +265,8 @@ void *data = malloc(sizeof(struct mycls));
 setcls(data);
 </pre>
 
-<p>Later on the data can be accessed anywhere within the coroutine using
-<tt>cls</tt> function:</p>
+<p>Later on the data can be accessed anywhere within the coroutine or the
+subroutines invoked from it using <tt>cls</tt> function:</p>
 
 <pre>
 struct mycls *data = cls();
