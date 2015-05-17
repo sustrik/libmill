@@ -22,7 +22,7 @@
 
 */
 
-#include "mill.h"
+#include "libmill.h"
 
 #include <assert.h>
 #include <poll.h>

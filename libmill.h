@@ -28,6 +28,8 @@
 #include <alloca.h>
 #include <errno.h>
 #include <stddef.h>
+#include <sys/types.h>
+#include <sys/socket.h>	
 
 /******************************************************************************/
 /*  ABI versioning support                                                    */
@@ -239,6 +241,25 @@ MILL_EXPORT void mill_choose_out(struct mill_clause *clause,
 MILL_EXPORT void mill_choose_otherwise(void);
 MILL_EXPORT int mill_choose_wait(void);
 MILL_EXPORT void *mill_choose_val(void);
+
+/******************************************************************************/
+/*  Experimental                                                              */
+/******************************************************************************/
+
+typedef struct tcplistener *tcplistener;
+typedef struct tcpconn *tcpconn;
+
+MILL_EXPORT tcplistener tcplisten(const struct sockaddr *addr,
+    socklen_t addrlen);
+MILL_EXPORT tcpconn tcpaccept(tcplistener listener);
+MILL_EXPORT void tcplistener_close(tcplistener listener);
+MILL_EXPORT tcpconn tcpconnect(const struct sockaddr *addr, socklen_t addrlen);
+MILL_EXPORT void tcpconn_close(tcpconn conn);
+MILL_EXPORT void tcpwrite(tcpconn conn, const void *buf, size_t len);
+MILL_EXPORT int tcpflush(tcpconn conn);
+MILL_EXPORT ssize_t tcpread(tcpconn conn, void *buf, size_t len);
+MILL_EXPORT ssize_t tcpreaduntil(tcpconn conn, void *buf, size_t len,
+    char until);
 
 #endif
 

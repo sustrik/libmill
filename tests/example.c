@@ -23,7 +23,7 @@
 */
 
 #include <stdio.h>
-#include "../mill.h"
+#include "../libmill.h"
 
 void worker(int count, const char *text) {
     int i;

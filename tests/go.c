@@ -24,7 +24,7 @@
 
 #include <assert.h>
 #include <stdio.h>
-#include "../mill.h"
+#include "../libmill.h"
 
 int sum = 0;
 

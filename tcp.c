@@ -29,8 +29,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "tcp.h"
-#include "mill.h"
+#include "libmill.h"
 
 #define MILL_TCP_LISTEN_BACKLOG 10
 

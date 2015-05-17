@@ -29,7 +29,7 @@ DISTCLEANFILES = @DOLT_CLEANFILES@
 ################################################################################
 
 millincludedir = $(includedir)
-millinclude_HEADERS = mill.h tcp.h
+millinclude_HEADERS = libmill.h
 
 lib_LTLIBRARIES = libmill.la
 

@@ -23,7 +23,7 @@
 */
 
 #include <assert.h>
-#include "../mill.h"
+#include "../libmill.h"
 
 int main() {
 

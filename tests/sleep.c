@@ -26,7 +26,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <sys/time.h>
-#include "../mill.h"
+#include "../libmill.h"
 
 static uint64_t now() {
     struct timeval tv;

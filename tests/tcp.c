@@ -26,8 +26,7 @@
 #include <netinet/in.h>
 #include <string.h>
 
-#include "../mill.h"
-#include "../tcp.h"
+#include "../libmill.h"
 
 void connect_socket(void) {
     struct sockaddr_in addr;
