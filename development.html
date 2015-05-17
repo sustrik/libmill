@@ -21,9 +21,13 @@
 
 <h2>Development</h2>
 
+<h3>Reporting bugs</h3>
+
 <p>Report a bug here:</p>
 
 <p><a href="https://github.com/sustrik/mill/issues">https://github.com/sustrik/mill/issues</a></p>
+
+<h3>Accessing source code</h3>
 
 <p>To clone the repository:</p>
 
@@ -31,11 +35,49 @@
 $ git clone https://github.com/sustrik/mill.git
 </pre>
 
+<h3>Debugging</h3>
+
 <p>For easy debugging use the following configure options:</p>
 
 <pre>
 $ ./configure --disable-shared --enable-debug
 </pre>
+
+<p>The above will turn the optimisation out, generate debug symbols and link
+all the tests with the static version of the library. The latter means that
+the executables in <tt>tests</tt> subdirectory will be actual debuggable
+binaries rather that wrapper shell scripts.</p>
+
+<h3>Contributing</h3>
+
+<p>To contribute to Mill send your patch to the mailing list or, alternatively,
+send a GitHub pull request. In either case you have to state that your patch is
+submitted under MIT/X11 license, so that it can be incorporated into
+the mainline codebase without licesing issues.</p>
+
+<p>If you make a substantial contribution to a file, add your copyright to
+the file header. Irrespective of whether you do so, your name will be added to
+the AUTHORS file to indicate you own copyright to a part of the codebase.</p>
+
+<h3>Release process</h3>
+
+<p>These instructions are intended for the project maintainers:</p>
+
+<ol>
+<li>Run <tt>make distcheck</tt> to check whether the packaging process still
+works.</li>
+<li>Bump ABI version as appropriate (see here: <a href="http://250bpm.com/blog:41">http://250bpm.com/blog:41</a>).
+Commit it and push it back to the master on GitHub.</li>
+<li>Tag the new version and push the tag to GitHub (e.g. <tt>git tag -a
+0.3-beta; git push origin 0.3-beta</tt>).</li>
+<li>Clone a clean repo from GitHub.</li>
+<li>Build the package (<tt>make distcheck</tt>).</li>
+<li>Get the checksums (<tt>md5sum</tt>) of the packages.</li>
+<li>Add the packages to <tt>gh-pages</tt> branch.</li>
+<li>Adjust the download.html web page in <tt>gh-pages</tt> branch.</li>
+<li>Commit and push to <tt>gh-pages</tt>.</li>
+<li>Send the announcement about the release to the project mailing list.</li>
+</ol>
 
 </body>
 </html>
