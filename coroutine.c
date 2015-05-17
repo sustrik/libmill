@@ -27,12 +27,10 @@
 
 #include <assert.h>
 #include <poll.h>
-#include <setjmp.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/time.h>
 #include <unistd.h>
 
 /******************************************************************************/
