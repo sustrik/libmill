@@ -3,9 +3,9 @@ exec_prefix=@exec_prefix@
 libdir=@libdir@
 includedir=@includedir@
 
-Name: mill
-Description: Mill runtime library
-URL: http://millc.org/
+Name: libmill
+Description: Go-style concurrency in C
+URL: http://libmill.org/
 Version: @NN_ABI_VERSION@
 Requires:
 Libs: -L${libdir} -lmill @LIBS@
