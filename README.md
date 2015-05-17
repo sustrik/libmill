@@ -21,7 +21,7 @@ Documentation
 
 For the documentation check the project website:
 
-http://millc.org
+http://libmill.org
 
 License
 -------
