@@ -28,17 +28,21 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
+#include "mill.h"
+
 typedef struct tcplistener *tcplistener;
 typedef struct tcpconn *tcpconn;
 
-tcplistener tcplisten(const struct sockaddr *addr, socklen_t addrlen);
-tcpconn tcpaccept(tcplistener listener);
-void tcplistener_close(tcplistener listener);
-tcpconn tcpconnect(const struct sockaddr *addr, socklen_t addrlen);
-void tcpconn_close(tcpconn conn);
-void tcpwrite(tcpconn conn, const void *buf, size_t len);
-int tcpflush(tcpconn conn);
-ssize_t tcpread(tcpconn conn, void *buf, size_t len);
-ssize_t tcpreaduntil(tcpconn conn, void *buf, size_t len, char until);
+MILL_EXPORT tcplistener tcplisten(const struct sockaddr *addr,
+    socklen_t addrlen);
+MILL_EXPORT tcpconn tcpaccept(tcplistener listener);
+MILL_EXPORT void tcplistener_close(tcplistener listener);
+MILL_EXPORT tcpconn tcpconnect(const struct sockaddr *addr, socklen_t addrlen);
+MILL_EXPORT void tcpconn_close(tcpconn conn);
+MILL_EXPORT void tcpwrite(tcpconn conn, const void *buf, size_t len);
+MILL_EXPORT int tcpflush(tcpconn conn);
+MILL_EXPORT ssize_t tcpread(tcpconn conn, void *buf, size_t len);
+MILL_EXPORT ssize_t tcpreaduntil(tcpconn conn, void *buf, size_t len,
+    char until);
 
 #endif
