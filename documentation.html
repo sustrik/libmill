@@ -48,7 +48,7 @@ $ make check
 $ sudo make install
 </pre>
 
-<p>After the installation there's <tt>mill.h</tt> available as well
+<p>After the installation there's <tt>mill.h</tt> header file available as well
 as dynamic library <tt>libmill.so</tt> and static library
 <tt>libmill.a</tt>.</p>
 
@@ -96,19 +96,13 @@ int main() {
 }
 </pre>
 
-<p>Even functions with exotic argument lists can be executed as coroutines:</p>
-
-<pre>
-go(printf("%d + %d = %d\n", 2, 2, 4));
-</pre>
-
 <p>However, keep in mind that coroutines are executed asynchronously and thus,
 even if the function returns a value, there is now way to retrieve it.</p>
 
 <p>Also keep in mind that coroutines are scheduled in a cooperative fashion.
-If one coroutine block, for example by calling <tt>sleep()</tt>, it blocks
-the whole process. Therefore, coroutine-friendly versions of blocking functions
-(such as <tt>mconnect()</tt> or <tt>msend()</tt>, see below) should be used.</p>
+If one coroutine blocks, for example by calling <tt>sleep()</tt>, it blocks
+the entire process. Therefore, coroutine-friendly versions of blocking functions
+(such as <tt>msleep()</tt> or <tt>fdwait()</tt>, see below) should be used.</p>
 
 <p>In addition, you can yield CPU to other coroutines explicitly:</p>
 
