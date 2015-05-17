@@ -26,7 +26,7 @@
 
 AC_PREREQ([2.53])
 
-AC_INIT([mill], [m4_esyscmd([./package_version.sh])],
+AC_INIT([libmill], [m4_esyscmd([./package_version.sh])],
    [millc@freelists.org], [libmill], [http://libmill.org/])
 AC_CONFIG_SRCDIR([libmill.pc.in])
 AM_INIT_AUTOMAKE([1.6 foreign subdir-objects tar-ustar])
