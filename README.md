@@ -1,4 +1,4 @@
-Libmill
+LIBMILL
 =======
 
 Libmill is a library that introduces Go-style concurrency to C.
