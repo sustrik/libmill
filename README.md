@@ -1,12 +1,12 @@
 Mill
 ====
 
-Mill is a library that introduces Go-style concurrency to C.
+Libmill is a library that introduces Go-style concurrency to C.
 
-Mill works with x86-64, gcc and Linux/OSX.
+Libmill works with x86-64, gcc and Linux/OSX.
 
-Install
--------
+Building and installing from source
+-----------------------------------
 
 ```
 $ ./autogen.sh
@@ -26,4 +26,4 @@ http://libmill.org
 License
 -------
 
-Mill is licensed under MIT/X11 license.
+Libmill is licensed under MIT/X11 license.
