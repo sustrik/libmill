@@ -31,7 +31,7 @@
 
 <h3 id="build">Build</h3>
 
-<p>Mill runs with x86_64, gcc and Linux/OSX.</p>
+<p>Libmill runs with x86_64, gcc and Linux/OSX.</p>
 
 <p>Whether it works in different environments is not known - please, do report
 any successes or failures on the project mailing list.</p>
@@ -40,23 +40,23 @@ any successes or failures on the project mailing list.</p>
 as follows:</p>
 
 <pre>
-$ tar -xzf mill-0.1-alpha.tar.gz
-$ cd mill-0.1-alpha
+$ tar -xzf libmill-0.2-alpha.tar.gz
+$ cd libmill-0.2-alpha
 $ ./configure
 $ make
 $ make check
 $ sudo make install
 </pre>
 
-<p>After the installation there's <tt>mill.h</tt> header file available as well
-as dynamic library <tt>libmill.so</tt> and static library
+<p>After the installation there's <tt>libmill.h</tt> header file available
+as well as dynamic library <tt>libmill.so</tt> and static library
 <tt>libmill.a</tt>.</p>
 
 <p>A program using the library can look for example like this:</p>
 
 <pre>
 #include &lt;stdio.h&gt;
-#include "mill.h"
+#include "libmill.h"
 
 void worker(int count, const char *text) {
     int i;
@@ -99,7 +99,7 @@ int main() {
 <p>However, keep in mind that coroutines are executed asynchronously and thus,
 even if the function returns a value, there is now way to retrieve it.</p>
 
-<p>Also keep in mind that coroutines are scheduled in a cooperative fashion.
+<p>Also bear in mind that coroutines are scheduled in a cooperative fashion.
 If one coroutine blocks, for example by calling <tt>sleep()</tt>, it blocks
 the entire process. Therefore, coroutine-friendly versions of blocking functions
 (such as <tt>msleep()</tt> or <tt>fdwait()</tt>, see below) should be used.</p>
@@ -132,13 +132,13 @@ if(events & FDW_ERR) {
 </pre>
 
 <p>Note that error (<tt>FDW_ERR</tt>) can be returned from the function
-irrespective of whether you polled for it or not.</p>
+irrespective of whether you asked for it or not.</p>
 
 <h3 id="channels">Channels</h3>
 
 <p>Channels are typed pipes used for communication between coroutines. To create
 a channel you have to specify what kind of values are meant to be passed
-through it. The second parameter is the buffer size. Setting this argument
+through it. The second parameter is buffer size. Setting this argument
 to zero creates an unbuffered channel:</p>
 
 <pre>
@@ -153,9 +153,9 @@ must match the type of the channel otherwise you'll get runtime exception.</p>
 chs(ch, int, 42);
 </pre>
 
-<p>To receive a value from the channel use <tt>chr</tt> expression. The type
+<p>To receive a value from the channel use <tt>chr</tt>. The type
 specified as the second parameter must match the type of the channel otherwise
-you'll get runtime exception.</p>
+the program will abort with runtime exception.</p>
 
 <pre>
 int i = chr(ch, int);
@@ -163,7 +163,7 @@ int i = chr(ch, int);
 
 <p>When the sender is done with sending it can announce the fact using
 <tt>chdone</tt> function. It will cause all the receivers on the channel to
-receive the specified value indefinitely.</p>
+receive the value specified in the third parameter indefinitely:</p>
 
 <pre>
 chdone(ch, int, -1);
@@ -174,6 +174,11 @@ chdone(ch, int, -1);
 <pre>
 chclose(ch);
 </pre>
+
+<p>Note that <tt>chclose</tt> deallocates any elements remaining the channel,
+however, if the element itself has a pointer to a different object, that object
+won't be deallocated. In this respect <tt>chclose</tt> is similar to the
+standard <tt>free</tt> function.</p>
 
 <p>When sharing a channel between two or more coroutines you can duplicate
 the channel handle. Channel is deallocated only after all its handles
