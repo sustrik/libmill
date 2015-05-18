@@ -415,6 +415,31 @@ struct chan {
     size_t first;
 };
 
+/* This structure represents a single clause in a choose statement.
+   Similarly, both chs() and chr() each create a single clause. */
+struct mill_clause {
+    /* Double-linked list of clauses waiting for a channel endpoint. */
+    struct mill_clause *prev;
+    struct mill_clause *next;
+    /* Linked list of clauses in the choose statement. */
+    struct mill_clause *next_clause;
+    /* The coroutine which created the clause. */
+    struct mill_cr *cr;
+    /* Channel endpoint the clause is waiting for. */
+    struct mill_ep *ep;
+    /* For out clauses, pointer to the value to send. For in clauses it is
+       either point to the value to receive to or NULL. In the latter case
+       the value should be received into coroutines in buffer. */
+    void *val;
+    /* The index to jump to when the clause is executed. */
+    int idx;
+    /* If 0, there's no peer waiting for the clause at the moment.
+       If 1, there is one. */
+    int available;
+};
+
+MILL_CT_ASSERT(MILL_CLAUSELEN == sizeof(struct mill_clause));
+
 static chan mill_getchan(struct mill_ep *ep) {
     switch(ep->type) {
     case MILL_SENDER:
@@ -640,8 +665,7 @@ void chclose(chan ch) {
     }
 }
 
-void mill_choose_in(struct mill_clause *clause,
-      chan ch, size_t sz, int idx) {
+void mill_choose_in(void *clause, chan ch, size_t sz, int idx) {
     if(ch->sz != sz)
         mill_panic("receive of a type not matching the channel");
 
@@ -655,20 +679,20 @@ void mill_choose_in(struct mill_clause *clause,
         return;
 
     /* Fill in the clause entry. */
-    clause->cr = first_cr;
-    clause->ep = &ch->receiver;
-    clause->val = NULL;
-    clause->idx = idx;
-    clause->available = available;
-    clause->next_clause = first_cr->chstate.clauses;
+    struct mill_clause *cl = (struct mill_clause*) clause;
+    cl->cr = first_cr;
+    cl->ep = &ch->receiver;
+    cl->val = NULL;
+    cl->idx = idx;
+    cl->available = available;
+    cl->next_clause = first_cr->chstate.clauses;
     first_cr->chstate.clauses = clause;
 
     /* Add the clause to the channel's list of waiting clauses. */
-    mill_addclause(&ch->receiver, clause);
+    mill_addclause(&ch->receiver, cl);
 }
 
-void mill_choose_out(struct mill_clause *clause,
-      chan ch, void *val, size_t sz, int idx) {
+void mill_choose_out(void *clause, chan ch, void *val, size_t sz, int idx) {
     if(ch->done)
         mill_panic("send to done-with channel");
     if(ch->sz != sz)
@@ -684,16 +708,17 @@ void mill_choose_out(struct mill_clause *clause,
         return;
 
     /* Fill in the clause entry. */
-    clause->cr = first_cr;
-    clause->ep = &ch->sender;
-    clause->val = val;
-    clause->next_clause = first_cr->chstate.clauses;
-    clause->available = available;
-    clause->idx = idx;
-    first_cr->chstate.clauses = clause;
+    struct mill_clause *cl = (struct mill_clause*) clause;
+    cl->cr = first_cr;
+    cl->ep = &ch->sender;
+    cl->val = val;
+    cl->next_clause = first_cr->chstate.clauses;
+    cl->available = available;
+    cl->idx = idx;
+    first_cr->chstate.clauses = cl;
 
     /* Add the clause to the channel's list of waiting clauses. */
-    mill_addclause(&ch->sender, clause);
+    mill_addclause(&ch->sender, cl);
 }
 
 void mill_choose_otherwise(void) {

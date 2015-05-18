@@ -115,31 +115,7 @@ MILL_EXPORT void setcls(void *val);
 
 typedef struct chan *chan;
 
-struct mill_cp;
-struct mill_ep;
-
-/* This structure represents a single clause in a choose statement.
-   Similarly, both chs() and chr() each create a single clause. */
-struct mill_clause {
-    /* Double-linked list of clauses waiting for a channel endpoint. */
-    struct mill_clause *prev;
-    struct mill_clause *next;
-    /* The coroutine which created the clause. */
-    struct mill_cr *cr;
-    /* Channel endpoint the clause is waiting for. */
-    struct mill_ep *ep;
-    /* For out clauses, pointer to the value to send. For in clauses it is
-       either point to the value to receive to or NULL. In the latter case
-       the value should be received into coroutines in buffer. */
-    void *val;
-    /* The index to jump to when the clause is executed. */
-    int idx;
-    /* If 0, there's no peer waiting for the clause at the moment.
-       If 1, there is one. */
-    int available;
-    /* Linked list of clauses in the choose statement. */
-    struct mill_clause *next_clause;
-};
+#define MILL_CLAUSELEN (sizeof(void*) * 6 + sizeof(int) * 2)
 
 #define chmake(type, bufsz) mill_chmake(sizeof(type), bufsz)
 
@@ -179,9 +155,9 @@ MILL_EXPORT void chclose(chan ch);
                 }\
                 goto mill_concat(mill_label, idx);\
             }\
-            struct mill_clause mill_concat(mill_clause, idx);\
+            char mill_concat(mill_clause, idx)[MILL_CLAUSELEN];\
             mill_choose_in(\
-                &mill_concat(mill_clause, idx),\
+                &mill_concat(mill_clause, idx)[0],\
                 (chan),\
                 sizeof(type),\
                 idx);\
@@ -199,10 +175,10 @@ MILL_EXPORT void chclose(chan ch);
                 }\
                 goto mill_concat(mill_label, idx);\
             }\
-            struct mill_clause mill_concat(mill_clause, idx);\
+            char mill_concat(mill_clause, idx)[MILL_CLAUSELEN];\
             type mill_concat(mill_val, idx) = (val);\
             mill_choose_out(\
-                &mill_concat(mill_clause, idx),\
+                &mill_concat(mill_clause, idx)[0],\
                 (chan),\
                 &mill_concat(mill_val, idx),\
                 sizeof(type),\
@@ -234,10 +210,9 @@ MILL_EXPORT void chclose(chan ch);
             mill_idx = mill_choose_wait();\
         }
 
-MILL_EXPORT void mill_choose_in(struct mill_clause *clause,
-    chan ch, size_t sz, int idx);
-MILL_EXPORT void mill_choose_out(struct mill_clause *clause,
-    chan ch, void *val, size_t sz, int idx);
+MILL_EXPORT void mill_choose_in(void *clause, chan ch, size_t sz, int idx);
+MILL_EXPORT void mill_choose_out(void *clause, chan ch, void *val, size_t sz,
+    int idx);
 MILL_EXPORT void mill_choose_otherwise(void);
 MILL_EXPORT int mill_choose_wait(void);
 MILL_EXPORT void *mill_choose_val(void);

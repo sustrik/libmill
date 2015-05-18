@@ -22,8 +22,8 @@
 
 */
 
-#ifndef LIBMILL_UTILS_H_INCLUDED
-#define LIBMILL_UTILS_H_INCLUDED
+#ifndef MILL_UTILS_H_INCLUDED
+#define MILL_UTILS_H_INCLUDED
 
 #include <setjmp.h>
 #include <stddef.h>
@@ -48,6 +48,14 @@ struct mill_ctx {
 
 #define mill_setjmp(ctx) setjmp((ctx)->jbuf)
 #define mill_jmp(ctx) longjmp((ctx)->jbuf, 1)
+
+/* Compile-time assert. */
+#define MILL_CT_ASSERT_HELPER2(prefix, line) \
+    prefix##line
+#define MILL_CT_ASSERT_HELPER1(prefix, line) \
+    MILL_CT_ASSERT_HELPER2(prefix, line)
+#define MILL_CT_ASSERT(x) \
+    typedef int MILL_CT_ASSERT_HELPER1(ct_assert_,__COUNTER__) [(x) ? 1 : -1]
 
 #endif
 
