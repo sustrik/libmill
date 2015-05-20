@@ -563,15 +563,15 @@ static void mill_rmclause(struct mill_ep *ep, struct mill_clause *clause) {
 /* Add new item to the channel buffer. */
 static int mill_enqueue(chan ch, void *val) {
     /* If there's a receiver already waiting, let's resume it. */
-    if(ch->receiver.first_clause) {
-        void *dst = ch->receiver.first_clause->val;
+    struct mill_clause *cl = ch->receiver.first_clause;
+    if(cl) {
+        void *dst = cl->val;
         if(!dst)
-            dst = mill_getvalbuf(ch->receiver.first_clause->cr, ch->sz);
+            dst = mill_getvalbuf(cl->cr, ch->sz);
         memcpy(dst, val, ch->sz);
-        ch->receiver.first_clause->cr->chstate.idx =
-            ch->receiver.first_clause->idx;
-        mill_resume(ch->receiver.first_clause->cr);
-        mill_rmclause(&ch->receiver, ch->receiver.first_clause);
+        cl->cr->chstate.idx = cl->idx;
+        mill_resume(cl->cr);
+        mill_rmclause(&ch->receiver, cl);
         return 1;
     }
     /* The buffer is full. */
@@ -591,12 +591,12 @@ static int mill_dequeue(chan ch, void *val) {
         dst = mill_getvalbuf(ch->receiver.first_clause->cr, ch->sz);
 
     /* If there's a sender already waiting, let's resume it. */
-    if(ch->sender.first_clause) {
-        memcpy(dst, ch->sender.first_clause->val, ch->sz);
-        ch->sender.first_clause->cr->chstate.idx =
-            ch->sender.first_clause->idx;
-        mill_resume(ch->sender.first_clause->cr);
-        mill_rmclause(&ch->sender, ch->sender.first_clause);
+    struct mill_clause *cl = ch->sender.first_clause;
+    if(cl) {
+        memcpy(dst, cl->val, ch->sz);
+        cl->cr->chstate.idx = cl->idx;
+        mill_resume(cl->cr);
+        mill_rmclause(&ch->sender, cl);
         return 1;
     }
 
