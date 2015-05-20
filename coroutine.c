@@ -23,6 +23,7 @@
 */
 
 #include "libmill.h"
+#include "list.h"
 #include "utils.h"
 
 #include <assert.h>
@@ -75,8 +76,33 @@ static void mill_chstate_init(struct mill_chstate *chstate) {
     chstate->idx = -2;
 }
 
+enum mill_state {
+    MILL_YIELD,
+    MILL_MSLEEP,
+    MILL_FDWAIT,
+    MILL_CHR,
+    MILL_CHS,
+    MILL_CHOOSE
+};
+
 /* The coroutine. This structure is held on the top of the coroutine's stack. */
 struct mill_cr {
+    /* The list of all coroutines. */
+    struct mill_list_item all_crs_item;
+
+    /* Unique ID of the coroutine. */
+    int id;
+
+    /* Filename and line number of where the coroutine was created. */
+    const char *created;
+
+    /* Filename and line number of where the current operation was
+       invoked from. */
+    const char *current;
+
+    /* Status of the coroutine. Used for debugging purposes. */
+    enum mill_state state;
+
     /* A linked list the coroutine is in. It can be either the list of
        coroutines ready for execution, list of sleeping coroutines or NULL. */
     struct mill_cr *next;
@@ -107,8 +133,14 @@ struct mill_cr {
     void *cls;
 };
 
+/* ID to be assigned to next launched coroutine. */
+static int next_cr_id = 1;
+
 /* Fake coroutine corresponding to the main thread of execution. */
 static struct mill_cr main_cr = {NULL};
+
+/* List of all coroutines. Used for debugging purposes. */
+struct mill_list all_crs = {&main_cr.all_crs_item, &main_cr.all_crs_item};
 
 /* The queue of coroutines ready to run. The first one is currently running. */
 static struct mill_cr *first_cr = &main_cr;
@@ -151,6 +183,7 @@ static void mill_resume(struct mill_cr *cr) {
     else
         first_cr = cr;
     last_cr = cr;
+    cr->state = MILL_YIELD;
 }
 
 /* Switch to a different coroutine. */
@@ -237,7 +270,7 @@ static void mill_ctxswitch(void) {
 }
 
 /* The intial part of go(). Allocates the stack for the new coroutine. */
-void *mill_go_prologue() {
+void *mill_go_prologue(const char *created) {
     if(mill_setjmp(&first_cr->ctx))
         return NULL;
     struct mill_cr *cr;
@@ -251,6 +284,13 @@ void *mill_go_prologue() {
         assert(ptr);
         cr = (struct mill_cr*)(ptr + MILL_STACK_SIZE - sizeof(struct mill_cr));
     }
+    mill_list_item_init(&cr->all_crs_item);
+    mill_list_insert(&all_crs, &cr->all_crs_item, mill_list_end(&all_crs));
+    cr->id = next_cr_id;
+    cr->created = created;
+    cr->current = NULL;
+    ++next_cr_id;
+    cr->state = MILL_YIELD;
     cr->next = first_cr;
     mill_chstate_init(&cr->chstate);
     cr->val.ptr = NULL;
@@ -269,6 +309,7 @@ void mill_go_epilogue(void) {
         free(cr->val.ptr);
         cr->val.ptr = NULL;
     }
+    mill_list_erase(&all_crs, &cr->all_crs_item);
     if(num_cached_crs >= MILL_MAX_CACHED_STACKS) {
         char *ptr = ((char*)(cr + 1)) - MILL_STACK_SIZE;
         free(ptr);
@@ -283,17 +324,19 @@ void mill_go_epilogue(void) {
 
 /* Move the current coroutine to the end of the queue.
    Pass control to the new head of the queue. */
-void yield(void) {
+void mill_yield(const char *current) {
     if(first_cr == last_cr)
         return;
     if(mill_setjmp(&first_cr->ctx))
         return;
-    mill_resume(mill_suspend());
+    struct mill_cr *cr = mill_suspend();
+    cr->current = current;
+    mill_resume(cr);
     mill_ctxswitch();
 }
 
 /* Pause current coroutine for a specified time interval. */
-void msleep(unsigned long ms) {
+void mill_msleep(unsigned long ms, const char *current) {
     /* No point in waiting. However, let's give other coroutines a chance. */
     if(ms <= 0) {
         yield();
@@ -307,7 +350,9 @@ void msleep(unsigned long ms) {
     /* Move the coroutine into the right place in the ordered list
        of sleeping coroutines. */
     struct mill_cr *cr = mill_suspend();
+    cr->state = MILL_MSLEEP;
     cr->expiry = mill_now() + ms;
+    cr->current = current;
     struct mill_cr **it = &sleeping;
     while(*it && (*it)->expiry <= cr->expiry)
         it = &((*it)->next);
@@ -319,7 +364,7 @@ void msleep(unsigned long ms) {
 }
 
 /* Waiting for events from a file descriptor. */
-int fdwait(int fd, int events) {
+int mill_fdwait(int fd, int events, const char *current) {
     /* Find the fd in the pollset. TODO: This is O(n)! */
     int i;
     for(i = 0; i != wait_size; ++i) {
@@ -362,7 +407,9 @@ int fdwait(int fd, int events) {
 
     /* Save the current state and pass control to a different coroutine. */
     if(!mill_setjmp(&first_cr->ctx)) {
-        mill_suspend();
+        struct mill_cr *cr = mill_suspend();
+        cr->state = MILL_FDWAIT;
+        cr->current = current;
         mill_ctxswitch();
     }
 
@@ -395,6 +442,15 @@ struct mill_ep {
 
 /* Channel. */
 struct chan {
+    /* List of all channels. Used for debugging purposes. */
+    struct mill_list_item all_chans_item;
+
+    /* Channel ID. */
+    int id;
+
+    /* Filename and line number of where the channel was created. */
+    const char *created;
+
     /* The size of the elements stored in the channel, in bytes. */
     size_t sz;
     /* Channel holds two lists, the list of clauses waiting to send and list
@@ -414,6 +470,12 @@ struct chan {
     size_t items;
     size_t first;
 };
+
+/* ID to be assigned to the next created channel. */
+static int mill_next_chan_id = 1;
+
+/* List of all channels. Used for debugging purposes. */
+static struct mill_list all_chans = {0};
 
 /* This structure represents a single clause in a choose statement.
    Similarly, both chs() and chr() each create a single clause. */
@@ -553,13 +615,19 @@ static int mill_dequeue(chan ch, void *val) {
     return 1;
 }
 
-chan mill_chmake(size_t sz, size_t bufsz) {
+chan mill_chmake(size_t sz, size_t bufsz, const char *created) {
     /* We are allocating 1 additional element after the channel buffer to
        store the done-with value. It can't be stored in the regular buffer
        because that would mean chdone() would block when buffer is full. */
     struct chan *ch = (struct chan*)malloc(sizeof(struct chan) +
         (sz * (bufsz + 1)));
     assert(ch);
+    mill_list_item_init(&ch->all_chans_item);
+    mill_list_insert(&all_chans, &ch->all_chans_item,
+        mill_list_end(&all_chans));
+    ch->id = mill_next_chan_id;
+    ++mill_next_chan_id;
+    ch->created = created;
     ch->sz = sz;
     ch->sender.type = MILL_SENDER;
     ch->sender.first_clause = NULL;
@@ -580,7 +648,7 @@ chan chdup(chan ch) {
     return ch;
 }
 
-void mill_chs(chan ch, void *val, size_t sz) {
+void mill_chs(chan ch, void *val, size_t sz, const char *current) {
     if(ch->done)
         mill_panic("send to done-with channel");
     if(ch->sz != sz)
@@ -591,25 +659,32 @@ void mill_chs(chan ch, void *val, size_t sz) {
 
     /* If there's no free space in the buffer we are going to yield
        till the receiver arrives. */
-    if(mill_setjmp(&first_cr->ctx))
+    if(mill_setjmp(&first_cr->ctx)) {
+        first_cr->chstate.clauses = NULL;
         return;
+    }
     struct mill_clause clause;
     clause.cr = mill_suspend();
+    clause.cr->state = MILL_CHS;
     clause.ep = &ch->sender;
     clause.val = val;
     clause.next_clause = NULL;
     mill_addclause(&ch->sender, &clause);
+    clause.cr->chstate.clauses = &clause;
+    clause.cr->current = current;
 
     /* Pass control to a different coroutine. */
     mill_ctxswitch();
 }
 
-void *mill_chr(chan ch, void *val, size_t sz) {
+void *mill_chr(chan ch, void *val, size_t sz, const char *current) {
     if(ch->sz != sz)
         mill_panic("receive of a type not matching the channel");
 
-    if(mill_dequeue(ch, val))
+    if(mill_dequeue(ch, val)) {
+        first_cr->chstate.clauses = NULL;
         return val;
+    }
 
     /* If there's no message in the buffer we are going to yield
        till the sender arrives. */
@@ -617,10 +692,13 @@ void *mill_chr(chan ch, void *val, size_t sz) {
         return val;
     struct mill_clause clause;
     clause.cr = mill_suspend();
+    clause.cr->state = MILL_CHR;
     clause.ep = &ch->receiver;
     clause.val = val;
     clause.next_clause = NULL;
     mill_addclause(&ch->receiver, &clause);
+    clause.cr->chstate.clauses = &clause;
+    clause.cr->current = current;
 
     /* Pass control to a different coroutine. */
     mill_ctxswitch();
@@ -661,6 +739,7 @@ void chclose(chan ch) {
     if(!ch->refcount) {
         assert(!ch->sender.first_clause);
         assert(!ch->receiver.first_clause);
+        mill_list_erase(&all_chans, &ch->all_chans_item);
         free(ch);
     }
 }
@@ -727,7 +806,7 @@ void mill_choose_otherwise(void) {
     first_cr->chstate.othws = 1;
 }
 
-int mill_choose_wait(void) {
+int mill_choose_wait(const char *current) {
     struct mill_chstate *chstate = &first_cr->chstate;
     int res = -1;
     struct mill_clause *it;
@@ -762,7 +841,9 @@ int mill_choose_wait(void) {
 
     /* In all other cases block and wait for an available channel. */
     if(!mill_setjmp(&first_cr->ctx)) {
-        mill_suspend();
+        struct mill_cr *cr = mill_suspend();
+        cr->state = MILL_CHOOSE;
+        cr->current = current;
         mill_ctxswitch();
     }
     /* Get the result clause as set up by the coroutine that just unblocked
@@ -781,5 +862,109 @@ int mill_choose_wait(void) {
 
 void *mill_choose_val(void) {
     return first_cr->val.ptr ? first_cr->val.ptr : first_cr->val.buf;
+}
+
+/******************************************************************************/
+/*  Debugging                                                                 */
+/******************************************************************************/
+
+void goredump(void) {
+    char buf[256];
+    fprintf(stderr,
+        "\nCOROUTINE   state                  current              created\n");
+    fprintf(stderr,
+        "---------------------------------------------------------------\n");
+    struct mill_list_item *it;
+    for(it = mill_list_begin(&all_crs);
+          it != mill_list_end(&all_crs);
+          it = mill_list_next(&all_crs, it)) {
+        struct mill_cr *cr = mill_cont(it, struct mill_cr, all_crs_item);
+        switch(cr->state) {
+        case MILL_YIELD:
+            sprintf(buf, "%s", first_cr == cr ? "running" : "yield()");
+            break;
+        case MILL_MSLEEP:
+            sprintf(buf, "msleep()");
+            break;
+        case MILL_FDWAIT:
+            sprintf(buf, "fdwait(%d)", -1);
+            break;
+        case MILL_CHR:
+            sprintf(buf, "chr(%d)", mill_getchan(cr->chstate.clauses->ep)->id);
+            break;
+        case MILL_CHS:
+            sprintf(buf, "chs(%d)", mill_getchan(cr->chstate.clauses->ep)->id);
+            break;
+        case MILL_CHOOSE:
+            {
+		        int pos = 0;
+                pos += sprintf(&buf[pos], "choose(");
+		        struct mill_clause *cl = cr->chstate.clauses;
+		        int first = 1;
+		        while(cl) { // TODO: List the clauses in reverse order.
+		            if(first)
+		                first = 0;
+		            else
+		                pos += sprintf(&buf[pos], ",");
+		            pos += sprintf(&buf[pos], "%d", mill_getchan(cl->ep)->id);
+		            cl = cl->next_clause;
+		        }
+		        sprintf(&buf[pos], ")");
+            }
+            break;
+        default:
+            assert(0);
+        }
+        fprintf(stderr, "%s (%06d) %-22s %-20s %s\n",
+            cr == first_cr ? "=>" : "  ",
+            cr->id,
+            buf,
+            cr == first_cr ? "---" : cr->current,
+            cr->created ? cr->created : "<main>");
+    }
+    fprintf(stderr,
+        "\nCHANNEL  msgs/max    senders/receivers      refs  done  created\n");
+    fprintf(stderr,
+        "---------------------------------------------------------------\n");
+    for(it = mill_list_begin(&all_chans);
+          it != mill_list_end(&all_chans);
+          it = mill_list_next(&all_chans, it)) {
+        struct chan *ch = mill_cont(it, struct chan, all_chans_item);
+        sprintf(buf, "%d/%d",
+            (int)ch->items,
+            (int)ch->bufsz);
+        fprintf(stderr, "(%06d) %-11s ",
+            ch->id,
+            buf);
+        int pos;
+        struct mill_clause *clause;
+        if(ch->sender.first_clause) {
+            pos = sprintf(buf, "s:");
+            clause = ch->sender.first_clause;
+        }
+        else if(ch->receiver.first_clause) {
+            pos = sprintf(buf, "r:");
+            clause = ch->receiver.first_clause;
+        }
+        else {
+            sprintf(buf, " ");
+            clause = NULL;
+        }
+        int first = 1;
+        while(clause) {
+            if(first)
+                first = 0;
+            else
+                pos += sprintf(&buf[pos], ",");
+            pos += sprintf(&buf[pos], "%d", (int)clause->cr->id);
+            clause = clause->next;
+        }
+        fprintf(stderr, "%-22s %-5d %-5s %s\n",
+            buf,
+            (int)ch->refcount,
+            ch->done ? "yes" : "no",
+            ch->created);            
+    }
+    fprintf(stderr,"\n");
 }
 

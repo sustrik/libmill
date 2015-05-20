@@ -81,12 +81,15 @@
 MILL_EXPORT extern volatile int mill_unoptimisable1;
 MILL_EXPORT extern volatile void *mill_unoptimisable2;
 
-MILL_EXPORT void *mill_go_prologue(void);
+MILL_EXPORT void *mill_go_prologue(const char *created);
 MILL_EXPORT void mill_go_epilogue(void);
+
+#define mill_string2(x) #x
+#define mill_string(x) mill_string2(x)
 
 #define go(fn) \
     do {\
-        void *mill_sp = mill_go_prologue();\
+        void *mill_sp = mill_go_prologue(__FILE__ ":" mill_string(__LINE__));\
         if(mill_sp) {\
             int mill_anchor[mill_unoptimisable1];\
             mill_unoptimisable2 = &mill_anchor;\
@@ -97,14 +100,22 @@ MILL_EXPORT void mill_go_epilogue(void);
         }\
     } while(0)
 
-MILL_EXPORT void yield(void);
+#define yield() mill_yield(__FILE__ ":" mill_string(__LINE__))
 
-MILL_EXPORT void msleep(unsigned long ms);
+MILL_EXPORT void mill_yield(const char *current);
+
+#define msleep(ms) mill_msleep((ms), __FILE__ ":" mill_string(__LINE__))
+
+MILL_EXPORT void mill_msleep(unsigned long ms, const char *current);
+
+#define fdwait(fd, events) mill_fdwait((fd), (events),\
+    __FILE__ ":" mill_string(__LINE__))
 
 #define FDW_IN 1
 #define FDW_OUT 2
 #define FDW_ERR 4
-MILL_EXPORT int fdwait(int fd, int events);
+
+MILL_EXPORT int mill_fdwait(int fd, int events, const char *current);
 
 MILL_EXPORT void *cls(void);
 MILL_EXPORT void setcls(void *val);
@@ -117,16 +128,19 @@ typedef struct chan *chan;
 
 #define MILL_CLAUSELEN (sizeof(void*) * 6 + sizeof(int) * 2)
 
-#define chmake(type, bufsz) mill_chmake(sizeof(type), bufsz)
+#define chmake(type, bufsz) mill_chmake(sizeof(type), bufsz,\
+    __FILE__ ":" mill_string(__LINE__))
 
 #define chs(channel, type, value) \
     do {\
         type mill_val = (value);\
-        mill_chs((channel), &mill_val, sizeof(type));\
+        mill_chs((channel), &mill_val, sizeof(type),\
+            __FILE__ ":" mill_string(__LINE__));\
     } while(0)
 
 #define chr(channel, type) \
-    (*(type*)mill_chr((channel), alloca(sizeof(type)), sizeof(type)))
+    (*(type*)mill_chr((channel), alloca(sizeof(type)), sizeof(type),\
+        __FILE__ ":" mill_string(__LINE__)))
 
 #define chdone(channel, type, value) \
     do {\
@@ -134,10 +148,10 @@ typedef struct chan *chan;
         mill_chdone((channel), &mill_val, sizeof(type));\
     } while(0)
 
-MILL_EXPORT chan mill_chmake(size_t sz, size_t bufsz);
+MILL_EXPORT chan mill_chmake(size_t sz, size_t bufsz, const char *created);
 MILL_EXPORT chan chdup(chan ch);
-MILL_EXPORT void mill_chs(chan ch, void *val, size_t sz);
-MILL_EXPORT void *mill_chr(chan ch, void *val, size_t sz);
+MILL_EXPORT void mill_chs(chan ch, void *val, size_t sz, const char *current);
+MILL_EXPORT void *mill_chr(chan ch, void *val, size_t sz, const char *current);
 MILL_EXPORT void mill_chdone(chan ch, void *val, size_t sz);
 MILL_EXPORT void chclose(chan ch);
 
@@ -207,14 +221,14 @@ MILL_EXPORT void chclose(chan ch);
                     break;\
                 }\
             }\
-            mill_idx = mill_choose_wait();\
+            mill_idx = mill_choose_wait(__FILE__ ":" mill_string(__LINE__));\
         }
 
 MILL_EXPORT void mill_choose_in(void *clause, chan ch, size_t sz, int idx);
 MILL_EXPORT void mill_choose_out(void *clause, chan ch, void *val, size_t sz,
     int idx);
 MILL_EXPORT void mill_choose_otherwise(void);
-MILL_EXPORT int mill_choose_wait(void);
+MILL_EXPORT int mill_choose_wait(const char *current);
 MILL_EXPORT void *mill_choose_val(void);
 
 /******************************************************************************/
@@ -235,6 +249,13 @@ MILL_EXPORT int tcpflush(tcpconn conn);
 MILL_EXPORT ssize_t tcpread(tcpconn conn, void *buf, size_t len);
 MILL_EXPORT ssize_t tcpreaduntil(tcpconn conn, void *buf, size_t len,
     char until);
+
+/******************************************************************************/
+/*  Debugging                                                                 */
+/******************************************************************************/
+
+MILL_EXPORT void goredump(void);
+
 
 #endif
 

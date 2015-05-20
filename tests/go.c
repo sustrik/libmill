@@ -28,6 +28,15 @@
 
 int sum = 0;
 
+void receiver(chan ch) {
+    chan ch2 = chmake(int, 0);
+    choose {
+    in(ch, int, val):
+    in(ch2, int, val):
+    end
+    }
+}
+
 void worker(int count, int n) {
     int i;
     for(i = 0; i != count; ++i) {
@@ -40,6 +49,11 @@ int main() {
     go(worker(3, 7));
     go(worker(1, 11));
     go(worker(2, 5));
+    chan ch = chmake(int, 100);
+    go(receiver(ch));
+    go(receiver(ch));
+    go(receiver(ch));
+goredump();
     msleep(100);
     assert(sum == 42);
     return 0;
