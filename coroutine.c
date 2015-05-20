@@ -922,8 +922,11 @@ void goredump(void) {
             cr == first_cr ? "---" : cr->current,
             cr->created ? cr->created : "<main>");
     }
+    fprintf(stderr,"\n");
+    if(mill_list_empty(&all_chans))
+        return;
     fprintf(stderr,
-        "\nCHANNEL  msgs/max    senders/receivers      refs  done  created\n");
+        "CHANNEL  msgs/max    senders/receivers      refs  done  created\n");
     fprintf(stderr,
         "---------------------------------------------------------------\n");
     for(it = mill_list_begin(&all_chans);
