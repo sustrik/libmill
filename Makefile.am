@@ -38,6 +38,8 @@ libmill_la_SOURCES = \
     channel.c\
     coroutine.h\
     coroutine.c\
+    list.h\
+    list.c\
     tcp.h\
     tcp.c\
     utils.h\
