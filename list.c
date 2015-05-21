@@ -73,8 +73,6 @@ struct mill_list_item *mill_list_next(struct mill_list *self,
 void mill_list_insert(struct mill_list *self, struct mill_list_item *item,
     struct mill_list_item *it)
 {
-    assert(!item->prev && !item->next);
-
     item->prev = it ? it->prev : self->last;
     item->next = it;
     if(item->prev)
@@ -107,15 +105,5 @@ struct mill_list_item *mill_list_erase(struct mill_list *self,
     item->next = NULL;
 
     return next;
-}
-
-void mill_list_item_init(struct mill_list_item *self)
-{
-    self->prev = NULL;
-    self->next = NULL;
-}
-
-void mill_list_item_term(struct mill_list_item *self)
-{
 }
 

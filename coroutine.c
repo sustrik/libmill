@@ -284,7 +284,6 @@ void *mill_go_prologue(const char *created) {
         assert(ptr);
         cr = (struct mill_cr*)(ptr + MILL_STACK_SIZE - sizeof(struct mill_cr));
     }
-    mill_list_item_init(&cr->all_crs_item);
     mill_list_insert(&all_crs, &cr->all_crs_item, mill_list_end(&all_crs));
     cr->id = next_cr_id;
     cr->created = created;
@@ -593,7 +592,6 @@ chan mill_chmake(size_t sz, size_t bufsz, const char *created) {
     struct chan *ch = (struct chan*)malloc(sizeof(struct chan) +
         (sz * (bufsz + 1)));
     assert(ch);
-    mill_list_item_init(&ch->all_chans_item);
     mill_list_insert(&all_chans, &ch->all_chans_item,
         mill_list_end(&all_chans));
     ch->id = mill_next_chan_id;
@@ -638,7 +636,6 @@ void mill_chs(chan ch, void *val, size_t sz, const char *current) {
     cl.ep = &ch->sender;
     cl.val = val;
     cl.next_clause = NULL;
-    mill_list_item_init(&cl.item);
     mill_list_insert(&ch->sender.clauses, &cl.item,
         mill_list_end(&ch->sender.clauses));
     cl.cr->chstate.clauses = &cl;
@@ -667,7 +664,6 @@ void *mill_chr(chan ch, void *val, size_t sz, const char *current) {
     cl.ep = &ch->receiver;
     cl.val = val;
     cl.next_clause = NULL;
-    mill_list_item_init(&cl.item);
     mill_list_insert(&ch->receiver.clauses, &cl.item,
         mill_list_end(&ch->receiver.clauses));
     cl.cr->chstate.clauses = &cl;
@@ -743,7 +739,6 @@ void mill_choose_in(void *clause, chan ch, size_t sz, int idx) {
     first_cr->chstate.clauses = clause;
 
     /* Add the clause to the channel's list of waiting clauses. */
-    mill_list_item_init(&cl->item);
     mill_list_insert(&ch->receiver.clauses, &cl->item,
         mill_list_end(&ch->receiver.clauses));
 }
@@ -775,7 +770,6 @@ void mill_choose_out(void *clause, chan ch, void *val, size_t sz, int idx) {
     first_cr->chstate.clauses = cl;
 
     /* Add the clause to the channel's list of waiting clauses. */
-    mill_list_item_init(&cl->item);
     mill_list_insert(&ch->sender.clauses, &cl->item,
         mill_list_end(&ch->sender.clauses));
 }

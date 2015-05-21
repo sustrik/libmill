@@ -69,16 +69,5 @@ void mill_list_insert(struct mill_list *self, struct mill_list_item *item,
 struct mill_list_item *mill_list_erase(struct mill_list *self,
     struct mill_list_item *item);
 
-/* Initialize a list item. At this point it is not part of any list.
-   To statically initialise the item use = {0}. */
-void mill_list_item_init(struct mill_list_item *self);
-
-/* Terminates a list item. Item must not be part of any list before it's
-   terminated. */
-void mill_list_item_term(struct mill_list_item *self);
-
-/* Returns 1 is the item is part of a list, 0 otherwise. */
-int mill_list_item_isinlist(struct mill_list_item *self);
-
 #endif
 
