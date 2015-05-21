@@ -704,8 +704,8 @@ void chclose(chan ch) {
     assert(ch->refcount >= 1);
     --ch->refcount;
     if(!ch->refcount) {
-        assert(mill_list_empty(&ch->sender.clauses));
-        assert(mill_list_empty(&ch->receiver.clauses));
+        mill_list_term(&ch->sender.clauses);
+        mill_list_term(&ch->receiver.clauses);
         mill_list_erase(&all_chans, &ch->all_chans_item);
         free(ch);
     }
