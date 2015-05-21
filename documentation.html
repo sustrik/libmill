@@ -27,6 +27,7 @@
   <li><a href="#channels">Channels</a></li>
   <li><a href="#choose">Choose statement</a></li>
   <li><a href="#cls">Coroutine-local storage</a></li>
+  <li><a href="#debug">Debugging</a></li>
 </ul>
 
 <h3 id="build">Build</h3>
@@ -280,6 +281,41 @@ printf("CLS: a=%d b=%d\n", data->a, data->b);
 
 <p>It can be safely assumed that before coroutine-local data are set,
 <tt>cls</tt> function will return <tt>NULL</tt>.</p>
+
+<h3 id="debug">Debugging</h3>
+
+<p>When debugging a program you may want to inspect the coroutines being
+run and the channels being used. Use <tt>goredump()</tt> function to do
+that.</p>
+
+<p>It can be used in your program but also directly from the debugger. Here's
+an example <tt>gdb</tt> session:</p>
+
+<pre>
+Breakpoint 1, main () at foo.c:57
+57	    if(quux &lt; 0) {
+(gdb) p goredump()
+
+COROUTINE   state                  current              created
+---------------------------------------------------------------
+=> (000000) running                ---                  &lt;main&gt;
+   (000001) yield()                foo.c:44             foo.c:49
+   (000002) yield()                foo.c:44             foo.c:50
+   (000003) yield()                foo.c:44             foo.c:51
+   (000004) choose(2,1)            foo.c:36             foo.c:53
+   (000005) choose(3,1)            foo.c:36             foo.c:54
+   (000006) choose(4,1)            baz.c:128            foo.c:55
+
+CHANNEL  msgs/max    senders/receivers      refs  done  created
+---------------------------------------------------------------
+(000001) 0/100       r:4,5,6                1     no    foo.c:52
+(000002) 0/0         r:4                    1     no    baz.c:9
+(000003) 0/0         r:5                    1     no    baz.c:9
+(000004) 0/0         r:6                    1     no    baz.c:9
+
+$2 = void
+(gdb) 
+</pre>
 
 <!--
 
