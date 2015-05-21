@@ -57,11 +57,8 @@ struct mill_list_item *mill_list_prev(struct mill_list *self,
     return it->prev;
 }
 
-struct mill_list_item *mill_list_next(struct mill_list *self,
-    struct mill_list_item *it)
+struct mill_list_item *mill_list_next(struct mill_list_item *it)
 {
-    if(!it)
-        return self->first;
     return it->next;
 }
 

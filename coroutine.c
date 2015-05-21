@@ -844,8 +844,7 @@ void goredump(void) {
     fprintf(stderr,
         "---------------------------------------------------------------\n");
     struct mill_list_item *it;
-    for(it = mill_list_begin(&all_crs); it != NULL;
-          it = mill_list_next(&all_crs, it)) {
+    for(it = mill_list_begin(&all_crs); it != NULL; it = mill_list_next(it)) {
         struct mill_cr *cr = mill_cont(it, struct mill_cr, all_crs_item);
         switch(cr->state) {
         case MILL_YIELD:
@@ -897,8 +896,7 @@ void goredump(void) {
         "CHANNEL  msgs/max    senders/receivers      refs  done  created\n");
     fprintf(stderr,
         "---------------------------------------------------------------\n");
-    for(it = mill_list_begin(&all_chans); it != NULL;
-          it = mill_list_next(&all_chans, it)) {
+    for(it = mill_list_begin(&all_chans); it != NULL; it = mill_list_next(it)) {
         struct chan *ch = mill_cont(it, struct chan, all_chans_item);
         sprintf(buf, "%d/%d",
             (int)ch->items,
@@ -931,7 +929,7 @@ void goredump(void) {
             else
                 pos += sprintf(&buf[pos], ",");
             pos += sprintf(&buf[pos], "%d", (int)cl->cr->id);
-            cl = mill_cont(mill_list_next(clauselist, &cl->item),
+            cl = mill_cont(mill_list_next(&cl->item),
                 struct mill_clause, item);
         }
         fprintf(stderr, "%-22s %-5d %-5s %s\n",
