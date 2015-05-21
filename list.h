@@ -25,6 +25,8 @@
 #ifndef MILL_LIST_INCLUDED
 #define MILL_LIST_INCLUDED
 
+/* Doubly-linked list. */
+
 struct mill_list_item {
     struct mill_list_item *next;
     struct mill_list_item *prev;
@@ -45,7 +47,8 @@ void mill_list_term(struct mill_list *self);
 /* Returns 1 is list has zero items, 0 otherwise. */
 int mill_list_empty(struct mill_list *self);
 
-/* Returns iterator to the first item in the list. */
+/* Returns iterator to the first item in the list or NULL if
+   the list is empty. */
 struct mill_list_item *mill_list_begin(struct mill_list *self);
 
 /* Returns iterator to an item prior to the one pointed to by 'it'.

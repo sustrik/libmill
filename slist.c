@@ -45,12 +45,7 @@ struct mill_slist_item *mill_slist_begin(struct mill_slist *self) {
     return self->first;
 }
 
-struct mill_slist_item *mill_slist_end(struct mill_slist *self) {
-    return NULL;
-}
-
-struct mill_slist_item *mill_slist_next(struct mill_slist *self,
-      struct mill_slist_item *it) {
+struct mill_slist_item *mill_slist_next(struct mill_slist_item *it) {
     return it->next;
 }
 

@@ -25,6 +25,9 @@
 #ifndef MILL_SLIST_INCLUDED
 #define MILL_SLIST_INCLUDED
 
+/* Singly-linked list. Having both push and push_back functions means that
+   it can be used both as a queue and as a stack. */
+
 struct mill_slist_item {
     struct mill_slist_item *next;
 };
@@ -44,15 +47,13 @@ void mill_slist_term(struct mill_slist *self);
 /* Returns 1 is list has zero items, 0 otherwise. */
 int mill_slist_empty(struct mill_slist *self);
 
-/* Returns iterator to the first item in the list. */
+/* Returns iterator to the first item in the list or NULL if
+   the list is empty. */
 struct mill_slist_item *mill_slist_begin(struct mill_slist *self);
 
-/* Returns iterator to one past the last item in the list. */
-struct mill_slist_item *mill_slist_end(struct mill_slist *self);
-
-/* Returns iterator to one past the item pointed to by 'it'. */
-struct mill_list_item *mill_list_next(struct mill_slist *self,
-    struct mill_slist_item *it);
+/* Returns iterator to one past the item pointed to by 'it'.
+   If there are no more items returns NULL. */
+struct mill_list_item *mill_list_next(struct mill_slist_item *it);
 
 /* Push the item to the beginning of the list. */
 void mill_slist_push(struct mill_slist *self, struct mill_slist_item *item);
