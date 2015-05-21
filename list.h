@@ -48,10 +48,8 @@ int mill_list_empty(struct mill_list *self);
 /* Returns iterator to the first item in the list. */
 struct mill_list_item *mill_list_begin(struct mill_list *self);
 
-/* Returns iterator to one past the last item in the list. */
-struct mill_list_item *mill_list_end(struct mill_list *self);
-
-/* Returns iterator to an item prior to the one pointed to by 'it'. */
+/* Returns iterator to an item prior to the one pointed to by 'it'.
+   Returns NULL when it reaches end of the list. */
 struct mill_list_item *mill_list_prev(struct mill_list *self,
     struct mill_list_item *it);
 
@@ -60,7 +58,7 @@ struct mill_list_item *mill_list_next(struct mill_list *self,
     struct mill_list_item *it);
 
 /* Adds the item to the list before the item pointed to by 'it'.
-   Prior to insertion item should not be part of any list. */
+   If 'it' is NULL the item is inserted to the end of the list. */
 void mill_list_insert(struct mill_list *self, struct mill_list_item *item,
     struct mill_list_item *it);
 

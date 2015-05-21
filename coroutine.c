@@ -284,7 +284,7 @@ void *mill_go_prologue(const char *created) {
         assert(ptr);
         cr = (struct mill_cr*)(ptr + MILL_STACK_SIZE - sizeof(struct mill_cr));
     }
-    mill_list_insert(&all_crs, &cr->all_crs_item, mill_list_end(&all_crs));
+    mill_list_insert(&all_crs, &cr->all_crs_item, NULL);
     cr->id = next_cr_id;
     cr->created = created;
     cr->current = NULL;
@@ -592,8 +592,7 @@ chan mill_chmake(size_t sz, size_t bufsz, const char *created) {
     struct chan *ch = (struct chan*)malloc(sizeof(struct chan) +
         (sz * (bufsz + 1)));
     assert(ch);
-    mill_list_insert(&all_chans, &ch->all_chans_item,
-        mill_list_end(&all_chans));
+    mill_list_insert(&all_chans, &ch->all_chans_item, NULL);
     ch->id = mill_next_chan_id;
     ++mill_next_chan_id;
     ch->created = created;
@@ -636,8 +635,7 @@ void mill_chs(chan ch, void *val, size_t sz, const char *current) {
     cl.ep = &ch->sender;
     cl.val = val;
     cl.next_clause = NULL;
-    mill_list_insert(&ch->sender.clauses, &cl.item,
-        mill_list_end(&ch->sender.clauses));
+    mill_list_insert(&ch->sender.clauses, &cl.item, NULL);
     cl.cr->chstate.clauses = &cl;
     cl.cr->current = current;
 
@@ -664,8 +662,7 @@ void *mill_chr(chan ch, void *val, size_t sz, const char *current) {
     cl.ep = &ch->receiver;
     cl.val = val;
     cl.next_clause = NULL;
-    mill_list_insert(&ch->receiver.clauses, &cl.item,
-        mill_list_end(&ch->receiver.clauses));
+    mill_list_insert(&ch->receiver.clauses, &cl.item, NULL);
     cl.cr->chstate.clauses = &cl;
     cl.cr->current = current;
 
@@ -739,8 +736,7 @@ void mill_choose_in(void *clause, chan ch, size_t sz, int idx) {
     first_cr->chstate.clauses = clause;
 
     /* Add the clause to the channel's list of waiting clauses. */
-    mill_list_insert(&ch->receiver.clauses, &cl->item,
-        mill_list_end(&ch->receiver.clauses));
+    mill_list_insert(&ch->receiver.clauses, &cl->item, NULL);
 }
 
 void mill_choose_out(void *clause, chan ch, void *val, size_t sz, int idx) {
@@ -770,8 +766,7 @@ void mill_choose_out(void *clause, chan ch, void *val, size_t sz, int idx) {
     first_cr->chstate.clauses = cl;
 
     /* Add the clause to the channel's list of waiting clauses. */
-    mill_list_insert(&ch->sender.clauses, &cl->item,
-        mill_list_end(&ch->sender.clauses));
+    mill_list_insert(&ch->sender.clauses, &cl->item, NULL);
 }
 
 void mill_choose_otherwise(void) {
@@ -849,8 +844,7 @@ void goredump(void) {
     fprintf(stderr,
         "---------------------------------------------------------------\n");
     struct mill_list_item *it;
-    for(it = mill_list_begin(&all_crs);
-          it != mill_list_end(&all_crs);
+    for(it = mill_list_begin(&all_crs); it != NULL;
           it = mill_list_next(&all_crs, it)) {
         struct mill_cr *cr = mill_cont(it, struct mill_cr, all_crs_item);
         switch(cr->state) {
@@ -903,8 +897,7 @@ void goredump(void) {
         "CHANNEL  msgs/max    senders/receivers      refs  done  created\n");
     fprintf(stderr,
         "---------------------------------------------------------------\n");
-    for(it = mill_list_begin(&all_chans);
-          it != mill_list_end(&all_chans);
+    for(it = mill_list_begin(&all_chans); it != NULL;
           it = mill_list_next(&all_chans, it)) {
         struct chan *ch = mill_cont(it, struct chan, all_chans_item);
         sprintf(buf, "%d/%d",
@@ -932,7 +925,7 @@ void goredump(void) {
             cl = mill_cont(mill_list_begin(clauselist),
                 struct mill_clause, item);
         int first = 1;
-        while(cl && &cl->item != mill_list_end(clauselist)) {
+        while(cl) {
             if(first)
                 first = 0;
             else

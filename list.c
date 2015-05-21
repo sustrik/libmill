@@ -49,11 +49,6 @@ struct mill_list_item *mill_list_begin(struct mill_list *self)
     return self->first;
 }
 
-struct mill_list_item *mill_list_end(struct mill_list *self)
-{
-    return NULL;
-}
-
 struct mill_list_item *mill_list_prev(struct mill_list *self,
     struct mill_list_item *it)
 {
