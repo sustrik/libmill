@@ -317,6 +317,68 @@ $2 = void
 (gdb) 
 </pre>
 
+<p>Coroutine dump contains the list of coroutines, each tagged by its ID,
+state, pointer to the line of code that's being executed and to the line
+that created the coroutine.</p>
+
+<p>State field gives you name of the operation being performed along with
+its arguments. So, for example, when a coroutine is blocked in <tt>chr()</tt>
+you'll see the ID of the channel it is trying to receive from:</p>
+
+<pre>
+COROUTINE   state                  current              created
+---------------------------------------------------------------
+   (000005) chr(3)                 foo.c:12             foo.c:4
+</pre>
+
+<p>Same applies when sending to a channel:</p>
+
+<pre>
+COROUTINE   state                  current              created
+---------------------------------------------------------------
+   (000012) chs(3)                 foo.c:17             foo.c:4
+</pre>
+
+<p>When <tt>choose</tt> statement is being executed a list of channel IDs
+is provided, corresponding to the list of clauses in the <tt>choose</tt>
+statement:</p>
+
+<pre>
+COROUTINE   state                  current              created
+---------------------------------------------------------------
+   (000005) choose(3,1)            foo.c:36             foo.c:54
+</pre>
+
+<p>Channel dump (may be ommitted if there are no channels) reports channel ID,
+number of messages buffered in the channel, maximum channel capacity, channel's
+reference count, whether <tt>chdone()</tt> was already called and a pointer
+to the line of code that created the channel.</p> 
+
+<p>Additionally, if there are any receivers waiting for messages from the
+channel -- whether via <tt>chr</tt> or <tt>choose</tt> -- they are reported
+like this:</p>
+
+<pre>
+CHANNEL  msgs/max    senders/receivers      refs  done  created
+---------------------------------------------------------------
+(000001) 0/100       r:4,5,6                1     no    foo.c:52
+</pre>
+
+<p>The receivers are server in the displayed order, i.e. when a new message
+is sent to the channel it will be dispatched to coroutine 4. Next one will
+go to coroutine 5 and so on.</p>
+
+<p>Similarly, waiting senders are reported like this:</p>
+
+<pre>
+CHANNEL  msgs/max    senders/receivers      refs  done  created
+---------------------------------------------------------------
+(000001) 100/100     s:12,15                1     no    baz.c:231
+</pre>
+
+<p>If there are no coroutines waiting to send or receive messages from the
+channel the field is left empty.</p>
+
 <!--
 
 <h3 id="tcp">TCP library</h3>
