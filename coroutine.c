@@ -24,6 +24,7 @@
 
 #include "libmill.h"
 #include "list.h"
+#include "slist.h"
 #include "utils.h"
 
 #include <assert.h>
@@ -69,11 +70,11 @@ struct mill_chstate {
     int idx;
 };
 
-static void mill_chstate_init(struct mill_chstate *chstate) {
-    chstate->clauses = NULL;
-    chstate->othws = 0;
-    chstate->available = 0;
-    chstate->idx = -2;
+static void mill_chstate_init(struct mill_chstate *self) {
+    self->clauses = NULL;
+    self->othws = 0;
+    self->available = 0;
+    self->idx = -2;
 }
 
 enum mill_state {
@@ -479,7 +480,7 @@ static struct mill_list all_chans = {0};
    Similarly, both chs() and chr() each create a single clause. */
 struct mill_clause {
     /* Member of list of clauses waiting for a channel endpoint. */
-    struct mill_list_item item;
+    struct mill_list_item epitem;
     /* Linked list of clauses in the choose statement. */
     struct mill_clause *next_clause;
     /* The coroutine which created the clause. */
@@ -532,14 +533,14 @@ static int mill_enqueue(chan ch, void *val) {
     /* If there's a receiver already waiting, let's resume it. */
     if(!mill_list_empty(&ch->receiver.clauses)) {
         struct mill_clause *cl = mill_cont(
-            mill_list_begin(&ch->receiver.clauses), struct mill_clause, item);
+            mill_list_begin(&ch->receiver.clauses), struct mill_clause, epitem);
         void *dst = cl->val;
         if(!dst)
             dst = mill_getvalbuf(cl->cr, ch->sz);
         memcpy(dst, val, ch->sz);
         cl->cr->chstate.idx = cl->idx;
         mill_resume(cl->cr);
-        mill_list_erase(&ch->receiver.clauses, &cl->item);
+        mill_list_erase(&ch->receiver.clauses, &cl->epitem);
         return 1;
     }
     /* The buffer is full. */
@@ -557,16 +558,16 @@ static int mill_dequeue(chan ch, void *val) {
     void *dst = val;
     if(!dst)
         dst = mill_getvalbuf(mill_cont(mill_list_begin(&ch->receiver.clauses),
-            struct mill_clause, item)->cr, ch->sz);
+            struct mill_clause, epitem)->cr, ch->sz);
 
     /* If there's a sender already waiting, let's resume it. */
     struct mill_clause *cl = mill_cont(
-        mill_list_begin(&ch->sender.clauses), struct mill_clause, item);
+        mill_list_begin(&ch->sender.clauses), struct mill_clause, epitem);
     if(cl) {
         memcpy(dst, cl->val, ch->sz);
         cl->cr->chstate.idx = cl->idx;
         mill_resume(cl->cr);
-        mill_list_erase(&ch->sender.clauses, &cl->item);
+        mill_list_erase(&ch->sender.clauses, &cl->epitem);
         return 1;
     }
 
@@ -635,7 +636,7 @@ void mill_chs(chan ch, void *val, size_t sz, const char *current) {
     cl.ep = &ch->sender;
     cl.val = val;
     cl.next_clause = NULL;
-    mill_list_insert(&ch->sender.clauses, &cl.item, NULL);
+    mill_list_insert(&ch->sender.clauses, &cl.epitem, NULL);
     cl.cr->chstate.clauses = &cl;
     cl.cr->current = current;
 
@@ -662,7 +663,7 @@ void *mill_chr(chan ch, void *val, size_t sz, const char *current) {
     cl.ep = &ch->receiver;
     cl.val = val;
     cl.next_clause = NULL;
-    mill_list_insert(&ch->receiver.clauses, &cl.item, NULL);
+    mill_list_insert(&ch->receiver.clauses, &cl.epitem, NULL);
     cl.cr->chstate.clauses = &cl;
     cl.cr->current = current;
 
@@ -689,14 +690,14 @@ void mill_chdone(chan ch, void *val, size_t sz) {
     /* Resume all the receivers currently waiting on the channel. */
     while(!mill_list_empty(&ch->receiver.clauses)) {
         struct mill_clause *cl = mill_cont(
-            mill_list_begin(&ch->receiver.clauses), struct mill_clause, item);
+            mill_list_begin(&ch->receiver.clauses), struct mill_clause, epitem);
         void *dst = cl->val;
         if(!dst)
             dst = mill_getvalbuf(cl->cr, ch->sz);
         memcpy(dst, val, ch->sz);
         cl->cr->chstate.idx = cl->idx;
         mill_resume(cl->cr);
-        mill_list_erase(&ch->receiver.clauses, &cl->item);
+        mill_list_erase(&ch->receiver.clauses, &cl->epitem);
     }
 }
 
@@ -736,7 +737,7 @@ void mill_choose_in(void *clause, chan ch, size_t sz, int idx) {
     first_cr->chstate.clauses = clause;
 
     /* Add the clause to the channel's list of waiting clauses. */
-    mill_list_insert(&ch->receiver.clauses, &cl->item, NULL);
+    mill_list_insert(&ch->receiver.clauses, &cl->epitem, NULL);
 }
 
 void mill_choose_out(void *clause, chan ch, void *val, size_t sz, int idx) {
@@ -766,7 +767,7 @@ void mill_choose_out(void *clause, chan ch, void *val, size_t sz, int idx) {
     first_cr->chstate.clauses = cl;
 
     /* Add the clause to the channel's list of waiting clauses. */
-    mill_list_insert(&ch->sender.clauses, &cl->item, NULL);
+    mill_list_insert(&ch->sender.clauses, &cl->epitem, NULL);
 }
 
 void mill_choose_otherwise(void) {
@@ -822,7 +823,7 @@ int mill_choose_wait(const char *current) {
     /* Clean-up the clause lists in queried channels. */
     cleanup:
     for(it = chstate->clauses; it; it = it->next_clause)
-        mill_list_erase(&it->ep->clauses, &it->item);
+        mill_list_erase(&it->ep->clauses, &it->epitem);
     mill_chstate_init(chstate);
 
     assert(res >= -1);
@@ -921,7 +922,7 @@ void goredump(void) {
         struct mill_clause *cl = NULL;
         if(clauselist)
             cl = mill_cont(mill_list_begin(clauselist),
-                struct mill_clause, item);
+                struct mill_clause, epitem);
         int first = 1;
         while(cl) {
             if(first)
@@ -929,8 +930,8 @@ void goredump(void) {
             else
                 pos += sprintf(&buf[pos], ",");
             pos += sprintf(&buf[pos], "%d", (int)cl->cr->id);
-            cl = mill_cont(mill_list_next(&cl->item),
-                struct mill_clause, item);
+            cl = mill_cont(mill_list_next(&cl->epitem),
+                struct mill_clause, epitem);
         }
         fprintf(stderr, "%-22s %-5d %-5s %s\n",
             buf,

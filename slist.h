@@ -53,7 +53,7 @@ struct mill_slist_item *mill_slist_begin(struct mill_slist *self);
 
 /* Returns iterator to one past the item pointed to by 'it'.
    If there are no more items returns NULL. */
-struct mill_list_item *mill_list_next(struct mill_slist_item *it);
+struct mill_slist_item *mill_slist_next(struct mill_slist_item *it);
 
 /* Push the item to the beginning of the list. */
 void mill_slist_push(struct mill_slist *self, struct mill_slist_item *item);
