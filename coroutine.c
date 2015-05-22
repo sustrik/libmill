@@ -55,7 +55,7 @@ volatile void *mill_unoptimisable2 = NULL;
 /* This structure keeps the state of a 'choose' operation. */
 struct mill_chstate {
     /* List of clauses in the 'choose' statement. */
-    struct mill_clause *clauses;
+    struct mill_slist clauses;
 
     /* 1 if there is 'otherwise' clause. 0 if there is not. */
     int othws;
@@ -71,7 +71,7 @@ struct mill_chstate {
 };
 
 static void mill_chstate_init(struct mill_chstate *self) {
-    self->clauses = NULL;
+    mill_slist_init(&self->clauses);
     self->othws = 0;
     self->available = 0;
     self->idx = -2;
@@ -482,7 +482,7 @@ struct mill_clause {
     /* Member of list of clauses waiting for a channel endpoint. */
     struct mill_list_item epitem;
     /* Linked list of clauses in the choose statement. */
-    struct mill_clause *next_clause;
+    struct mill_slist_item chitem;
     /* The coroutine which created the clause. */
     struct mill_cr *cr;
     /* Channel endpoint the clause is waiting for. */
@@ -627,7 +627,7 @@ void mill_chs(chan ch, void *val, size_t sz, const char *current) {
     /* If there's no free space in the buffer we are going to yield
        till the receiver arrives. */
     if(mill_setjmp(&first_cr->ctx)) {
-        first_cr->chstate.clauses = NULL;
+        mill_slist_init(&first_cr->chstate.clauses);
         return;
     }
     struct mill_clause cl;
@@ -635,9 +635,8 @@ void mill_chs(chan ch, void *val, size_t sz, const char *current) {
     cl.cr->state = MILL_CHS;
     cl.ep = &ch->sender;
     cl.val = val;
-    cl.next_clause = NULL;
     mill_list_insert(&ch->sender.clauses, &cl.epitem, NULL);
-    cl.cr->chstate.clauses = &cl;
+    mill_slist_push_back(&cl.cr->chstate.clauses, &cl.chitem);
     cl.cr->current = current;
 
     /* Pass control to a different coroutine. */
@@ -649,7 +648,7 @@ void *mill_chr(chan ch, void *val, size_t sz, const char *current) {
         mill_panic("receive of a type not matching the channel");
 
     if(mill_dequeue(ch, val)) {
-        first_cr->chstate.clauses = NULL;
+        mill_slist_init(&first_cr->chstate.clauses);
         return val;
     }
 
@@ -662,9 +661,8 @@ void *mill_chr(chan ch, void *val, size_t sz, const char *current) {
     cl.cr->state = MILL_CHR;
     cl.ep = &ch->receiver;
     cl.val = val;
-    cl.next_clause = NULL;
     mill_list_insert(&ch->receiver.clauses, &cl.epitem, NULL);
-    cl.cr->chstate.clauses = &cl;
+    mill_slist_push_back(&cl.cr->chstate.clauses, &cl.chitem);
     cl.cr->current = current;
 
     /* Pass control to a different coroutine. */
@@ -733,8 +731,7 @@ void mill_choose_in(void *clause, chan ch, size_t sz, int idx) {
     cl->val = NULL;
     cl->idx = idx;
     cl->available = available;
-    cl->next_clause = first_cr->chstate.clauses;
-    first_cr->chstate.clauses = clause;
+    mill_slist_push_back(&first_cr->chstate.clauses, &cl->chitem);
 
     /* Add the clause to the channel's list of waiting clauses. */
     mill_list_insert(&ch->receiver.clauses, &cl->epitem, NULL);
@@ -761,10 +758,9 @@ void mill_choose_out(void *clause, chan ch, void *val, size_t sz, int idx) {
     cl->cr = first_cr;
     cl->ep = &ch->sender;
     cl->val = val;
-    cl->next_clause = first_cr->chstate.clauses;
     cl->available = available;
     cl->idx = idx;
-    first_cr->chstate.clauses = cl;
+    mill_slist_push_back(&first_cr->chstate.clauses, &cl->chitem);
 
     /* Add the clause to the channel's list of waiting clauses. */
     mill_list_insert(&ch->sender.clauses, &cl->epitem, NULL);
@@ -779,26 +775,26 @@ void mill_choose_otherwise(void) {
 int mill_choose_wait(const char *current) {
     struct mill_chstate *chstate = &first_cr->chstate;
     int res = -1;
-    struct mill_clause *it;
+    struct mill_slist_item *it;
     
     /* If there are clauses that are immediately available,
        randomly choose one of them. */
     if(chstate->available > 0) {
         int chosen = random() % (chstate->available);
-        it = chstate->clauses;
-        while(it) {
-            if(it->available) {
+        for (it = mill_slist_begin(&chstate->clauses); it != NULL;
+              it = mill_slist_next(it)) {
+            struct mill_clause *cl = mill_cont(it, struct mill_clause, chitem);
+            if(cl->available) {
                 if(!chosen) {
-                    int ok = it->ep->type == MILL_SENDER ?
-                        mill_enqueue(mill_getchan(it->ep), it->val) :
-                        mill_dequeue(mill_getchan(it->ep), NULL);
+                    int ok = cl->ep->type == MILL_SENDER ?
+                        mill_enqueue(mill_getchan(cl->ep), cl->val) :
+                        mill_dequeue(mill_getchan(cl->ep), NULL);
                     assert(ok);
-                    res = it->idx;
+                    res = cl->idx;
                     break;
                 }
                 --chosen;
             }
-            it = it->next_clause;
         }
         goto cleanup;
     }
@@ -822,8 +818,11 @@ int mill_choose_wait(const char *current) {
    
     /* Clean-up the clause lists in queried channels. */
     cleanup:
-    for(it = chstate->clauses; it; it = it->next_clause)
-        mill_list_erase(&it->ep->clauses, &it->epitem);
+    for(it = mill_slist_begin(&chstate->clauses); it;
+          it = mill_slist_next(it)) {
+        struct mill_clause *cl = mill_cont(it, struct mill_clause, chitem);
+        mill_list_erase(&cl->ep->clauses, &cl->epitem);
+    }
     mill_chstate_init(chstate);
 
     assert(res >= -1);
@@ -858,24 +857,27 @@ void goredump(void) {
             sprintf(buf, "fdwait(%d)", -1);
             break;
         case MILL_CHR:
-            sprintf(buf, "chr(%d)", mill_getchan(cr->chstate.clauses->ep)->id);
+            sprintf(buf, "chr(%d)", mill_getchan(mill_cont(mill_slist_begin(
+                &cr->chstate.clauses), struct mill_clause, chitem)->ep)->id);
             break;
         case MILL_CHS:
-            sprintf(buf, "chs(%d)", mill_getchan(cr->chstate.clauses->ep)->id);
+            sprintf(buf, "chs(%d)", mill_getchan(mill_cont(mill_slist_begin(
+                &cr->chstate.clauses), struct mill_clause, chitem)->ep)->id);
             break;
         case MILL_CHOOSE:
             {
 		        int pos = 0;
                 pos += sprintf(&buf[pos], "choose(");
-		        struct mill_clause *cl = cr->chstate.clauses;
 		        int first = 1;
-		        while(cl) { // TODO: List the clauses in reverse order.
+                struct mill_slist_item *it;
+                for(it = mill_slist_begin(&cr->chstate.clauses); it;
+                      it = mill_slist_next(it)) {
 		            if(first)
 		                first = 0;
 		            else
 		                pos += sprintf(&buf[pos], ",");
-		            pos += sprintf(&buf[pos], "%d", mill_getchan(cl->ep)->id);
-		            cl = cl->next_clause;
+		            pos += sprintf(&buf[pos], "%d", mill_getchan(mill_cont(it,
+                        struct mill_clause, chitem)->ep)->id);
 		        }
 		        sprintf(&buf[pos], ")");
             }
