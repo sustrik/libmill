@@ -349,10 +349,10 @@ COROUTINE   state                  current              created
    (000005) choose(3,1)            foo.c:36             foo.c:54
 </pre>
 
-<p>Channel dump (may be ommitted if there are no channels) reports channel ID,
-number of messages buffered in the channel, maximum channel capacity, channel's
-reference count, whether <tt>chdone()</tt> was already called and a pointer
-to the line of code that created the channel.</p> 
+<p>Channel dump (it may be ommitted if there are no channels) reports channel
+ID, number of messages buffered in the channel, maximum channel capacity,
+channel's reference count, whether <tt>chdone()</tt> was already called and a
+pointer to the line of code that created the channel.</p> 
 
 <p>Additionally, if there are any receivers waiting for messages from the
 channel -- whether via <tt>chr</tt> or <tt>choose</tt> -- they are reported
@@ -364,7 +364,7 @@ CHANNEL  msgs/max    senders/receivers      refs  done  created
 (000001) 0/100       r:4,5,6                1     no    foo.c:52
 </pre>
 
-<p>The receivers are server in the displayed order, i.e. when a new message
+<p>The receivers are served in the displayed order, i.e. when a new message
 is sent to the channel it will be dispatched to coroutine 4. Next one will
 go to coroutine 5 and so on.</p>
 
