@@ -256,7 +256,7 @@ is chosen at random.</p>
 <p>Coroutine-local storage is an advanced mechanism meant to be used in
 special cases. Avoid using it if possible. In general, use it where you would
 use thread-local storage in a threaded program. TLS itself cannot be used with
-Mill as multiple coroutines can share the same OS thread.</p>
+libmill as multiple coroutines can share the same OS thread.</p>
 
 <p>User can allocate coroutine-local data and attach it to the coroutine
 using <tt>setcls</tt> function. For example:</p>
