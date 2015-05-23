@@ -84,12 +84,18 @@ static int resolve_ip4_literal_addr(const char *addr,
     char *colon = strrchr(addr, ':');
 
     /* Port. */
-    int port;
-    if(!colon) {
-        port = 0;
-    }
-    else {
-        port = atoi(colon + 1);
+    int port = 0;
+    if(colon) {
+        const char *pos = colon + 1;
+        while(*pos) {
+          if(*pos < '0' || *pos > '9') {
+            errno = EINVAL;
+            return -1;
+          }
+          port *= 10;
+          port += *pos - '0';
+          ++pos;
+        }
         if(port < 0 || port > 0xffff) {
             errno = EINVAL;
             return -1;
