@@ -23,61 +23,50 @@
 */
 
 #include <assert.h>
-#include <netinet/in.h>
 #include <string.h>
 
 #include "../libmill.h"
 
-void connect_socket(void) {
-    struct sockaddr_in addr;
-    memset(&addr, 0, sizeof(addr));
-    addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = 0x0100007f;
-    addr.sin_port = htons(5555);
-    tcpconn cs = tcpconnect((struct sockaddr*)&addr, sizeof(addr));
+void client(void) {
+    tcpsock cs = tcpconnect("127.0.0.1:5555");
     assert(cs);
 
-    tcpwrite(cs, "ABC", 3);
+    tcpsend(cs, "ABC", 3);
     int rc = tcpflush(cs);
     assert(rc == 0);
 
     char buf[16];
-    ssize_t sz = tcpreaduntil(cs, buf, sizeof(buf), '\n');
+    ssize_t sz = tcprecvuntil(cs, buf, sizeof(buf), '\n');
     assert(sz == 4);
     assert(buf[0] == '1' && buf[1] == '2' && buf[2] == '3' && buf[3] == '\n');
-    sz = tcpreaduntil(cs, buf, sizeof(buf), '\n');
+    sz = tcprecvuntil(cs, buf, sizeof(buf), '\n');
     assert(sz == 3);
     assert(buf[0] == '4' && buf[1] == '5' && buf[2] == '\n');
-    sz = tcpreaduntil(cs, buf, 3, '\n');
+    sz = tcprecvuntil(cs, buf, 3, '\n');
     assert(sz == 0);
     assert(buf[0] == '6' && buf[1] == '7' && buf[2] == '8');
 
-    tcpconn_close(cs);
+    tcpclose(cs);
 }
 
 int main() {
-    struct sockaddr_in addr;
-    memset(&addr, 0, sizeof(addr));
-    addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = INADDR_ANY;
-    addr.sin_port = htons(5555);
-    tcplistener ls = tcplisten((struct sockaddr*)&addr, sizeof(addr));
+    tcpsock ls = tcplisten("*:5555");
     assert(ls);
 
-    go(connect_socket());
+    go(client());
 
-    tcpconn as = tcpaccept(ls);
+    tcpsock as = tcpaccept(ls);
 
     char buf[16];
-    ssize_t sz = tcpread(as, buf, 3);
+    ssize_t sz = tcprecv(as, buf, 3);
     assert(buf[0] == 'A' && buf[1] == 'B' && buf[2] == 'C');
 
-    tcpwrite(as, "123\n45\n6789", 9);
+    tcpsend(as, "123\n45\n6789", 9);
     int rc = tcpflush(as);
     assert(rc == 0);
 
-    tcpconn_close(as);
-    tcplistener_close(ls);
+    tcpclose(as);
+    tcpclose(ls);
 
     return 0;
 }

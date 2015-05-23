@@ -29,7 +29,6 @@
 #include <errno.h>
 #include <stddef.h>
 #include <sys/types.h>
-#include <sys/socket.h>	
 
 /******************************************************************************/
 /*  ABI versioning support                                                    */
@@ -235,20 +234,16 @@ MILL_EXPORT void *mill_choose_val(void);
 /*  Experimental                                                              */
 /******************************************************************************/
 
-typedef struct tcplistener *tcplistener;
-typedef struct tcpconn *tcpconn;
+typedef struct tcpsock *tcpsock;
 
-MILL_EXPORT tcplistener tcplisten(const struct sockaddr *addr,
-    socklen_t addrlen);
-MILL_EXPORT tcpconn tcpaccept(tcplistener listener);
-MILL_EXPORT void tcplistener_close(tcplistener listener);
-MILL_EXPORT tcpconn tcpconnect(const struct sockaddr *addr, socklen_t addrlen);
-MILL_EXPORT void tcpconn_close(tcpconn conn);
-MILL_EXPORT void tcpwrite(tcpconn conn, const void *buf, size_t len);
-MILL_EXPORT int tcpflush(tcpconn conn);
-MILL_EXPORT ssize_t tcpread(tcpconn conn, void *buf, size_t len);
-MILL_EXPORT ssize_t tcpreaduntil(tcpconn conn, void *buf, size_t len,
-    char until);
+MILL_EXPORT tcpsock tcplisten(const char *addr);
+MILL_EXPORT tcpsock tcpaccept(tcpsock s);
+MILL_EXPORT tcpsock tcpconnect(const char *addr);
+MILL_EXPORT void tcpsend(tcpsock s, const void *buf, size_t len);
+MILL_EXPORT int tcpflush(tcpsock s);
+MILL_EXPORT ssize_t tcprecv(tcpsock s, void *buf, size_t len);
+MILL_EXPORT ssize_t tcprecvuntil(tcpsock s, void *buf, size_t len, char until);
+MILL_EXPORT void tcpclose(tcpsock s);
 
 /******************************************************************************/
 /*  Debugging                                                                 */

@@ -22,24 +22,40 @@
 
 */
 
+#include <arpa/inet.h>
 #include <assert.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
+#include <sys/socket.h>
 #include <unistd.h>
 
 #include "libmill.h"
+#include "utils.h"
 
 #define MILL_TCP_LISTEN_BACKLOG 10
 
 #define MILL_TCP_BUFLEN 1500
 
+enum mill_tcptype {
+   MILL_TCPLISTENER,
+   MILL_TCPCONN
+};
+
+struct tcpsock {
+    enum mill_tcptype type;
+};
+
 struct tcplistener {
+    struct tcpsock sock;
     int fd;
 };
 
 struct tcpconn {
+    struct tcpsock sock;
     int fd;
     int ifirst;
     int ilen;
@@ -52,6 +68,7 @@ struct tcpconn {
 static struct tcpconn *tcpconn_create(int fd) {
     struct tcpconn *conn = malloc(sizeof(struct tcpconn));
     assert(conn);
+    conn->sock.type = MILL_TCPCONN;
     conn->fd = fd;
     conn->ifirst = 0;
     conn->ilen = 0;
@@ -60,7 +77,59 @@ static struct tcpconn *tcpconn_create(int fd) {
     return conn;
 }
 
-tcplistener tcplisten(const struct sockaddr *addr, socklen_t addrlen) {
+static int resolve_ip4_literal_addr(const char *addr,
+      struct sockaddr_in *addr_in) {
+    memset(addr_in, 0, sizeof(struct sockaddr_in));
+    addr_in->sin_family = AF_INET;
+    char *colon = strrchr(addr, ':');
+
+    /* Port. */
+    int port;
+    if(!colon) {
+        port = 0;
+    }
+    else {
+        port = atoi(colon + 1);
+        if(port < 0 || port > 0xffff) {
+            errno = EINVAL;
+            return -1;
+        }
+    }
+    addr_in->sin_port = htons(port);
+
+    /* Get the IP address part of the string. */
+    const char *straddr;
+    char straddrbuf[256];
+    if(!colon)
+        straddr = addr;
+    else {
+        assert(colon - addr + 1 <= sizeof(straddrbuf));
+        memcpy(straddrbuf, addr, colon - addr);
+        straddrbuf[colon - addr] = 0;
+        straddr = straddrbuf;
+    }
+
+    /* Wildcard address. */
+    if(strcmp(straddr, "*") == 0) {
+        addr_in->sin_addr.s_addr = INADDR_ANY;
+        return 0;
+    }
+
+    /* IPv4 address. */
+    int rc = inet_pton(AF_INET, straddr, &addr_in->sin_addr);
+    if(rc != 1) {
+        errno = EINVAL;
+        return -1;
+    }
+    return 0;
+}
+
+tcpsock tcplisten(const char *addr) {
+    struct sockaddr_in addr_in;
+    int rc = resolve_ip4_literal_addr(addr, &addr_in);
+    if (rc != 0)
+        return NULL;
+
     /* Open the listening socket. */
     int s = socket(AF_INET, SOCK_STREAM, 0);
     if(s == -1)
@@ -70,53 +139,56 @@ tcplistener tcplisten(const struct sockaddr *addr, socklen_t addrlen) {
     int opt = fcntl(s, F_GETFL, 0);
     if (opt == -1)
         opt = 0;
-    int rc = fcntl(s, F_SETFL, opt | O_NONBLOCK);
+    rc = fcntl(s, F_SETFL, opt | O_NONBLOCK);
     assert(rc != -1);
 
     /* Start listening. */
-    rc = bind(s, addr, addrlen);
+    rc = bind(s, (struct sockaddr*)&addr_in, sizeof(addr_in));
     assert(rc != -1);
     rc = listen(s, MILL_TCP_LISTEN_BACKLOG);
     assert(rc != -1);
 
     /* Create the object. */
-    struct tcplistener *listener = malloc(sizeof(struct tcplistener));
-    assert(listener);
-    listener->fd = s;
-    return listener;
+    struct tcplistener *l = malloc(sizeof(struct tcplistener));
+    assert(l);
+    l->sock.type = MILL_TCPLISTENER;
+    l->fd = s;
+    return &l->sock;
 }
 
-tcpconn tcpaccept(tcplistener listener) {
+tcpsock tcpaccept(tcpsock s) {
+    if(s->type != MILL_TCPLISTENER)
+        mill_panic("trying to accept on a socket that isn't listening");
+    struct tcplistener *l = (struct tcplistener*)s;
 	while(1) {
         /* Try to get new connection (non-blocking). */
-        int s = accept(listener->fd, NULL, NULL);
-        if (s >= 0) {
+        int as = accept(l->fd, NULL, NULL);
+        if (as >= 0) {
             /* Put the newly created connection into non-blocking mode. */
-            int opt = fcntl(s, F_GETFL, 0);
+            int opt = fcntl(as, F_GETFL, 0);
             if (opt == -1)
                 opt = 0;
-            int rc = fcntl(s, F_SETFL, opt | O_NONBLOCK);
+            int rc = fcntl(as, F_SETFL, opt | O_NONBLOCK);
             assert(rc != -1);
 
             /* Create the object. */
-			return tcpconn_create(s);
+			return &tcpconn_create(as)->sock;
         }
-        assert(s == -1);
+        assert(as == -1);
         if(errno != EAGAIN && errno != EWOULDBLOCK)
             return NULL;
         /* Wait till new connection is available. */
-        int rc = fdwait(listener->fd, FDW_IN);
+        int rc = fdwait(l->fd, FDW_IN);
         assert(rc == FDW_IN);
     }
 }
 
-void tcplistener_close(tcplistener listener) {
-    int rc = close(listener->fd);
-    assert(rc == 0);
-    free(listener);
-}
+tcpsock tcpconnect(const char *addr) {
+    struct sockaddr_in addr_in;
+    int rc = resolve_ip4_literal_addr(addr, &addr_in);
+    if (rc != 0)
+        return NULL;
 
-tcpconn tcpconnect(const struct sockaddr *addr, socklen_t addrlen) {
     /* Open a socket. */
     int s = socket(AF_INET, SOCK_STREAM, 0);
     if(s == -1)
@@ -126,11 +198,11 @@ tcpconn tcpconnect(const struct sockaddr *addr, socklen_t addrlen) {
     int opt = fcntl(s, F_GETFL, 0);
     if (opt == -1)
         opt = 0;
-    int rc = fcntl(s, F_SETFL, opt | O_NONBLOCK);
+    rc = fcntl(s, F_SETFL, opt | O_NONBLOCK);
     assert(rc != -1);
 
     /* Connect to the remote endpoint. */
-    rc = connect(s, addr, addrlen);
+    rc = connect(s, (struct sockaddr*)&addr_in, sizeof(addr_in));
     if(rc != 0) {
 		assert(rc == -1);
 		if(errno != EINPROGRESS)
@@ -141,16 +213,13 @@ tcpconn tcpconnect(const struct sockaddr *addr, socklen_t addrlen) {
     }
 
     /* Create the object. */
-	return tcpconn_create(s);
+	return &tcpconn_create(s)->sock;
 }
 
-void tcpconn_close(tcpconn conn) {
-    int rc = close(conn->fd);
-    assert(rc == 0);
-    free(conn);
-}
-
-void tcpwrite(tcpconn conn, const void *buf, size_t len) {
+void tcpsend(tcpsock s, const void *buf, size_t len) {
+    if(s->type != MILL_TCPCONN)
+        mill_panic("trying to send to an unconnected socket");
+    struct tcpconn *conn = (struct tcpconn*)s;
     /* If there was already an error don't even try again. */
     if(conn->oerr)
         return;
@@ -163,7 +232,7 @@ void tcpwrite(tcpconn conn, const void *buf, size_t len) {
     }
 
     /* Flush the output buffer. */
-    tcpflush(conn);
+    tcpflush(s);
 
     /* Try to fit it into the buffer once again. */
     if(conn->olen + len <= MILL_TCP_BUFLEN) {
@@ -192,7 +261,10 @@ void tcpwrite(tcpconn conn, const void *buf, size_t len) {
     }
 }
 
-int tcpflush(tcpconn conn) {
+int tcpflush(tcpsock s) {
+    if(s->type != MILL_TCPCONN)
+        mill_panic("trying to send to an unconnected socket");
+    struct tcpconn *conn = (struct tcpconn*)s;
     if(conn->oerr) {
         errno = conn->oerr;
         conn->oerr = 0;
@@ -219,7 +291,10 @@ int tcpflush(tcpconn conn) {
     return 0;
 }
 
-ssize_t tcpread(tcpconn conn, void *buf, size_t len) {
+ssize_t tcprecv(tcpsock s, void *buf, size_t len) {
+    if(s->type != MILL_TCPCONN)
+        mill_panic("trying to receive from an unconnected socket");
+    struct tcpconn *conn = (struct tcpconn*)s;
     /* If there's enough data in the buffer it's easy. */
     if(conn->ilen >= len) {
         memcpy(buf, &conn->ibuf[conn->ifirst], len);
@@ -283,11 +358,13 @@ ssize_t tcpread(tcpconn conn, void *buf, size_t len) {
     }
 }
 
-ssize_t tcpreaduntil(tcpconn conn, void *buf, size_t len, char until) {
+ssize_t tcprecvuntil(tcpsock s, void *buf, size_t len, char until) {
+    if(s->type != MILL_TCPCONN)
+        mill_panic("trying to receive from an unconnected socket");
     char *pos = (char*)buf;
     size_t i;
     for(i = 0; i != len; ++i, ++pos) {
-        ssize_t res = tcpread(conn, pos, 1);
+        ssize_t res = tcprecv(s, pos, 1);
         if (res != 0)
             return -1;
         if(*pos == until)
@@ -295,4 +372,23 @@ ssize_t tcpreaduntil(tcpconn conn, void *buf, size_t len, char until) {
     }
     return 0;
 }
+
+void tcpclose(tcpsock s) {
+    if(s->type == MILL_TCPLISTENER) {
+        struct tcplistener *l = (struct tcplistener*)s;
+        int rc = close(l->fd);
+        assert(rc == 0);
+        free(l);
+        return;
+    }
+    if(s->type == MILL_TCPCONN) {
+        struct tcpconn *c = (struct tcpconn*)s;
+        int rc = close(c->fd);
+        assert(rc == 0);
+        free(c);
+        return;
+    }
+    assert(0);
+}
+
 
