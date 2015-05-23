@@ -209,7 +209,20 @@ tcpsock tcpconnect(const char *addr) {
 		    return NULL;
 		rc = fdwait(s, FDW_OUT);
         assert(rc == FDW_OUT);
-		/* TODO: Handle errors. */
+        int err;
+        socklen_t errsz = sizeof(err);
+        rc = getsockopt(s, SOL_SOCKET, SO_ERROR, (void*)&err, &errsz);
+        if(rc != 0) {
+            err = errno;
+            close(s);
+            errno = err;
+            return NULL;
+        }
+        if(err != 0) {
+            close(s);
+            errno = err;
+            return NULL;
+        }
     }
 
     /* Create the object. */
