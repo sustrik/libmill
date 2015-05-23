@@ -42,7 +42,6 @@ libmill_la_SOURCES = \
     list.c\
     slist.h\
     slist.c\
-    tcp.h\
     tcp.c\
     utils.h\
     utils.c
