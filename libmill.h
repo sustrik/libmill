@@ -231,7 +231,7 @@ MILL_EXPORT int mill_choose_wait(const char *current);
 MILL_EXPORT void *mill_choose_val(void);
 
 /******************************************************************************/
-/*  Experimental                                                              */
+/*  TCP library                                                               */
 /******************************************************************************/
 
 typedef struct tcpsock *tcpsock;
