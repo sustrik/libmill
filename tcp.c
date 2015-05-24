@@ -184,7 +184,7 @@ tcpsock tcpaccept(tcpsock s) {
         if(errno != EAGAIN && errno != EWOULDBLOCK)
             return NULL;
         /* Wait till new connection is available. */
-        int rc = fdwait(l->fd, FDW_IN);
+        int rc = fdwait(l->fd, FDW_IN, -1);
         assert(rc == FDW_IN);
     }
 }
@@ -213,7 +213,7 @@ tcpsock tcpconnect(const char *addr) {
 		assert(rc == -1);
 		if(errno != EINPROGRESS)
 		    return NULL;
-		rc = fdwait(s, FDW_OUT);
+		rc = fdwait(s, FDW_OUT, -1);
         assert(rc == FDW_OUT);
         int err;
         socklen_t errsz = sizeof(err);
@@ -271,7 +271,7 @@ void tcpsend(tcpsock s, const void *buf, size_t len) {
                 conn->oerr = errno;
                 return;
             }
-            int rc = fdwait(conn->fd, FDW_OUT);
+            int rc = fdwait(conn->fd, FDW_OUT, -1);
             assert(rc == FDW_OUT);
             continue;
         }
@@ -299,7 +299,7 @@ int tcpflush(tcpsock s) {
         if(sz == -1) {
             if(errno != EAGAIN && errno != EWOULDBLOCK)
                 return -1;
-            int rc = fdwait(conn->fd, FDW_OUT);
+            int rc = fdwait(conn->fd, FDW_OUT, -1);
             assert(rc == FDW_OUT);
             continue;
         }
@@ -372,7 +372,7 @@ ssize_t tcprecv(tcpsock s, void *buf, size_t len) {
         }
 
         /* Wait till there's more data to read. */
-        int res = fdwait(conn->fd, FDW_IN);
+        int res = fdwait(conn->fd, FDW_IN, -1);
         assert(res == FDW_IN);
     }
 }

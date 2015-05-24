@@ -25,6 +25,7 @@
 #include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <unistd.h>
 #include <sys/time.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -44,7 +45,7 @@ int main() {
     assert(rc == 0);
 
     /* Check whether the pipe is writeable. */
-    rc = fdwait(fds[0], FDW_OUT);
+    rc = fdwait(fds[0], FDW_OUT, -1);
     assert(rc & FDW_OUT);
     assert(!(rc & ~FDW_OUT));
 

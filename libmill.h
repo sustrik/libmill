@@ -105,16 +105,17 @@ MILL_EXPORT void mill_yield(const char *current);
 
 #define msleep(ms) mill_msleep((ms), __FILE__ ":" mill_string(__LINE__))
 
-MILL_EXPORT void mill_msleep(unsigned long ms, const char *current);
+MILL_EXPORT void mill_msleep(long ms, const char *current);
 
-#define fdwait(fd, events) mill_fdwait((fd), (events),\
+#define fdwait(fd, events, timeout) mill_fdwait((fd), (events), (timeout),\
     __FILE__ ":" mill_string(__LINE__))
 
 #define FDW_IN 1
 #define FDW_OUT 2
 #define FDW_ERR 4
 
-MILL_EXPORT int mill_fdwait(int fd, int events, const char *current);
+MILL_EXPORT int mill_fdwait(int fd, int events, long timeout,
+    const char *current);
 
 MILL_EXPORT void *cls(void);
 MILL_EXPORT void setcls(void *val);

@@ -336,7 +336,7 @@ void mill_yield(const char *current) {
 }
 
 /* Pause current coroutine for a specified time interval. */
-void mill_msleep(unsigned long ms, const char *current) {
+void mill_msleep(long ms, const char *current) {
     /* No point in waiting. However, let's give other coroutines a chance. */
     if(ms <= 0) {
         yield();
@@ -364,7 +364,7 @@ void mill_msleep(unsigned long ms, const char *current) {
 }
 
 /* Waiting for events from a file descriptor. */
-int mill_fdwait(int fd, int events, const char *current) {
+int mill_fdwait(int fd, int events, long timeout, const char *current) {
     /* Find the fd in the pollset. TODO: This is O(n)! */
     int i;
     for(i = 0; i != wait_size; ++i) {
