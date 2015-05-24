@@ -25,6 +25,7 @@
 #include "libmill.h"
 #include "list.h"
 #include "slist.h"
+#include "stack.h"
 #include "utils.h"
 
 #include <assert.h>
@@ -39,15 +40,9 @@
 /*  Coroutines                                                                */
 /******************************************************************************/
 
-/* Size of stack for new coroutines. In bytes. */
-#define MILL_STACK_SIZE 16384
-
 /* Maximum size of an item in a channel that we can handle without
    extra memory allocation. */
 #define MILL_MAXINLINECHVALSIZE 128
-
-/* Maximum number of unused cached stacks. */
-#define MILL_MAX_CACHED_STACKS 64
 
 volatile int mill_unoptimisable1 = 1;
 volatile void *mill_unoptimisable2 = NULL;
@@ -161,11 +156,6 @@ struct mill_fdwitem {
 };
 static struct mill_fdwitem *wait_items = NULL;
 
-/* A stack of unused coroutine stacks. This allows for extra-fast allocation
-   of a new stack. The FIFO nature of this structure minimises cache misses. */
-static int num_cached_crs = 0;
-static struct mill_cr *cached_crs = NULL;
-
 /* Removes current coroutine from the queue and returns it to the caller. */
 static struct mill_cr *mill_suspend() {
     struct mill_cr *cr = first_cr;
@@ -274,17 +264,7 @@ static void mill_ctxswitch(void) {
 void *mill_go_prologue(const char *created) {
     if(mill_setjmp(&first_cr->ctx))
         return NULL;
-    struct mill_cr *cr;
-    if(cached_crs) {
-        cr = cached_crs;
-        cached_crs = cached_crs->next;
-        --num_cached_crs;
-    }
-    else {
-        char *ptr = malloc(MILL_STACK_SIZE);
-        assert(ptr);
-        cr = (struct mill_cr*)(ptr + MILL_STACK_SIZE - sizeof(struct mill_cr));
-    }
+    struct mill_cr *cr = ((struct mill_cr*)mill_allocstack()) - 1;
     mill_list_insert(&all_crs, &cr->all_crs_item, NULL);
     cr->id = next_cr_id;
     cr->created = created;
@@ -310,15 +290,7 @@ void mill_go_epilogue(void) {
         cr->val.ptr = NULL;
     }
     mill_list_erase(&all_crs, &cr->all_crs_item);
-    if(num_cached_crs >= MILL_MAX_CACHED_STACKS) {
-        char *ptr = ((char*)(cr + 1)) - MILL_STACK_SIZE;
-        free(ptr);
-    }
-    else {
-        cr->next = cached_crs;
-        cached_crs = cr;
-        ++num_cached_crs;
-    }
+    mill_freestack(cr + 1);
     mill_ctxswitch();
 }
 
