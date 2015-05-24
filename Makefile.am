@@ -34,9 +34,6 @@ millinclude_HEADERS = libmill.h
 lib_LTLIBRARIES = libmill.la
 
 libmill_la_SOURCES = \
-    channel.h\
-    channel.c\
-    coroutine.h\
     coroutine.c\
     list.h\
     list.c\
