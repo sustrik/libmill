@@ -23,6 +23,9 @@
 */
 
 #include "model.h"
+#include "utils.h"
+
+#include <assert.h>
 
 int next_cr_id = 1;
 struct mill_cr main_cr = {NULL};
@@ -36,4 +39,15 @@ struct pollfd *wait_fds = NULL;
 struct mill_fdwitem *wait_items = NULL;
 int mill_next_chan_id = 1;
 struct mill_list all_chans = {0};
+
+struct chan *mill_getchan(struct mill_ep *ep) {
+    switch(ep->type) {
+    case MILL_SENDER:
+        return mill_cont(ep, struct chan, sender);
+    case MILL_RECEIVER:
+        return mill_cont(ep, struct chan, receiver);
+    default:
+        assert(0);
+    }
+}
 

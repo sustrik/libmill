@@ -202,4 +202,6 @@ struct mill_clause {
     int available;
 };
 
+struct chan *mill_getchan(struct mill_ep *ep);
+
 #endif
