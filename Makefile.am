@@ -37,6 +37,8 @@ libmill_la_SOURCES = \
     libmill.c\
     list.h\
     list.c\
+    model.h\
+    model.c\
     slist.h\
     slist.c\
     stack.h\

@@ -23,6 +23,7 @@
 */
 
 #include "libmill.h"
+#include "model.h"
 #include "list.h"
 #include "slist.h"
 #include "stack.h"
@@ -40,30 +41,8 @@
 /*  Coroutines                                                                */
 /******************************************************************************/
 
-/* Maximum size of an item in a channel that we can handle without
-   extra memory allocation. */
-#define MILL_MAXINLINECHVALSIZE 128
-
 volatile int mill_unoptimisable1 = 1;
 volatile void *mill_unoptimisable2 = NULL;
-
-/* This structure keeps the state of a 'choose' operation. */
-struct mill_chstate {
-    /* List of clauses in the 'choose' statement. */
-    struct mill_slist clauses;
-
-    /* 1 if there is 'otherwise' clause. 0 if there is not. */
-    int othws;
-
-    /* Number of clauses that are immediately available. */
-    int available;
-
-    /* When coroutine is blocked in choose and a different coroutine
-       unblocks it, it copies the index from the clause that caused the
-       resumption of execution to this field, so that 'choose' statement
-       can find out what exactly have happened. */
-    int idx;
-};
 
 static void mill_chstate_init(struct mill_chstate *self) {
     mill_slist_init(&self->clauses);
@@ -71,90 +50,6 @@ static void mill_chstate_init(struct mill_chstate *self) {
     self->available = 0;
     self->idx = -2;
 }
-
-enum mill_state {
-    MILL_YIELD,
-    MILL_MSLEEP,
-    MILL_FDWAIT,
-    MILL_CHR,
-    MILL_CHS,
-    MILL_CHOOSE
-};
-
-/* The coroutine. This structure is held on the top of the coroutine's stack. */
-struct mill_cr {
-    /* The list of all coroutines. */
-    struct mill_list_item all_crs_item;
-
-    /* Unique ID of the coroutine. */
-    int id;
-
-    /* Filename and line number of where the coroutine was created. */
-    const char *created;
-
-    /* Filename and line number of where the current operation was
-       invoked from. */
-    const char *current;
-
-    /* Status of the coroutine. Used for debugging purposes. */
-    enum mill_state state;
-
-    /* A linked list the coroutine is in. It can be either the list of
-       coroutines ready for execution, list of sleeping coroutines or NULL. */
-    struct mill_cr *next;
-
-    /* Stored coroutine context while it is not executing. */
-    struct mill_ctx ctx;
-
-    /* State for the choose operation that's underway in this coroutine. */
-    struct mill_chstate chstate;
-
-    /* Place to store the received value when doing choose. 'ptr' doesn't get
-       deallocated for the main coroutine, however, we don't care as the
-       process is terminating at that point anyway. */
-    struct {
-        void *ptr;
-        size_t capacity;
-        char buf[MILL_MAXINLINECHVALSIZE];
-    } val;
-
-    /* When coroutine is sleeping, the time when it should resume execution. */
-    uint64_t expiry;
-
-    /* When doing fdwait() this field is used to transfer the result to the
-       blocked coroutine. */
-    int fdwres;
-
-    /* Coroutine-local storage. */
-    void *cls;
-};
-
-/* ID to be assigned to next launched coroutine. */
-static int next_cr_id = 1;
-
-/* Fake coroutine corresponding to the main thread of execution. */
-static struct mill_cr main_cr = {NULL};
-
-/* List of all coroutines. Used for debugging purposes. */
-struct mill_list all_crs = {&main_cr.all_crs_item, &main_cr.all_crs_item};
-
-/* The queue of coroutines ready to run. The first one is currently running. */
-static struct mill_cr *first_cr = &main_cr;
-static struct mill_cr *last_cr = &main_cr;
-
-/* Linked list of all sleeping coroutines. The list is ordered.
-   First coroutine to be resume comes first and so on. */
-static struct mill_cr *sleeping = NULL;
-
-/* Pollset used for waiting for file descriptors. */
-static int wait_size = 0;
-static int wait_capacity = 0;
-static struct pollfd *wait_fds = NULL;
-struct mill_fdwitem {
-    struct mill_cr *in;
-    struct mill_cr *out;
-};
-static struct mill_fdwitem *wait_items = NULL;
 
 /* Removes current coroutine from the queue and returns it to the caller. */
 static struct mill_cr *mill_suspend() {
@@ -402,73 +297,6 @@ void setcls(void *val) {
 /******************************************************************************/
 /*  Channels                                                                  */
 /******************************************************************************/
-
-/* Channel endpoint. */
-struct mill_ep {
-    /* Thanks to this flag we can cast from ep pointer to chan pointer. */
-    enum {MILL_SENDER, MILL_RECEIVER} type;
-    /* List of clauses waiting for this endpoint. */
-    struct mill_list clauses;
-};
-
-/* Channel. */
-struct chan {
-    /* List of all channels. Used for debugging purposes. */
-    struct mill_list_item all_chans_item;
-
-    /* Channel ID. */
-    int id;
-
-    /* Filename and line number of where the channel was created. */
-    const char *created;
-
-    /* The size of the elements stored in the channel, in bytes. */
-    size_t sz;
-    /* Channel holds two lists, the list of clauses waiting to send and list
-       of clauses waiting to receive. */
-    struct mill_ep sender;
-    struct mill_ep receiver;
-    /* Number of open handles to this channel. */
-    int refcount;
-    /* 1 is chdone() was already called. 0 otherwise. */
-    int done;
-
-    /* The message buffer directly follows the chan structure. 'bufsz' specifies
-       the maximum capacity of the buffer. 'items' is the number of messages
-       currently in the buffer. 'first' is the index of the next message to
-       receive from the buffer. */
-    size_t bufsz;
-    size_t items;
-    size_t first;
-};
-
-/* ID to be assigned to the next created channel. */
-static int mill_next_chan_id = 1;
-
-/* List of all channels. Used for debugging purposes. */
-static struct mill_list all_chans = {0};
-
-/* This structure represents a single clause in a choose statement.
-   Similarly, both chs() and chr() each create a single clause. */
-struct mill_clause {
-    /* Member of list of clauses waiting for a channel endpoint. */
-    struct mill_list_item epitem;
-    /* Linked list of clauses in the choose statement. */
-    struct mill_slist_item chitem;
-    /* The coroutine which created the clause. */
-    struct mill_cr *cr;
-    /* Channel endpoint the clause is waiting for. */
-    struct mill_ep *ep;
-    /* For out clauses, pointer to the value to send. For in clauses it is
-       either point to the value to receive to or NULL. In the latter case
-       the value should be received into coroutines in buffer. */
-    void *val;
-    /* The index to jump to when the clause is executed. */
-    int idx;
-    /* If 0, there's no peer waiting for the clause at the moment.
-       If 1, there is one. */
-    int available;
-};
 
 MILL_CT_ASSERT(MILL_CLAUSELEN == sizeof(struct mill_clause));
 
