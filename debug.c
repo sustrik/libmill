@@ -91,7 +91,7 @@ void goredump(void) {
     fprintf(stderr,
         "---------------------------------------------------------------\n");
     for(it = mill_list_begin(&all_chans); it != NULL; it = mill_list_next(it)) {
-        struct chan *ch = mill_cont(it, struct chan, all_chans_item);
+        struct mill_chan *ch = mill_cont(it, struct mill_chan, all_chans_item);
         sprintf(buf, "%d/%d",
             (int)ch->items,
             (int)ch->bufsz);

@@ -379,7 +379,7 @@ chan mill_chmake(size_t sz, size_t bufsz, const char *created) {
     /* We are allocating 1 additional element after the channel buffer to
        store the done-with value. It can't be stored in the regular buffer
        because that would mean chdone() would block when buffer is full. */
-    struct chan *ch = (struct chan*)malloc(sizeof(struct chan) +
+    struct mill_chan *ch = (struct mill_chan*)malloc(sizeof(struct mill_chan) +
         (sz * (bufsz + 1)));
     assert(ch);
     mill_list_insert(&all_chans, &ch->all_chans_item, NULL);

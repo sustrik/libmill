@@ -40,12 +40,12 @@ struct mill_fdwitem *wait_items = NULL;
 int mill_next_chan_id = 1;
 struct mill_list all_chans = {0};
 
-struct chan *mill_getchan(struct mill_ep *ep) {
+struct mill_chan *mill_getchan(struct mill_ep *ep) {
     switch(ep->type) {
     case MILL_SENDER:
-        return mill_cont(ep, struct chan, sender);
+        return mill_cont(ep, struct mill_chan, sender);
     case MILL_RECEIVER:
-        return mill_cont(ep, struct chan, receiver);
+        return mill_cont(ep, struct mill_chan, receiver);
     default:
         assert(0);
     }

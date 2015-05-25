@@ -144,7 +144,7 @@ struct mill_ep {
 };
 
 /* Channel. */
-struct chan {
+struct mill_chan {
     /* List of all channels. Used for debugging purposes. */
     struct mill_list_item all_chans_item;
 
@@ -202,6 +202,6 @@ struct mill_clause {
     int available;
 };
 
-struct chan *mill_getchan(struct mill_ep *ep);
+struct mill_chan *mill_getchan(struct mill_ep *ep);
 
 #endif

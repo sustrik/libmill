@@ -124,7 +124,7 @@ MILL_EXPORT void setcls(void *val);
 /*  Channels                                                                  */
 /******************************************************************************/
 
-typedef struct chan *chan;
+typedef struct mill_chan *chan;
 
 #define MILL_CLAUSELEN (sizeof(void*) * 6 + sizeof(int) * 2)
 
