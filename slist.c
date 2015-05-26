@@ -68,6 +68,18 @@ void mill_slist_push_back(struct mill_slist *self,
     self->last = item;
 }
 
+void mill_slist_insert(struct mill_slist *self, struct mill_slist_item *item,
+      struct mill_slist_item *it) {
+    if(!it) {
+        mill_slist_push(self, item);
+        return;
+    }
+    item->next = it->next;
+    if(it == self->last)
+        self->last = item;
+    it->next = item;
+}
+
 struct mill_slist_item *mill_slist_pop(struct mill_slist *self) {
     if(!self->first)
         return NULL;

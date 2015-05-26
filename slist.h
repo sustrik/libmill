@@ -65,5 +65,11 @@ void mill_slist_push_back(struct mill_slist *self,
 /* Pop an item from the beginning of the list. */
 struct mill_slist_item *mill_slist_pop(struct mill_slist *self);
 
+/* Insert the item after the item pointed to by 'it' argument. If 'it' is
+   NULL the item is inserted to the beginning of the list. */
+void mill_slist_insert(struct mill_slist *self, struct mill_slist_item *item,
+    struct mill_slist_item *it);
+
+
 #endif
 
