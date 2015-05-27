@@ -78,9 +78,11 @@ struct mill_cr {
     /* Status of the coroutine. Used for debugging purposes. */
     enum mill_state state;
 
-    /* A linked list the coroutine is in. It can be either the list of
-       coroutines ready for execution, list of sleeping coroutines or NULL. */
+    /* List of coroutines ready to be executed. */
     struct mill_cr *next;
+
+    /* List of sleeping coroutines. */
+    struct mill_slist_item sleeping_item;
 
     /* Stored coroutine context while it is not executing. */
     struct mill_ctx ctx;
@@ -123,7 +125,7 @@ extern struct mill_cr *last_cr;
 
 /* Linked list of all sleeping coroutines. The list is ordered.
    First coroutine to be resume comes first and so on. */
-extern struct mill_cr *sleeping;
+extern struct mill_slist sleeping;
 
 /* Pollset used for waiting for file descriptors. */
 extern int wait_size;

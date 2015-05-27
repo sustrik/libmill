@@ -69,7 +69,6 @@ AC_ARG_ENABLE([debug], [AS_HELP_STRING([--enable-debug],
 if test "x$enable_debug" = "xyes"; then
     # Override original optimisation level - last option specified wins.
     CFLAGS="$CFLAGS -g -O0"
-    AC_DEFINE([MILL_DEBUG])
 fi
 
 ################################################################################

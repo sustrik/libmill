@@ -38,7 +38,7 @@ void mill_slist_term(struct mill_slist *self) {
 }
 
 int mill_slist_empty(struct mill_slist *self) {
-    return self->first ? 1 : 0;
+    return self->first ? 0 : 1;
 }
 
 struct mill_slist_item *mill_slist_begin(struct mill_slist *self) {

@@ -80,15 +80,17 @@ static void mill_ctxswitch(void) {
         mill_jmp(&first_cr->ctx);
 
     /* The execution of the entore process would block. Let's panic. */
-    if(!sleeping && !wait_size)
+    if(mill_slist_empty(&sleeping) && !wait_size)
         mill_panic("global hang-up");
 
     while(1) {
         /* Compute the time till next expired sleeping coroutine. */
         int timeout = -1;
-        if(sleeping) {
+        if(!mill_slist_empty(&sleeping)) {
             uint64_t nw = mill_now();
-            timeout = nw >= sleeping->expiry ? 0 : sleeping->expiry - nw;
+            uint64_t expiry = mill_cont(mill_slist_begin(&sleeping),
+                struct mill_cr, sleeping_item)->expiry;
+            timeout = nw >= expiry ? 0 : expiry - nw;
         }
 
         /* Wait for events. */
@@ -96,13 +98,16 @@ static void mill_ctxswitch(void) {
         assert(rc >= 0);
 
         /* Resume all sleeping coroutines that have expired. */
-        if(sleeping) {
+        if(!mill_slist_empty(&sleeping)) {
             uint64_t nw = mill_now();
-		    while(sleeping && (sleeping->expiry <= nw)) {
-                struct mill_cr *cr = sleeping;
-                sleeping = cr->next;
+            while(!mill_slist_empty(&sleeping)) {
+                struct mill_cr *cr = mill_cont(mill_slist_begin(&sleeping),
+                    struct mill_cr, sleeping_item);
+                if(cr->expiry > nw)
+                    break;
+                mill_slist_pop(&sleeping);
                 mill_resume(cr);
-		    }
+            }
         }
 
         /* Resume coroutines waiting for file descriptors. */
@@ -213,18 +218,29 @@ void mill_msleep(long ms, const char *current) {
     /* Save the current state. */
     if(mill_setjmp(&first_cr->ctx))
         return;
-    
-    /* Move the coroutine into the right place in the ordered list
-       of sleeping coroutines. */
+
     struct mill_cr *cr = mill_suspend();
     cr->state = MILL_MSLEEP;
     cr->expiry = mill_now() + ms;
     cr->current = current;
-    struct mill_cr **it = &sleeping;
-    while(*it && (*it)->expiry <= cr->expiry)
-        it = &((*it)->next);
-    cr->next = *it;
-    *it = cr;
+    
+    /* Move the coroutine into the right place in the ordered list
+       of sleeping coroutines. */
+    struct mill_slist_item *it = mill_slist_begin(&sleeping);
+    if(!it) {
+        mill_slist_push(&sleeping, &cr->sleeping_item);
+    }
+    else {
+       while(it) {
+           struct mill_cr *next = mill_cont(mill_slist_next(it),
+               struct mill_cr, sleeping_item);
+           if(!next || next->expiry > cr->expiry) {
+               mill_slist_insert(&sleeping, &cr->sleeping_item, it);
+               break;
+           }
+           it = mill_slist_next(it);
+       }
+    }
 
     /* Pass control to a different coroutine. */
     mill_ctxswitch();

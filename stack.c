@@ -46,7 +46,7 @@ static int mill_num_cached_stacks = 0;
 static struct mill_slist mill_cached_stacks = {0};
 
 void *mill_allocstack(void) {
-    if(mill_slist_empty(&mill_cached_stacks))
+    if(!mill_slist_empty(&mill_cached_stacks))
         return (void*)(mill_slist_pop(&mill_cached_stacks) + 1);
     char *ptr = malloc(MILL_STACK_SIZE);
     assert(ptr);
