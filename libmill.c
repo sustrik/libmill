@@ -22,9 +22,10 @@
 
 */
 
+#include "debug.h"
 #include "libmill.h"
-#include "model.h"
 #include "list.h"
+#include "model.h"
 #include "slist.h"
 #include "stack.h"
 #include "utils.h"
@@ -188,6 +189,10 @@ void mill_go_epilogue(void) {
     if(cr->val.ptr) {
         free(cr->val.ptr);
         cr->val.ptr = NULL;
+
+        /* Ensure that debug functions are available if a single go()
+           statement is present in the user's code. */
+        mill_preserve_debug();
     }
     mill_list_erase(&all_crs, &cr->all_crs_item);
     mill_freestack(cr + 1);
@@ -392,6 +397,10 @@ static int mill_dequeue(chan ch, void *val) {
 }
 
 chan mill_chmake(size_t sz, size_t bufsz, const char *created) {
+    /* If there's at least one channel created in the user's code
+       we want the debug functions to get into the binary. */
+    mill_preserve_debug();
+
     /* We are allocating 1 additional element after the channel buffer to
        store the done-with value. It can't be stored in the regular buffer
        because that would mean chdone() would block when buffer is full. */

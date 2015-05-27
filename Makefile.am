@@ -34,6 +34,7 @@ millinclude_HEADERS = libmill.h
 lib_LTLIBRARIES = libmill.la
 
 libmill_la_SOURCES = \
+    debug.h\
     debug.c\
     libmill.c\
     list.h\

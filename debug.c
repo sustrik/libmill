@@ -135,3 +135,12 @@ void goredump(void) {
     fprintf(stderr,"\n");
 }
 
+void mill_preserve_debug(void) {
+    /* Do nothing, but trick the copiler into thinking that
+       the debug functions are being used. */
+    static volatile int unoptimisable = 0;
+    if(unoptimisable) {
+        goredump();
+    }
+}
+
