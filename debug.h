@@ -25,7 +25,13 @@
 #ifndef MILL_DEBUG_INCLUDED
 #define MILL_DEBUG_INCLUDED
 
+struct mill_chan;
+
 /* Ensure that debugging functions get compiled into the binary. */
 void mill_preserve_debug(void);
+
+/* Create a trace record. */
+void mill_trace(const char *format, ...);
+void mill_chtrace(struct mill_chan *ch, const char *format, ...);
 
 #endif

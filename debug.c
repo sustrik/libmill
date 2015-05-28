@@ -22,10 +22,12 @@
 
 */
 
+#include "libmill.h"
 #include "model.h"
 #include "utils.h"
 
 #include <assert.h>
+#include <stdarg.h>
 #include <stdio.h>
 
 void goredump(void) {
@@ -135,12 +137,68 @@ void goredump(void) {
     fprintf(stderr,"\n");
 }
 
+void alltrace(void) {
+    trace = 1;
+}
+
+void alluntrace(void) {
+    trace = 0;
+}
+
+void gotrace(void) {
+    first_cr->trace = 1;
+}
+
+void gountrace(void) {
+    first_cr->trace = 0;
+}
+
+void chtrace(chan ch) {
+    ch->trace = 1;
+}
+
+void chuntrace(chan ch) {
+    ch->trace = 0;
+}
+
 void mill_preserve_debug(void) {
     /* Do nothing, but trick the copiler into thinking that
        the debug functions are being used. */
-    static volatile int unoptimisable = 0;
-    if(unoptimisable) {
-        goredump();
-    }
+    static volatile int unoptimisable = 1;
+    if(unoptimisable)
+        return;
+    goredump();
+    alltrace();
+    alluntrace();
+    gotrace();
+    gountrace();
+    chtrace(NULL);
+    chuntrace(NULL);
+}
+
+static void mill_dotrace(const char *format, struct mill_chan *ch, va_list va) {
+    if(!trace && !first_cr->trace && !(ch && ch->trace))
+        return;
+    if(ch)
+        fprintf(stderr, "==> (%06d) (%06d) : ", (int)first_cr->id, (int)ch->id);
+    else
+        fprintf(stderr, "==> (%06d) (------) : ", (int)first_cr->id);
+    vfprintf(stderr, format, va);
+    fprintf(stderr, "\n");
+    fflush(stderr);
+}
+
+void mill_trace(const char *format, ...) {
+    va_list va;
+    va_start(va ,format);
+    mill_dotrace(format, NULL, va);
+    va_end(va);
+}
+
+void mill_chtrace(struct mill_chan *ch, const char *format, ...) {
+    va_list va;
+    va_start(va ,format);
+    mill_dotrace(format, ch, va);
+    va_end(va);
 }
 

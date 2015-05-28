@@ -252,6 +252,14 @@ MILL_EXPORT void tcpclose(tcpsock s);
 
 MILL_EXPORT void goredump(void);
 
+MILL_EXPORT void alltrace(void);
+MILL_EXPORT void alluntrace(void);
+
+MILL_EXPORT void gotrace(void);
+MILL_EXPORT void gountrace(void);
+
+MILL_EXPORT void chtrace(chan ch);
+MILL_EXPORT void chuntrace(chan ch);
 
 #endif
 

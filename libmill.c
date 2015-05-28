@@ -178,6 +178,7 @@ void *mill_go_prologue(const char *created) {
     cr->expiry = 0;
     cr->fdwres = 0;
     cr->cls = NULL;
+    cr->trace = 0;
 
     /* Move the current coroutine to the end of the queue. */
     mill_resume(mill_suspend());    
@@ -427,6 +428,7 @@ chan mill_chmake(size_t sz, size_t bufsz, const char *created) {
     ch->bufsz = bufsz;
     ch->items = 0;
     ch->first = 0;
+    ch->trace = 0;
     return ch;
 }
 

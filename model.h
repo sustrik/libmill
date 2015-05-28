@@ -25,6 +25,7 @@
 #ifndef MILL_MODEL_INCLUDED
 #define MILL_MODEL_INCLUDED
 
+#include "model.h"
 #include "list.h"
 #include "slist.h"
 #include "utils.h"
@@ -108,6 +109,9 @@ struct mill_cr {
 
     /* Coroutine-local storage. */
     void *cls;
+
+    /* Whether tracing is enabled for this coroutine. */
+    int trace;
 };
 
 /* ID to be assigned to next launched coroutine. */
@@ -174,6 +178,9 @@ struct mill_chan {
     size_t bufsz;
     size_t items;
     size_t first;
+
+    /* Whether tracing is enabled for this channel. */
+    int trace;
 };
 
 /* ID to be assigned to the next created channel. */
@@ -205,5 +212,8 @@ struct mill_clause {
 };
 
 struct mill_chan *mill_getchan(struct mill_ep *ep);
+
+/* Whether global tracing is switched on. */
+extern int trace;
 
 #endif
