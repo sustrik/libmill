@@ -172,14 +172,20 @@ void *mill_go_prologue(const char *created) {
     cr->current = NULL;
     ++next_cr_id;
     cr->state = MILL_YIELD;
-    cr->next = first_cr;
     mill_chstate_init(&cr->chstate);
     cr->val.ptr = NULL;
     cr->val.capacity = MILL_MAXINLINECHVALSIZE;
     cr->expiry = 0;
     cr->fdwres = 0;
     cr->cls = NULL;
+
+    /* Move the current coroutine to the end of the queue. */
+    mill_resume(mill_suspend());    
+
+    /* Put the new coroutine to the beginning of the queue. */
+    cr->next = first_cr;
     first_cr = cr;
+
     return (void*)cr;
 }
 
