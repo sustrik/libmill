@@ -176,7 +176,7 @@ void mill_preserve_debug(void) {
     chuntrace(NULL);
 }
 
-static void mill_dotrace(const char *format, struct mill_chan *ch, va_list va) {
+static void mill_dotrace(const char *location, const char *format, struct mill_chan *ch, va_list va) {
     if(!trace && !first_cr->trace && !(ch && ch->trace))
         return;
     if(ch)
@@ -184,21 +184,24 @@ static void mill_dotrace(const char *format, struct mill_chan *ch, va_list va) {
     else
         fprintf(stderr, "==> (%06d) (------) : ", (int)first_cr->id);
     vfprintf(stderr, format, va);
-    fprintf(stderr, "\n");
+    if(location)
+        fprintf(stderr, " (%s)\n", location);
+    else
+        fprintf(stderr, "\n");
     fflush(stderr);
 }
 
-void mill_trace(const char *format, ...) {
+void mill_trace(const char *location, const char *format, ...) {
     va_list va;
     va_start(va ,format);
-    mill_dotrace(format, NULL, va);
+    mill_dotrace(location, format, NULL, va);
     va_end(va);
 }
 
-void mill_chtrace(struct mill_chan *ch, const char *format, ...) {
+void mill_chtrace(const char *location, struct mill_chan *ch, const char *format, ...) {
     va_list va;
     va_start(va ,format);
-    mill_dotrace(format, ch, va);
+    mill_dotrace(location, format, ch, va);
     va_end(va);
 }
 

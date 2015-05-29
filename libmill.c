@@ -187,11 +187,16 @@ void *mill_go_prologue(const char *created) {
     cr->next = first_cr;
     first_cr = cr;
 
+    mill_trace(created, "coroutine started");
+
     return (void*)cr;
 }
 
 /* The final part of go(). Cleans up when the coroutine is finished. */
 void mill_go_epilogue(void) {
+
+    mill_trace(NULL, "coroutine done");
+
     struct mill_cr *cr = mill_suspend();
     if(cr->val.ptr) {
         free(cr->val.ptr);
@@ -429,6 +434,7 @@ chan mill_chmake(size_t sz, size_t bufsz, const char *created) {
     ch->items = 0;
     ch->first = 0;
     ch->trace = 0;
+    mill_chtrace(created, ch, "channel created");
     return ch;
 }
 
@@ -521,13 +527,14 @@ void mill_chdone(chan ch, void *val, size_t sz) {
     }
 }
 
-void chclose(chan ch) {
+void mill_chclose(chan ch, const char *current) {
     assert(ch->refcount >= 1);
     --ch->refcount;
     if(!ch->refcount) {
         mill_list_term(&ch->sender.clauses);
         mill_list_term(&ch->receiver.clauses);
         mill_list_erase(&all_chans, &ch->all_chans_item);
+        mill_chtrace(current, ch, "channel destroyed");
         free(ch);
     }
 }
