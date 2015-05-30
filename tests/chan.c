@@ -63,7 +63,6 @@ void structsender(chan ch, struct foo val) {
 }
 
 int main() {
-    alltrace();
     int val;
 
     /* Receiver waits for sender. */

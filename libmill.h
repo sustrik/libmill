@@ -145,7 +145,8 @@ typedef struct mill_chan *chan;
 #define chdone(channel, type, value) \
     do {\
         type mill_val = (value);\
-        mill_chdone((channel), &mill_val, sizeof(type));\
+        mill_chdone((channel), &mill_val, sizeof(type),\
+             __FILE__ ":" mill_string(__LINE__));\
     } while(0)
 
 #define chclose(channel) mill_chclose((channel),\
@@ -155,7 +156,8 @@ MILL_EXPORT chan mill_chmake(size_t sz, size_t bufsz, const char *created);
 MILL_EXPORT chan chdup(chan ch);
 MILL_EXPORT void mill_chs(chan ch, void *val, size_t sz, const char *current);
 MILL_EXPORT void *mill_chr(chan ch, void *val, size_t sz, const char *current);
-MILL_EXPORT void mill_chdone(chan ch, void *val, size_t sz);
+MILL_EXPORT void mill_chdone(chan ch, void *val, size_t sz,
+    const char *current);
 MILL_EXPORT void mill_chclose(chan ch, const char *current);
 
 #define mill_concat(x,y) x##y
@@ -255,14 +257,8 @@ MILL_EXPORT void tcpclose(tcpsock s);
 
 MILL_EXPORT void goredump(void);
 
-MILL_EXPORT void alltrace(void);
-MILL_EXPORT void alluntrace(void);
-
-MILL_EXPORT void gotrace(void);
-MILL_EXPORT void gountrace(void);
-
-MILL_EXPORT void chtrace(chan ch);
-MILL_EXPORT void chuntrace(chan ch);
+MILL_EXPORT void traceon(void);
+MILL_EXPORT void traceoff(void);
 
 #endif
 

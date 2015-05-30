@@ -29,6 +29,8 @@
 #include <assert.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <sys/time.h>
+#include <time.h>
 
 void goredump(void) {
     char buf[256];
@@ -137,28 +139,12 @@ void goredump(void) {
     fprintf(stderr,"\n");
 }
 
-void alltrace(void) {
+void traceon(void) {
     trace = 1;
 }
 
-void alluntrace(void) {
+void traceoff(void) {
     trace = 0;
-}
-
-void gotrace(void) {
-    first_cr->trace = 1;
-}
-
-void gountrace(void) {
-    first_cr->trace = 0;
-}
-
-void chtrace(chan ch) {
-    ch->trace = 1;
-}
-
-void chuntrace(chan ch) {
-    ch->trace = 0;
 }
 
 void mill_preserve_debug(void) {
@@ -168,40 +154,37 @@ void mill_preserve_debug(void) {
     if(unoptimisable)
         return;
     goredump();
-    alltrace();
-    alluntrace();
-    gotrace();
-    gountrace();
-    chtrace(NULL);
-    chuntrace(NULL);
+    traceon();
+    traceoff();
 }
 
-static void mill_dotrace(const char *location, const char *format, struct mill_chan *ch, va_list va) {
-    if(!trace && !first_cr->trace && !(ch && ch->trace))
+static struct mill_cr *mill_last_traced_cr = NULL;
+
+void mill_trace(const char *location, const char *format, ...) {
+    if(!trace)
         return;
-    if(ch)
-        fprintf(stderr, "==> (%06d) (%06d) : ", (int)first_cr->id, (int)ch->id);
-    else
-        fprintf(stderr, "==> (%06d) (------) : ", (int)first_cr->id);
+
+    if(mill_last_traced_cr && mill_last_traced_cr != first_cr)
+        fprintf(stderr, "==> ----------------------------------------------\n");
+    mill_last_traced_cr = first_cr;
+    
+    /* First print the timestamp and coroutine ID. */
+    struct timeval nw;
+    gettimeofday(&nw, NULL);
+    struct tm *nwtm = localtime(&nw.tv_sec);
+    char buf[64];
+    strftime(buf, sizeof buf, "%02H:%02M:%02S", nwtm);
+    fprintf(stderr, "==> %s.%06d CR%06d ",
+        buf, (int)nw.tv_usec, (int)first_cr->id);
+
+    va_list va;
+    va_start(va ,format);
     vfprintf(stderr, format, va);
+    va_end(va);
     if(location)
-        fprintf(stderr, " (%s)\n", location);
+        fprintf(stderr, " at %s\n", location);
     else
         fprintf(stderr, "\n");
     fflush(stderr);
-}
-
-void mill_trace(const char *location, const char *format, ...) {
-    va_list va;
-    va_start(va ,format);
-    mill_dotrace(location, format, NULL, va);
-    va_end(va);
-}
-
-void mill_chtrace(const char *location, struct mill_chan *ch, const char *format, ...) {
-    va_list va;
-    va_start(va ,format);
-    mill_dotrace(location, format, ch, va);
-    va_end(va);
 }
 

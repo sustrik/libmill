@@ -32,6 +32,5 @@ void mill_preserve_debug(void);
 
 /* Create a trace record. */
 void mill_trace(const char *location, const char *format, ...);
-void mill_chtrace(const char *location, struct mill_chan *ch, const char *format, ...);
 
 #endif

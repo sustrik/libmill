@@ -109,9 +109,6 @@ struct mill_cr {
 
     /* Coroutine-local storage. */
     void *cls;
-
-    /* Whether tracing is enabled for this coroutine. */
-    int trace;
 };
 
 /* ID to be assigned to next launched coroutine. */
@@ -178,9 +175,6 @@ struct mill_chan {
     size_t bufsz;
     size_t items;
     size_t first;
-
-    /* Whether tracing is enabled for this channel. */
-    int trace;
 };
 
 /* ID to be assigned to the next created channel. */
