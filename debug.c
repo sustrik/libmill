@@ -34,16 +34,20 @@
 
 void goredump(void) {
     char buf[256];
+    char idbuf[10];
+
     fprintf(stderr,
-        "\nCOROUTINE   state                  current              created\n");
+        "\nCOROUTINE  state                                      "
+        "current                                  created\n");
     fprintf(stderr,
-        "---------------------------------------------------------------\n");
+        "----------------------------------------------------------------------"
+        "--------------------------------------------------\n");
     struct mill_list_item *it;
     for(it = mill_list_begin(&all_crs); it != NULL; it = mill_list_next(it)) {
         struct mill_cr *cr = mill_cont(it, struct mill_cr, all_crs_item);
         switch(cr->state) {
         case MILL_YIELD:
-            sprintf(buf, "%s", first_cr == cr ? "running" : "yield()");
+            sprintf(buf, "%s", first_cr == cr ? "RUNNING" : "yield()");
             break;
         case MILL_MSLEEP:
             sprintf(buf, "msleep()");
@@ -52,11 +56,11 @@ void goredump(void) {
             sprintf(buf, "fdwait(%d)", -1);
             break;
         case MILL_CHR:
-            sprintf(buf, "chr(%d)", mill_getchan(mill_cont(mill_slist_begin(
+            sprintf(buf, "chr(<%d>)", mill_getchan(mill_cont(mill_slist_begin(
                 &cr->chstate.clauses), struct mill_clause, chitem)->ep)->id);
             break;
         case MILL_CHS:
-            sprintf(buf, "chs(%d)", mill_getchan(mill_cont(mill_slist_begin(
+            sprintf(buf, "chs(<%d>)", mill_getchan(mill_cont(mill_slist_begin(
                 &cr->chstate.clauses), struct mill_clause, chitem)->ep)->id);
             break;
         case MILL_CHOOSE:
@@ -71,8 +75,8 @@ void goredump(void) {
 		                first = 0;
 		            else
 		                pos += sprintf(&buf[pos], ",");
-		            pos += sprintf(&buf[pos], "%d", mill_getchan(mill_cont(it,
-                        struct mill_clause, chitem)->ep)->id);
+		            pos += sprintf(&buf[pos], "<%d>", mill_getchan(
+                        mill_cont(it, struct mill_clause, chitem)->ep)->id);
 		        }
 		        sprintf(&buf[pos], ")");
             }
@@ -80,27 +84,31 @@ void goredump(void) {
         default:
             assert(0);
         }
-        fprintf(stderr, "%s (%06d) %-22s %-20s %s\n",
-            cr == first_cr ? "=>" : "  ",
-            cr->id,
+        snprintf(idbuf, sizeof(idbuf), "{%d}", (int)cr->id);
+        fprintf(stderr, "%-8s   %-42s %-40s %s\n",
+            idbuf,
             buf,
             cr == first_cr ? "---" : cr->current,
             cr->created ? cr->created : "<main>");
     }
     fprintf(stderr,"\n");
+
     if(mill_list_empty(&all_chans))
         return;
     fprintf(stderr,
-        "CHANNEL  msgs/max    senders/receivers      refs  done  created\n");
+        "CHANNEL  msgs/max    senders/receivers                          "
+        "refs  done  created\n");
     fprintf(stderr,
-        "---------------------------------------------------------------\n");
+        "----------------------------------------------------------------------"
+        "--------------------------------------------------\n");
     for(it = mill_list_begin(&all_chans); it != NULL; it = mill_list_next(it)) {
         struct mill_chan *ch = mill_cont(it, struct mill_chan, all_chans_item);
+        snprintf(idbuf, sizeof(idbuf), "<%d>", (int)ch->id);
         sprintf(buf, "%d/%d",
             (int)ch->items,
             (int)ch->bufsz);
-        fprintf(stderr, "(%06d) %-11s ",
-            ch->id,
+        fprintf(stderr, "%-8s %-11s ",
+            idbuf,
             buf);
         int pos;
         struct mill_list *clauselist;
@@ -126,11 +134,11 @@ void goredump(void) {
                 first = 0;
             else
                 pos += sprintf(&buf[pos], ",");
-            pos += sprintf(&buf[pos], "%d", (int)cl->cr->id);
+            pos += sprintf(&buf[pos], "{%d}", (int)cl->cr->id);
             cl = mill_cont(mill_list_next(&cl->epitem),
                 struct mill_clause, epitem);
         }
-        fprintf(stderr, "%-22s %-5d %-5s %s\n",
+        fprintf(stderr, "%-42s %-5d %-5s %s\n",
             buf,
             (int)ch->refcount,
             ch->done ? "yes" : "no",
@@ -164,18 +172,23 @@ void mill_trace(const char *location, const char *format, ...) {
     if(!trace)
         return;
 
+    char buf[256];
+
     if(mill_last_traced_cr && mill_last_traced_cr != first_cr)
-        fprintf(stderr, "==> ----------------------------------------------\n");
+        fprintf(stderr, "==> --------------------------------------------------"
+        "------------------------------------------------------------------\n");
     mill_last_traced_cr = first_cr;
     
-    /* First print the timestamp and coroutine ID. */
+    /* First print the timestamp. */
     struct timeval nw;
     gettimeofday(&nw, NULL);
     struct tm *nwtm = localtime(&nw.tv_sec);
-    char buf[64];
     strftime(buf, sizeof buf, "%02H:%02M:%02S", nwtm);
-    fprintf(stderr, "==> %s.%06d CR%06d ",
-        buf, (int)nw.tv_usec, (int)first_cr->id);
+    fprintf(stderr, "==> %s.%06d ", buf, (int)nw.tv_usec);
+
+    /* Coroutine ID. */
+    snprintf(buf, sizeof(buf), "{%d}", (int)first_cr->id);
+    fprintf(stderr, "%-8s ", buf);
 
     va_list va;
     va_start(va ,format);

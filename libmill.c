@@ -178,6 +178,7 @@ void *mill_go_prologue(const char *created) {
     cr->expiry = 0;
     cr->fdwres = 0;
     cr->cls = NULL;
+    mill_trace(created, "{%d}=go()", (int)cr->id);
 
     /* Move the current coroutine to the end of the queue. */
     mill_resume(mill_suspend());    
@@ -185,8 +186,6 @@ void *mill_go_prologue(const char *created) {
     /* Put the new coroutine to the beginning of the queue. */
     cr->next = first_cr;
     first_cr = cr;
-
-    mill_trace(created, "go()");
 
     return (void*)cr;
 }
@@ -432,7 +431,7 @@ chan mill_chmake(size_t sz, size_t bufsz, const char *created) {
     ch->bufsz = bufsz;
     ch->items = 0;
     ch->first = 0;
-    mill_trace(created, "CH%06d=chmake(%d)", (int)ch->id, (int)bufsz);
+    mill_trace(created, "<%d>=chmake(%d)", (int)ch->id, (int)bufsz);
     return ch;
 }
 
@@ -442,7 +441,7 @@ chan chdup(chan ch) {
 }
 
 void mill_chs(chan ch, void *val, size_t sz, const char *current) {
-    mill_trace(current, "chs(CH%06d)", (int)ch->id);
+    mill_trace(current, "chs(<%d>)", (int)ch->id);
 
     if(ch->done)
         mill_panic("send to done-with channel");
@@ -472,7 +471,7 @@ void mill_chs(chan ch, void *val, size_t sz, const char *current) {
 }
 
 void *mill_chr(chan ch, void *val, size_t sz, const char *current) {
-    mill_trace(current, "chr(CH%06d)", (int)ch->id);
+    mill_trace(current, "chr(<%d>)", (int)ch->id);
 
     if(ch->sz != sz)
         mill_panic("receive of a type not matching the channel");
@@ -502,7 +501,7 @@ void *mill_chr(chan ch, void *val, size_t sz, const char *current) {
 }
 
 void mill_chdone(chan ch, void *val, size_t sz, const char *current) {
-    mill_trace(current, "chdone(CH%06d)", (int)ch->id);
+    mill_trace(current, "chdone(<%d>)", (int)ch->id);
 
     if(ch->done)
         mill_panic("chdone on already done-with channel");
@@ -532,7 +531,7 @@ void mill_chdone(chan ch, void *val, size_t sz, const char *current) {
 }
 
 void mill_chclose(chan ch, const char *current) {
-    mill_trace(current, "chclose(CH%06d)", (int)ch->id);
+    mill_trace(current, "chclose(<%d>)", (int)ch->id);
     assert(ch->refcount >= 1);
     --ch->refcount;
     if(!ch->refcount) {
@@ -606,7 +605,7 @@ void mill_choose_otherwise(void) {
 }
 
 int mill_choose_wait(const char *current) {
-    mill_trace(current, "choose{}");
+    mill_trace(current, "choose()");
 
     struct mill_chstate *chstate = &first_cr->chstate;
     int res = -1;
