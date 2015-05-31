@@ -131,6 +131,9 @@ typedef struct mill_chan *chan;
 #define chmake(type, bufsz) mill_chmake(sizeof(type), bufsz,\
     __FILE__ ":" mill_string(__LINE__))
 
+#define chdup(channel) mill_chdup((channel),\
+    __FILE__ ":" mill_string(__LINE__))
+
 #define chs(channel, type, value) \
     do {\
         type mill_val = (value);\
@@ -153,7 +156,7 @@ typedef struct mill_chan *chan;
     __FILE__ ":" mill_string(__LINE__))
 
 MILL_EXPORT chan mill_chmake(size_t sz, size_t bufsz, const char *created);
-MILL_EXPORT chan chdup(chan ch);
+MILL_EXPORT chan mill_chdup(chan ch, const char *created);
 MILL_EXPORT void mill_chs(chan ch, void *val, size_t sz, const char *current);
 MILL_EXPORT void *mill_chr(chan ch, void *val, size_t sz, const char *current);
 MILL_EXPORT void mill_chdone(chan ch, void *val, size_t sz,

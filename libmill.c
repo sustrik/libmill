@@ -435,7 +435,8 @@ chan mill_chmake(size_t sz, size_t bufsz, const char *created) {
     return ch;
 }
 
-chan chdup(chan ch) {
+chan mill_chdup(chan ch, const char *current) {
+    mill_trace(current, "chdup(<%d>)", (int)ch->id);
     ++ch->refcount;
     return ch;
 }
