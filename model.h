@@ -207,7 +207,4 @@ struct mill_clause {
 
 struct mill_chan *mill_getchan(struct mill_ep *ep);
 
-/* Whether global tracing is switched on. */
-extern int trace;
-
 #endif

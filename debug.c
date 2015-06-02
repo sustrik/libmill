@@ -147,14 +147,6 @@ void goredump(void) {
     fprintf(stderr,"\n");
 }
 
-void traceon(void) {
-    trace = 1;
-}
-
-void traceoff(void) {
-    trace = 0;
-}
-
 void mill_preserve_debug(void) {
     /* Do nothing, but trick the copiler into thinking that
        the debug functions are being used. */
@@ -162,14 +154,18 @@ void mill_preserve_debug(void) {
     if(unoptimisable)
         return;
     goredump();
-    traceon();
-    traceoff();
+    trace(0);
 }
 
+static int tracelevel = 0;
 static struct mill_cr *mill_last_traced_cr = NULL;
 
+void trace(int level) {
+    tracelevel = level;
+}
+
 void mill_trace(const char *location, const char *format, ...) {
-    if(!trace)
+    if(tracelevel <= 0)
         return;
 
     char buf[256];

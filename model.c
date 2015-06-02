@@ -39,7 +39,6 @@ struct pollfd *wait_fds = NULL;
 struct mill_fdwitem *wait_items = NULL;
 int mill_next_chan_id = 1;
 struct mill_list all_chans = {0};
-int trace = 0;
 
 struct mill_chan *mill_getchan(struct mill_ep *ep) {
     switch(ep->type) {

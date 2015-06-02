@@ -87,7 +87,7 @@ void unused(void) {
 }
 
 int main() {
-    traceon();
+    trace(1);
     /* Non-blocking receiver case. */
     chan ch1 = chmake(int, 0);
     go(sender1(chdup(ch1), 555));
