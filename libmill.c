@@ -31,8 +31,6 @@
 #include "utils.h"
 
 #include <assert.h>
-#include <poll.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -75,89 +73,16 @@ static void mill_resume(struct mill_cr *cr) {
 
 /* Switch to a different coroutine. */
 static void mill_ctxswitch(void) {
-    /* If there's a coroutine ready to be executed go for it. Otherwise,
-       we are going to wait for sleeping coroutines and for external events. */
+    /* If there's a coroutine ready to be executed go for it. */
     if(first_cr)
         mill_jmp(&first_cr->ctx);
 
-    /* The execution of the entore process would block. Let's panic. */
-    if(mill_slist_empty(&sleeping) && !wait_size)
-        mill_panic("global hang-up");
-
-    while(1) {
-        /* Compute the time till next expired sleeping coroutine. */
-        int timeout = -1;
-        if(!mill_slist_empty(&sleeping)) {
-            uint64_t nw = mill_now();
-            uint64_t expiry = mill_cont(mill_slist_begin(&sleeping),
-                struct mill_cr, sleeping_item)->expiry;
-            timeout = nw >= expiry ? 0 : expiry - nw;
-        }
-
-        /* Wait for events. */
-        int rc = poll(wait_fds, wait_size, timeout);
-        assert(rc >= 0);
-
-        /* Resume all sleeping coroutines that have expired. */
-        if(!mill_slist_empty(&sleeping)) {
-            uint64_t nw = mill_now();
-            while(!mill_slist_empty(&sleeping)) {
-                struct mill_cr *cr = mill_cont(mill_slist_begin(&sleeping),
-                    struct mill_cr, sleeping_item);
-                if(cr->expiry > nw)
-                    break;
-                mill_slist_pop(&sleeping);
-                mill_resume(cr);
-            }
-        }
-
-        /* Resume coroutines waiting for file descriptors. */
-        int i;
-        for(i = 0; i != wait_size && rc; ++i) {
-            /* Set the result values. */
-            if(wait_fds[i].revents & POLLIN) {
-                assert(wait_items[i].in);
-                wait_items[i].in->fdwres |= FDW_IN;
-            }
-            if(wait_fds[i].revents & POLLOUT) {
-                assert(wait_items[i].out);
-                wait_items[i].out->fdwres |= FDW_OUT;
-            }
-            if(wait_fds[i].revents & (POLLERR | POLLHUP | POLLNVAL)) {
-                if(wait_items[i].in)
-                    wait_items[i].in->fdwres |= FDW_ERR;
-                if(wait_items[i].out)
-                    wait_items[i].out->fdwres |= FDW_ERR;
-            }
-            /* Unblock waiting coroutines. */
-            if(wait_items[i].in && wait_items[i].in->fdwres) {
-                mill_resume(wait_items[i].in);
-                wait_fds[i].events &= ~POLLIN;
-                wait_items[i].in = NULL;
-            }
-            if(wait_items[i].out && wait_items[i].out->fdwres) {
-                mill_resume(wait_items[i].out);
-                wait_fds[i].events &= ~POLLOUT;
-                wait_items[i].out = NULL;
-            }
-            /* If nobody is waiting for the fd remove it from the pollset. */
-            if(!wait_fds[i].events) {
-                assert(!wait_items[i].in && !wait_items[i].out);
-                wait_fds[i] = wait_fds[wait_size - 1];
-                wait_items[i] = wait_items[wait_size - 1];
-                --wait_size;
-                --rc;
-            }
-        }
-
-        /* If no coroutine was resumed, do the poll again. This should not
-           happen in theory, but let's be ready for the case when timers
-           are not precise. */
-        if(first_cr)
-            break;
-    }
+    /*  Otherwise, we are going to wait for sleeping coroutines
+        and for external events. */
+    mill_wait();
 
 	/* Pass control to a resumed coroutine. */
+    assert(first_cr);
 	mill_jmp(&first_cr->ctx);
 }
 
@@ -175,7 +100,6 @@ void *mill_go_prologue(const char *created) {
     mill_chstate_init(&cr->chstate);
     cr->val.ptr = NULL;
     cr->val.capacity = MILL_MAXINLINECHVALSIZE;
-    cr->expiry = 0;
     cr->fdwres = 0;
     cr->cls = NULL;
     mill_trace(created, "{%d}=go()", (int)cr->id);
@@ -222,6 +146,10 @@ void mill_yield(const char *current) {
     mill_ctxswitch();
 }
 
+static void mill_msleep_cb(struct mill_timer *self) {
+    mill_resume(mill_cont(self, struct mill_cr, sleeper));
+}
+
 /* Pause current coroutine for a specified time interval. */
 void mill_msleep(long ms, const char *current) {
     /* No point in waiting. However, let's give other coroutines a chance. */
@@ -234,74 +162,28 @@ void mill_msleep(long ms, const char *current) {
     if(mill_setjmp(&first_cr->ctx))
         return;
 
+    /* Suspend the running coroutine. */
     struct mill_cr *cr = mill_suspend();
     cr->state = MILL_MSLEEP;
-    cr->expiry = mill_now() + ms;
     cr->current = current;
-    
-    /* Move the coroutine into the right place in the ordered list
-       of sleeping coroutines. */
-    struct mill_slist_item *it = mill_slist_begin(&sleeping);
-    if(!it) {
-        mill_slist_push(&sleeping, &cr->sleeping_item);
-    }
-    else {
-       while(it) {
-           struct mill_cr *next = mill_cont(mill_slist_next(it),
-               struct mill_cr, sleeping_item);
-           if(!next || next->expiry > cr->expiry) {
-               mill_slist_insert(&sleeping, &cr->sleeping_item, it);
-               break;
-           }
-           it = mill_slist_next(it);
-       }
-    }
 
-    /* Pass control to a different coroutine. */
+    /* Start waiting for the timer. */
+    mill_timer(&cr->sleeper, ms, mill_msleep_cb);
+
+    /* In the meanwhile pass control to a different coroutine. */
     mill_ctxswitch();
 }
 
-/* Waiting for events from a file descriptor. */
+static void mill_fdwait_cb(struct mill_poll *self, int events) {
+    struct mill_cr *cr = mill_cont(self, struct mill_cr, poller);
+    cr->fdwres = events;
+    mill_resume(cr);
+}
+
+/* Wait for events from a file descriptor. */
 int mill_fdwait(int fd, int events, long timeout, const char *current) {
-    /* Find the fd in the pollset. TODO: This is O(n)! */
-    int i;
-    for(i = 0; i != wait_size; ++i) {
-        if(wait_fds[i].fd == fd)
-            break;
-    }
-
-    /* Grow the pollset as needed. */
-    if(i == wait_size) { 
-		if(wait_size == wait_capacity) {
-		    wait_capacity = wait_capacity ? wait_capacity * 2 : 64;
-		    wait_fds = realloc(wait_fds,
-		        wait_capacity * sizeof(struct pollfd));
-		    wait_items = realloc(wait_items,
-		        wait_capacity * sizeof(struct mill_fdwitem));
-		}
-        ++wait_size;
-        wait_fds[i].fd = fd;
-        wait_fds[i].events = 0;
-        wait_fds[i].revents = 0;
-        wait_items[i].in = NULL;
-        wait_items[i].out = NULL;
-    }
-
-    /* Register the waiting coroutine in the pollset. */
-    if(events & FDW_IN) {
-        if(wait_items[i].in)
-            mill_panic(
-                "multiple coroutines waiting for a single file descriptor");
-        wait_fds[i].events |= POLLIN;
-        wait_items[i].in = first_cr;
-    }
-    if(events & FDW_OUT) {
-        if(wait_items[i].out)
-            mill_panic(
-                "multiple coroutines waiting for a single file descriptor");
-        wait_fds[i].events |= POLLOUT;
-        wait_items[i].out = first_cr;
-    }
+    /* Register with the poller. */
+    mill_poll(&first_cr->poller, fd, events, mill_fdwait_cb);
 
     /* Save the current state and pass control to a different coroutine. */
     if(!mill_setjmp(&first_cr->ctx)) {

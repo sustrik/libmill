@@ -27,6 +27,7 @@
 
 #include "model.h"
 #include "list.h"
+#include "poller.h"
 #include "slist.h"
 #include "utils.h"
 
@@ -82,8 +83,11 @@ struct mill_cr {
     /* List of coroutines ready to be executed. */
     struct mill_cr *next;
 
-    /* List of sleeping coroutines. */
-    struct mill_slist_item sleeping_item;
+    /* Used when the coroutine is sleeping. */
+    struct mill_timer sleeper;
+
+    /* Used when the coroutine is waiting for a file descriptor. */
+    struct mill_poll poller;
 
     /* Stored coroutine context while it is not executing. */
     struct mill_ctx ctx;
@@ -99,9 +103,6 @@ struct mill_cr {
         size_t capacity;
         char buf[MILL_MAXINLINECHVALSIZE];
     } val;
-
-    /* When coroutine is sleeping, the time when it should resume execution. */
-    uint64_t expiry;
 
     /* When doing fdwait() this field is used to transfer the result to the
        blocked coroutine. */
@@ -123,20 +124,6 @@ extern struct mill_list all_crs;;
 /* The queue of coroutines ready to run. The first one is currently running. */
 extern struct mill_cr *first_cr;
 extern struct mill_cr *last_cr;
-
-/* Linked list of all sleeping coroutines. The list is ordered.
-   First coroutine to be resume comes first and so on. */
-extern struct mill_slist sleeping;
-
-/* Pollset used for waiting for file descriptors. */
-extern int wait_size;
-extern int wait_capacity;
-extern struct pollfd *wait_fds;
-struct mill_fdwitem {
-    struct mill_cr *in;
-    struct mill_cr *out;
-};
-extern struct mill_fdwitem *wait_items;
 
 /* Channel endpoint. */
 struct mill_ep {
