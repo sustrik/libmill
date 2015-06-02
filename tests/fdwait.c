@@ -44,10 +44,22 @@ int main() {
     int rc = socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
     assert(rc == 0);
 
-    /* Check whether the pipe is writeable. */
+    /* Check for out. */
     rc = fdwait(fds[0], FDW_OUT, -1);
     assert(rc & FDW_OUT);
     assert(!(rc & ~FDW_OUT));
+
+    /* Check for in. */
+    ssize_t sz = send(fds[1], "A", 1, 0);
+    assert(sz == 1);
+    rc = fdwait(fds[0], FDW_IN, -1);
+    assert(rc & FDW_IN);
+    assert(!(rc & ~FDW_IN));
+
+    /* Check for both in and out. */
+    rc = fdwait(fds[0], FDW_IN | FDW_OUT, -1);
+    assert(rc & (FDW_IN | FDW_OUT));
+    assert(!(rc & ~(FDW_IN | FDW_OUT)));
 
 #if 0
     /* Check the same with timeout. */
