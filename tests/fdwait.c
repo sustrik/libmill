@@ -58,7 +58,8 @@ int main() {
 
     /* Check for both in and out. */
     rc = fdwait(fds[0], FDW_IN | FDW_OUT, -1);
-    assert(rc & (FDW_IN | FDW_OUT));
+    assert(rc & FDW_IN);
+    assert(rc & FDW_OUT);
     assert(!(rc & ~(FDW_IN | FDW_OUT)));
 
 #if 0
