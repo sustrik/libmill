@@ -66,7 +66,7 @@ struct mill_cr {
     enum mill_state state;
 
     /* List of coroutines ready to be executed. */
-    struct mill_cr *next;
+    struct mill_slist_item item;
 
     /* Used when the coroutine is sleeping. */
     struct mill_timer sleeper;
@@ -98,8 +98,7 @@ struct mill_cr {
 extern struct mill_cr main_cr;
 
 /* The queue of coroutines ready to run. The first one is currently running. */
-extern struct mill_cr *first_cr;
-extern struct mill_cr *last_cr;
+extern struct mill_slist mill_ready;
 
 /* Channel endpoint. */
 struct mill_ep {
@@ -126,7 +125,7 @@ struct mill_chan {
     /* The message buffer directly follows the chan structure. 'bufsz' specifies
        the maximum capacity of the buffer. 'items' is the number of messages
        currently in the buffer. 'first' is the index of the next message to
-       receive from the buffer. */
+       be received from the buffer. */
     size_t bufsz;
     size_t items;
     size_t first;
@@ -157,6 +156,10 @@ struct mill_clause {
     int available;
 };
 
+/* Currently running coroutine. */
+struct mill_cr *mill_running(void);
+
+/* Returns pointer to the channel that contains specified endpoint. */
 struct mill_chan *mill_getchan(struct mill_ep *ep);
 
 #endif

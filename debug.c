@@ -87,7 +87,7 @@ void goredump(void) {
         struct mill_cr *cr = mill_cont(it, struct mill_cr, debug.item);
         switch(cr->state) {
         case MILL_YIELD:
-            sprintf(buf, "%s", first_cr == cr ? "RUNNING" : "yield()");
+            sprintf(buf, "%s", mill_running() == cr ? "RUNNING" : "yield()");
             break;
         case MILL_MSLEEP:
             sprintf(buf, "msleep()");
@@ -131,7 +131,7 @@ void goredump(void) {
         fprintf(stderr, "%-8s   %-42s %-40s %s\n",
             idbuf,
             buf,
-            cr == first_cr ? "---" : cr->debug.current,
+            cr == mill_running() ? "---" : cr->debug.current,
             cr->debug.created ? cr->debug.created : "<main>");
     }
     fprintf(stderr,"\n");
@@ -200,23 +200,23 @@ void mill_preserve_debug(void) {
     trace(0);
 }
 
-static int tracelevel = 0;
-static struct mill_cr *mill_last_traced_cr = NULL;
+static int mill_tracelevel = 0;
+static int mill_last_traced_cr_id = -1;
 
 void trace(int level) {
-    tracelevel = level;
+    mill_tracelevel = level;
 }
 
 void mill_trace(const char *location, const char *format, ...) {
-    if(tracelevel <= 0)
+    if(mill_tracelevel <= 0)
         return;
 
     char buf[256];
 
-    if(mill_last_traced_cr && mill_last_traced_cr != first_cr)
+    if(mill_last_traced_cr_id != mill_running()->debug.id)
         fprintf(stderr, "==> --------------------------------------------------"
         "------------------------------------------------------------------\n");
-    mill_last_traced_cr = first_cr;
+    mill_last_traced_cr_id = mill_running()->debug.id;
     
     /* First print the timestamp. */
     struct timeval nw;
@@ -226,7 +226,7 @@ void mill_trace(const char *location, const char *format, ...) {
     fprintf(stderr, "==> %s.%06d ", buf, (int)nw.tv_usec);
 
     /* Coroutine ID. */
-    snprintf(buf, sizeof(buf), "{%d}", (int)first_cr->debug.id);
+    snprintf(buf, sizeof(buf), "{%d}", (int)mill_running()->debug.id);
     fprintf(stderr, "%-8s ", buf);
 
     va_list va;

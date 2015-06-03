@@ -70,6 +70,5 @@ struct mill_slist_item *mill_slist_pop(struct mill_slist *self);
 void mill_slist_insert(struct mill_slist *self, struct mill_slist_item *item,
     struct mill_slist_item *it);
 
-
 #endif
 

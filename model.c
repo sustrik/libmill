@@ -28,8 +28,11 @@
 #include <assert.h>
 
 struct mill_cr main_cr = {0};
-struct mill_cr *first_cr = &main_cr;
-struct mill_cr *last_cr = &main_cr;
+struct mill_slist mill_ready = {&main_cr.item, &main_cr.item};
+
+struct mill_cr *mill_running(void) {
+    return mill_cont(mill_slist_begin(&mill_ready), struct mill_cr, item);
+}
 
 struct mill_chan *mill_getchan(struct mill_ep *ep) {
     switch(ep->type) {
