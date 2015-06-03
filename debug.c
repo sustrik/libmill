@@ -32,6 +32,46 @@
 #include <sys/time.h>
 #include <time.h>
 
+/* ID to be assigned to next launched coroutine. */
+static int mill_next_cr_id = 1;
+
+/* List of all coroutines. */
+static struct mill_list mill_all_crs = {
+    &main_cr.debug.item, &main_cr.debug.item};
+
+/* ID to be assigned to the next created channel. */
+static int mill_next_chan_id = 1;
+
+/* List of all channels. */
+static struct mill_list mill_all_chans = {0};
+
+void mill_register_cr(struct mill_debug_cr *cr, const char *created) {
+    mill_list_insert(&mill_all_crs, &cr->item, NULL);
+    cr->id = mill_next_cr_id;
+    ++mill_next_cr_id;
+    cr->created = created;
+    cr->current = NULL;
+}
+
+void mill_unregister_cr(struct mill_debug_cr *cr) {
+    mill_list_erase(&mill_all_crs, &cr->item);
+}
+
+void mill_register_chan(struct mill_debug_chan *ch, const char *created) {
+    mill_list_insert(&mill_all_chans, &ch->item, NULL);
+    ch->id = mill_next_chan_id;
+    ++mill_next_chan_id;
+    ch->created = created;
+}
+
+void mill_unregister_chan(struct mill_debug_chan *ch) {
+    mill_list_erase(&mill_all_chans, &ch->item);
+}
+
+void mill_set_current(struct mill_debug_cr *cr, const char *current) {
+    cr->current = current;
+}
+
 void goredump(void) {
     char buf[256];
     char idbuf[10];
@@ -43,8 +83,8 @@ void goredump(void) {
         "----------------------------------------------------------------------"
         "--------------------------------------------------\n");
     struct mill_list_item *it;
-    for(it = mill_list_begin(&all_crs); it != NULL; it = mill_list_next(it)) {
-        struct mill_cr *cr = mill_cont(it, struct mill_cr, all_crs_item);
+    for(it = mill_list_begin(&mill_all_crs); it; it = mill_list_next(it)) {
+        struct mill_cr *cr = mill_cont(it, struct mill_cr, debug.item);
         switch(cr->state) {
         case MILL_YIELD:
             sprintf(buf, "%s", first_cr == cr ? "RUNNING" : "yield()");
@@ -57,11 +97,13 @@ void goredump(void) {
             break;
         case MILL_CHR:
             sprintf(buf, "chr(<%d>)", mill_getchan(mill_cont(mill_slist_begin(
-                &cr->chstate.clauses), struct mill_clause, chitem)->ep)->id);
+                &cr->chstate.clauses), struct mill_clause,
+                chitem)->ep)->debug.id);
             break;
         case MILL_CHS:
             sprintf(buf, "chs(<%d>)", mill_getchan(mill_cont(mill_slist_begin(
-                &cr->chstate.clauses), struct mill_clause, chitem)->ep)->id);
+                &cr->chstate.clauses), struct mill_clause,
+                chitem)->ep)->debug.id);
             break;
         case MILL_CHOOSE:
             {
@@ -76,7 +118,8 @@ void goredump(void) {
 		            else
 		                pos += sprintf(&buf[pos], ",");
 		            pos += sprintf(&buf[pos], "<%d>", mill_getchan(
-                        mill_cont(it, struct mill_clause, chitem)->ep)->id);
+                        mill_cont(it, struct mill_clause,
+                        chitem)->ep)->debug.id);
 		        }
 		        sprintf(&buf[pos], ")");
             }
@@ -84,16 +127,16 @@ void goredump(void) {
         default:
             assert(0);
         }
-        snprintf(idbuf, sizeof(idbuf), "{%d}", (int)cr->id);
+        snprintf(idbuf, sizeof(idbuf), "{%d}", (int)cr->debug.id);
         fprintf(stderr, "%-8s   %-42s %-40s %s\n",
             idbuf,
             buf,
-            cr == first_cr ? "---" : cr->current,
-            cr->created ? cr->created : "<main>");
+            cr == first_cr ? "---" : cr->debug.current,
+            cr->debug.created ? cr->debug.created : "<main>");
     }
     fprintf(stderr,"\n");
 
-    if(mill_list_empty(&all_chans))
+    if(mill_list_empty(&mill_all_chans))
         return;
     fprintf(stderr,
         "CHANNEL  msgs/max    senders/receivers                          "
@@ -101,9 +144,9 @@ void goredump(void) {
     fprintf(stderr,
         "----------------------------------------------------------------------"
         "--------------------------------------------------\n");
-    for(it = mill_list_begin(&all_chans); it != NULL; it = mill_list_next(it)) {
-        struct mill_chan *ch = mill_cont(it, struct mill_chan, all_chans_item);
-        snprintf(idbuf, sizeof(idbuf), "<%d>", (int)ch->id);
+    for(it = mill_list_begin(&mill_all_chans); it; it = mill_list_next(it)) {
+        struct mill_chan *ch = mill_cont(it, struct mill_chan, debug.item);
+        snprintf(idbuf, sizeof(idbuf), "<%d>", (int)ch->debug.id);
         sprintf(buf, "%d/%d",
             (int)ch->items,
             (int)ch->bufsz);
@@ -134,7 +177,7 @@ void goredump(void) {
                 first = 0;
             else
                 pos += sprintf(&buf[pos], ",");
-            pos += sprintf(&buf[pos], "{%d}", (int)cl->cr->id);
+            pos += sprintf(&buf[pos], "{%d}", (int)cl->cr->debug.id);
             cl = mill_cont(mill_list_next(&cl->epitem),
                 struct mill_clause, epitem);
         }
@@ -142,7 +185,7 @@ void goredump(void) {
             buf,
             (int)ch->refcount,
             ch->done ? "yes" : "no",
-            ch->created);            
+            ch->debug.created);            
     }
     fprintf(stderr,"\n");
 }
@@ -183,7 +226,7 @@ void mill_trace(const char *location, const char *format, ...) {
     fprintf(stderr, "==> %s.%06d ", buf, (int)nw.tv_usec);
 
     /* Coroutine ID. */
-    snprintf(buf, sizeof(buf), "{%d}", (int)first_cr->id);
+    snprintf(buf, sizeof(buf), "{%d}", (int)first_cr->debug.id);
     fprintf(stderr, "%-8s ", buf);
 
     va_list va;

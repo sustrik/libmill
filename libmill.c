@@ -95,17 +95,13 @@ void *mill_go_prologue(const char *created) {
     if(mill_setjmp(&first_cr->ctx))
         return NULL;
     struct mill_cr *cr = ((struct mill_cr*)mill_allocstack()) - 1;
-    mill_list_insert(&all_crs, &cr->all_crs_item, NULL);
-    cr->id = next_cr_id;
-    cr->created = created;
-    cr->current = NULL;
-    ++next_cr_id;
+    mill_register_cr(&cr->debug, created);
     cr->state = MILL_YIELD;
     mill_chstate_init(&cr->chstate);
     mill_valbuf_init(&cr->valbuf);
     cr->fdwres = 0;
     cr->cls = NULL;
-    mill_trace(created, "{%d}=go()", (int)cr->id);
+    mill_trace(created, "{%d}=go()", (int)cr->debug.id);
 
     /* Move the current coroutine to the end of the queue. */
     mill_resume(mill_suspend());    
@@ -120,9 +116,8 @@ void *mill_go_prologue(const char *created) {
 /* The final part of go(). Cleans up when the coroutine is finished. */
 void mill_go_epilogue(void) {
     mill_trace(NULL, "go() done");
-
     struct mill_cr *cr = mill_suspend();
-    mill_list_erase(&all_crs, &cr->all_crs_item);
+    mill_unregister_cr(&cr->debug);
     mill_valbuf_term(&cr->valbuf);
     mill_freestack(cr + 1);
     mill_ctxswitch();
@@ -136,7 +131,7 @@ void mill_yield(const char *current) {
     if(mill_setjmp(&first_cr->ctx))
         return;
     struct mill_cr *cr = mill_suspend();
-    cr->current = current;
+    mill_set_current(&cr->debug, current);
     mill_resume(cr);
     mill_ctxswitch();
 }
@@ -160,7 +155,7 @@ void mill_msleep(long ms, const char *current) {
     /* Suspend the running coroutine. */
     struct mill_cr *cr = mill_suspend();
     cr->state = MILL_MSLEEP;
-    cr->current = current;
+    mill_set_current(&cr->debug, current);
 
     /* Start waiting for the timer. */
     mill_timer(&cr->sleeper, ms, mill_msleep_cb);
@@ -184,7 +179,7 @@ int mill_fdwait(int fd, int events, long timeout, const char *current) {
     if(!mill_setjmp(&first_cr->ctx)) {
         struct mill_cr *cr = mill_suspend();
         cr->state = MILL_FDWAIT;
-        cr->current = current;
+        mill_set_current(&cr->debug, current);
         mill_ctxswitch();
     }
 
@@ -278,10 +273,7 @@ chan mill_chmake(size_t sz, size_t bufsz, const char *created) {
     struct mill_chan *ch = (struct mill_chan*)malloc(sizeof(struct mill_chan) +
         (sz * (bufsz + 1)));
     assert(ch);
-    mill_list_insert(&all_chans, &ch->all_chans_item, NULL);
-    ch->id = mill_next_chan_id;
-    ++mill_next_chan_id;
-    ch->created = created;
+    mill_register_chan(&ch->debug, created);
     ch->sz = sz;
     ch->sender.type = MILL_SENDER;
     mill_list_init(&ch->sender.clauses);
@@ -292,18 +284,18 @@ chan mill_chmake(size_t sz, size_t bufsz, const char *created) {
     ch->bufsz = bufsz;
     ch->items = 0;
     ch->first = 0;
-    mill_trace(created, "<%d>=chmake(%d)", (int)ch->id, (int)bufsz);
+    mill_trace(created, "<%d>=chmake(%d)", (int)ch->debug.id, (int)bufsz);
     return ch;
 }
 
 chan mill_chdup(chan ch, const char *current) {
-    mill_trace(current, "chdup(<%d>)", (int)ch->id);
+    mill_trace(current, "chdup(<%d>)", (int)ch->debug.id);
     ++ch->refcount;
     return ch;
 }
 
 void mill_chs(chan ch, void *val, size_t sz, const char *current) {
-    mill_trace(current, "chs(<%d>)", (int)ch->id);
+    mill_trace(current, "chs(<%d>)", (int)ch->debug.id);
 
     if(ch->done)
         mill_panic("send to done-with channel");
@@ -326,14 +318,14 @@ void mill_chs(chan ch, void *val, size_t sz, const char *current) {
     cl.val = val;
     mill_list_insert(&ch->sender.clauses, &cl.epitem, NULL);
     mill_slist_push_back(&cl.cr->chstate.clauses, &cl.chitem);
-    cl.cr->current = current;
+    mill_set_current(&cl.cr->debug, current);
 
     /* Pass control to a different coroutine. */
     mill_ctxswitch();
 }
 
 void *mill_chr(chan ch, void *val, size_t sz, const char *current) {
-    mill_trace(current, "chr(<%d>)", (int)ch->id);
+    mill_trace(current, "chr(<%d>)", (int)ch->debug.id);
 
     if(ch->sz != sz)
         mill_panic("receive of a type not matching the channel");
@@ -354,7 +346,7 @@ void *mill_chr(chan ch, void *val, size_t sz, const char *current) {
     cl.val = val;
     mill_list_insert(&ch->receiver.clauses, &cl.epitem, NULL);
     mill_slist_push_back(&cl.cr->chstate.clauses, &cl.chitem);
-    cl.cr->current = current;
+    mill_set_current(&cl.cr->debug, current);
 
     /* Pass control to a different coroutine. */
     mill_ctxswitch();
@@ -363,7 +355,7 @@ void *mill_chr(chan ch, void *val, size_t sz, const char *current) {
 }
 
 void mill_chdone(chan ch, void *val, size_t sz, const char *current) {
-    mill_trace(current, "chdone(<%d>)", (int)ch->id);
+    mill_trace(current, "chdone(<%d>)", (int)ch->debug.id);
 
     if(ch->done)
         mill_panic("chdone on already done-with channel");
@@ -393,13 +385,13 @@ void mill_chdone(chan ch, void *val, size_t sz, const char *current) {
 }
 
 void mill_chclose(chan ch, const char *current) {
-    mill_trace(current, "chclose(<%d>)", (int)ch->id);
+    mill_trace(current, "chclose(<%d>)", (int)ch->debug.id);
     assert(ch->refcount >= 1);
     --ch->refcount;
     if(!ch->refcount) {
         mill_list_term(&ch->sender.clauses);
         mill_list_term(&ch->receiver.clauses);
-        mill_list_erase(&all_chans, &ch->all_chans_item);
+        mill_unregister_chan(&ch->debug);
         free(ch);
     }
 }
@@ -473,7 +465,7 @@ int mill_choose_wait(const char *current) {
     int res = -1;
     struct mill_slist_item *it;
     
-    /* If there are clauses that are immediately available,
+    /* If there are clauses that are immediately available
        randomly choose one of them. */
     if(chstate->available > 0) {
         int chosen = random() % (chstate->available);
@@ -505,7 +497,7 @@ int mill_choose_wait(const char *current) {
     if(!mill_setjmp(&first_cr->ctx)) {
         struct mill_cr *cr = mill_suspend();
         cr->state = MILL_CHOOSE;
-        cr->current = current;
+        mill_set_current(&cr->debug, current);
         mill_ctxswitch();
     }
     /* Get the result clause as set up by the coroutine that just unblocked

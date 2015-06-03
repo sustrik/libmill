@@ -25,6 +25,7 @@
 #ifndef MILL_MODEL_INCLUDED
 #define MILL_MODEL_INCLUDED
 
+#include "debug.h"
 #include "model.h"
 #include "list.h"
 #include "poller.h"
@@ -61,19 +62,6 @@ enum mill_state {
 
 /* The coroutine. This structure is held on the top of the coroutine's stack. */
 struct mill_cr {
-    /* The list of all coroutines. */
-    struct mill_list_item all_crs_item;
-
-    /* Unique ID of the coroutine. */
-    int id;
-
-    /* Filename and line number of where the coroutine was created. */
-    const char *created;
-
-    /* Filename and line number of where the current operation was
-       invoked from. */
-    const char *current;
-
     /* Status of the coroutine. Used for debugging purposes. */
     enum mill_state state;
 
@@ -95,22 +83,19 @@ struct mill_cr {
     /* Place to store the received value when doing choose. */
     struct mill_valbuf valbuf;
 
-    /* When doing fdwait() this field is used to transfer the result to the
-       blocked coroutine. */
+    /* When doing fdwait() this field is used to transfer the result
+       to the blocked coroutine. */
     int fdwres;
 
     /* Coroutine-local storage. */
     void *cls;
-};
 
-/* ID to be assigned to next launched coroutine. */
-extern int next_cr_id;
+    /* Debugging info. */
+    struct mill_debug_cr debug;
+};
 
 /* Fake coroutine corresponding to the main thread of execution. */
 extern struct mill_cr main_cr;
-
-/* List of all coroutines. Used for debugging purposes. */
-extern struct mill_list all_crs;;
 
 /* The queue of coroutines ready to run. The first one is currently running. */
 extern struct mill_cr *first_cr;
@@ -126,14 +111,6 @@ struct mill_ep {
 
 /* Channel. */
 struct mill_chan {
-    /* List of all channels. Used for debugging purposes. */
-    struct mill_list_item all_chans_item;
-
-    /* Channel ID. */
-    int id;
-
-    /* Filename and line number of where the channel was created. */
-    const char *created;
 
     /* The size of the elements stored in the channel, in bytes. */
     size_t sz;
@@ -153,13 +130,10 @@ struct mill_chan {
     size_t bufsz;
     size_t items;
     size_t first;
+
+    /* Debugging info. */
+    struct mill_debug_chan debug;
 };
-
-/* ID to be assigned to the next created channel. */
-extern int mill_next_chan_id;
-
-/* List of all channels. Used for debugging purposes. */
-extern struct mill_list all_chans;
 
 /* This structure represents a single clause in a choose statement.
    Similarly, both chs() and chr() each create a single clause. */
