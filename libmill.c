@@ -88,6 +88,10 @@ static void mill_ctxswitch(void) {
 
 /* The intial part of go(). Allocates the stack for the new coroutine. */
 void *mill_go_prologue(const char *created) {
+    /* Ensure that debug functions are available whenever a single go()
+       statement is present in the user's code. */
+    mill_preserve_debug();
+
     if(mill_setjmp(&first_cr->ctx))
         return NULL;
     struct mill_cr *cr = ((struct mill_cr*)mill_allocstack()) - 1;
@@ -98,8 +102,7 @@ void *mill_go_prologue(const char *created) {
     ++next_cr_id;
     cr->state = MILL_YIELD;
     mill_chstate_init(&cr->chstate);
-    cr->val.ptr = NULL;
-    cr->val.capacity = MILL_MAXINLINECHVALSIZE;
+    mill_valbuf_init(&cr->valbuf);
     cr->fdwres = 0;
     cr->cls = NULL;
     mill_trace(created, "{%d}=go()", (int)cr->id);
@@ -116,19 +119,11 @@ void *mill_go_prologue(const char *created) {
 
 /* The final part of go(). Cleans up when the coroutine is finished. */
 void mill_go_epilogue(void) {
-
     mill_trace(NULL, "go() done");
 
     struct mill_cr *cr = mill_suspend();
-    if(cr->val.ptr) {
-        free(cr->val.ptr);
-        cr->val.ptr = NULL;
-
-        /* Ensure that debug functions are available if a single go()
-           statement is present in the user's code. */
-        mill_preserve_debug();
-    }
     mill_list_erase(&all_crs, &cr->all_crs_item);
+    mill_valbuf_term(&cr->valbuf);
     mill_freestack(cr + 1);
     mill_ctxswitch();
 }
@@ -213,23 +208,6 @@ void setcls(void *val) {
 
 MILL_CT_ASSERT(MILL_CLAUSELEN == sizeof(struct mill_clause));
 
-/* Returns pointer to the coroutinr'd in-buffer. The buffer is reallocated
-   as needed to accommodate 'sz' bytes of content. */
-static void *mill_getvalbuf(struct mill_cr *cr, size_t sz) {
-    size_t capacity = cr->val.capacity ?
-          cr->val.capacity :
-          MILL_MAXINLINECHVALSIZE;
-    /* If there's enough capacity for the type available, return either
-       dynamically allocated buffer, if present, or the static buffer. */
-    if(capacity >= sz)
-        return cr->val.ptr ? cr->val.ptr : cr->val.buf;
-    /* Allocate or grow the dyncamic buffer to accommodate the type. */
-    cr->val.ptr = realloc(cr->val.ptr, sz);
-    assert(cr->val.ptr);
-    cr->val.capacity = sz;
-    return cr->val.ptr;
-}
-
 /* Add new item to the channel buffer. */
 static int mill_enqueue(chan ch, void *val) {
     /* If there's a receiver already waiting, let's resume it. */
@@ -238,7 +216,7 @@ static int mill_enqueue(chan ch, void *val) {
             mill_list_begin(&ch->receiver.clauses), struct mill_clause, epitem);
         void *dst = cl->val;
         if(!dst)
-            dst = mill_getvalbuf(cl->cr, ch->sz);
+            dst = mill_valbuf_alloc(&cl->cr->valbuf, ch->sz);
         memcpy(dst, val, ch->sz);
         cl->cr->chstate.idx = cl->idx;
         mill_resume(cl->cr);
@@ -259,8 +237,9 @@ static int mill_enqueue(chan ch, void *val) {
 static int mill_dequeue(chan ch, void *val) {
     void *dst = val;
     if(!dst)
-        dst = mill_getvalbuf(mill_cont(mill_list_begin(&ch->receiver.clauses),
-            struct mill_clause, epitem)->cr, ch->sz);
+        dst = mill_valbuf_alloc(
+            &mill_cont(mill_list_begin(&ch->receiver.clauses),
+            struct mill_clause, epitem)->cr->valbuf, ch->sz);
 
     /* If there's a sender already waiting, let's resume it. */
     struct mill_clause *cl = mill_cont(
@@ -405,7 +384,7 @@ void mill_chdone(chan ch, void *val, size_t sz, const char *current) {
             mill_list_begin(&ch->receiver.clauses), struct mill_clause, epitem);
         void *dst = cl->val;
         if(!dst)
-            dst = mill_getvalbuf(cl->cr, ch->sz);
+            dst = mill_valbuf_alloc(&cl->cr->valbuf, ch->sz);
         memcpy(dst, val, ch->sz);
         cl->cr->chstate.idx = cl->idx;
         mill_resume(cl->cr);
@@ -547,6 +526,6 @@ int mill_choose_wait(const char *current) {
 }
 
 void *mill_choose_val(void) {
-    return first_cr->val.ptr ? first_cr->val.ptr : first_cr->val.buf;
+    return mill_valbuf_get(&first_cr->valbuf);
 }
 

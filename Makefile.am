@@ -49,7 +49,9 @@ libmill_la_SOURCES = \
     stack.c\
     tcp.c\
     utils.h\
-    utils.c
+    utils.c\
+    valbuf.h\
+    valbuf.c
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libmill.pc

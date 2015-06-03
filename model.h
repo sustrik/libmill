@@ -30,10 +30,7 @@
 #include "poller.h"
 #include "slist.h"
 #include "utils.h"
-
-/* Maximum size of an item in a channel that we can handle without
-   extra memory allocation. */
-#define MILL_MAXINLINECHVALSIZE 128
+#include "valbuf.h"
 
 /* This structure keeps the state of a 'choose' operation. */
 struct mill_chstate {
@@ -95,14 +92,8 @@ struct mill_cr {
     /* State for the choose operation that's underway in this coroutine. */
     struct mill_chstate chstate;
 
-    /* Place to store the received value when doing choose. 'ptr' doesn't get
-       deallocated for the main coroutine, however, we don't care as the
-       process is terminating at that point anyway. */
-    struct {
-        void *ptr;
-        size_t capacity;
-        char buf[MILL_MAXINLINECHVALSIZE];
-    } val;
+    /* Place to store the received value when doing choose. */
+    struct mill_valbuf valbuf;
 
     /* When doing fdwait() this field is used to transfer the result to the
        blocked coroutine. */
