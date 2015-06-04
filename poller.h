@@ -25,7 +25,7 @@
 #ifndef MILL_POLLER_INCLUDED
 #define MILL_POLLER_INCLUDED
 
-/* Wait till at least one callback is invoked. */
+/* Wait till at least one coroutine is resumed. */
 void mill_wait(void);
 
 #endif
