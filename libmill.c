@@ -474,28 +474,25 @@ int mill_choose_wait(const char *current) {
                 --chosen;
             }
         }
-        goto cleanup;
     }
-
     /* If not so but there's an 'otherwise' clause we can go straight to it. */
-    if(chstate->othws) {
+    else if(chstate->othws) {
         res = -1;
-        goto cleanup;
     }
-
     /* In all other cases block and wait for an available channel. */
-    if(!mill_setjmp(&mill_running()->ctx)) {
-        struct mill_cr *cr = mill_suspend();
-        cr->state = MILL_CHOOSE;
-        mill_set_current(&cr->debug, current);
-        mill_ctxswitch();
+    else {
+        if(!mill_setjmp(&mill_running()->ctx)) {
+            struct mill_cr *cr = mill_suspend();
+            cr->state = MILL_CHOOSE;
+            mill_set_current(&cr->debug, current);
+            mill_ctxswitch();
+        }
+        /* Get the result clause as set up by the coroutine that just unblocked
+           this choose statement. */
+        res = chstate->idx;
     }
-    /* Get the result clause as set up by the coroutine that just unblocked
-       this choose statement. */
-    res = chstate->idx;
    
     /* Clean-up the clause lists in queried channels. */
-    cleanup:
     for(it = mill_slist_begin(&chstate->clauses); it;
           it = mill_slist_next(it)) {
         struct mill_clause *cl = mill_cont(it, struct mill_clause, chitem);
