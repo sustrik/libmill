@@ -55,7 +55,6 @@ static int mill_suspend(void) {
     /* Store the context of the current coroutine, if any. */
     if(mill_running && mill_setjmp(&mill_running->ctx))
         return mill_running->result;
-
     while(1) {
         /* If there's a coroutine ready to be executed go for it. */
         if(!mill_slist_empty(&mill_ready)) {
@@ -63,7 +62,6 @@ static int mill_suspend(void) {
             mill_running = mill_cont(it, struct mill_cr, item);
             mill_jmp(&mill_running->ctx);
         }
-
         /*  Otherwise, we are going to wait for sleeping coroutines
             and for external events. */
         mill_wait();
@@ -80,28 +78,25 @@ static void mill_resume(struct mill_cr *cr, int result) {
     mill_slist_push_back(&mill_ready, &cr->item);
 }
 
-/* The intial part of go(). Allocates the stack for the new coroutine. */
+/* The intial part of go(). Starts the new coroutine. */
 void *mill_go_prologue(const char *created) {
     /* Ensure that debug functions are available whenever a single go()
        statement is present in the user's code. */
     mill_preserve_debug();
-
-    if(mill_setjmp(&mill_running->ctx))
-        return NULL;
+    /* Allocate and initialise new stack. */
     struct mill_cr *cr = ((struct mill_cr*)mill_allocstack()) - 1;
     mill_register_cr(&cr->debug, created);
-    cr->state = MILL_SCHEDULED;
     mill_chstate_init(&cr->chstate);
     mill_valbuf_init(&cr->valbuf);
     cr->cls = NULL;
     mill_trace(created, "{%d}=go()", (int)cr->debug.id);
-
-    /* Move the parent coroutine to the end of the queue. */
-    mill_resume(mill_running, -1);    
-
-    /* Mark the new coroutine as the one that is running. */
+    /* Suspend the parent coroutine and make the new one running. */
+    if(mill_setjmp(&mill_running->ctx))
+        return NULL;
+    mill_resume(mill_running, 0);    
     mill_running = cr;
-
+    /* Return the location of the stack so that the caller can shift the
+       stack pointer as needed. */
     return (void*)cr;
 }
 
@@ -112,6 +107,8 @@ void mill_go_epilogue(void) {
     mill_valbuf_term(&mill_running->valbuf);
     mill_freestack(mill_running + 1);
     mill_running = NULL;
+    /* Given that there's no running coroutine at this point this call
+       will never return. */
     mill_suspend();
 }
 
@@ -125,12 +122,12 @@ void mill_yield(const char *current) {
 
     /* This looks fishy, but yes, we can resume the coroutine even before
        suspending it. */
-    mill_resume(mill_running, -1);
+    mill_resume(mill_running, 0);
     mill_suspend();
 }
 
 static void mill_msleep_cb(struct mill_timer *self) {
-    mill_resume(mill_cont(self, struct mill_cr, sleeper), -1);
+    mill_resume(mill_cont(self, struct mill_cr, sleeper), 0);
 }
 
 /* Pause current coroutine for a specified time interval. */
