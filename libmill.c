@@ -45,12 +45,6 @@ volatile void *mill_unoptimisable2 = NULL;
 /* Queue of coroutines scheduled for execution. */
 static struct mill_slist mill_ready = {0};
 
-static void mill_chstate_init(struct mill_chstate *self) {
-    mill_slist_init(&self->clauses);
-    self->othws = 0;
-    self->available = 0;
-}
-
 int mill_suspend(void) {
     /* Store the context of the current coroutine, if any. */
     if(mill_running && mill_setjmp(&mill_running->ctx))
@@ -83,7 +77,6 @@ void *mill_go_prologue(const char *created) {
     /* Allocate and initialise new stack. */
     struct mill_cr *cr = ((struct mill_cr*)mill_allocstack()) - 1;
     mill_register_cr(&cr->debug, created);
-    mill_chstate_init(&cr->chstate);
     mill_valbuf_init(&cr->valbuf);
     cr->cls = NULL;
     mill_trace(created, "{%d}=go()", (int)cr->debug.id);
@@ -234,15 +227,14 @@ void mill_chs(chan ch, void *val, size_t sz, const char *current) {
        till a receiver arrives. */
     struct mill_clause cl;
     cl.cr = mill_running;
-    cl.cr->state = MILL_CHS;
+    mill_running->state = MILL_CHS;
     cl.ep = &ch->sender;
     cl.val = val;
     mill_list_insert(&ch->sender.clauses, &cl.epitem, NULL);
-    mill_slist_push_back(&cl.cr->chstate.clauses, &cl.chitem);
-    mill_set_current(&cl.cr->debug, current);
-    mill_suspend();
-    /* Clean up after the operation. TODO: Do we need this? */
     mill_slist_init(&mill_running->chstate.clauses);
+    mill_slist_push_back(&mill_running->chstate.clauses, &cl.chitem);
+    mill_set_current(&mill_running->debug, current);
+    mill_suspend();
 }
 
 void *mill_chr(chan ch, void *val, size_t sz, const char *current) {
@@ -250,21 +242,19 @@ void *mill_chr(chan ch, void *val, size_t sz, const char *current) {
     if(ch->sz != sz)
         mill_panic("receive of a type not matching the channel");
     /* Try to get a value straight away. */
-    if(mill_dequeue(ch, val)) {
-        /* Clean up after the operation. TODO: Do we need this? */
-        mill_slist_init(&mill_running->chstate.clauses);
+    if(mill_dequeue(ch, val))
         return val;
-    }
     /* If there's no message in the buffer we are going to yield
        till a sender arrives. */
     struct mill_clause cl;
     cl.cr = mill_running;
-    cl.cr->state = MILL_CHR;
+    mill_running->state = MILL_CHR;
     cl.ep = &ch->receiver;
     cl.val = val;
     mill_list_insert(&ch->receiver.clauses, &cl.epitem, NULL);
-    mill_slist_push_back(&cl.cr->chstate.clauses, &cl.chitem);
-    mill_set_current(&cl.cr->debug, current);
+    mill_slist_init(&mill_running->chstate.clauses);
+    mill_slist_push_back(&mill_running->chstate.clauses, &cl.chitem);
+    mill_set_current(&mill_running->debug, current);
     mill_suspend();
     return val;
 }
@@ -305,6 +295,12 @@ void mill_chclose(chan ch, const char *current) {
         mill_unregister_chan(&ch->debug);
         free(ch);
     }
+}
+
+void mill_choose_init(void) {
+    mill_slist_init(&mill_running->chstate.clauses);
+    mill_running->chstate.othws = 0;
+    mill_running->chstate.available = 0;
 }
 
 void mill_choose_in(void *clause, chan ch, size_t sz, int idx) {
@@ -402,7 +398,6 @@ int mill_choose_wait(const char *current) {
         struct mill_clause *cl = mill_cont(it, struct mill_clause, chitem);
         mill_list_erase(&cl->ep->clauses, &cl->epitem);
     }
-    mill_chstate_init(chstate); /* TODO: Is this needed? */
     assert(res >= -1);
     return res;
 }
