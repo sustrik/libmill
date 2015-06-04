@@ -107,8 +107,8 @@ void mill_go_epilogue(void) {
     mill_valbuf_term(&mill_running->valbuf);
     mill_freestack(mill_running + 1);
     mill_running = NULL;
-    /* Given that there's no running coroutine at this point this call
-       will never return. */
+    /* Given that there's no running coroutine at this point
+       this call will never return. */
     mill_suspend();
 }
 
@@ -117,9 +117,7 @@ void mill_yield(const char *current) {
        back and forth. */
     if(mill_slist_empty(&mill_ready))
         return;
-
     mill_set_current(&mill_running->debug, current);
-
     /* This looks fishy, but yes, we can resume the coroutine even before
        suspending it. */
     mill_resume(mill_running, 0);
@@ -137,15 +135,11 @@ void mill_msleep(long ms, const char *current) {
         yield();
         return;
     }
-
     /* Suspend the running coroutine. */
     mill_running->state = MILL_MSLEEP;
     mill_set_current(&mill_running->debug, current);
-
-    /* Start waiting for the timer. */
+    /* Wait for the timer. */
     mill_timer(&mill_running->sleeper, ms, mill_msleep_cb);
-
-    /* In the meanwhile pass control to a different coroutine. */
     mill_suspend();
 }
 
@@ -158,10 +152,8 @@ static void mill_fdwait_cb(struct mill_poll *self, int events) {
 int mill_fdwait(int fd, int events, long timeout, const char *current) {
     mill_running->state = MILL_FDWAIT;
     mill_set_current(&mill_running->debug, current);
-    /* Register with the poller. */
-    mill_poll(&mill_running->poller, fd, events, mill_fdwait_cb);
-
     /* Wait for the signal from the file descriptor. */
+    mill_poll(&mill_running->poller, fd, events, mill_fdwait_cb);
     return mill_suspend();
 }
 
@@ -210,7 +202,6 @@ static int mill_dequeue(chan ch, void *val) {
         dst = mill_valbuf_alloc(
             &mill_cont(mill_list_begin(&ch->receiver.clauses),
             struct mill_clause, epitem)->cr->valbuf, ch->sz);
-
     /* If there's a sender already waiting, let's resume it. */
     struct mill_clause *cl = mill_cont(
         mill_list_begin(&ch->sender.clauses), struct mill_clause, epitem);
@@ -220,7 +211,6 @@ static int mill_dequeue(chan ch, void *val) {
         mill_list_erase(&ch->sender.clauses, &cl->epitem);
         return 1;
     }
-
     /* The buffer is empty. */
     if(!ch->items) {
         if(!ch->done)
@@ -240,12 +230,11 @@ chan mill_chmake(size_t sz, size_t bufsz, const char *created) {
     /* If there's at least one channel created in the user's code
        we want the debug functions to get into the binary. */
     mill_preserve_debug();
-
     /* We are allocating 1 additional element after the channel buffer to
        store the done-with value. It can't be stored in the regular buffer
        because that would mean chdone() would block when buffer is full. */
-    struct mill_chan *ch = (struct mill_chan*)malloc(sizeof(struct mill_chan) +
-        (sz * (bufsz + 1)));
+    struct mill_chan *ch = (struct mill_chan*)
+        malloc(sizeof(struct mill_chan) + (sz * (bufsz + 1)));
     assert(ch);
     mill_register_chan(&ch->debug, created);
     ch->sz = sz;
@@ -270,17 +259,15 @@ chan mill_chdup(chan ch, const char *current) {
 
 void mill_chs(chan ch, void *val, size_t sz, const char *current) {
     mill_trace(current, "chs(<%d>)", (int)ch->debug.id);
-
     if(ch->done)
         mill_panic("send to done-with channel");
     if(ch->sz != sz)
         mill_panic("send of a type not matching the channel");
-
+    /* Try to enqueue the value straight away. */
     if(mill_enqueue(ch, val))
         return;
-
     /* If there's no free space in the buffer we are going to yield
-       till the receiver arrives. */
+       till a receiver arrives. */
     struct mill_clause cl;
     cl.cr = mill_running;
     cl.cr->state = MILL_CHS;
@@ -289,26 +276,23 @@ void mill_chs(chan ch, void *val, size_t sz, const char *current) {
     mill_list_insert(&ch->sender.clauses, &cl.epitem, NULL);
     mill_slist_push_back(&cl.cr->chstate.clauses, &cl.chitem);
     mill_set_current(&cl.cr->debug, current);
-
-    /* Wait till the value is written to the channel. */
     mill_suspend();
-
+    /* Clean up after the operation. TODO: Do we need this? */
     mill_slist_init(&mill_running->chstate.clauses);
 }
 
 void *mill_chr(chan ch, void *val, size_t sz, const char *current) {
     mill_trace(current, "chr(<%d>)", (int)ch->debug.id);
-
     if(ch->sz != sz)
         mill_panic("receive of a type not matching the channel");
-
+    /* Try to get a value straight away. */
     if(mill_dequeue(ch, val)) {
+        /* Clean up after the operation. TODO: Do we need this? */
         mill_slist_init(&mill_running->chstate.clauses);
         return val;
     }
-
     /* If there's no message in the buffer we are going to yield
-       till the sender arrives. */
+       till a sender arrives. */
     struct mill_clause cl;
     cl.cr = mill_running;
     cl.cr->state = MILL_CHR;
@@ -317,29 +301,23 @@ void *mill_chr(chan ch, void *val, size_t sz, const char *current) {
     mill_list_insert(&ch->receiver.clauses, &cl.epitem, NULL);
     mill_slist_push_back(&cl.cr->chstate.clauses, &cl.chitem);
     mill_set_current(&cl.cr->debug, current);
-
-    /* Pass control to a different coroutine. */
     mill_suspend();
-
     return val;
 }
 
 void mill_chdone(chan ch, void *val, size_t sz, const char *current) {
     mill_trace(current, "chdone(<%d>)", (int)ch->debug.id);
-
     if(ch->done)
         mill_panic("chdone on already done-with channel");
     if(ch->sz != sz)
         mill_panic("send of a type not matching the channel");
-
     /* Panic if there are other senders on the same channel. */
     if(!mill_list_empty(&ch->sender.clauses))
         mill_panic("send to done-with channel");
-
     /* Put the channel into done-with mode. */
     ch->done = 1;
+    /* Store the terminal value into a special position in the channel. */
     memcpy(((char*)(ch + 1)) + (ch->bufsz * ch->sz) , val, ch->sz);
-
     /* Resume all the receivers currently waiting on the channel. */
     while(!mill_list_empty(&ch->receiver.clauses)) {
         struct mill_clause *cl = mill_cont(
@@ -368,17 +346,14 @@ void mill_chclose(chan ch, const char *current) {
 void mill_choose_in(void *clause, chan ch, size_t sz, int idx) {
     if(ch->sz != sz)
         mill_panic("receive of a type not matching the channel");
-
     /* Find out whether the clause is immediately available. */
     int available = ch->done || !mill_list_empty(&ch->sender.clauses) ||
         ch->items ? 1 : 0;
     if(available)
         ++mill_running->chstate.available;
-
     /* If there are available clauses don't bother with non-available ones. */
     if(!available && mill_running->chstate.available)
         return;
-
     /* Fill in the clause entry. */
     struct mill_clause *cl = (struct mill_clause*) clause;
     cl->cr = mill_running;
@@ -387,7 +362,6 @@ void mill_choose_in(void *clause, chan ch, size_t sz, int idx) {
     cl->idx = idx;
     cl->available = available;
     mill_slist_push_back(&mill_running->chstate.clauses, &cl->chitem);
-
     /* Add the clause to the channel's list of waiting clauses. */
     mill_list_insert(&ch->receiver.clauses, &cl->epitem, NULL);
 }
@@ -397,17 +371,14 @@ void mill_choose_out(void *clause, chan ch, void *val, size_t sz, int idx) {
         mill_panic("send to done-with channel");
     if(ch->sz != sz)
         mill_panic("send of a type not matching the channel");
-
     /* Find out whether the clause is immediately available. */
     int available = !mill_list_empty(&ch->receiver.clauses) ||
         ch->items < ch->bufsz ? 1 : 0;
     if(available)
         ++mill_running->chstate.available;
-
     /* If there are available clauses don't bother with non-available ones. */
     if(!available && mill_running->chstate.available)
         return;
-
     /* Fill in the clause entry. */
     struct mill_clause *cl = (struct mill_clause*) clause;
     cl->cr = mill_running;
@@ -416,7 +387,6 @@ void mill_choose_out(void *clause, chan ch, void *val, size_t sz, int idx) {
     cl->available = available;
     cl->idx = idx;
     mill_slist_push_back(&mill_running->chstate.clauses, &cl->chitem);
-
     /* Add the clause to the channel's list of waiting clauses. */
     mill_list_insert(&ch->sender.clauses, &cl->epitem, NULL);
 }
@@ -429,11 +399,9 @@ void mill_choose_otherwise(void) {
 
 int mill_choose_wait(const char *current) {
     mill_trace(current, "choose()");
-
     struct mill_chstate *chstate = &mill_running->chstate;
     int res = -1;
     struct mill_slist_item *it;
-    
     /* If there are clauses that are immediately available
        randomly choose one of them. */
     if(chstate->available > 0) {
@@ -464,15 +432,13 @@ int mill_choose_wait(const char *current) {
         mill_set_current(&mill_running->debug, current);
         res = mill_suspend();
     }
-   
     /* Clean-up the clause lists in queried channels. */
     for(it = mill_slist_begin(&chstate->clauses); it;
           it = mill_slist_next(it)) {
         struct mill_clause *cl = mill_cont(it, struct mill_clause, chitem);
         mill_list_erase(&cl->ep->clauses, &cl->epitem);
     }
-    mill_chstate_init(chstate);
-
+    mill_chstate_init(chstate); /* TODO: Is this needed? */
     assert(res >= -1);
     return res;
 }
