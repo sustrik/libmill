@@ -32,33 +32,15 @@
 
 #include <stdint.h>
 
-struct mill_timer;
-
-typedef void(*mill_timer_cb)(struct mill_timer *self);
-
 struct mill_timer {
     /* Item of the global list of timers. */
     struct mill_slist_item item;
     /* The timepoint when the timer expires. */
     uint64_t expiry;
-    /* Callback to invoke on timer expiration. */
-    mill_timer_cb cb;
 };
-
-/* Installs new timer. */
-void mill_timer(struct mill_timer *self, long ms, mill_timer_cb cb);
-
-struct mill_poll;
-
-typedef void(*mill_poll_cb)(struct mill_poll *self, int events);
 
 struct mill_poll {
-    /* Callback to invoke when the file descriptor signals. */
-    mill_poll_cb cb;
 };
-
-/* Starts waiting for events from a specified file descriptor. */
-void mill_poll(struct mill_poll *self, int fd, int events, mill_poll_cb cb);
 
 /* Wait till at least one callback is invoked. */
 void mill_wait(void);

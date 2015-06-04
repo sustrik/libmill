@@ -36,10 +36,9 @@
    First timer to be resume comes first and so on. */
 static struct mill_slist mill_timers = {0};
 
-void mill_timer(struct mill_timer *self, long ms, mill_timer_cb cb) {
-    self->expiry = mill_now() + ms;
-    self->cb = cb;
-    
+static void mill_timer(struct mill_timer *self, long ms) {
+    /* Compute at which point of time will the timer expire. */
+    self->expiry = mill_now() + ms;    
     /* Move the coroutine into the right place in the ordered list
        of sleeping coroutines. */
     struct mill_slist_item *it = mill_slist_begin(&mill_timers);
@@ -72,7 +71,7 @@ struct mill_pollset_item {
 };
 static struct mill_pollset_item *mill_pollset_items = NULL;
 
-void mill_poll(struct mill_poll *self, int fd, int events, mill_poll_cb cb) {
+static void mill_poll(struct mill_poll *self, int fd, int events) {
     /* Find the fd in the pollset. TODO: This is O(n) operation! */
     int i;
     for(i = 0; i != mill_pollset_size; ++i) {
@@ -99,7 +98,6 @@ void mill_poll(struct mill_poll *self, int fd, int events, mill_poll_cb cb) {
     }
 
     /* Register the new poller in the pollset. */
-    self->cb = cb;
     if(events & FDW_IN) {
         if(mill_pollset_items[i].in)
             mill_panic(
@@ -116,10 +114,6 @@ void mill_poll(struct mill_poll *self, int fd, int events, mill_poll_cb cb) {
     }
 }
 
-static void mill_msleep_cb(struct mill_timer *self) {
-    mill_resume(mill_cont(self, struct mill_cr, sleeper), 0);
-}
-
 /* Pause current coroutine for a specified time interval. */
 void mill_msleep(long ms, const char *current) {
     /* No point in waiting. However, let's give other coroutines a chance. */
@@ -131,13 +125,8 @@ void mill_msleep(long ms, const char *current) {
     mill_running->state = MILL_MSLEEP;
     mill_set_current(&mill_running->debug, current);
     /* Wait for the timer. */
-    mill_timer(&mill_running->sleeper, ms, mill_msleep_cb);
+    mill_timer(&mill_running->sleeper, ms);
     mill_suspend();
-}
-
-static void mill_fdwait_cb(struct mill_poll *self, int events) {
-    struct mill_cr *cr = mill_cont(self, struct mill_cr, poller);
-    mill_resume(cr, events);
 }
 
 /* Wait for events from a file descriptor. */
@@ -145,7 +134,7 @@ int mill_fdwait(int fd, int events, long timeout, const char *current) {
     mill_running->state = MILL_FDWAIT;
     mill_set_current(&mill_running->debug, current);
     /* Wait for the signal from the file descriptor. */
-    mill_poll(&mill_running->poller, fd, events, mill_fdwait_cb);
+    mill_poll(&mill_running->poller, fd, events);
     return mill_suspend();
 }
 
@@ -179,7 +168,7 @@ void mill_wait(void) {
                 if(timer->expiry > nw)
                     break;
                 mill_slist_pop(&mill_timers);
-                timer->cb(timer);
+                mill_resume(mill_cont(timer, struct mill_cr, sleeper), 0);
                 fired = 1;
             }
         }
@@ -208,22 +197,25 @@ void mill_wait(void) {
         /* Fire the callbacks. */
         if(mill_pollset_items[i].in &&
               mill_pollset_items[i].in == mill_pollset_items[i].out) {
-            mill_pollset_items[i].in->cb(mill_pollset_items[i].in,
-                inevents | outevents);
+            struct mill_cr *cr = mill_cont(mill_pollset_items[i].in,
+                struct mill_cr, poller);
+            mill_resume(cr, inevents | outevents);
             mill_pollset_fds[i].events = 0;
             mill_pollset_items[i].in = NULL;
             mill_pollset_items[i].out = NULL;
         }
         else {
             if(mill_pollset_items[i].in && inevents) {
-                mill_pollset_items[i].in->cb(mill_pollset_items[i].in,
-                    inevents);
+                struct mill_cr *cr = mill_cont(mill_pollset_items[i].in,
+                    struct mill_cr, poller);
+                mill_resume(cr, inevents);
                 mill_pollset_fds[i].events &= ~POLLIN;
                 mill_pollset_items[i].in = NULL;
             }
             else if(mill_pollset_items[i].out && outevents) {
-                mill_pollset_items[i].out->cb(mill_pollset_items[i].out,
-                    outevents);
+                struct mill_cr *cr = mill_cont(mill_pollset_items[i].out,
+                    struct mill_cr, poller);
+                mill_resume(cr, outevents);
                 mill_pollset_fds[i].events &= ~POLLOUT;
                 mill_pollset_items[i].out = NULL;
             }
