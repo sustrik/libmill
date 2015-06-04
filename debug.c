@@ -96,14 +96,12 @@ void goredump(void) {
             sprintf(buf, "fdwait(%d)", -1);
             break;
         case MILL_CHR:
-            sprintf(buf, "chr(<%d>)", mill_getchan(mill_cont(mill_slist_begin(
-                &cr->chstate.clauses), struct mill_clause,
-                chitem)->ep)->debug.id);
+            sprintf(buf, "chr(<%d>)",
+                mill_getchan(cr->receiver.clause->ep)->debug.id);
             break;
         case MILL_CHS:
-            sprintf(buf, "chs(<%d>)", mill_getchan(mill_cont(mill_slist_begin(
-                &cr->chstate.clauses), struct mill_clause,
-                chitem)->ep)->debug.id);
+            sprintf(buf, "chs(<%d>)",
+                mill_getchan(cr->sender.clause->ep)->debug.id);
             break;
         case MILL_CHOOSE:
             {

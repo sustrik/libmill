@@ -58,6 +58,14 @@ struct mill_msleep {
 struct mill_fdwait {
 };
 
+struct mill_chr {
+    struct mill_clause *clause;
+};
+
+struct mill_chs {
+    struct mill_clause *clause;
+};
+
 /* This structure keeps the state of a 'choose' operation. */
 struct mill_chstate {
     /* List of clauses in the 'choose' statement. */
@@ -78,6 +86,8 @@ struct mill_cr {
     struct mill_ready idler;
     struct mill_msleep sleeper;
     struct mill_fdwait fdwaiter;
+    struct mill_chr receiver;
+    struct mill_chs sender;
 
     /* Stored coroutine context while it is not executing. */
     struct mill_ctx ctx;

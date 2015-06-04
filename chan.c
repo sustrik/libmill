@@ -139,8 +139,7 @@ void mill_chs(chan ch, void *val, size_t sz, const char *current) {
     cl.ep = &ch->sender;
     cl.val = val;
     mill_list_insert(&ch->sender.clauses, &cl.epitem, NULL);
-    mill_slist_init(&mill_running->chstate.clauses);
-    mill_slist_push_back(&mill_running->chstate.clauses, &cl.chitem);
+    mill_running->sender.clause = &cl;
     mill_set_current(&mill_running->debug, current);
     mill_suspend();
 }
@@ -160,8 +159,7 @@ void *mill_chr(chan ch, void *val, size_t sz, const char *current) {
     cl.ep = &ch->receiver;
     cl.val = val;
     mill_list_insert(&ch->receiver.clauses, &cl.epitem, NULL);
-    mill_slist_init(&mill_running->chstate.clauses);
-    mill_slist_push_back(&mill_running->chstate.clauses, &cl.chitem);
+    mill_running->receiver.clause = &cl;
     mill_set_current(&mill_running->debug, current);
     mill_suspend();
     return val;
