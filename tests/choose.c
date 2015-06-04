@@ -251,7 +251,6 @@ int main() {
     }
     chclose(ch13);
 
-#if 0
     /* Test whether selection of out channels is random. */
     chan ch14 = chmake(int, 0);
     go(feeder2(chdup(ch14), 666, 777));
@@ -268,7 +267,6 @@ int main() {
     }
     assert(first > 1 && second > 1);
     chclose(ch14);
-#endif
 
     /* Test whether allocating larger in buffer breaks previous in clause. */
     chan ch15 = chmake(struct large, 1);
