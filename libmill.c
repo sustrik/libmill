@@ -24,9 +24,7 @@
 
 #include "debug.h"
 #include "libmill.h"
-#include "list.h"
 #include "model.h"
-#include "slist.h"
 #include "stack.h"
 #include "utils.h"
 
@@ -58,25 +56,26 @@ static int mill_suspend(void) {
     if(mill_running && mill_setjmp(&mill_running->ctx))
         return mill_running->result;
 
-    /* If there's a coroutine ready to be executed go for it. */
-    if(!mill_slist_empty(&mill_ready)) {
-        struct mill_slist_item *it = mill_slist_pop(&mill_ready);
-        mill_running = mill_cont(it, struct mill_cr, item);
-        mill_jmp(&mill_running->ctx);
+    while(1) {
+        /* If there's a coroutine ready to be executed go for it. */
+        if(!mill_slist_empty(&mill_ready)) {
+            struct mill_slist_item *it = mill_slist_pop(&mill_ready);
+            mill_running = mill_cont(it, struct mill_cr, item);
+            mill_jmp(&mill_running->ctx);
+        }
+
+        /*  Otherwise, we are going to wait for sleeping coroutines
+            and for external events. */
+        mill_wait();
+
+	    /* Pass control to a resumed coroutine. */
+        assert(!mill_slist_empty(&mill_ready));
     }
-
-    /*  Otherwise, we are going to wait for sleeping coroutines
-        and for external events. */
-    mill_wait();
-
-	/* Pass control to a resumed coroutine. */
-    assert(!mill_slist_empty(&mill_ready));
-    struct mill_slist_item *it = mill_slist_pop(&mill_ready);
-    mill_running = mill_cont(it, struct mill_cr, item);
-    mill_jmp(&mill_running->ctx);
 }
 
-/* Schedules preiously suspended coroutine for execution. */
+/* Schedules preiously suspended coroutine for execution. Keep in mind that
+   it doesn't immediately run it, just puts it into the queue of ready
+   coroutines. */
 static void mill_resume(struct mill_cr *cr, int result) {
     cr->result = result;
     cr->state = MILL_SCHEDULED;
