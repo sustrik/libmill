@@ -50,20 +50,13 @@ static void mill_chstate_init(struct mill_chstate *self) {
     mill_slist_init(&self->clauses);
     self->othws = 0;
     self->available = 0;
-    self->idx = -2;
-}
-
-/* Schedules preiously suspended coroutine for execution. */
-static void mill_resume(struct mill_cr *cr) {
-    cr->state = MILL_SCHEDULED;
-    mill_slist_push_back(&mill_ready, &cr->item);
 }
 
 /* Switch to a different coroutine. */
-static void mill_suspend(void) {
+static int mill_suspend(void) {
     /* Store the context of the current coroutine, if any. */
     if(mill_running && mill_setjmp(&mill_running->ctx))
-        return;
+        return mill_running->result;
 
     /* If there's a coroutine ready to be executed go for it. */
     if(!mill_slist_empty(&mill_ready)) {
@@ -83,6 +76,13 @@ static void mill_suspend(void) {
     mill_jmp(&mill_running->ctx);
 }
 
+/* Schedules preiously suspended coroutine for execution. */
+static void mill_resume(struct mill_cr *cr, int result) {
+    cr->result = result;
+    cr->state = MILL_SCHEDULED;
+    mill_slist_push_back(&mill_ready, &cr->item);
+}
+
 /* The intial part of go(). Allocates the stack for the new coroutine. */
 void *mill_go_prologue(const char *created) {
     /* Ensure that debug functions are available whenever a single go()
@@ -96,12 +96,11 @@ void *mill_go_prologue(const char *created) {
     cr->state = MILL_SCHEDULED;
     mill_chstate_init(&cr->chstate);
     mill_valbuf_init(&cr->valbuf);
-    cr->fdwres = 0;
     cr->cls = NULL;
     mill_trace(created, "{%d}=go()", (int)cr->debug.id);
 
     /* Move the parent coroutine to the end of the queue. */
-    mill_resume(mill_running);    
+    mill_resume(mill_running, -1);    
 
     /* Mark the new coroutine as the one that is running. */
     mill_running = cr;
@@ -119,18 +118,22 @@ void mill_go_epilogue(void) {
     mill_suspend();
 }
 
-/* Move the current coroutine to the end of the queue.
-   Pass control to the new head of the queue. */
 void mill_yield(const char *current) {
+    /* If there's only one coroutine ready, no point in context switching
+       back and forth. */
     if(mill_slist_empty(&mill_ready))
         return;
+
     mill_set_current(&mill_running->debug, current);
-    mill_resume(mill_running);
+
+    /* This looks fishy, but yes, we can resume the coroutine even before
+       suspending it. */
+    mill_resume(mill_running, -1);
     mill_suspend();
 }
 
 static void mill_msleep_cb(struct mill_timer *self) {
-    mill_resume(mill_cont(self, struct mill_cr, sleeper));
+    mill_resume(mill_cont(self, struct mill_cr, sleeper), -1);
 }
 
 /* Pause current coroutine for a specified time interval. */
@@ -154,8 +157,7 @@ void mill_msleep(long ms, const char *current) {
 
 static void mill_fdwait_cb(struct mill_poll *self, int events) {
     struct mill_cr *cr = mill_cont(self, struct mill_cr, poller);
-    cr->fdwres = events;
-    mill_resume(cr);
+    mill_resume(cr, events);
 }
 
 /* Wait for events from a file descriptor. */
@@ -165,13 +167,8 @@ int mill_fdwait(int fd, int events, long timeout, const char *current) {
     /* Register with the poller. */
     mill_poll(&mill_running->poller, fd, events, mill_fdwait_cb);
 
-    /* Pass control to a different coroutine. */
-    mill_suspend();
-
-    /* Return the value sent by the polling coroutine. */
-    int res = mill_running->fdwres;
-    mill_running->fdwres = 0;
-    return res;
+    /* Wait for the signal from the file descriptor. */
+    return mill_suspend();
 }
 
 void *cls(void) {
@@ -198,8 +195,7 @@ static int mill_enqueue(chan ch, void *val) {
         if(!dst)
             dst = mill_valbuf_alloc(&cl->cr->valbuf, ch->sz);
         memcpy(dst, val, ch->sz);
-        cl->cr->chstate.idx = cl->idx;
-        mill_resume(cl->cr);
+        mill_resume(cl->cr, cl->idx);
         mill_list_erase(&ch->receiver.clauses, &cl->epitem);
         return 1;
     }
@@ -226,8 +222,7 @@ static int mill_dequeue(chan ch, void *val) {
         mill_list_begin(&ch->sender.clauses), struct mill_clause, epitem);
     if(cl) {
         memcpy(dst, cl->val, ch->sz);
-        cl->cr->chstate.idx = cl->idx;
-        mill_resume(cl->cr);
+        mill_resume(cl->cr, cl->idx);
         mill_list_erase(&ch->sender.clauses, &cl->epitem);
         return 1;
     }
@@ -359,8 +354,7 @@ void mill_chdone(chan ch, void *val, size_t sz, const char *current) {
         if(!dst)
             dst = mill_valbuf_alloc(&cl->cr->valbuf, ch->sz);
         memcpy(dst, val, ch->sz);
-        cl->cr->chstate.idx = cl->idx;
-        mill_resume(cl->cr);
+        mill_resume(cl->cr, cl->idx);
         mill_list_erase(&ch->receiver.clauses, &cl->epitem);
     }
 }
@@ -474,10 +468,7 @@ int mill_choose_wait(const char *current) {
     else {
         mill_running->state = MILL_CHOOSE;
         mill_set_current(&mill_running->debug, current);
-        mill_suspend();
-        /* Get the result clause as set up by the coroutine that just unblocked
-           this choose statement. */
-        res = chstate->idx;
+        res = mill_suspend();
     }
    
     /* Clean-up the clause lists in queried channels. */

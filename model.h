@@ -43,12 +43,6 @@ struct mill_chstate {
 
     /* Number of clauses that are immediately available. */
     int available;
-
-    /* When coroutine is blocked in choose and a different coroutine
-       unblocks it, it copies the index from the clause that caused the
-       resumption of execution to this field, so that 'choose' statement
-       can find out what exactly have happened. */
-    int idx;
 };
 
 enum mill_state {
@@ -83,9 +77,8 @@ struct mill_cr {
     /* Place to store the received value when doing choose. */
     struct mill_valbuf valbuf;
 
-    /* When doing fdwait() this field is used to transfer the result
-       to the blocked coroutine. */
-    int fdwres;
+    /* Argument to resume() call being passed to the blocked suspend() call. */
+    int result;
 
     /* Coroutine-local storage. */
     void *cls;
