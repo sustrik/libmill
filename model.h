@@ -100,9 +100,6 @@ extern struct mill_cr main_cr;
 /* The coroutine that is running at the moment. */
 extern struct mill_cr *mill_running;
 
-/* The queue of coroutines ready to run. */
-extern struct mill_slist mill_ready;
-
 /* Channel endpoint. */
 struct mill_ep {
     /* Thanks to this flag we can cast from ep pointer to chan pointer. */

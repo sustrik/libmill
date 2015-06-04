@@ -43,6 +43,9 @@
 volatile int mill_unoptimisable1 = 1;
 volatile void *mill_unoptimisable2 = NULL;
 
+/* Queue of coroutines scheduled for execution. */
+static struct mill_slist mill_ready = {0};
+
 static void mill_chstate_init(struct mill_chstate *self) {
     mill_slist_init(&self->clauses);
     self->othws = 0;
