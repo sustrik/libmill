@@ -23,117 +23,20 @@
 */
 
 #include "cr.h"
-#include "debug.h"
 #include "libmill.h"
 #include "model.h"
-#include "stack.h"
-#include "utils.h"
 
 #include <assert.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
-/******************************************************************************/
-/*  Coroutines                                                                */
-/******************************************************************************/
-
-volatile int mill_unoptimisable1 = 1;
-volatile void *mill_unoptimisable2 = NULL;
-
-/* Queue of coroutines scheduled for execution. */
-static struct mill_slist mill_ready = {0};
+MILL_CT_ASSERT(MILL_CLAUSELEN == sizeof(struct mill_clause));
 
 static void mill_chstate_init(struct mill_chstate *self) {
     mill_slist_init(&self->clauses);
     self->othws = 0;
     self->available = 0;
 }
-
-int mill_suspend(void) {
-    /* Store the context of the current coroutine, if any. */
-    if(mill_running && mill_setjmp(&mill_running->ctx))
-        return mill_running->result;
-    while(1) {
-        /* If there's a coroutine ready to be executed go for it. */
-        if(!mill_slist_empty(&mill_ready)) {
-            struct mill_slist_item *it = mill_slist_pop(&mill_ready);
-            mill_running = mill_cont(it, struct mill_cr, item);
-            mill_jmp(&mill_running->ctx);
-        }
-        /*  Otherwise, we are going to wait for sleeping coroutines
-            and for external events. */
-        mill_wait();
-        assert(!mill_slist_empty(&mill_ready));
-    }
-}
-
-void mill_resume(struct mill_cr *cr, int result) {
-    cr->result = result;
-    cr->state = MILL_SCHEDULED;
-    mill_slist_push_back(&mill_ready, &cr->item);
-}
-
-/* The intial part of go(). Starts the new coroutine. */
-void *mill_go_prologue(const char *created) {
-    /* Ensure that debug functions are available whenever a single go()
-       statement is present in the user's code. */
-    mill_preserve_debug();
-    /* Allocate and initialise new stack. */
-    struct mill_cr *cr = ((struct mill_cr*)mill_allocstack()) - 1;
-    mill_register_cr(&cr->debug, created);
-    mill_chstate_init(&cr->chstate);
-    mill_valbuf_init(&cr->valbuf);
-    cr->cls = NULL;
-    mill_trace(created, "{%d}=go()", (int)cr->debug.id);
-    /* Suspend the parent coroutine and make the new one running. */
-    if(mill_setjmp(&mill_running->ctx))
-        return NULL;
-    mill_resume(mill_running, 0);    
-    mill_running = cr;
-    /* Return the location of the stack so that the caller can shift the
-       stack pointer as needed. */
-    return (void*)cr;
-}
-
-/* The final part of go(). Cleans up when the coroutine is finished. */
-void mill_go_epilogue(void) {
-    mill_trace(NULL, "go() done");
-    mill_unregister_cr(&mill_running->debug);
-    mill_valbuf_term(&mill_running->valbuf);
-    mill_freestack(mill_running + 1);
-    mill_running = NULL;
-    /* Given that there's no running coroutine at this point
-       this call will never return. */
-    mill_suspend();
-}
-
-void mill_yield(const char *current) {
-    /* If there's only one coroutine ready, no point in context switching
-       back and forth. */
-    if(mill_slist_empty(&mill_ready))
-        return;
-    mill_set_current(&mill_running->debug, current);
-    /* This looks fishy, but yes, we can resume the coroutine even before
-       suspending it. */
-    mill_resume(mill_running, 0);
-    mill_suspend();
-}
-
-void *cls(void) {
-    return mill_running->cls;
-}
-
-void setcls(void *val) {
-    mill_running->cls = val;
-}
-
-/******************************************************************************/
-/*  Channels                                                                  */
-/******************************************************************************/
-
-MILL_CT_ASSERT(MILL_CLAUSELEN == sizeof(struct mill_clause));
 
 /* Add new item to the channel buffer. */
 static int mill_enqueue(chan ch, void *val) {
@@ -232,6 +135,7 @@ void mill_chs(chan ch, void *val, size_t sz, const char *current) {
         return;
     /* If there's no free space in the buffer we are going to yield
        till a receiver arrives. */
+    mill_chstate_init(&mill_running->chstate);
     struct mill_clause cl;
     cl.cr = mill_running;
     cl.cr->state = MILL_CHS;
@@ -241,8 +145,6 @@ void mill_chs(chan ch, void *val, size_t sz, const char *current) {
     mill_slist_push_back(&cl.cr->chstate.clauses, &cl.chitem);
     mill_set_current(&cl.cr->debug, current);
     mill_suspend();
-    /* Clean up after the operation. TODO: Do we need this? */
-    mill_slist_init(&mill_running->chstate.clauses);
 }
 
 void *mill_chr(chan ch, void *val, size_t sz, const char *current) {
@@ -250,13 +152,11 @@ void *mill_chr(chan ch, void *val, size_t sz, const char *current) {
     if(ch->sz != sz)
         mill_panic("receive of a type not matching the channel");
     /* Try to get a value straight away. */
-    if(mill_dequeue(ch, val)) {
-        /* Clean up after the operation. TODO: Do we need this? */
-        mill_slist_init(&mill_running->chstate.clauses);
+    if(mill_dequeue(ch, val))
         return val;
-    }
     /* If there's no message in the buffer we are going to yield
        till a sender arrives. */
+    mill_chstate_init(&mill_running->chstate);
     struct mill_clause cl;
     cl.cr = mill_running;
     cl.cr->state = MILL_CHR;
@@ -305,6 +205,10 @@ void mill_chclose(chan ch, const char *current) {
         mill_unregister_chan(&ch->debug);
         free(ch);
     }
+}
+
+void mill_choose_init(void) {
+    mill_chstate_init(&mill_running->chstate);
 }
 
 void mill_choose_in(void *clause, chan ch, size_t sz, int idx) {
@@ -402,7 +306,6 @@ int mill_choose_wait(const char *current) {
         struct mill_clause *cl = mill_cont(it, struct mill_clause, chitem);
         mill_list_erase(&cl->ep->clauses, &cl->epitem);
     }
-    mill_chstate_init(chstate); /* TODO: Is this needed? */
     assert(res >= -1);
     return res;
 }
