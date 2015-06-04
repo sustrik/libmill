@@ -67,8 +67,6 @@ static int mill_suspend(void) {
         /*  Otherwise, we are going to wait for sleeping coroutines
             and for external events. */
         mill_wait();
-
-	    /* Pass control to a resumed coroutine. */
         assert(!mill_slist_empty(&mill_ready));
     }
 }
