@@ -167,7 +167,6 @@ MILL_EXPORT void mill_chclose(chan ch, const char *current);
 
 #define choose \
     {\
-        mill_choose_init();\
         int mill_idx = -2;\
         while(1) {\
             if(mill_idx != -2) {\
@@ -233,7 +232,6 @@ MILL_EXPORT void mill_chclose(chan ch, const char *current);
             mill_idx = mill_choose_wait(__FILE__ ":" mill_string(__LINE__));\
         }
 
-MILL_EXPORT void mill_choose_init(void);
 MILL_EXPORT void mill_choose_in(void *clause, chan ch, size_t sz, int idx);
 MILL_EXPORT void mill_choose_out(void *clause, chan ch, void *val, size_t sz,
     int idx);

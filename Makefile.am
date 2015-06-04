@@ -34,11 +34,10 @@ millinclude_HEADERS = libmill.h
 lib_LTLIBRARIES = libmill.la
 
 libmill_la_SOURCES = \
-    chan.c\
     cr.h\
-    cr.c\
     debug.h\
     debug.c\
+    libmill.c\
     list.h\
     list.c\
     model.h\
@@ -62,7 +61,7 @@ libmill_la_LDFLAGS = -no-undefined -version-info @MILL_LIBTOOL_VERSION@
 
 # Turn the source fortification in glibc off - otherwise it would panic
 # because of the stack pointer black magic in 'go' macro.
-libmill_la_sCFLAGS = \
+libmill_la_CFLAGS = \
     -fvisibility=hidden\
     -DMILL_EXPORTS \
     -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0
