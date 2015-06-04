@@ -29,6 +29,14 @@
 #include <stddef.h>
 #include <stdint.h>
 
+/* For now use longjmp. Replace by a different mechanism as needed. */
+struct mill_ctx {
+    jmp_buf jbuf;
+};
+
+#define mill_setjmp(ctx) setjmp((ctx)->jbuf)
+#define mill_jmp(ctx) longjmp((ctx)->jbuf, 1)
+
 /* Cause panic. */
 void mill_panic(const char *text);
 
@@ -39,15 +47,6 @@ void mill_panic(const char *text);
 
 /* Current time. Millisecond precision. */
 uint64_t mill_now();
-
-/* For now use longjmp. This may be replaced by a different mechanism
-   as needed. */
-struct mill_ctx {
-    jmp_buf jbuf;
-};
-
-#define mill_setjmp(ctx) setjmp((ctx)->jbuf)
-#define mill_jmp(ctx) longjmp((ctx)->jbuf, 1)
 
 /* Compile-time assert. */
 #define MILL_CT_ASSERT_HELPER2(prefix, line) \
