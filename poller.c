@@ -36,26 +36,36 @@
    First timer to be resume comes first and so on. */
 static struct mill_slist mill_timers = {0};
 
-static void mill_timer(struct mill_timer *self, long ms) {
+/* Pause current coroutine for a specified time interval. */
+void mill_msleep(long ms, const char *current) {
+    /* No point in waiting. However, let's give other coroutines a chance. */
+    if(ms <= 0) {
+        yield();
+        return;
+    }
     /* Compute at which point of time will the timer expire. */
-    self->expiry = mill_now() + ms;    
+    mill_running->sleeper.expiry = mill_now() + ms;    
     /* Move the coroutine into the right place in the ordered list
        of sleeping coroutines. */
     struct mill_slist_item *it = mill_slist_begin(&mill_timers);
     if(!it) {
-        mill_slist_push(&mill_timers, &self->item);
+        mill_slist_push(&mill_timers, &mill_running->sleeper.item);
     }
     else {
        while(it) {
            struct mill_timer *next = mill_cont(mill_slist_next(it),
                struct mill_timer, item);
-           if(!next || next->expiry > self->expiry) {
-               mill_slist_insert(&mill_timers, &self->item, it);
+           if(!next || next->expiry > mill_running->sleeper.expiry) {
+               mill_slist_insert(&mill_timers, &mill_running->sleeper.item, it);
                break;
            }
            it = mill_slist_next(it);
        }
     }
+    /* Wait while the timer expires. */
+    mill_running->state = MILL_MSLEEP;
+    mill_set_current(&mill_running->debug, current);
+    mill_suspend();
 }
 
 /* Pollset used for waiting for file descriptors. */
@@ -71,14 +81,14 @@ struct mill_pollset_item {
 };
 static struct mill_pollset_item *mill_pollset_items = NULL;
 
-static void mill_poll(struct mill_poll *self, int fd, int events) {
+/* Wait for events from a file descriptor. */
+int mill_fdwait(int fd, int events, long timeout, const char *current) {
     /* Find the fd in the pollset. TODO: This is O(n) operation! */
     int i;
     for(i = 0; i != mill_pollset_size; ++i) {
         if(mill_pollset_fds[i].fd == fd)
             break;
     }
-
     /* Grow the pollset as needed. */
     if(i == mill_pollset_size) { 
 		if(mill_pollset_size == mill_pollset_capacity) {
@@ -96,45 +106,24 @@ static void mill_poll(struct mill_poll *self, int fd, int events) {
         mill_pollset_items[i].in = NULL;
         mill_pollset_items[i].out = NULL;
     }
-
     /* Register the new poller in the pollset. */
     if(events & FDW_IN) {
         if(mill_pollset_items[i].in)
             mill_panic(
                 "multiple coroutines waiting for a single file descriptor");
         mill_pollset_fds[i].events |= POLLIN;
-        mill_pollset_items[i].in = self;
+        mill_pollset_items[i].in = &mill_running->poller;
     }
     if(events & FDW_OUT) {
         if(mill_pollset_items[i].out)
             mill_panic(
                 "multiple coroutines waiting for a single file descriptor");
         mill_pollset_fds[i].events |= POLLOUT;
-        mill_pollset_items[i].out = self;
+        mill_pollset_items[i].out = &mill_running->poller;
     }
-}
-
-/* Pause current coroutine for a specified time interval. */
-void mill_msleep(long ms, const char *current) {
-    /* No point in waiting. However, let's give other coroutines a chance. */
-    if(ms <= 0) {
-        yield();
-        return;
-    }
-    /* Suspend the running coroutine. */
-    mill_running->state = MILL_MSLEEP;
-    mill_set_current(&mill_running->debug, current);
-    /* Wait for the timer. */
-    mill_timer(&mill_running->sleeper, ms);
-    mill_suspend();
-}
-
-/* Wait for events from a file descriptor. */
-int mill_fdwait(int fd, int events, long timeout, const char *current) {
+    /* Wait for the signal from the file descriptor. */
     mill_running->state = MILL_FDWAIT;
     mill_set_current(&mill_running->debug, current);
-    /* Wait for the signal from the file descriptor. */
-    mill_poll(&mill_running->poller, fd, events);
     return mill_suspend();
 }
 
