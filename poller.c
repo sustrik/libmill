@@ -22,6 +22,7 @@
 
 */
 
+#include "cr.h"
 #include "model.h"
 #include "poller.h"
 #include "utils.h"
@@ -113,6 +114,39 @@ void mill_poll(struct mill_poll *self, int fd, int events, mill_poll_cb cb) {
         mill_pollset_fds[i].events |= POLLOUT;
         mill_pollset_items[i].out = self;
     }
+}
+
+static void mill_msleep_cb(struct mill_timer *self) {
+    mill_resume(mill_cont(self, struct mill_cr, sleeper), 0);
+}
+
+/* Pause current coroutine for a specified time interval. */
+void mill_msleep(long ms, const char *current) {
+    /* No point in waiting. However, let's give other coroutines a chance. */
+    if(ms <= 0) {
+        yield();
+        return;
+    }
+    /* Suspend the running coroutine. */
+    mill_running->state = MILL_MSLEEP;
+    mill_set_current(&mill_running->debug, current);
+    /* Wait for the timer. */
+    mill_timer(&mill_running->sleeper, ms, mill_msleep_cb);
+    mill_suspend();
+}
+
+static void mill_fdwait_cb(struct mill_poll *self, int events) {
+    struct mill_cr *cr = mill_cont(self, struct mill_cr, poller);
+    mill_resume(cr, events);
+}
+
+/* Wait for events from a file descriptor. */
+int mill_fdwait(int fd, int events, long timeout, const char *current) {
+    mill_running->state = MILL_FDWAIT;
+    mill_set_current(&mill_running->debug, current);
+    /* Wait for the signal from the file descriptor. */
+    mill_poll(&mill_running->poller, fd, events, mill_fdwait_cb);
+    return mill_suspend();
 }
 
 void mill_wait(void) {
