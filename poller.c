@@ -45,19 +45,20 @@ void mill_msleep(long ms, const char *current) {
         return;
     }
     /* Compute at which point of time will the timer expire. */
-    mill_running->sleeper.expiry = mill_now() + ms;    
+    mill_running->u_msleep.expiry = mill_now() + ms;    
     /* Move the coroutine into the right place in the ordered list
        of sleeping coroutines. */
     struct mill_slist_item *it = mill_slist_begin(&mill_timers);
     if(!it) {
-        mill_slist_push(&mill_timers, &mill_running->sleeper.item);
+        mill_slist_push(&mill_timers, &mill_running->u_msleep.item);
     }
     else {
        while(it) {
            struct mill_msleep *next = mill_cont(mill_slist_next(it),
                struct mill_msleep, item);
-           if(!next || next->expiry > mill_running->sleeper.expiry) {
-               mill_slist_insert(&mill_timers, &mill_running->sleeper.item, it);
+           if(!next || next->expiry > mill_running->u_msleep.expiry) {
+               mill_slist_insert(&mill_timers,
+                   &mill_running->u_msleep.item, it);
                break;
            }
            it = mill_slist_next(it);
@@ -113,14 +114,14 @@ int mill_fdwait(int fd, int events, long timeout, const char *current) {
             mill_panic(
                 "multiple coroutines waiting for a single file descriptor");
         mill_pollset_fds[i].events |= POLLIN;
-        mill_pollset_items[i].in = &mill_running->fdwaiter;
+        mill_pollset_items[i].in = &mill_running->u_fdwait;
     }
     if(events & FDW_OUT) {
         if(mill_pollset_items[i].out)
             mill_panic(
                 "multiple coroutines waiting for a single file descriptor");
         mill_pollset_fds[i].events |= POLLOUT;
-        mill_pollset_items[i].out = &mill_running->fdwaiter;
+        mill_pollset_items[i].out = &mill_running->u_fdwait;
     }
     /* Wait for the signal from the file descriptor. */
     mill_running->state = MILL_FDWAIT;
@@ -158,7 +159,7 @@ void mill_wait(void) {
                 if(timer->expiry > nw)
                     break;
                 mill_slist_pop(&mill_timers);
-                mill_resume(mill_cont(timer, struct mill_cr, sleeper), 0);
+                mill_resume(mill_cont(timer, struct mill_cr, u_msleep), 0);
                 fired = 1;
             }
         }
@@ -188,7 +189,7 @@ void mill_wait(void) {
         if(mill_pollset_items[i].in &&
               mill_pollset_items[i].in == mill_pollset_items[i].out) {
             struct mill_cr *cr = mill_cont(mill_pollset_items[i].in,
-                struct mill_cr, fdwaiter);
+                struct mill_cr, u_fdwait);
             mill_resume(cr, inevents | outevents);
             mill_pollset_fds[i].events = 0;
             mill_pollset_items[i].in = NULL;
@@ -197,14 +198,14 @@ void mill_wait(void) {
         else {
             if(mill_pollset_items[i].in && inevents) {
                 struct mill_cr *cr = mill_cont(mill_pollset_items[i].in,
-                    struct mill_cr, fdwaiter);
+                    struct mill_cr, u_fdwait);
                 mill_resume(cr, inevents);
                 mill_pollset_fds[i].events &= ~POLLIN;
                 mill_pollset_items[i].in = NULL;
             }
             else if(mill_pollset_items[i].out && outevents) {
                 struct mill_cr *cr = mill_cont(mill_pollset_items[i].out,
-                    struct mill_cr, fdwaiter);
+                    struct mill_cr, u_fdwait);
                 mill_resume(cr, outevents);
                 mill_pollset_fds[i].events &= ~POLLOUT;
                 mill_pollset_items[i].out = NULL;

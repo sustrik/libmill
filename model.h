@@ -80,12 +80,12 @@ struct mill_cr {
     /* Status of the coroutine. Used for debugging purposes. */
     enum mill_state state;
 
-    struct mill_ready idler;
-    struct mill_msleep sleeper;
-    struct mill_fdwait fdwaiter;
-    struct mill_chr receiver;
-    struct mill_chs sender;
-    struct mill_choose chooser;
+    struct mill_ready u_ready;
+    struct mill_msleep u_msleep;
+    struct mill_fdwait u_fdwait;
+    struct mill_chr u_chr;
+    struct mill_chs u_chs;
+    struct mill_choose u_choose ;
 
     /* Stored coroutine context while it is not executing. */
     struct mill_ctx ctx;

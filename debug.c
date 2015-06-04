@@ -97,11 +97,11 @@ void goredump(void) {
             break;
         case MILL_CHR:
             sprintf(buf, "chr(<%d>)",
-                mill_getchan(cr->receiver.clause->ep)->debug.id);
+                mill_getchan(cr->u_chr.clause->ep)->debug.id);
             break;
         case MILL_CHS:
             sprintf(buf, "chs(<%d>)",
-                mill_getchan(cr->sender.clause->ep)->debug.id);
+                mill_getchan(cr->u_chs.clause->ep)->debug.id);
             break;
         case MILL_CHOOSE:
             {
@@ -109,7 +109,7 @@ void goredump(void) {
                 pos += sprintf(&buf[pos], "choose(");
 		        int first = 1;
                 struct mill_slist_item *it;
-                for(it = mill_slist_begin(&cr->chooser.clauses); it;
+                for(it = mill_slist_begin(&cr->u_choose.clauses); it;
                       it = mill_slist_next(it)) {
 		            if(first)
 		                first = 0;
