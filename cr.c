@@ -47,7 +47,7 @@ int mill_suspend(void) {
         /* If there's a coroutine ready to be executed go for it. */
         if(!mill_slist_empty(&mill_ready)) {
             struct mill_slist_item *it = mill_slist_pop(&mill_ready);
-            mill_running = mill_cont(it, struct mill_cr, item);
+            mill_running = mill_cont(it, struct mill_cr, idler.item);
             mill_jmp(&mill_running->ctx);
         }
         /*  Otherwise, we are going to wait for sleeping coroutines
@@ -60,7 +60,7 @@ int mill_suspend(void) {
 void mill_resume(struct mill_cr *cr, int result) {
     cr->result = result;
     cr->state = MILL_READY;
-    mill_slist_push_back(&mill_ready, &cr->item);
+    mill_slist_push_back(&mill_ready, &cr->idler.item);
 }
 
 /* The intial part of go(). Starts the new coroutine. */

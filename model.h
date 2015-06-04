@@ -44,6 +44,10 @@ enum mill_state {
     MILL_CHOOSE
 };
 
+struct mill_ready {
+    struct mill_slist_item item;
+};
+
 struct mill_msleep {
     /* Item of the global list of timers. */
     struct mill_slist_item item;
@@ -71,13 +75,8 @@ struct mill_cr {
     /* Status of the coroutine. Used for debugging purposes. */
     enum mill_state state;
 
-    /* List of coroutines ready to be executed. */
-    struct mill_slist_item item;
-
-    /* Used when the coroutine is sleeping. */
+    struct mill_ready idler;
     struct mill_msleep sleeper;
-
-    /* Used when the coroutine is waiting for a file descriptor. */
     struct mill_fdwait fdwaiter;
 
     /* Stored coroutine context while it is not executing. */
