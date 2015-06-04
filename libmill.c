@@ -60,7 +60,11 @@ static void mill_resume(struct mill_cr *cr) {
 }
 
 /* Switch to a different coroutine. */
-static void mill_ctxswitch(void) {
+static void mill_suspend(void) {
+    /* Store the context of the current coroutine, if any. */
+    if(mill_running && mill_setjmp(&mill_running->ctx))
+        return;
+
     /* If there's a coroutine ready to be executed go for it. */
     if(!mill_slist_empty(&mill_ready)) {
         struct mill_slist_item *it = mill_slist_pop(&mill_ready);
@@ -111,7 +115,8 @@ void mill_go_epilogue(void) {
     mill_unregister_cr(&mill_running->debug);
     mill_valbuf_term(&mill_running->valbuf);
     mill_freestack(mill_running + 1);
-    mill_ctxswitch();
+    mill_running = NULL;
+    mill_suspend();
 }
 
 /* Move the current coroutine to the end of the queue.
@@ -121,9 +126,7 @@ void mill_yield(const char *current) {
         return;
     mill_set_current(&mill_running->debug, current);
     mill_resume(mill_running);
-    if(mill_setjmp(&mill_running->ctx))
-        return;
-    mill_ctxswitch();
+    mill_suspend();
 }
 
 static void mill_msleep_cb(struct mill_timer *self) {
@@ -146,9 +149,7 @@ void mill_msleep(long ms, const char *current) {
     mill_timer(&mill_running->sleeper, ms, mill_msleep_cb);
 
     /* In the meanwhile pass control to a different coroutine. */
-    if(mill_setjmp(&mill_running->ctx))
-        return;
-    mill_ctxswitch();
+    mill_suspend();
 }
 
 static void mill_fdwait_cb(struct mill_poll *self, int events) {
@@ -164,9 +165,8 @@ int mill_fdwait(int fd, int events, long timeout, const char *current) {
     /* Register with the poller. */
     mill_poll(&mill_running->poller, fd, events, mill_fdwait_cb);
 
-    /* Save the current state and pass control to a different coroutine. */
-    if(!mill_setjmp(&mill_running->ctx))
-        mill_ctxswitch();
+    /* Pass control to a different coroutine. */
+    mill_suspend();
 
     /* Return the value sent by the polling coroutine. */
     int res = mill_running->fdwres;
@@ -301,12 +301,10 @@ void mill_chs(chan ch, void *val, size_t sz, const char *current) {
     mill_slist_push_back(&cl.cr->chstate.clauses, &cl.chitem);
     mill_set_current(&cl.cr->debug, current);
 
-    /* Pass control to a different coroutine. */
-    if(mill_setjmp(&mill_running->ctx)) {
-        mill_slist_init(&mill_running->chstate.clauses);
-        return;
-    }
-    mill_ctxswitch();
+    /* Wait till the value is written to the channel. */
+    mill_suspend();
+
+    mill_slist_init(&mill_running->chstate.clauses);
 }
 
 void *mill_chr(chan ch, void *val, size_t sz, const char *current) {
@@ -332,11 +330,9 @@ void *mill_chr(chan ch, void *val, size_t sz, const char *current) {
     mill_set_current(&cl.cr->debug, current);
 
     /* Pass control to a different coroutine. */
-    if(mill_setjmp(&mill_running->ctx))
-        return val;
-    mill_ctxswitch();
-    /* Unreachable, but let's make XCode happy. */
-    return NULL;
+    mill_suspend();
+
+    return val;
 }
 
 void mill_chdone(chan ch, void *val, size_t sz, const char *current) {
@@ -478,8 +474,7 @@ int mill_choose_wait(const char *current) {
     else {
         mill_running->state = MILL_CHOOSE;
         mill_set_current(&mill_running->debug, current);
-        if(!mill_setjmp(&mill_running->ctx))
-            mill_ctxswitch();
+        mill_suspend();
         /* Get the result clause as set up by the coroutine that just unblocked
            this choose statement. */
         res = chstate->idx;
