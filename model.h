@@ -85,12 +85,12 @@ struct mill_cr {
     struct mill_fdwait u_fdwait;
     struct mill_chr u_chr;
     struct mill_chs u_chs;
-    struct mill_choose u_choose ;
+    struct mill_choose u_choose;
 
     /* Stored coroutine context while it is not executing. */
     struct mill_ctx ctx;
 
-    /* Place to store the received value when doing choose. */
+    /* Place to temporarily store the received value when doing choose. */
     struct mill_valbuf valbuf;
 
     /* Argument to resume() call being passed to the blocked suspend() call. */
