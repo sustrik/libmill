@@ -59,7 +59,7 @@ int mill_suspend(void) {
 
 void mill_resume(struct mill_cr *cr, int result) {
     cr->result = result;
-    cr->state = MILL_SCHEDULED;
+    cr->state = MILL_READY;
     mill_slist_push_back(&mill_ready, &cr->item);
 }
 

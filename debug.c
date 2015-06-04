@@ -86,8 +86,8 @@ void goredump(void) {
     for(it = mill_list_begin(&mill_all_crs); it; it = mill_list_next(it)) {
         struct mill_cr *cr = mill_cont(it, struct mill_cr, debug.item);
         switch(cr->state) {
-        case MILL_SCHEDULED:
-            sprintf(buf, "%s", mill_running == cr ? "RUNNING" : "scheduled");
+        case MILL_READY:
+            sprintf(buf, "%s", mill_running == cr ? "RUNNING" : "ready");
             break;
         case MILL_MSLEEP:
             sprintf(buf, "msleep()");

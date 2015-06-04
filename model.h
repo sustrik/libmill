@@ -36,7 +36,7 @@
 #include <stdint.h>
 
 enum mill_state {
-    MILL_SCHEDULED,
+    MILL_READY,
     MILL_MSLEEP,
     MILL_FDWAIT,
     MILL_CHR,
