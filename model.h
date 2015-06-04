@@ -52,7 +52,7 @@ struct mill_chstate {
 };
 
 enum mill_state {
-    MILL_YIELD,
+    MILL_SCHEDULED,
     MILL_MSLEEP,
     MILL_FDWAIT,
     MILL_CHR,

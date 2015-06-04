@@ -57,8 +57,8 @@ static struct mill_cr *mill_suspend() {
 }
 
 /* Schedules preiously suspended coroutine for execution. */
-static void mill_resume(struct mill_cr *cr) {
-    cr->state = MILL_YIELD;
+static void mill_schedule(struct mill_cr *cr) {
+    cr->state = MILL_SCHEDULED;
     mill_slist_push_back(&mill_ready, &cr->item);
 }
 
@@ -87,7 +87,7 @@ void *mill_go_prologue(const char *created) {
         return NULL;
     struct mill_cr *cr = ((struct mill_cr*)mill_allocstack()) - 1;
     mill_register_cr(&cr->debug, created);
-    cr->state = MILL_YIELD;
+    cr->state = MILL_SCHEDULED;
     mill_chstate_init(&cr->chstate);
     mill_valbuf_init(&cr->valbuf);
     cr->fdwres = 0;
@@ -95,7 +95,7 @@ void *mill_go_prologue(const char *created) {
     mill_trace(created, "{%d}=go()", (int)cr->debug.id);
 
     /* Move the current coroutine to the end of the queue. */
-    mill_resume(mill_suspend());    
+    mill_schedule(mill_suspend());    
 
     /* Put the new coroutine to the beginning of the queue. */
     mill_slist_push(&mill_ready, &cr->item);
@@ -122,12 +122,12 @@ void mill_yield(const char *current) {
         return;
     struct mill_cr *cr = mill_suspend();
     mill_set_current(&cr->debug, current);
-    mill_resume(cr);
+    mill_schedule(cr);
     mill_ctxswitch();
 }
 
 static void mill_msleep_cb(struct mill_timer *self) {
-    mill_resume(mill_cont(self, struct mill_cr, sleeper));
+    mill_schedule(mill_cont(self, struct mill_cr, sleeper));
 }
 
 /* Pause current coroutine for a specified time interval. */
@@ -157,7 +157,7 @@ void mill_msleep(long ms, const char *current) {
 static void mill_fdwait_cb(struct mill_poll *self, int events) {
     struct mill_cr *cr = mill_cont(self, struct mill_cr, poller);
     cr->fdwres = events;
-    mill_resume(cr);
+    mill_schedule(cr);
 }
 
 /* Wait for events from a file descriptor. */
@@ -204,7 +204,7 @@ static int mill_enqueue(chan ch, void *val) {
             dst = mill_valbuf_alloc(&cl->cr->valbuf, ch->sz);
         memcpy(dst, val, ch->sz);
         cl->cr->chstate.idx = cl->idx;
-        mill_resume(cl->cr);
+        mill_schedule(cl->cr);
         mill_list_erase(&ch->receiver.clauses, &cl->epitem);
         return 1;
     }
@@ -232,7 +232,7 @@ static int mill_dequeue(chan ch, void *val) {
     if(cl) {
         memcpy(dst, cl->val, ch->sz);
         cl->cr->chstate.idx = cl->idx;
-        mill_resume(cl->cr);
+        mill_schedule(cl->cr);
         mill_list_erase(&ch->sender.clauses, &cl->epitem);
         return 1;
     }
@@ -369,7 +369,7 @@ void mill_chdone(chan ch, void *val, size_t sz, const char *current) {
             dst = mill_valbuf_alloc(&cl->cr->valbuf, ch->sz);
         memcpy(dst, val, ch->sz);
         cl->cr->chstate.idx = cl->idx;
-        mill_resume(cl->cr);
+        mill_schedule(cl->cr);
         mill_list_erase(&ch->receiver.clauses, &cl->epitem);
     }
 }
