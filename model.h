@@ -97,7 +97,10 @@ struct mill_cr {
 /* Fake coroutine corresponding to the main thread of execution. */
 extern struct mill_cr main_cr;
 
-/* The queue of coroutines ready to run. The first one is currently running. */
+/* The coroutine that is running at the moment. */
+extern struct mill_cr *mill_running;
+
+/* The queue of coroutines ready to run. */
 extern struct mill_slist mill_ready;
 
 /* Channel endpoint. */
@@ -155,9 +158,6 @@ struct mill_clause {
        If 1, there is one. */
     int available;
 };
-
-/* Currently running coroutine. */
-struct mill_cr *mill_running(void);
 
 /* Returns pointer to the channel that contains specified endpoint. */
 struct mill_chan *mill_getchan(struct mill_ep *ep);

@@ -87,7 +87,7 @@ void goredump(void) {
         struct mill_cr *cr = mill_cont(it, struct mill_cr, debug.item);
         switch(cr->state) {
         case MILL_SCHEDULED:
-            sprintf(buf, "%s", mill_running() == cr ? "RUNNING" : "scheduled");
+            sprintf(buf, "%s", mill_running == cr ? "RUNNING" : "scheduled");
             break;
         case MILL_MSLEEP:
             sprintf(buf, "msleep()");
@@ -131,7 +131,7 @@ void goredump(void) {
         fprintf(stderr, "%-8s   %-42s %-40s %s\n",
             idbuf,
             buf,
-            cr == mill_running() ? "---" : cr->debug.current,
+            cr == mill_running ? "---" : cr->debug.current,
             cr->debug.created ? cr->debug.created : "<main>");
     }
     fprintf(stderr,"\n");
@@ -213,10 +213,10 @@ void mill_trace(const char *location, const char *format, ...) {
 
     char buf[256];
 
-    if(mill_last_traced_cr_id != mill_running()->debug.id)
+    if(mill_last_traced_cr_id != mill_running->debug.id)
         fprintf(stderr, "==> --------------------------------------------------"
         "------------------------------------------------------------------\n");
-    mill_last_traced_cr_id = mill_running()->debug.id;
+    mill_last_traced_cr_id = mill_running->debug.id;
     
     /* First print the timestamp. */
     struct timeval nw;
@@ -226,7 +226,7 @@ void mill_trace(const char *location, const char *format, ...) {
     fprintf(stderr, "==> %s.%06d ", buf, (int)nw.tv_usec);
 
     /* Coroutine ID. */
-    snprintf(buf, sizeof(buf), "{%d}", (int)mill_running()->debug.id);
+    snprintf(buf, sizeof(buf), "{%d}", (int)mill_running->debug.id);
     fprintf(stderr, "%-8s ", buf);
 
     va_list va;

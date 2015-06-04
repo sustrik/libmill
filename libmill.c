@@ -50,12 +50,6 @@ static void mill_chstate_init(struct mill_chstate *self) {
     self->idx = -2;
 }
 
-/* Removes current coroutine from the queue and returns it to the caller. */
-static struct mill_cr *mill_suspend() {
-    struct mill_slist_item *it = mill_slist_pop(&mill_ready);
-    return mill_cont(it, struct mill_cr, item);
-}
-
 /* Schedules preiously suspended coroutine for execution. */
 static void mill_resume(struct mill_cr *cr) {
     cr->state = MILL_SCHEDULED;
@@ -65,8 +59,11 @@ static void mill_resume(struct mill_cr *cr) {
 /* Switch to a different coroutine. */
 static void mill_ctxswitch(void) {
     /* If there's a coroutine ready to be executed go for it. */
-    if(mill_running())
-        mill_jmp(&mill_running()->ctx);
+    if(!mill_slist_empty(&mill_ready)) {
+        struct mill_slist_item *it = mill_slist_pop(&mill_ready);
+        mill_running = mill_cont(it, struct mill_cr, item);
+        mill_jmp(&mill_running->ctx);
+    }
 
     /*  Otherwise, we are going to wait for sleeping coroutines
         and for external events. */
@@ -74,7 +71,9 @@ static void mill_ctxswitch(void) {
 
 	/* Pass control to a resumed coroutine. */
     assert(!mill_slist_empty(&mill_ready));
-	mill_jmp(&mill_running()->ctx);
+    struct mill_slist_item *it = mill_slist_pop(&mill_ready);
+    mill_running = mill_cont(it, struct mill_cr, item);
+    mill_jmp(&mill_running->ctx);
 }
 
 /* The intial part of go(). Allocates the stack for the new coroutine. */
@@ -83,7 +82,7 @@ void *mill_go_prologue(const char *created) {
        statement is present in the user's code. */
     mill_preserve_debug();
 
-    if(mill_setjmp(&mill_running()->ctx))
+    if(mill_setjmp(&mill_running->ctx))
         return NULL;
     struct mill_cr *cr = ((struct mill_cr*)mill_allocstack()) - 1;
     mill_register_cr(&cr->debug, created);
@@ -94,11 +93,11 @@ void *mill_go_prologue(const char *created) {
     cr->cls = NULL;
     mill_trace(created, "{%d}=go()", (int)cr->debug.id);
 
-    /* Move the current coroutine to the end of the queue. */
-    mill_resume(mill_suspend());    
+    /* Move the parent coroutine to the end of the queue. */
+    mill_resume(mill_running);    
 
-    /* Put the new coroutine to the beginning of the queue. */
-    mill_slist_push(&mill_ready, &cr->item);
+    /* Mark the new coroutine as the one that is running. */
+    mill_running = cr;
 
     return (void*)cr;
 }
@@ -106,23 +105,21 @@ void *mill_go_prologue(const char *created) {
 /* The final part of go(). Cleans up when the coroutine is finished. */
 void mill_go_epilogue(void) {
     mill_trace(NULL, "go() done");
-    struct mill_cr *cr = mill_suspend();
-    mill_unregister_cr(&cr->debug);
-    mill_valbuf_term(&cr->valbuf);
-    mill_freestack(cr + 1);
+    mill_unregister_cr(&mill_running->debug);
+    mill_valbuf_term(&mill_running->valbuf);
+    mill_freestack(mill_running + 1);
     mill_ctxswitch();
 }
 
 /* Move the current coroutine to the end of the queue.
    Pass control to the new head of the queue. */
 void mill_yield(const char *current) {
-    if(mill_ready.first == mill_ready.last)
+    if(mill_slist_empty(&mill_ready))
         return;
-    if(mill_setjmp(&mill_running()->ctx))
+    if(mill_setjmp(&mill_running->ctx))
         return;
-    struct mill_cr *cr = mill_suspend();
-    mill_set_current(&cr->debug, current);
-    mill_resume(cr);
+    mill_set_current(&mill_running->debug, current);
+    mill_resume(mill_running);
     mill_ctxswitch();
 }
 
@@ -139,16 +136,15 @@ void mill_msleep(long ms, const char *current) {
     }
 
     /* Save the current state. */
-    if(mill_setjmp(&mill_running()->ctx))
+    if(mill_setjmp(&mill_running->ctx))
         return;
 
     /* Suspend the running coroutine. */
-    struct mill_cr *cr = mill_suspend();
-    cr->state = MILL_MSLEEP;
-    mill_set_current(&cr->debug, current);
+    mill_running->state = MILL_MSLEEP;
+    mill_set_current(&mill_running->debug, current);
 
     /* Start waiting for the timer. */
-    mill_timer(&cr->sleeper, ms, mill_msleep_cb);
+    mill_timer(&mill_running->sleeper, ms, mill_msleep_cb);
 
     /* In the meanwhile pass control to a different coroutine. */
     mill_ctxswitch();
@@ -163,28 +159,27 @@ static void mill_fdwait_cb(struct mill_poll *self, int events) {
 /* Wait for events from a file descriptor. */
 int mill_fdwait(int fd, int events, long timeout, const char *current) {
     /* Register with the poller. */
-    mill_poll(&mill_running()->poller, fd, events, mill_fdwait_cb);
+    mill_poll(&mill_running->poller, fd, events, mill_fdwait_cb);
 
     /* Save the current state and pass control to a different coroutine. */
-    if(!mill_setjmp(&mill_running()->ctx)) {
-        struct mill_cr *cr = mill_suspend();
-        cr->state = MILL_FDWAIT;
-        mill_set_current(&cr->debug, current);
+    if(!mill_setjmp(&mill_running->ctx)) {
+        mill_running->state = MILL_FDWAIT;
+        mill_set_current(&mill_running->debug, current);
         mill_ctxswitch();
     }
 
     /* Return the value sent by the polling coroutine. */
-    int res = mill_running()->fdwres;
-    mill_running()->fdwres = 0;
+    int res = mill_running->fdwres;
+    mill_running->fdwres = 0;
     return res;
 }
 
 void *cls(void) {
-    return mill_running()->cls;
+    return mill_running->cls;
 }
 
 void setcls(void *val) {
-    mill_running()->cls = val;
+    mill_running->cls = val;
 }
 
 /******************************************************************************/
@@ -297,12 +292,12 @@ void mill_chs(chan ch, void *val, size_t sz, const char *current) {
 
     /* If there's no free space in the buffer we are going to yield
        till the receiver arrives. */
-    if(mill_setjmp(&mill_running()->ctx)) {
-        mill_slist_init(&mill_running()->chstate.clauses);
+    if(mill_setjmp(&mill_running->ctx)) {
+        mill_slist_init(&mill_running->chstate.clauses);
         return;
     }
     struct mill_clause cl;
-    cl.cr = mill_suspend();
+    cl.cr = mill_running;
     cl.cr->state = MILL_CHS;
     cl.ep = &ch->sender;
     cl.val = val;
@@ -321,16 +316,16 @@ void *mill_chr(chan ch, void *val, size_t sz, const char *current) {
         mill_panic("receive of a type not matching the channel");
 
     if(mill_dequeue(ch, val)) {
-        mill_slist_init(&mill_running()->chstate.clauses);
+        mill_slist_init(&mill_running->chstate.clauses);
         return val;
     }
 
     /* If there's no message in the buffer we are going to yield
        till the sender arrives. */
-    if(mill_setjmp(&mill_running()->ctx))
+    if(mill_setjmp(&mill_running->ctx))
         return val;
     struct mill_clause cl;
-    cl.cr = mill_suspend();
+    cl.cr = mill_running;
     cl.cr->state = MILL_CHR;
     cl.ep = &ch->receiver;
     cl.val = val;
@@ -394,20 +389,20 @@ void mill_choose_in(void *clause, chan ch, size_t sz, int idx) {
     int available = ch->done || !mill_list_empty(&ch->sender.clauses) ||
         ch->items ? 1 : 0;
     if(available)
-        ++mill_running()->chstate.available;
+        ++mill_running->chstate.available;
 
     /* If there are available clauses don't bother with non-available ones. */
-    if(!available && mill_running()->chstate.available)
+    if(!available && mill_running->chstate.available)
         return;
 
     /* Fill in the clause entry. */
     struct mill_clause *cl = (struct mill_clause*) clause;
-    cl->cr = mill_running();
+    cl->cr = mill_running;
     cl->ep = &ch->receiver;
     cl->val = NULL;
     cl->idx = idx;
     cl->available = available;
-    mill_slist_push_back(&mill_running()->chstate.clauses, &cl->chitem);
+    mill_slist_push_back(&mill_running->chstate.clauses, &cl->chitem);
 
     /* Add the clause to the channel's list of waiting clauses. */
     mill_list_insert(&ch->receiver.clauses, &cl->epitem, NULL);
@@ -423,35 +418,35 @@ void mill_choose_out(void *clause, chan ch, void *val, size_t sz, int idx) {
     int available = !mill_list_empty(&ch->receiver.clauses) ||
         ch->items < ch->bufsz ? 1 : 0;
     if(available)
-        ++mill_running()->chstate.available;
+        ++mill_running->chstate.available;
 
     /* If there are available clauses don't bother with non-available ones. */
-    if(!available && mill_running()->chstate.available)
+    if(!available && mill_running->chstate.available)
         return;
 
     /* Fill in the clause entry. */
     struct mill_clause *cl = (struct mill_clause*) clause;
-    cl->cr = mill_running();
+    cl->cr = mill_running;
     cl->ep = &ch->sender;
     cl->val = val;
     cl->available = available;
     cl->idx = idx;
-    mill_slist_push_back(&mill_running()->chstate.clauses, &cl->chitem);
+    mill_slist_push_back(&mill_running->chstate.clauses, &cl->chitem);
 
     /* Add the clause to the channel's list of waiting clauses. */
     mill_list_insert(&ch->sender.clauses, &cl->epitem, NULL);
 }
 
 void mill_choose_otherwise(void) {
-    if(mill_running()->chstate.othws != 0)
+    if(mill_running->chstate.othws != 0)
         mill_panic("multiple 'otherwise' clauses in a choose statement");
-    mill_running()->chstate.othws = 1;
+    mill_running->chstate.othws = 1;
 }
 
 int mill_choose_wait(const char *current) {
     mill_trace(current, "choose()");
 
-    struct mill_chstate *chstate = &mill_running()->chstate;
+    struct mill_chstate *chstate = &mill_running->chstate;
     int res = -1;
     struct mill_slist_item *it;
     
@@ -481,10 +476,9 @@ int mill_choose_wait(const char *current) {
     }
     /* In all other cases block and wait for an available channel. */
     else {
-        if(!mill_setjmp(&mill_running()->ctx)) {
-            struct mill_cr *cr = mill_suspend();
-            cr->state = MILL_CHOOSE;
-            mill_set_current(&cr->debug, current);
+        if(!mill_setjmp(&mill_running->ctx)) {
+            mill_running->state = MILL_CHOOSE;
+            mill_set_current(&mill_running->debug, current);
             mill_ctxswitch();
         }
         /* Get the result clause as set up by the coroutine that just unblocked
@@ -505,6 +499,6 @@ int mill_choose_wait(const char *current) {
 }
 
 void *mill_choose_val(void) {
-    return mill_valbuf_get(&mill_running()->valbuf);
+    return mill_valbuf_get(&mill_running->valbuf);
 }
 
