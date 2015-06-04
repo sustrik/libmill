@@ -25,23 +25,6 @@
 #ifndef MILL_POLLER_INCLUDED
 #define MILL_POLLER_INCLUDED
 
-/* Pull in FDW_IN/OUT/ERR constants. */
-#include "libmill.h"
-
-#include "slist.h"
-
-#include <stdint.h>
-
-struct mill_timer {
-    /* Item of the global list of timers. */
-    struct mill_slist_item item;
-    /* The timepoint when the timer expires. */
-    uint64_t expiry;
-};
-
-struct mill_poll {
-};
-
 /* Wait till at least one callback is invoked. */
 void mill_wait(void);
 

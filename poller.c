@@ -23,6 +23,7 @@
 */
 
 #include "cr.h"
+#include "libmill.h"
 #include "model.h"
 #include "poller.h"
 #include "utils.h"

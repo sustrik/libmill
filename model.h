@@ -33,6 +33,27 @@
 #include "utils.h"
 #include "valbuf.h"
 
+#include <stdint.h>
+
+enum mill_state {
+    MILL_SCHEDULED,
+    MILL_MSLEEP,
+    MILL_FDWAIT,
+    MILL_CHR,
+    MILL_CHS,
+    MILL_CHOOSE
+};
+
+struct mill_timer {
+    /* Item of the global list of timers. */
+    struct mill_slist_item item;
+    /* The timepoint when the timer expires. */
+    uint64_t expiry;
+};
+
+struct mill_poll {
+};
+
 /* This structure keeps the state of a 'choose' operation. */
 struct mill_chstate {
     /* List of clauses in the 'choose' statement. */
@@ -43,15 +64,6 @@ struct mill_chstate {
 
     /* Number of clauses that are immediately available. */
     int available;
-};
-
-enum mill_state {
-    MILL_SCHEDULED,
-    MILL_MSLEEP,
-    MILL_FDWAIT,
-    MILL_CHR,
-    MILL_CHS,
-    MILL_CHOOSE
 };
 
 /* The coroutine. This structure is held on the top of the coroutine's stack. */
