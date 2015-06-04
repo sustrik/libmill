@@ -66,14 +66,11 @@ struct mill_chs {
     struct mill_clause *clause;
 };
 
-/* This structure keeps the state of a 'choose' operation. */
-struct mill_chstate {
+struct mill_choose {
     /* List of clauses in the 'choose' statement. */
     struct mill_slist clauses;
-
     /* 1 if there is 'otherwise' clause. 0 if there is not. */
     int othws;
-
     /* Number of clauses that are immediately available. */
     int available;
 };
@@ -88,12 +85,10 @@ struct mill_cr {
     struct mill_fdwait fdwaiter;
     struct mill_chr receiver;
     struct mill_chs sender;
+    struct mill_choose chooser;
 
     /* Stored coroutine context while it is not executing. */
     struct mill_ctx ctx;
-
-    /* State for the choose operation that's underway in this coroutine. */
-    struct mill_chstate chstate;
 
     /* Place to store the received value when doing choose. */
     struct mill_valbuf valbuf;

@@ -109,7 +109,7 @@ void goredump(void) {
                 pos += sprintf(&buf[pos], "choose(");
 		        int first = 1;
                 struct mill_slist_item *it;
-                for(it = mill_slist_begin(&cr->chstate.clauses); it;
+                for(it = mill_slist_begin(&cr->chooser.clauses); it;
                       it = mill_slist_next(it)) {
 		            if(first)
 		                first = 0;
