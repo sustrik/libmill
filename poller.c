@@ -54,8 +54,8 @@ void mill_msleep(long ms, const char *current) {
     }
     else {
        while(it) {
-           struct mill_timer *next = mill_cont(mill_slist_next(it),
-               struct mill_timer, item);
+           struct mill_msleep *next = mill_cont(mill_slist_next(it),
+               struct mill_msleep, item);
            if(!next || next->expiry > mill_running->sleeper.expiry) {
                mill_slist_insert(&mill_timers, &mill_running->sleeper.item, it);
                break;
@@ -77,8 +77,8 @@ static struct pollfd *mill_pollset_fds = NULL;
 /* The item at a specific index in this array corresponds to the entry
    in mill_pollset fds with the same index. */
 struct mill_pollset_item {
-    struct mill_poll *in;
-    struct mill_poll *out;
+    struct mill_fdwait *in;
+    struct mill_fdwait *out;
 };
 static struct mill_pollset_item *mill_pollset_items = NULL;
 
@@ -113,14 +113,14 @@ int mill_fdwait(int fd, int events, long timeout, const char *current) {
             mill_panic(
                 "multiple coroutines waiting for a single file descriptor");
         mill_pollset_fds[i].events |= POLLIN;
-        mill_pollset_items[i].in = &mill_running->poller;
+        mill_pollset_items[i].in = &mill_running->fdwaiter;
     }
     if(events & FDW_OUT) {
         if(mill_pollset_items[i].out)
             mill_panic(
                 "multiple coroutines waiting for a single file descriptor");
         mill_pollset_fds[i].events |= POLLOUT;
-        mill_pollset_items[i].out = &mill_running->poller;
+        mill_pollset_items[i].out = &mill_running->fdwaiter;
     }
     /* Wait for the signal from the file descriptor. */
     mill_running->state = MILL_FDWAIT;
@@ -141,7 +141,7 @@ void mill_wait(void) {
         if(!mill_slist_empty(&mill_timers)) {
             uint64_t nw = mill_now();
             uint64_t expiry = mill_cont(mill_slist_begin(&mill_timers),
-                struct mill_timer, item)->expiry;
+                struct mill_msleep, item)->expiry;
             timeout = nw >= expiry ? 0 : expiry - nw;
         }
 
@@ -153,8 +153,8 @@ void mill_wait(void) {
         if(!mill_slist_empty(&mill_timers)) {
             uint64_t nw = mill_now();
             while(!mill_slist_empty(&mill_timers)) {
-                struct mill_timer *timer = mill_cont(
-                    mill_slist_begin(&mill_timers), struct mill_timer, item);
+                struct mill_msleep *timer = mill_cont(
+                    mill_slist_begin(&mill_timers), struct mill_msleep, item);
                 if(timer->expiry > nw)
                     break;
                 mill_slist_pop(&mill_timers);
@@ -188,7 +188,7 @@ void mill_wait(void) {
         if(mill_pollset_items[i].in &&
               mill_pollset_items[i].in == mill_pollset_items[i].out) {
             struct mill_cr *cr = mill_cont(mill_pollset_items[i].in,
-                struct mill_cr, poller);
+                struct mill_cr, fdwaiter);
             mill_resume(cr, inevents | outevents);
             mill_pollset_fds[i].events = 0;
             mill_pollset_items[i].in = NULL;
@@ -197,14 +197,14 @@ void mill_wait(void) {
         else {
             if(mill_pollset_items[i].in && inevents) {
                 struct mill_cr *cr = mill_cont(mill_pollset_items[i].in,
-                    struct mill_cr, poller);
+                    struct mill_cr, fdwaiter);
                 mill_resume(cr, inevents);
                 mill_pollset_fds[i].events &= ~POLLIN;
                 mill_pollset_items[i].in = NULL;
             }
             else if(mill_pollset_items[i].out && outevents) {
                 struct mill_cr *cr = mill_cont(mill_pollset_items[i].out,
-                    struct mill_cr, poller);
+                    struct mill_cr, fdwaiter);
                 mill_resume(cr, outevents);
                 mill_pollset_fds[i].events &= ~POLLOUT;
                 mill_pollset_items[i].out = NULL;

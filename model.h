@@ -44,14 +44,14 @@ enum mill_state {
     MILL_CHOOSE
 };
 
-struct mill_timer {
+struct mill_msleep {
     /* Item of the global list of timers. */
     struct mill_slist_item item;
     /* The timepoint when the timer expires. */
     uint64_t expiry;
 };
 
-struct mill_poll {
+struct mill_fdwait {
 };
 
 /* This structure keeps the state of a 'choose' operation. */
@@ -75,10 +75,10 @@ struct mill_cr {
     struct mill_slist_item item;
 
     /* Used when the coroutine is sleeping. */
-    struct mill_timer sleeper;
+    struct mill_msleep sleeper;
 
     /* Used when the coroutine is waiting for a file descriptor. */
-    struct mill_poll poller;
+    struct mill_fdwait fdwaiter;
 
     /* Stored coroutine context while it is not executing. */
     struct mill_ctx ctx;
