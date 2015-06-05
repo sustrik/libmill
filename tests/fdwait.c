@@ -49,6 +49,19 @@ int main() {
     assert(rc & FDW_OUT);
     assert(!(rc & ~FDW_OUT));
 
+    /* Check with the timeout that doesn't expire. */
+    rc = fdwait(fds[0], FDW_OUT, 100);
+    assert(rc);
+    assert(rc & FDW_OUT);
+    assert(!(rc & ~FDW_OUT));
+
+    /* Check with the timeout that does expire. */
+    uint64_t ms = now();
+    rc = fdwait(fds[0], FDW_IN, 100);
+    assert(rc == 0);
+    ms = now() - ms;
+    assert(ms > 90 && ms < 110);
+
     /* Check for in. */
     ssize_t sz = send(fds[1], "A", 1, 0);
     assert(sz == 1);
@@ -61,20 +74,6 @@ int main() {
     assert(rc & FDW_IN);
     assert(rc & FDW_OUT);
     assert(!(rc & ~(FDW_IN | FDW_OUT)));
-
-#if 0
-    /* Check the same with timeout. */
-    rc = fdwait(fds[0], FDW_OUT, 100);
-    assert(rc & FDW_OUT);
-    assert(!(rc & ~FDW_OUT));
-
-    /* Check that the pipe is not readable. */
-    uint64_t ms = now();
-    rc = fdwait(fds[0], FDW_IN, 100);
-    assert(rc == 0);
-    ms = now() - ms;
-    assert(ms > 90 && ms < 110);
-#endif
 
     close(fds[0]);
     close(fds[1]);

@@ -48,16 +48,11 @@ struct mill_ready {
     struct mill_slist_item item;
 };
 
-struct mill_msleep {
-    /* Item of the global list of timers. */
-    struct mill_slist_item item;
+struct mill_fdwait {
+    /* Item in the global list of timers. */
+    struct mill_list_item item;
     /* The timepoint when the timer expires. */
     uint64_t expiry;
-};
-
-struct mill_fdwait {
-    /* Timeout for the operation, if any. */
-    struct mill_msleep timeout;
 };
 
 struct mill_chr {
@@ -83,7 +78,7 @@ struct mill_cr {
     enum mill_state state;
 
     struct mill_ready u_ready;
-    struct mill_msleep u_msleep;
+    /* u_fdwait is also used by msleep(). */
     struct mill_fdwait u_fdwait;
     struct mill_chr u_chr;
     struct mill_chs u_chs;
