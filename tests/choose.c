@@ -87,7 +87,10 @@ void unused(void) {
 }
 
 int main() {
+    /* In this test we are also going to make sure that the debugging support
+       doesn't crash the application. */
     trace(1);
+
     /* Non-blocking receiver case. */
     chan ch1 = chmake(int, 0);
     go(sender1(chdup(ch1), 555));
@@ -192,7 +195,6 @@ int main() {
     }
     assert(test == 1);
 
-
     /* Test two simultaneous senders vs. choose statement. */
     int val;
     chan ch10 = chmake(int, 0);
@@ -272,7 +274,7 @@ int main() {
     chan ch15 = chmake(struct large, 1);
     chan ch16 = chmake(int, 1);
     go(sender2(chdup(ch16), 1111));
-goredump();
+    goredump();
     choose {
     in(ch16, int, val):
         assert(val == 1111);
