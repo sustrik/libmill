@@ -188,18 +188,7 @@ void goredump(void) {
     fprintf(stderr,"\n");
 }
 
-void mill_preserve_debug(void) {
-    /* Do nothing, but trick the copiler into thinking that
-       the debug functions are being used. */
-    static volatile int unoptimisable = 1;
-    if(unoptimisable)
-        return;
-    goredump();
-    trace(0);
-}
-
 static int mill_tracelevel = 0;
-static int mill_last_traced_cr_id = -1;
 
 void trace(int level) {
     mill_tracelevel = level;
@@ -210,11 +199,6 @@ void mill_trace(const char *location, const char *format, ...) {
         return;
 
     char buf[256];
-
-    if(mill_last_traced_cr_id != mill_running->debug.id)
-        fprintf(stderr, "==> --------------------------------------------------"
-        "------------------------------------------------------------------\n");
-    mill_last_traced_cr_id = mill_running->debug.id;
     
     /* First print the timestamp. */
     struct timeval nw;
@@ -236,5 +220,15 @@ void mill_trace(const char *location, const char *format, ...) {
     else
         fprintf(stderr, "\n");
     fflush(stderr);
+}
+
+void mill_preserve_debug(void) {
+    /* Do nothing, but trick the copiler into thinking that the debug functions
+       are being used so that it does not optimise them away. */
+    static volatile int unoptimisable = 1;
+    if(unoptimisable)
+        return;
+    goredump();
+    trace(0);
 }
 
