@@ -37,6 +37,32 @@
    First timer to be resume comes first and so on. */
 static struct mill_slist mill_timers = {0};
 
+static void mill_add_timer(struct mill_msleep *self, long ms) {
+    /* Compute at which point of time will the timer expire. */
+    self->expiry = mill_now() + ms;    
+    /* Move the coroutine into the right place in the ordered list
+       of sleeping coroutines. */
+    struct mill_slist_item *it = mill_slist_begin(&mill_timers);
+    if(!it) {
+        mill_slist_push(&mill_timers, &self->item);
+    }
+    else {
+        while(it) {
+            struct mill_msleep *next = mill_cont(mill_slist_next(it),
+                struct mill_msleep, item);
+            if(!next || next->expiry > self->expiry) {
+                mill_slist_insert(&mill_timers, &self->item, it);
+                break;
+            }
+            it = mill_slist_next(it);
+        }
+    }
+}
+
+static void mill_rm_timer(struct mill_msleep *self) {
+    assert(0);
+}
+
 /* Pause current coroutine for a specified time interval. */
 void mill_msleep(long ms, const char *current) {
     /* No point in waiting. However, let's give other coroutines a chance. */
@@ -44,27 +70,8 @@ void mill_msleep(long ms, const char *current) {
         yield();
         return;
     }
-    /* Compute at which point of time will the timer expire. */
-    mill_running->u_msleep.expiry = mill_now() + ms;    
-    /* Move the coroutine into the right place in the ordered list
-       of sleeping coroutines. */
-    struct mill_slist_item *it = mill_slist_begin(&mill_timers);
-    if(!it) {
-        mill_slist_push(&mill_timers, &mill_running->u_msleep.item);
-    }
-    else {
-       while(it) {
-           struct mill_msleep *next = mill_cont(mill_slist_next(it),
-               struct mill_msleep, item);
-           if(!next || next->expiry > mill_running->u_msleep.expiry) {
-               mill_slist_insert(&mill_timers,
-                   &mill_running->u_msleep.item, it);
-               break;
-           }
-           it = mill_slist_next(it);
-       }
-    }
     /* Wait while the timer expires. */
+    mill_add_timer(&mill_running->u_msleep, ms);
     mill_running->state = MILL_MSLEEP;
     mill_set_current(&mill_running->debug, current);
     mill_suspend();
@@ -85,6 +92,10 @@ static struct mill_pollset_item *mill_pollset_items = NULL;
 
 /* Wait for events from a file descriptor. */
 int mill_fdwait(int fd, int events, long timeout, const char *current) {
+    /* If required, start waiting for the timeout. */
+    if(timeout >= 0)
+        mill_add_timer(&mill_running->u_fdwait.timeout, timeout);
+
     /* Find the fd in the pollset. TODO: This is O(n) operation! */
     int i;
     for(i = 0; i != mill_pollset_size; ++i) {
@@ -123,10 +134,35 @@ int mill_fdwait(int fd, int events, long timeout, const char *current) {
         mill_pollset_fds[i].events |= POLLOUT;
         mill_pollset_items[i].out = &mill_running->u_fdwait;
     }
-    /* Wait for the signal from the file descriptor. */
+    /* Do actual waiting. */
     mill_running->state = MILL_FDWAIT;
     mill_set_current(&mill_running->debug, current);
-    return mill_suspend();
+    int rc = mill_suspend();
+
+    /* Handle file descriptor events. */
+    if(rc >= 0) {
+        if(timeout >= 0)
+            mill_rm_timer(&mill_running->u_fdwait.timeout);
+        return rc;
+    }
+
+    /* Handle the timeout. Clean-up the pollset. */
+    if(mill_pollset_items[i].in = &mill_running->u_fdwait) {
+        mill_pollset_items[i].in = NULL;
+        mill_pollset_fds[i].events &= ~POLLIN;
+    }
+    if(mill_pollset_items[i].out = &mill_running->u_fdwait) {
+        mill_pollset_items[i].out = NULL;
+        mill_pollset_fds[i].events &= ~POLLOUT;
+    }
+    if(!mill_pollset_fds[i].events) {
+        --mill_pollset_size;
+        if(i < mill_pollset_size) {
+            mill_pollset_items[i] = mill_pollset_items[mill_pollset_size];
+            mill_pollset_fds[i] = mill_pollset_fds[mill_pollset_size];
+        }
+    }
+    return 0;
 }
 
 void mill_wait(void) {
@@ -159,7 +195,7 @@ void mill_wait(void) {
                 if(timer->expiry > nw)
                     break;
                 mill_slist_pop(&mill_timers);
-                mill_resume(mill_cont(timer, struct mill_cr, u_msleep), 0);
+                mill_resume(mill_cont(timer, struct mill_cr, u_msleep), -1);
                 fired = 1;
             }
         }

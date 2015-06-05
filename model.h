@@ -56,6 +56,8 @@ struct mill_msleep {
 };
 
 struct mill_fdwait {
+    /* Timeout for the operation, if any. */
+    struct mill_msleep timeout;
 };
 
 struct mill_chr {
