@@ -57,8 +57,8 @@ int main(int argc, char *argv[]) {
     long duration = (long)(stop - start);
     long ns = (duration * 1000000) / count;
 
-    printf("performed %ldM coroutines in %f seconds\n",
-        (long)(count / 1000000 * 2), ((float)duration) / 1000);
+    printf("executed %ldM coroutines in %f seconds\n",
+        (long)(count / 1000000), ((float)duration) / 1000);
     printf("duration of one coroutine creation+termination: %ld ns\n", ns);
     printf("coroutine creations+terminatios per second: %fM\n",
         (float)(1000000000 / ns) / 1000000);

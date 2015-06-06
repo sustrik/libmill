@@ -48,7 +48,7 @@ int main(int argc, char *argv[]) {
         printf("usage: ctxswitch <millions-of-context-switches>\n");
         return 1;
     }
-    long count = atol(argv[1]) / 2 * 1000000;
+    long count = atol(argv[1]) * 1000000 / 2;
 
     uint64_t start = now();
     go(worker(count));
@@ -62,7 +62,7 @@ int main(int argc, char *argv[]) {
     long ns = (duration * 1000000) / (count * 2);
 
     printf("performed %ldM context switches in %f seconds\n",
-        (long)(count / 1000000 * 2), ((float)duration) / 1000);
+        (long)(count * 2 / 1000000), ((float)duration) / 1000);
     printf("duration of one context switch: %ld ns\n", ns);
     printf("context switches per second: %fM\n",
         (float)(1000000000 / ns) / 1000000);
