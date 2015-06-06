@@ -26,6 +26,7 @@
 #define MILL_DEBUG_INCLUDED
 
 #include "list.h"
+#include "utils.h"
 
 struct mill_debug_cr {
     /* List of all coroutines. */
@@ -60,7 +61,10 @@ void mill_unregister_chan(struct mill_debug_chan *ch);
    the operation was invoked from. */
 void mill_set_current(struct mill_debug_cr *cr, const char *current);
 
+extern int mill_tracelevel;
+
 /* Create a trace record. */
-void mill_trace(const char *location, const char *format, ...);
+#define mill_trace if(mill_slow(mill_tracelevel)) mill_trace_
+void mill_trace_(const char *location, const char *format, ...);
 
 #endif

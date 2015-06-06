@@ -41,3 +41,6 @@ tests/fdwait
 tests/tcp
 tests/*.trs
 tests/*.log
+perf/.dirstamp
+perf/go
+perf/ctxswitch

@@ -23,6 +23,7 @@
 */
 
 #include "list.h"
+#include "utils.h"
 
 #include <assert.h>
 #include <stddef.h>
@@ -67,13 +68,13 @@ void mill_list_insert(struct mill_list *self, struct mill_list_item *item,
 {
     item->prev = it ? it->prev : self->last;
     item->next = it;
-    if(item->prev)
+    if(mill_fast(item->prev))
         item->prev->next = item;
-    if(item->next)
+    if(mill_fast(item->next))
         item->next->prev = item;
-    if(!self->first || self->first == it)
+    if(mill_slow(!self->first || self->first == it))
         self->first = item;
-    if(!it)
+    if(mill_slow(!it))
         self->last = item;
 }
 
@@ -82,11 +83,11 @@ struct mill_list_item *mill_list_erase(struct mill_list *self,
 {
     struct mill_list_item *next;
 
-    if(item->prev)
+    if(mill_fast(item->prev))
         item->prev->next = item->next;
     else
         self->first = item->next;
-    if(item->next)
+    if(mill_fast(item->next))
         item->next->prev = item->prev;
     else
         self->last = item->prev;

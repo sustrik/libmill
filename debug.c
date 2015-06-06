@@ -188,13 +188,13 @@ void goredump(void) {
     fprintf(stderr,"\n");
 }
 
-static int mill_tracelevel = 0;
+int mill_tracelevel = 0;
 
 void trace(int level) {
     mill_tracelevel = level;
 }
 
-void mill_trace(const char *location, const char *format, ...) {
+void mill_trace_(const char *location, const char *format, ...) {
     if(mill_tracelevel <= 0)
         return;
 

@@ -97,6 +97,7 @@ void mill_go_epilogue(void) {
 }
 
 void mill_yield(const char *current) {
+    //mill_trace(current, "yield()");
     /* If there's only one coroutine ready, no point in context switching
        back and forth. */
     if(mill_slist_empty(&mill_ready))

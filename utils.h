@@ -56,5 +56,13 @@ uint64_t mill_now();
 #define MILL_CT_ASSERT(x) \
     typedef int MILL_CT_ASSERT_HELPER1(ct_assert_,__COUNTER__) [(x) ? 1 : -1]
 
+#if defined __GNUC__ || defined __llvm__
+#define mill_fast(x) __builtin_expect(!!(x), 1)
+#define mill_slow(x) __builtin_expect(!!(x), 0)
+#else
+#define mill_fast(x) (x)
+#define mill_slow(x) (x)
+#endif
+
 #endif
 
