@@ -142,7 +142,7 @@ typedef struct mill_chan *chan;
     } while(0)
 
 #define chr(channel, type) \
-    (*(type*)mill_chr((channel), alloca(sizeof(type)), sizeof(type),\
+    (*(type*)mill_chr((channel), sizeof(type),\
         __FILE__ ":" mill_string(__LINE__)))
 
 #define chdone(channel, type, value) \
@@ -158,7 +158,7 @@ typedef struct mill_chan *chan;
 MILL_EXPORT chan mill_chmake(size_t sz, size_t bufsz, const char *created);
 MILL_EXPORT chan mill_chdup(chan ch, const char *created);
 MILL_EXPORT void mill_chs(chan ch, void *val, size_t sz, const char *current);
-MILL_EXPORT void *mill_chr(chan ch, void *val, size_t sz, const char *current);
+MILL_EXPORT void *mill_chr(chan ch, size_t sz, const char *current);
 MILL_EXPORT void mill_chdone(chan ch, void *val, size_t sz,
     const char *current);
 MILL_EXPORT void mill_chclose(chan ch, const char *current);

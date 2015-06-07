@@ -144,10 +144,11 @@ void mill_chs(chan ch, void *val, size_t sz, const char *current) {
     mill_suspend();
 }
 
-void *mill_chr(chan ch, void *val, size_t sz, const char *current) {
+void *mill_chr(chan ch, size_t sz, const char *current) {
     mill_trace(current, "chr(<%d>)", (int)ch->debug.id);
     if(ch->sz != sz)
         mill_panic("receive of a type not matching the channel");
+    void *val = mill_valbuf_alloc(&mill_running->valbuf, sz);
     /* Try to get a value straight away. */
     if(mill_dequeue(ch, val))
         return val;
