@@ -44,3 +44,4 @@ tests/*.log
 perf/.dirstamp
 perf/go
 perf/ctxswitch
+perf/chan
