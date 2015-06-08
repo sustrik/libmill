@@ -67,49 +67,6 @@ chan mill_chdup(chan ch, const char *current) {
     return ch;
 }
 
-void mill_chs(chan ch, void *val, size_t sz, const char *current) {
-    mill_trace(current, "chr(<%d>)", (int)ch->debug.id);
-    mill_choose_init(current);
-    struct mill_clause cl;
-    mill_choose_out(&cl, ch, val, sz, 0);
-    mill_choose_wait();
-}
-
-void *mill_chr(chan ch, size_t sz, const char *current) {
-    mill_trace(current, "chr(<%d>)", (int)ch->debug.id);
-    mill_choose_init(current);
-    struct mill_clause cl;
-    mill_choose_in(&cl, ch, sz, 0);
-    mill_choose_wait();
-    return mill_choose_val();
-}
-
-void mill_chdone(chan ch, void *val, size_t sz, const char *current) {
-    mill_trace(current, "chdone(<%d>)", (int)ch->debug.id);
-    if(ch->done)
-        mill_panic("chdone on already done-with channel");
-    if(ch->sz != sz)
-        mill_panic("send of a type not matching the channel");
-    /* Panic if there are other senders on the same channel. */
-    if(!mill_list_empty(&ch->sender.clauses))
-        mill_panic("send to done-with channel");
-    /* Put the channel into done-with mode. */
-    ch->done = 1;
-    /* Store the terminal value into a special position in the channel. */
-    memcpy(((char*)(ch + 1)) + (ch->bufsz * ch->sz) , val, ch->sz);
-    /* Resume all the receivers currently waiting on the channel. */
-    while(!mill_list_empty(&ch->receiver.clauses)) {
-        struct mill_clause *cl = mill_cont(
-            mill_list_begin(&ch->receiver.clauses), struct mill_clause, epitem);
-        void *dst = cl->val;
-        if(!dst)
-            dst = mill_valbuf_alloc(&cl->cr->valbuf, ch->sz);
-        memcpy(dst, val, ch->sz);
-        mill_resume(cl->cr, cl->idx);
-        mill_list_erase(&ch->receiver.clauses, &cl->epitem);
-    }
-}
-
 void mill_chclose(chan ch, const char *current) {
     mill_trace(current, "chclose(<%d>)", (int)ch->debug.id);
     assert(ch->refcount >= 1);
@@ -279,5 +236,48 @@ int mill_choose_wait(void) {
 
 void *mill_choose_val(void) {
     return mill_valbuf_get(&mill_running->valbuf);
+}
+
+void mill_chs(chan ch, void *val, size_t sz, const char *current) {
+    mill_trace(current, "chr(<%d>)", (int)ch->debug.id);
+    mill_choose_init(current);
+    struct mill_clause cl;
+    mill_choose_out(&cl, ch, val, sz, 0);
+    mill_choose_wait();
+}
+
+void *mill_chr(chan ch, size_t sz, const char *current) {
+    mill_trace(current, "chr(<%d>)", (int)ch->debug.id);
+    mill_choose_init(current);
+    struct mill_clause cl;
+    mill_choose_in(&cl, ch, sz, 0);
+    mill_choose_wait();
+    return mill_choose_val();
+}
+
+void mill_chdone(chan ch, void *val, size_t sz, const char *current) {
+    mill_trace(current, "chdone(<%d>)", (int)ch->debug.id);
+    if(ch->done)
+        mill_panic("chdone on already done-with channel");
+    if(ch->sz != sz)
+        mill_panic("send of a type not matching the channel");
+    /* Panic if there are other senders on the same channel. */
+    if(!mill_list_empty(&ch->sender.clauses))
+        mill_panic("send to done-with channel");
+    /* Put the channel into done-with mode. */
+    ch->done = 1;
+    /* Store the terminal value into a special position in the channel. */
+    memcpy(((char*)(ch + 1)) + (ch->bufsz * ch->sz) , val, ch->sz);
+    /* Resume all the receivers currently waiting on the channel. */
+    while(!mill_list_empty(&ch->receiver.clauses)) {
+        struct mill_clause *cl = mill_cont(
+            mill_list_begin(&ch->receiver.clauses), struct mill_clause, epitem);
+        void *dst = cl->val;
+        if(!dst)
+            dst = mill_valbuf_alloc(&cl->cr->valbuf, ch->sz);
+        memcpy(dst, val, ch->sz);
+        mill_resume(cl->cr, cl->idx);
+        mill_list_erase(&ch->receiver.clauses, &cl->epitem);
+    }
 }
 
