@@ -79,12 +79,17 @@ void mill_chclose(chan ch, const char *current) {
     }
 }
 
-void mill_choose_init(const char *current) {
-    mill_trace(current, "choose()");
+static void mill_choose_init_(const char *current) {
     mill_set_current(&mill_running->debug, current);
     mill_slist_init(&mill_running->u_choose.clauses);
     mill_running->u_choose.othws = 0;
     mill_running->u_choose.available = 0;
+}
+
+void mill_choose_init(const char *current) {
+    mill_trace(current, "choose()");
+    mill_running->state = MILL_CHOOSE;
+    mill_choose_init_(current);
 }
 
 void mill_choose_in(void *clause, chan ch, size_t sz, int idx) {
@@ -221,7 +226,6 @@ int mill_choose_wait(void) {
     }
     /* In all other cases block and wait for an available channel. */
     else {
-        mill_running->state = MILL_CHOOSE;
         res = mill_suspend();
     }
     /* Clean-up the clause lists in queried channels. */
@@ -240,7 +244,8 @@ void *mill_choose_val(void) {
 
 void mill_chs(chan ch, void *val, size_t sz, const char *current) {
     mill_trace(current, "chr(<%d>)", (int)ch->debug.id);
-    mill_choose_init(current);
+    mill_choose_init_(current);
+    mill_running->state = MILL_CHS;
     struct mill_clause cl;
     mill_choose_out(&cl, ch, val, sz, 0);
     mill_choose_wait();
@@ -248,7 +253,8 @@ void mill_chs(chan ch, void *val, size_t sz, const char *current) {
 
 void *mill_chr(chan ch, size_t sz, const char *current) {
     mill_trace(current, "chr(<%d>)", (int)ch->debug.id);
-    mill_choose_init(current);
+    mill_running->state = MILL_CHR;
+    mill_choose_init_(current);
     struct mill_clause cl;
     mill_choose_in(&cl, ch, sz, 0);
     mill_choose_wait();
