@@ -123,47 +123,20 @@ chan mill_chdup(chan ch, const char *current) {
 }
 
 void mill_chs(chan ch, void *val, size_t sz, const char *current) {
-    mill_trace(current, "chs(<%d>)", (int)ch->debug.id);
-    if(ch->done)
-        mill_panic("send to done-with channel");
-    if(ch->sz != sz)
-        mill_panic("send of a type not matching the channel");
-    /* Try to enqueue the value straight away. */
-    if(mill_enqueue(ch, val))
-        return;
-    /* If there's no free space in the buffer we are going to yield
-       till a receiver arrives. */
+    mill_trace(current, "chr(<%d>)", (int)ch->debug.id);
+    mill_choose_init(current);
     struct mill_clause cl;
-    cl.cr = mill_running;
-    mill_running->state = MILL_CHS;
-    cl.ep = &ch->sender;
-    cl.val = val;
-    mill_list_insert(&ch->sender.clauses, &cl.epitem, NULL);
-    mill_running->u_chs.clause = &cl;
-    mill_set_current(&mill_running->debug, current);
-    mill_suspend();
+    mill_choose_out(&cl, ch, val, sz, 0);
+    mill_choose_wait();
 }
 
 void *mill_chr(chan ch, size_t sz, const char *current) {
     mill_trace(current, "chr(<%d>)", (int)ch->debug.id);
-    if(ch->sz != sz)
-        mill_panic("receive of a type not matching the channel");
-    void *val = mill_valbuf_alloc(&mill_running->valbuf, sz);
-    /* Try to get a value straight away. */
-    if(mill_dequeue(ch, val))
-        return val;
-    /* If there's no message in the buffer we are going to yield
-       till a sender arrives. */
+    mill_choose_init(current);
     struct mill_clause cl;
-    cl.cr = mill_running;
-    mill_running->state = MILL_CHR;
-    cl.ep = &ch->receiver;
-    cl.val = val;
-    mill_list_insert(&ch->receiver.clauses, &cl.epitem, NULL);
-    mill_running->u_chr.clause = &cl;
-    mill_set_current(&mill_running->debug, current);
-    mill_suspend();
-    return val;
+    mill_choose_in(&cl, ch, sz, 0);
+    mill_choose_wait();
+    return mill_choose_val();
 }
 
 void mill_chdone(chan ch, void *val, size_t sz, const char *current) {
