@@ -48,6 +48,7 @@ struct mill_ready {
     struct mill_slist_item item;
 };
 
+/* This structure covers fdwait and msleep operations. */
 struct mill_fdwait {
     /* Item in the global list of timers. */
     struct mill_list_item item;
@@ -55,14 +56,7 @@ struct mill_fdwait {
     uint64_t expiry;
 };
 
-struct mill_chr {
-    struct mill_clause *clause;
-};
-
-struct mill_chs {
-    struct mill_clause *clause;
-};
-
+/* This structure covers chr, chs and choose operations. */
 struct mill_choose {
     /* List of clauses in the 'choose' statement. */
     struct mill_slist clauses;
@@ -78,10 +72,7 @@ struct mill_cr {
     enum mill_state state;
 
     struct mill_ready u_ready;
-    /* u_fdwait is also used by msleep(). */
     struct mill_fdwait u_fdwait;
-    struct mill_chr u_chr;
-    struct mill_chs u_chs;
     struct mill_choose u_choose;
 
     /* Stored coroutine context while it is not executing. */
