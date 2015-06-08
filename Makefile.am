@@ -91,8 +91,10 @@ TESTS = $(check_PROGRAMS)
 
 noinst_PROGRAMS = \
     perf/go\
-    perf/ctxswitch \
-    perf/chan
+    perf/ctxswitch\
+    perf/chan\
+    perf/chs\
+    perf/chr
 
 LDADD = libmill.la
 

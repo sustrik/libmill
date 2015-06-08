@@ -45,3 +45,5 @@ perf/.dirstamp
 perf/go
 perf/ctxswitch
 perf/chan
+perf/chs
+perf/chr
