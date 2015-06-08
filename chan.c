@@ -42,10 +42,7 @@ static int mill_enqueue(chan ch, void *val) {
     if(!mill_list_empty(&ch->receiver.clauses)) {
         struct mill_clause *cl = mill_cont(
             mill_list_begin(&ch->receiver.clauses), struct mill_clause, epitem);
-        void *dst = cl->val;
-        if(!dst)
-            dst = mill_valbuf_alloc(&cl->cr->valbuf, ch->sz);
-        memcpy(dst, val, ch->sz);
+        memcpy(mill_valbuf_alloc(&cl->cr->valbuf, ch->sz), val, ch->sz);
         mill_resume(cl->cr, cl->idx);
         mill_list_erase(&ch->receiver.clauses, &cl->epitem);
         return 1;
@@ -61,10 +58,8 @@ static int mill_enqueue(chan ch, void *val) {
 }
 
 /* Pop one value from the channel buffer. */
-static int mill_dequeue(chan ch, void *val) {
-    void *dst = val;
-    if(!dst)
-        dst = mill_valbuf_alloc(
+static int mill_dequeue(chan ch) {
+    void *dst = mill_valbuf_alloc(
             &mill_cont(mill_list_begin(&ch->receiver.clauses),
             struct mill_clause, epitem)->cr->valbuf, ch->sz);
     /* If there's a sender already waiting, let's resume it. */
@@ -254,7 +249,7 @@ int mill_choose_wait(void) {
                 if(!chosen) {
                     int ok = cl->ep->type == MILL_SENDER ?
                         mill_enqueue(mill_getchan(cl->ep), cl->val) :
-                        mill_dequeue(mill_getchan(cl->ep), NULL);
+                        mill_dequeue(mill_getchan(cl->ep));
                     assert(ok);
                     res = cl->idx;
                     break;
