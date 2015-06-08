@@ -78,7 +78,7 @@ struct mill_cr {
     /* Stored coroutine context while it is not executing. */
     struct mill_ctx ctx;
 
-    /* Place to temporarily store the received value when doing choose. */
+    /* Place to temporarily store the value received from a channel. */
     struct mill_valbuf valbuf;
 
     /* Argument to resume() call being passed to the blocked suspend() call. */

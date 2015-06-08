@@ -36,56 +36,6 @@
 
 MILL_CT_ASSERT(MILL_CLAUSELEN == sizeof(struct mill_clause));
 
-/* Add new item to the channel buffer. */
-static int mill_enqueue(chan ch, void *val) {
-    /* If there's a receiver already waiting, let's resume it. */
-    if(!mill_list_empty(&ch->receiver.clauses)) {
-        struct mill_clause *cl = mill_cont(
-            mill_list_begin(&ch->receiver.clauses), struct mill_clause, epitem);
-        memcpy(mill_valbuf_alloc(&cl->cr->valbuf, ch->sz), val, ch->sz);
-        mill_resume(cl->cr, cl->idx);
-        mill_list_erase(&ch->receiver.clauses, &cl->epitem);
-        return 1;
-    }
-    /* The buffer is full. */
-    if(ch->items >= ch->bufsz)
-        return 0;
-    /* Write the value to the buffer. */
-    size_t pos = (ch->first + ch->items) % ch->bufsz;
-    memcpy(((char*)(ch + 1)) + (pos * ch->sz) , val, ch->sz);
-    ++ch->items;
-    return 1;
-}
-
-/* Pop one value from the channel buffer. */
-static int mill_dequeue(chan ch) {
-    void *dst = mill_valbuf_alloc(
-            &mill_cont(mill_list_begin(&ch->receiver.clauses),
-            struct mill_clause, epitem)->cr->valbuf, ch->sz);
-    /* If there's a sender already waiting, let's resume it. */
-    struct mill_clause *cl = mill_cont(
-        mill_list_begin(&ch->sender.clauses), struct mill_clause, epitem);
-    if(cl) {
-        memcpy(dst, cl->val, ch->sz);
-        mill_resume(cl->cr, cl->idx);
-        mill_list_erase(&ch->sender.clauses, &cl->epitem);
-        return 1;
-    }
-    /* The buffer is empty. */
-    if(!ch->items) {
-        if(!ch->done)
-            return 0;
-        /* Receiving from a closed channel yields done-with value. */
-        memcpy(dst, ((char*)(ch + 1)) + (ch->bufsz * ch->sz), ch->sz);
-        return 1;
-    }
-    /* Get the value from the buffer. */
-    memcpy(dst, ((char*)(ch + 1)) + (ch->first * ch->sz), ch->sz);
-    ch->first = (ch->first + 1) % ch->bufsz;
-    --ch->items;
-    return 1;
-}
-
 chan mill_chmake(size_t sz, size_t bufsz, const char *created) {
     /* If there's at least one channel created in the user's code
        we want the debug functions to get into the binary. */
@@ -232,6 +182,56 @@ void mill_choose_otherwise(void) {
     if(mill_running->u_choose.othws != 0)
         mill_panic("multiple 'otherwise' clauses in a choose statement");
     mill_running->u_choose.othws = 1;
+}
+
+/* Push new item to the channel. */
+static int mill_enqueue(chan ch, void *val) {
+    /* If there's a receiver already waiting, let's resume it. */
+    if(!mill_list_empty(&ch->receiver.clauses)) {
+        struct mill_clause *cl = mill_cont(
+            mill_list_begin(&ch->receiver.clauses), struct mill_clause, epitem);
+        memcpy(mill_valbuf_alloc(&cl->cr->valbuf, ch->sz), val, ch->sz);
+        mill_resume(cl->cr, cl->idx);
+        mill_list_erase(&ch->receiver.clauses, &cl->epitem);
+        return 1;
+    }
+    /* The buffer is full. */
+    if(ch->items >= ch->bufsz)
+        return 0;
+    /* Write the value to the buffer. */
+    size_t pos = (ch->first + ch->items) % ch->bufsz;
+    memcpy(((char*)(ch + 1)) + (pos * ch->sz) , val, ch->sz);
+    ++ch->items;
+    return 1;
+}
+
+/* Pop one value from the channel. */
+static int mill_dequeue(chan ch) {
+    void *dst = mill_valbuf_alloc(
+            &mill_cont(mill_list_begin(&ch->receiver.clauses),
+            struct mill_clause, epitem)->cr->valbuf, ch->sz);
+    /* If there's a sender already waiting, let's resume it. */
+    struct mill_clause *cl = mill_cont(
+        mill_list_begin(&ch->sender.clauses), struct mill_clause, epitem);
+    if(cl) {
+        memcpy(dst, cl->val, ch->sz);
+        mill_resume(cl->cr, cl->idx);
+        mill_list_erase(&ch->sender.clauses, &cl->epitem);
+        return 1;
+    }
+    /* The buffer is empty. */
+    if(!ch->items) {
+        if(!ch->done)
+            return 0;
+        /* Receiving from a closed channel yields done-with value. */
+        memcpy(dst, ((char*)(ch + 1)) + (ch->bufsz * ch->sz), ch->sz);
+        return 1;
+    }
+    /* Get the value from the buffer. */
+    memcpy(dst, ((char*)(ch + 1)) + (ch->first * ch->sz), ch->sz);
+    ch->first = (ch->first + 1) % ch->bufsz;
+    --ch->items;
+    return 1;
 }
 
 int mill_choose_wait(void) {
