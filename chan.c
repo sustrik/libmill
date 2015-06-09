@@ -93,7 +93,7 @@ void mill_choose_init(const char *current) {
 }
 
 void mill_choose_in(void *clause, chan ch, size_t sz, int idx) {
-    if(ch->sz != sz)
+    if(mill_slow(ch->sz != sz))
         mill_panic("receive of a type not matching the channel");
     /* Find out whether the clause is immediately available. */
     int available = ch->done || !mill_list_empty(&ch->sender.clauses) ||
@@ -116,9 +116,9 @@ void mill_choose_in(void *clause, chan ch, size_t sz, int idx) {
 }
 
 void mill_choose_out(void *clause, chan ch, void *val, size_t sz, int idx) {
-    if(ch->done)
+    if(mill_slow(ch->done))
         mill_panic("send to done-with channel");
-    if(ch->sz != sz)
+    if(mill_slow(ch->sz != sz))
         mill_panic("send of a type not matching the channel");
     /* Find out whether the clause is immediately available. */
     int available = !mill_list_empty(&ch->receiver.clauses) ||
@@ -141,7 +141,7 @@ void mill_choose_out(void *clause, chan ch, void *val, size_t sz, int idx) {
 }
 
 void mill_choose_otherwise(void) {
-    if(mill_running->u_choose.othws != 0)
+    if(mill_slow(mill_running->u_choose.othws != 0))
         mill_panic("multiple 'otherwise' clauses in a choose statement");
     mill_running->u_choose.othws = 1;
 }
@@ -263,12 +263,12 @@ void *mill_chr(chan ch, size_t sz, const char *current) {
 
 void mill_chdone(chan ch, void *val, size_t sz, const char *current) {
     mill_trace(current, "chdone(<%d>)", (int)ch->debug.id);
-    if(ch->done)
+    if(mill_slow(ch->done))
         mill_panic("chdone on already done-with channel");
-    if(ch->sz != sz)
+    if(mill_slow(ch->sz != sz))
         mill_panic("send of a type not matching the channel");
     /* Panic if there are other senders on the same channel. */
-    if(!mill_list_empty(&ch->sender.clauses))
+    if(mill_slow(!mill_list_empty(&ch->sender.clauses)))
         mill_panic("send to done-with channel");
     /* Put the channel into done-with mode. */
     ch->done = 1;
@@ -278,10 +278,7 @@ void mill_chdone(chan ch, void *val, size_t sz, const char *current) {
     while(!mill_list_empty(&ch->receiver.clauses)) {
         struct mill_clause *cl = mill_cont(
             mill_list_begin(&ch->receiver.clauses), struct mill_clause, epitem);
-        void *dst = cl->val;
-        if(!dst)
-            dst = mill_valbuf_alloc(&cl->cr->valbuf, ch->sz);
-        memcpy(dst, val, ch->sz);
+        memcpy(mill_valbuf_alloc(&cl->cr->valbuf, ch->sz), val, ch->sz);
         mill_resume(cl->cr, cl->idx);
         mill_list_erase(&ch->receiver.clauses, &cl->epitem);
     }
