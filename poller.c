@@ -108,14 +108,14 @@ int mill_fdwait(int fd, int events, long timeout, const char *current) {
         }
         /* Register the new file descriptor in the pollset. */
         if(events & FDW_IN) {
-            if(mill_pollset_items[i].in)
+            if(mill_slow(mill_pollset_items[i].in))
                 mill_panic(
                     "multiple coroutines waiting for a single file descriptor");
             mill_pollset_fds[i].events |= POLLIN;
             mill_pollset_items[i].in = &mill_running->u_fdwait;
         }
         if(events & FDW_OUT) {
-            if(mill_pollset_items[i].out)
+            if(mill_slow(mill_pollset_items[i].out))
                 mill_panic(
                     "multiple coroutines waiting for a single file descriptor");
             mill_pollset_fds[i].events |= POLLOUT;
@@ -155,7 +155,7 @@ int mill_fdwait(int fd, int events, long timeout, const char *current) {
 
 void mill_wait(void) {
     /* The execution of the entire process would block. Let's panic. */
-    if(mill_list_empty(&mill_timers) && !mill_pollset_size)
+    if(mill_slow(mill_list_empty(&mill_timers) && !mill_pollset_size))
         mill_panic("global hang-up");
 
     int fired = 0;
