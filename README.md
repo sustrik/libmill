@@ -2,8 +2,7 @@ LIBMILL
 =======
 
 Libmill is a library that introduces Go-style concurrency to C.
-
-Libmill works with x86-64, gcc and Linux/OSX.
+It works with x86-64, gcc and Linux/OSX.
 
 Documentation
 -------------
