@@ -197,31 +197,30 @@ static int mill_dequeue(chan ch) {
 }
 
 int mill_choose_wait(void) {
-    struct mill_choose *u_choose = &mill_running->u_choose;
+    struct mill_choose *uc = &mill_running->u_choose;
     int res = -1;
     struct mill_slist_item *it;
     /* If there are clauses that are immediately available
        randomly choose one of them. */
-    if(u_choose->available > 0) {
-        int chosen = random() % (u_choose->available);
-        for (it = mill_slist_begin(&u_choose->clauses); it != NULL;
-              it = mill_slist_next(it)) {
-            struct mill_clause *cl = mill_cont(it, struct mill_clause, chitem);
+    if(uc->available > 0) {
+        int chosen = random() % (uc->available);
+        struct mill_clause *cl;
+        for(it = mill_slist_begin(&uc->clauses); it; it = mill_slist_next(it)) {
+            cl = mill_cont(it, struct mill_clause, chitem);
             if(cl->available) {
-                if(!chosen) {
-                    int ok = cl->ep->type == MILL_SENDER ?
-                        mill_enqueue(mill_getchan(cl->ep), cl->val) :
-                        mill_dequeue(mill_getchan(cl->ep));
-                    assert(ok);
-                    res = cl->idx;
+                if(!chosen)
                     break;
-                }
                 --chosen;
             }
         }
+        int ok = cl->ep->type == MILL_SENDER ?
+            mill_enqueue(mill_getchan(cl->ep), cl->val) :
+            mill_dequeue(mill_getchan(cl->ep));
+        assert(ok);
+        res = cl->idx;
     }
     /* If not so but there's an 'otherwise' clause we can go straight to it. */
-    else if(u_choose->othws) {
+    else if(uc->othws) {
         res = -1;
     }
     /* In all other cases block and wait for an available channel. */
@@ -229,7 +228,7 @@ int mill_choose_wait(void) {
         res = mill_suspend();
     }
     /* Clean-up the clause lists in queried channels. */
-    for(it = mill_slist_begin(&u_choose->clauses); it;
+    for(it = mill_slist_begin(&uc->clauses); it;
           it = mill_slist_next(it)) {
         struct mill_clause *cl = mill_cont(it, struct mill_clause, chitem);
         mill_list_erase(&cl->ep->clauses, &cl->epitem);
