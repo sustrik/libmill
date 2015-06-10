@@ -69,14 +69,14 @@ chan mill_chdup(chan ch, const char *current) {
 
 void mill_chclose(chan ch, const char *current) {
     mill_trace(current, "chclose(<%d>)", (int)ch->debug.id);
-    assert(ch->refcount >= 1);
+    assert(ch->refcount > 0);
     --ch->refcount;
-    if(!ch->refcount) {
-        mill_list_term(&ch->sender.clauses);
-        mill_list_term(&ch->receiver.clauses);
-        mill_unregister_chan(&ch->debug);
-        free(ch);
-    }
+    if(ch->refcount)
+        return;
+    mill_list_term(&ch->sender.clauses);
+    mill_list_term(&ch->receiver.clauses);
+    mill_unregister_chan(&ch->debug);
+    free(ch);
 }
 
 static void mill_choose_init_(const char *current) {
@@ -201,11 +201,11 @@ int mill_choose_wait(void) {
         struct mill_clause *cl;
         for(it = mill_slist_begin(&uc->clauses); it; it = mill_slist_next(it)) {
             cl = mill_cont(it, struct mill_clause, chitem);
-            if(cl->available) {
-                if(!chosen)
-                    break;
-                --chosen;
-            }
+            if(!cl->available)
+                continue;
+            if(!chosen)
+                break;
+            --chosen;
         }
         if(cl->ep->type == MILL_SENDER)
             mill_enqueue(mill_getchan(cl->ep), cl->val);
@@ -214,13 +214,11 @@ int mill_choose_wait(void) {
         res = cl->idx;
     }
     /* If not so but there's an 'otherwise' clause we can go straight to it. */
-    else if(uc->othws) {
+    else if(uc->othws)
         res = -1;
-    }
     /* In all other cases block and wait for an available channel. */
-    else {
+    else
         res = mill_suspend();
-    }
     /* Clean-up the clause lists in queried channels. */
     for(it = mill_slist_begin(&uc->clauses); it; it = mill_slist_next(it)) {
         struct mill_clause *cl = mill_cont(it, struct mill_clause, chitem);
