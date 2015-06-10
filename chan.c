@@ -111,7 +111,7 @@ void mill_choose_in(void *clause, chan ch, size_t sz, int idx) {
     cl->idx = idx;
     cl->available = available;
     mill_slist_push_back(&mill_running->u_choose.clauses, &cl->chitem);
-    /* Add the clause to the channel's list of waiting clauses. */
+    /* Add the clause to the channel's list of waiting receivers. */
     mill_list_insert(&ch->receiver.clauses, &cl->epitem, NULL);
 }
 
@@ -136,7 +136,7 @@ void mill_choose_out(void *clause, chan ch, void *val, size_t sz, int idx) {
     cl->available = available;
     cl->idx = idx;
     mill_slist_push_back(&mill_running->u_choose.clauses, &cl->chitem);
-    /* Add the clause to the channel's list of waiting clauses. */
+    /* Add the clause to the channel's list of waiting senders. */
     mill_list_insert(&ch->sender.clauses, &cl->epitem, NULL);
 }
 
