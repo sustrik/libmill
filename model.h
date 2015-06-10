@@ -107,7 +107,6 @@ struct mill_ep {
 
 /* Channel. */
 struct mill_chan {
-
     /* The size of the elements stored in the channel, in bytes. */
     size_t sz;
     /* Channel holds two lists, the list of clauses waiting to send and list
@@ -122,7 +121,8 @@ struct mill_chan {
     /* The message buffer directly follows the chan structure. 'bufsz' specifies
        the maximum capacity of the buffer. 'items' is the number of messages
        currently in the buffer. 'first' is the index of the next message to
-       be received from the buffer. */
+       be received from the buffer. There's one extra element at the end of
+       the buffer used to store the message supplied by chdone() function. */
     size_t bufsz;
     size_t items;
     size_t first;
