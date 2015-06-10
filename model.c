@@ -27,8 +27,8 @@
 
 #include <assert.h>
 
-struct mill_cr main_cr = {0};
-struct mill_cr *mill_running = &main_cr;
+struct mill_cr mill_main = {0};
+struct mill_cr *mill_running = &mill_main;
 
 struct mill_chan *mill_getchan(struct mill_ep *ep) {
     switch(ep->type) {

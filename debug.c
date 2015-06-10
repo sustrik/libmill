@@ -37,7 +37,7 @@ static int mill_next_cr_id = 1;
 
 /* List of all coroutines. */
 static struct mill_list mill_all_crs = {
-    &main_cr.debug.item, &main_cr.debug.item};
+    &mill_main.debug.item, &mill_main.debug.item};
 
 /* ID to be assigned to the next created channel. */
 static int mill_next_chan_id = 1;

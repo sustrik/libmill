@@ -92,7 +92,7 @@ struct mill_cr {
 };
 
 /* Fake coroutine corresponding to the main thread of execution. */
-extern struct mill_cr main_cr;
+extern struct mill_cr mill_main;
 
 /* The coroutine that is running at the moment. */
 extern struct mill_cr *mill_running;
