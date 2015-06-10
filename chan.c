@@ -147,7 +147,7 @@ void mill_choose_otherwise(void) {
 }
 
 /* Push new item to the channel. */
-static int mill_enqueue(chan ch, void *val) {
+static void mill_enqueue(chan ch, void *val) {
     /* If there's a receiver already waiting, let's resume it. */
     if(!mill_list_empty(&ch->receiver.clauses)) {
         struct mill_clause *cl = mill_cont(
@@ -155,20 +155,17 @@ static int mill_enqueue(chan ch, void *val) {
         memcpy(mill_valbuf_alloc(&cl->cr->valbuf, ch->sz), val, ch->sz);
         mill_resume(cl->cr, cl->idx);
         mill_list_erase(&ch->receiver.clauses, &cl->epitem);
-        return 1;
+        return;
     }
-    /* The buffer is full. */
-    if(ch->items >= ch->bufsz)
-        return 0;
     /* Write the value to the buffer. */
+    assert(ch->items < ch->bufsz);
     size_t pos = (ch->first + ch->items) % ch->bufsz;
     memcpy(((char*)(ch + 1)) + (pos * ch->sz) , val, ch->sz);
     ++ch->items;
-    return 1;
 }
 
 /* Pop one value from the channel. */
-static int mill_dequeue(chan ch) {
+static void mill_dequeue(chan ch) {
     void *dst = mill_valbuf_alloc(
             &mill_cont(mill_list_begin(&ch->receiver.clauses),
             struct mill_clause, epitem)->cr->valbuf, ch->sz);
@@ -179,21 +176,18 @@ static int mill_dequeue(chan ch) {
         memcpy(dst, cl->val, ch->sz);
         mill_resume(cl->cr, cl->idx);
         mill_list_erase(&ch->sender.clauses, &cl->epitem);
-        return 1;
-    }
-    /* The buffer is empty. */
-    if(!ch->items) {
-        if(!ch->done)
-            return 0;
-        /* Receiving from a closed channel yields done-with value. */
-        memcpy(dst, ((char*)(ch + 1)) + (ch->bufsz * ch->sz), ch->sz);
-        return 1;
+        return;
     }
     /* Get the value from the buffer. */
-    memcpy(dst, ((char*)(ch + 1)) + (ch->first * ch->sz), ch->sz);
-    ch->first = (ch->first + 1) % ch->bufsz;
-    --ch->items;
-    return 1;
+    if(ch->items) {
+        memcpy(dst, ((char*)(ch + 1)) + (ch->first * ch->sz), ch->sz);
+        ch->first = (ch->first + 1) % ch->bufsz;
+        --ch->items;
+        return;
+    }
+    /* If the buffer is empty, the channel must have been done-with. */
+    assert(ch->done);
+    memcpy(dst, ((char*)(ch + 1)) + (ch->bufsz * ch->sz), ch->sz);
 }
 
 int mill_choose_wait(void) {
@@ -213,10 +207,10 @@ int mill_choose_wait(void) {
                 --chosen;
             }
         }
-        int ok = cl->ep->type == MILL_SENDER ?
-            mill_enqueue(mill_getchan(cl->ep), cl->val) :
+        if(cl->ep->type == MILL_SENDER)
+            mill_enqueue(mill_getchan(cl->ep), cl->val);
+        else
             mill_dequeue(mill_getchan(cl->ep));
-        assert(ok);
         res = cl->idx;
     }
     /* If not so but there's an 'otherwise' clause we can go straight to it. */
@@ -228,8 +222,7 @@ int mill_choose_wait(void) {
         res = mill_suspend();
     }
     /* Clean-up the clause lists in queried channels. */
-    for(it = mill_slist_begin(&uc->clauses); it;
-          it = mill_slist_next(it)) {
+    for(it = mill_slist_begin(&uc->clauses); it; it = mill_slist_next(it)) {
         struct mill_clause *cl = mill_cont(it, struct mill_clause, chitem);
         mill_list_erase(&cl->ep->clauses, &cl->epitem);
     }
