@@ -352,59 +352,68 @@ tcpclose(s);
 
 <h3 id="debug">Debugging</h3>
 
-<p>When debugging a program you may want to inspect the coroutines being
-run and the channels being used. Use <tt>goredump()</tt> function to do
-that.</p>
+<p>Libmill provides a couple of functions to help with the debugging. They can
+be invoked either directly from the program or manually from the debugger.</p>
 
-<p>It can be used in your program but also directly from the debugger. Here's
-an example <tt>gdb</tt> session:</p>
+<p>When inspecting debug output following rules apply:</>
+
+<ol>
+  <li>Both coroutines and channels are represented by decimal IDs.</li>
+  <li>The IDs are never re-used, even if the original object was already
+      deallocated.</li>
+  <li>Coroutine IDs are printed in curly braces, e.g. <tt>{24}</tt>.</li>
+  <li>Channel IDs are printed in pointy braces, e.g. <tt>&lt;24&gt;</tt>.</li>
+</ol>
+
+<h4>goredump</h4>
+
+<p>When debugging a program you may want to inspect the coroutines being
+run and the channels being used. Use <tt>goredump</tt> function to do
+exactly that.</p>
+
+<p>Here's an example of how to use it directly from a <tt>gdb</tt>
+   session:</p>
 
 <pre>
 Breakpoint 1, main () at foo.c:57
 57	    if(quux &lt; 0) {
 (gdb) p goredump()
 
-COROUTINE   state                  current              created
----------------------------------------------------------------
-=> (000000) running                ---                  &lt;main&gt;
-   (000001) yield()                foo.c:44             foo.c:49
-   (000002) yield()                foo.c:44             foo.c:50
-   (000003) yield()                foo.c:44             foo.c:51
-   (000004) choose(2,1)            foo.c:36             foo.c:53
-   (000005) choose(3,1)            foo.c:36             foo.c:54
-   (000006) choose(4,1)            baz.c:128            foo.c:55
+COROUTINE  state                  current           created
+----------------------------------------------------------------------
+{0}        RUNNING                ---               &lt;main&gt;
+{7}        chs(&lt;7&gt;)               foo.c:63          foo.c:157
+{8}        chr(&lt;8&gt;)               foo.c:63          foo.c:158
+{14}       choose(&lt;14&gt;,&lt;14&gt;)      foo.c:70          foo.c:258
+{15}       ready                  foo.c:35          foo.c:276
 
-CHANNEL  msgs/max    senders/receivers      refs  done  created
----------------------------------------------------------------
-(000001) 0/100       r:4,5,6                1     no    foo.c:52
-(000002) 0/0         r:4                    1     no    baz.c:9
-(000003) 0/0         r:5                    1     no    baz.c:9
-(000004) 0/0         r:6                    1     no    baz.c:9
+CHANNEL  msgs/max    senders/receivers     refs  done  created
+----------------------------------------------------------------------
+&lt;7&gt;      0/0         s:{7}                 2     no    foo.c:155
+&lt;8&gt;      0/0         r:{8}                 2     no    foo.c:156
+&lt;14&gt;     0/0         s:{14},{14}           2     no    foo.c:257
+&lt;15&gt;     22/100                            1     yes   foo.c:274
 
 $2 = void
 (gdb) 
 </pre>
 
-<p>Coroutine dump contains the list of coroutines, each tagged by its ID,
-state, pointer to the line of code that's being executed and to the line
-that created the coroutine.</p>
+<p>The first section is coroutine dump. It contains the list of all coroutines,
+each accompanied by its ID, state, the line of code that's it is executing at
+the moment and to the line that originally created the coroutine.</p>
 
-<p>State field gives you name of the operation being performed along with
-its arguments. So, for example, when a coroutine is blocked in <tt>chr()</tt>
-you'll see the ID of the channel it is trying to receive from:</p>
+<p>The dump doesn't contain coroutine name. To map the coroutine record to
+the actual coroutine in the code, check the line referenced by 'created'
+field.</p>
 
-<pre>
-COROUTINE   state                  current              created
----------------------------------------------------------------
-   (000005) chr(3)                 foo.c:12             foo.c:4
-</pre>
-
-<p>Same applies when sending to a channel:</p>
+<p>The 'state' field gives you more information about the operation being
+performed. When a coroutine is blocked in <tt>chr</tt> call, for example,
+you'll also see the ID of the channel it is trying to receive from:</p>
 
 <pre>
-COROUTINE   state                  current              created
----------------------------------------------------------------
-   (000012) chs(3)                 foo.c:17             foo.c:4
+COROUTINE  state                  current           created
+----------------------------------------------------------------------
+{8}        chr(&lt;8&gt;)               foo.c:63          foo.c:158
 </pre>
 
 <p>When <tt>choose</tt> statement is being executed a list of channel IDs
@@ -412,41 +421,59 @@ is provided, corresponding to the list of clauses in the <tt>choose</tt>
 statement:</p>
 
 <pre>
-COROUTINE   state                  current              created
----------------------------------------------------------------
-   (000005) choose(3,1)            foo.c:36             foo.c:54
+COROUTINE  state                  current           created
+----------------------------------------------------------------------
+{14}       choose(&lt;5&gt;,&lt;3&gt;)        foo.c:22          foo.c:107
 </pre>
 
-<p>Channel dump (it may be ommitted if there are no channels) reports channel
-ID, number of messages buffered in the channel, maximum channel capacity,
-channel's reference count, whether <tt>chdone()</tt> was already called and a
-pointer to the line of code that created the channel.</p> 
+<p>If there are any channels created by the user coroutine dump will be followed
+by a channel dump. Each record in the dump corresponds to one channel instance
+and contains its ID, number of messages buffered in the channel, channel
+capacity, its reference count, whether <tt>chdone</tt> was already called
+and a the line of code that created the channel.</p> 
 
-<p>Additionally, if there are any receivers waiting for messages from the
+<p>Additionally, if there are any coroutines waiting for messages from the
 channel -- whether via <tt>chr</tt> or <tt>choose</tt> -- they are reported
 like this:</p>
 
 <pre>
-CHANNEL  msgs/max    senders/receivers      refs  done  created
----------------------------------------------------------------
-(000001) 0/100       r:4,5,6                1     no    foo.c:52
+CHANNEL  msgs/max    senders/receivers     refs  done  created
+----------------------------------------------------------------------
+&lt;1&gt;      0/0         r:{4},{5}             2     no    foo.c:391
 </pre>
 
-<p>The receivers are served in the displayed order, i.e. when a new message
-is sent to the channel it will be dispatched to coroutine 4. Next one will
-go to coroutine 5 and so on.</p>
+<p>The waiting coroutines are served in the displayed order, i.e. when a new
+message is sent to the channel it will be dispatched to coroutine 4. Next one
+will go to coroutine 5 and so on.</p>
 
-<p>Similarly, waiting senders (<tt>chs</tt> or <tt>choose</tt>) are
-reported like this:</p>
+<p>Similarly, if there are coroutines trying to send message to the channel
+but unable to do so becuase the channel's buffer if full they are reported in
+the following way:</p>
 
 <pre>
-CHANNEL  msgs/max    senders/receivers      refs  done  created
----------------------------------------------------------------
-(000001) 100/100     s:12,15                1     no    baz.c:231
+CHANNEL  msgs/max    senders/receivers     refs  done  created
+----------------------------------------------------------------------
+&lt;1&gt;      100/100     r:{2},{13}            2     no    foo.c:392
 </pre>
 
 <p>If there are no coroutines waiting to send or receive messages from the
-channel the field is left empty.</p>
+channel the field is kept empty.</p>
+
+<h4>trace</h4>
+
+<p>It is possible to switch on tracing via <tt>trace</tt> function.</p>
+
+<pre>
+trace(1);
+</pre>
+
+<p>The function takes a single argument, the tracing level desired. At the
+moment there are only two tracing levels supported:</p>
+
+<ul>
+  <li>0: tracing is off; this is the default value.</li>
+  <li>1: invocations of all libmill functions are traced.</li>
+</ul>
 
 </body>
 </html>
