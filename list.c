@@ -34,12 +34,6 @@ void mill_list_init(struct mill_list *self)
     self->last = NULL;
 }
 
-void mill_list_term(struct mill_list *self)
-{
-    assert(!self->first);
-    assert(!self->last);
-}
-
 int mill_list_empty(struct mill_list *self)
 {
     return self->first ? 0 : 1;

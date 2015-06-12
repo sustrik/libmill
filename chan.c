@@ -73,8 +73,9 @@ void mill_chclose(chan ch, const char *current) {
     --ch->refcount;
     if(ch->refcount)
         return;
-    mill_list_term(&ch->sender.clauses);
-    mill_list_term(&ch->receiver.clauses);
+    if(!mill_list_empty(&ch->sender.clauses) ||
+          !mill_list_empty(&ch->receiver.clauses))
+        mill_panic("attempt to close a channel while it is still being used");
     mill_unregister_chan(&ch->debug);
     free(ch);
 }

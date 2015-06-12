@@ -84,7 +84,7 @@ void *mill_go_prologue(const char *created) {
     return (void*)cr;
 }
 
-/* The final part of go(). Cleans up when the coroutine is finished. */
+/* The final part of go(). Cleans up after the coroutine is finished. */
 void mill_go_epilogue(void) {
     mill_trace(NULL, "go() done");
     mill_unregister_cr(&mill_running->debug);
@@ -98,7 +98,7 @@ void mill_go_epilogue(void) {
 
 void mill_yield(const char *current) {
     mill_trace(current, "yield()");
-    /* If there's only one coroutine ready, no point in context switching
+    /* If there no other coroutines available, no point in context switching
        back and forth. */
     if(mill_slist_empty(&mill_ready))
         return;

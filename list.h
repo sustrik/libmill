@@ -40,10 +40,6 @@ struct mill_list {
 /* Initialise the list. To statically initialise the list use = {0}. */
 void mill_list_init(struct mill_list *self);
 
-/* Terminates the list. Note that all items must be removed before the
-   termination. */
-void mill_list_term(struct mill_list *self);
-
 /* Returns 1 is list has zero items, 0 otherwise. */
 int mill_list_empty(struct mill_list *self);
 
