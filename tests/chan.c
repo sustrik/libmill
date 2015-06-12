@@ -85,6 +85,7 @@ int main() {
     go(sender(chdup(ch3), 0, 999));
     val = chr(ch3, int);
     assert(val == 888);
+    yield();
     val = chr(ch3, int);
     assert(val == 999);
     chclose(ch3);

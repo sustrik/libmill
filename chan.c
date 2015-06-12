@@ -191,14 +191,24 @@ static void mill_dequeue(chan ch) {
     memcpy(dst, ((char*)(ch + 1)) + (ch->bufsz * ch->sz), ch->sz);
 }
 
+static void mill_choose_clean(struct mill_choose *uc, int exclude) {
+    struct mill_slist_item *it;
+    struct mill_clause *cl;
+    for(it = mill_slist_begin(&uc->clauses); it; it = mill_slist_next(it)) {
+        cl = mill_cont(it, struct mill_clause, chitem);
+        if(cl->idx == exclude)
+            continue;
+        mill_list_erase(&cl->ep->clauses, &cl->epitem);
+    }
+}
+
 int mill_choose_wait(void) {
     struct mill_choose *uc = &mill_running->u_choose;
-    int res = -1;
-    struct mill_slist_item *it;
     /* If there are clauses that are immediately available
        randomly choose one of them. */
     if(uc->available > 0) {
         int chosen = random() % (uc->available);
+        struct mill_slist_item *it;
         struct mill_clause *cl;
         for(it = mill_slist_begin(&uc->clauses); it; it = mill_slist_next(it)) {
             cl = mill_cont(it, struct mill_clause, chitem);
@@ -212,20 +222,18 @@ int mill_choose_wait(void) {
             mill_enqueue(mill_getchan(cl->ep), cl->val);
         else
             mill_dequeue(mill_getchan(cl->ep));
-        res = cl->idx;
+        mill_choose_clean(uc, -1);
+        return cl->idx;
     }
     /* If not so but there's an 'otherwise' clause we can go straight to it. */
-    else if(uc->othws)
-        res = -1;
-    /* In all other cases block and wait for an available channel. */
-    else
-        res = mill_suspend();
-    /* Clean-up the clause lists in queried channels. */
-    for(it = mill_slist_begin(&uc->clauses); it; it = mill_slist_next(it)) {
-        struct mill_clause *cl = mill_cont(it, struct mill_clause, chitem);
-        mill_list_erase(&cl->ep->clauses, &cl->epitem);
+    else if(uc->othws) {
+        mill_choose_clean(uc, -1);
+        return -1;
     }
-    assert(res >= -1);
+
+    /* In all other cases block and wait for an available channel. */
+    int res = mill_suspend();
+    mill_choose_clean(uc, res);
     return res;
 }
 
