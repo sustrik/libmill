@@ -121,7 +121,7 @@ void msleep(unsigned long ms);
 <p>To wait for an event from a file descriptor use <tt>fdwait</tt> function:</p>
 
 <pre>
-int events = fdwait(FDW_IN | FDW_OUT);
+int events = fdwait(fd, FDW_IN | FDW_OUT, -1);
 if(events & FDW_IN) {
     ...
 }
@@ -135,6 +135,8 @@ if(events & FDW_ERR) {
 
 <p>Note that error (<tt>FDW_ERR</tt>) can be returned from the function
 irrespective of whether you asked for it or not.</p>
+
+<p>The third parameter is timeout, in milliseconds. -1 means no timeout.</p>
 
 <h3 id="channels">Channels</h3>
 
@@ -259,25 +261,18 @@ special cases. Avoid using it if possible. In general, use it where you would
 use thread-local storage in a threaded program. TLS itself cannot be used with
 libmill as multiple coroutines can share the same OS thread.</p>
 
-<p>User can allocate coroutine-local data and attach it to the coroutine
-using <tt>setcls</tt> function. For example:</p>
+<p>Coroutine local data are a single pointer which can be set like this:</p>
 
 <pre>
-struct mycls {
-    int a;
-    int b;
-};
-
-void *data = malloc(sizeof(struct mycls));
+void *data = ...;
 setcls(data);
 </pre>
 
-<p>Later on the data can be accessed anywhere within the coroutine or the
-subroutines invoked from it using <tt>cls</tt> function:</p>
+<p>Later on the pointer can be accessed anywhere within the coroutine or any
+function invoked from it using <tt>cls</tt> function:</p>
 
 <pre>
-struct mycls *data = cls();
-printf("CLS: a=%d b=%d\n", data->a, data->b);
+void *data = cls();
 </pre>
 
 <p>It can be safely assumed that before coroutine-local data are set,
