@@ -231,6 +231,8 @@ int mill_choose_wait(void) {
         cl = mill_cont(it, struct mill_clause, chitem);
         mill_list_insert(&cl->ep->clauses, &cl->epitem, NULL);
     }
+    /* If choose is being performed from the running coroutine, all the parallel
+       chooses from other coroutines must be blocked on this line. */
     return mill_suspend();
 }
 
