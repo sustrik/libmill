@@ -80,6 +80,19 @@ void mill_chclose(chan ch, const char *current) {
     free(ch);
 }
 
+/* Unblock a coroutine blocked in mill_choose_wait() function.
+   It also cleans up the associated clause list. */
+static void mill_choose_unblock(struct mill_clause *cl) {
+    struct mill_slist_item *it;
+    struct mill_clause *itcl;
+    for(it = mill_slist_begin(&cl->cr->u_choose.clauses);
+          it; it = mill_slist_next(it)) {
+        itcl = mill_cont(it, struct mill_clause, chitem);
+        mill_list_erase(&itcl->ep->clauses, &itcl->epitem);
+    }
+    mill_resume(cl->cr, cl->idx);
+}
+
 static void mill_choose_init_(const char *current) {
     mill_set_current(&mill_running->debug, current);
     mill_slist_init(&mill_running->u_choose.clauses);
@@ -112,8 +125,6 @@ void mill_choose_in(void *clause, chan ch, size_t sz, int idx) {
     cl->idx = idx;
     cl->available = available;
     mill_slist_push_back(&mill_running->u_choose.clauses, &cl->chitem);
-    /* Add the clause to the channel's list of waiting receivers. */
-    mill_list_insert(&ch->receiver.clauses, &cl->epitem, NULL);
 }
 
 void mill_choose_out(void *clause, chan ch, void *val, size_t sz, int idx) {
@@ -137,8 +148,6 @@ void mill_choose_out(void *clause, chan ch, void *val, size_t sz, int idx) {
     cl->available = available;
     cl->idx = idx;
     mill_slist_push_back(&mill_running->u_choose.clauses, &cl->chitem);
-    /* Add the clause to the channel's list of waiting senders. */
-    mill_list_insert(&ch->sender.clauses, &cl->epitem, NULL);
 }
 
 void mill_choose_otherwise(void) {
@@ -154,8 +163,7 @@ static void mill_enqueue(chan ch, void *val) {
         struct mill_clause *cl = mill_cont(
             mill_list_begin(&ch->receiver.clauses), struct mill_clause, epitem);
         memcpy(mill_valbuf_alloc(&cl->cr->valbuf, ch->sz), val, ch->sz);
-        mill_resume(cl->cr, cl->idx);
-        mill_list_erase(&ch->receiver.clauses, &cl->epitem);
+        mill_choose_unblock(cl);
         return;
     }
     /* Write the value to the buffer. */
@@ -166,50 +174,36 @@ static void mill_enqueue(chan ch, void *val) {
 }
 
 /* Pop one value from the channel. */
-static void mill_dequeue(chan ch) {
-    void *dst = mill_valbuf_alloc(
-            &mill_cont(mill_list_begin(&ch->receiver.clauses),
-            struct mill_clause, epitem)->cr->valbuf, ch->sz);
+static void mill_dequeue(chan ch, void *val) {
     /* If there's a sender already waiting, let's resume it. */
     struct mill_clause *cl = mill_cont(
         mill_list_begin(&ch->sender.clauses), struct mill_clause, epitem);
     if(cl) {
-        memcpy(dst, cl->val, ch->sz);
-        mill_resume(cl->cr, cl->idx);
-        mill_list_erase(&ch->sender.clauses, &cl->epitem);
+        memcpy(val, cl->val, ch->sz);
+        mill_choose_unblock(cl);
         return;
     }
     /* Get the value from the buffer. */
     if(ch->items) {
-        memcpy(dst, ((char*)(ch + 1)) + (ch->first * ch->sz), ch->sz);
+        memcpy(val, ((char*)(ch + 1)) + (ch->first * ch->sz), ch->sz);
         ch->first = (ch->first + 1) % ch->bufsz;
         --ch->items;
         return;
     }
-    /* If the buffer is empty, the channel must have been done-with. */
+    /* If the buffer is empty, chdone() must have been already called. */
     assert(ch->done);
-    memcpy(dst, ((char*)(ch + 1)) + (ch->bufsz * ch->sz), ch->sz);
-}
-
-static void mill_choose_clean(struct mill_choose *uc, int exclude) {
-    struct mill_slist_item *it;
-    struct mill_clause *cl;
-    for(it = mill_slist_begin(&uc->clauses); it; it = mill_slist_next(it)) {
-        cl = mill_cont(it, struct mill_clause, chitem);
-        if(cl->idx == exclude)
-            continue;
-        mill_list_erase(&cl->ep->clauses, &cl->epitem);
-    }
+    memcpy(val, ((char*)(ch + 1)) + (ch->bufsz * ch->sz), ch->sz);
 }
 
 int mill_choose_wait(void) {
     struct mill_choose *uc = &mill_running->u_choose;
+    struct mill_slist_item *it;
+    struct mill_clause *cl;
+
     /* If there are clauses that are immediately available
        randomly choose one of them. */
     if(uc->available > 0) {
         int chosen = random() % (uc->available);
-        struct mill_slist_item *it;
-        struct mill_clause *cl;
         for(it = mill_slist_begin(&uc->clauses); it; it = mill_slist_next(it)) {
             cl = mill_cont(it, struct mill_clause, chitem);
             if(!cl->available)
@@ -218,23 +212,26 @@ int mill_choose_wait(void) {
                 break;
             --chosen;
         }
+        struct mill_chan *ch = mill_getchan(cl->ep);
         if(cl->ep->type == MILL_SENDER)
-            mill_enqueue(mill_getchan(cl->ep), cl->val);
+            mill_enqueue(ch, cl->val);
         else
-            mill_dequeue(mill_getchan(cl->ep));
-        mill_choose_clean(uc, -1);
+            mill_dequeue(mill_getchan(cl->ep),
+                mill_valbuf_alloc(&cl->cr->valbuf, ch->sz));
         return cl->idx;
     }
-    /* If not so but there's an 'otherwise' clause we can go straight to it. */
-    else if(uc->othws) {
-        mill_choose_clean(uc, -1);
-        return -1;
-    }
 
-    /* In all other cases block and wait for an available channel. */
-    int res = mill_suspend();
-    mill_choose_clean(uc, res);
-    return res;
+    /* If not so but there's an 'otherwise' clause we can go straight to it. */
+    if(uc->othws)
+        return -1;
+
+    /* In all other cases register this coroutine with the queried channels
+       and wait till one of the clauses unblocks. */
+    for(it = mill_slist_begin(&uc->clauses); it; it = mill_slist_next(it)) {
+        cl = mill_cont(it, struct mill_clause, chitem);
+        mill_list_insert(&cl->ep->clauses, &cl->epitem, NULL);
+    }
+    return mill_suspend();
 }
 
 void *mill_choose_val(void) {
@@ -278,8 +275,7 @@ void mill_chdone(chan ch, void *val, size_t sz, const char *current) {
         struct mill_clause *cl = mill_cont(
             mill_list_begin(&ch->receiver.clauses), struct mill_clause, epitem);
         memcpy(mill_valbuf_alloc(&cl->cr->valbuf, ch->sz), val, ch->sz);
-        mill_resume(cl->cr, cl->idx);
-        mill_list_erase(&ch->receiver.clauses, &cl->epitem);
+        mill_choose_unblock(cl);
     }
 }
 
