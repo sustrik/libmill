@@ -216,8 +216,7 @@ int mill_choose_wait(void) {
         if(cl->ep->type == MILL_SENDER)
             mill_enqueue(ch, cl->val);
         else
-            mill_dequeue(mill_getchan(cl->ep),
-                mill_valbuf_alloc(&cl->cr->valbuf, ch->sz));
+            mill_dequeue(ch, mill_valbuf_alloc(&cl->cr->valbuf, ch->sz));
         return cl->idx;
     }
 
