@@ -461,19 +461,61 @@ channel the field is kept empty.</p>
 
 <h4>trace</h4>
 
-<p>It is possible to switch on tracing via <tt>trace</tt> function.</p>
+<p>It is possible to switch on tracing via <tt>trace</tt> function. You can
+do so either programmatically or from the debugger:</p>
 
 <pre>
 trace(1);
 </pre>
 
-<p>The function takes a single argument, the tracing level desired. At the
-moment there are only two tracing levels supported:</p>
+<p>The function takes a single argument, the desired tracing level.
+At the moment there are only two supported tracing levels:</p>
 
 <ul>
   <li>0: tracing is off; this is the default value.</li>
   <li>1: invocations of all libmill functions are traced.</li>
 </ul>
+
+<p>Trace records are written to <tt>stderr</tt>. That way it is possible to
+redirect the trace records to a file, while keeping the original output of the
+program in the console:</p>
+
+<pre>
+$ ./test 2> trace.log
+</pre>
+
+<p>A part of the trace may look, for example, like this:</p>
+
+<pre>
+==> 22:24:56.404183 {0}      &lt;1&gt;=chmake(0) at tests/choose.c:113
+==> 22:24:56.404276 {0}      {1}=go() at tests/choose.c:114
+==> 22:24:56.404292 {1}      chdup(&lt;1&gt;) at tests/choose.c:114
+==> 22:24:56.404304 {1}      chr(&lt;1&gt;) at tests/choose.c:30
+==> 22:24:56.404316 {0}      choose() at tests/choose.c:115
+==> 22:24:56.404354 {0}      chclose(&lt;1&gt;) at tests/choose.c:120
+</pre>
+
+<p>Each trace record contains timestamp, ID of the coroutine that have generated
+the trace, the function being executed along with its arguments and the location
+of its invocation in the source code.</p>
+
+<p>The format is designed to be machine-friendly and, more specifically,
+grep-friendly.</p>
+
+<p>If you have a file that mixes trace records with other output, grep will
+help you filter out the trace records:</p>
+
+<pre>
+$ grep "==>" trace.log
+</pre>
+
+<p>Similarly, you can filter out records related to a particular coroutine
+or a specific channel:</p>
+
+<pre>
+$ grep "{9}" trace.log
+$ grep "&lt;33&gt;" trace.log
+</pre>
 
 </body>
 </html>
