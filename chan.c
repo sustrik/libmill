@@ -36,6 +36,8 @@
 
 MILL_CT_ASSERT(MILL_CLAUSELEN == sizeof(struct mill_clause));
 
+static int mill_choose_seqnum = 0;
+
 chan mill_chmake(size_t sz, size_t bufsz, const char *created) {
     /* If there's at least one channel created in the user's code
        we want the debug functions to get into the binary. */
@@ -49,8 +51,10 @@ chan mill_chmake(size_t sz, size_t bufsz, const char *created) {
     mill_register_chan(&ch->debug, created);
     ch->sz = sz;
     ch->sender.type = MILL_SENDER;
+    ch->sender.seqnum = mill_choose_seqnum;
     mill_list_init(&ch->sender.clauses);
     ch->receiver.type = MILL_RECEIVER;
+    ch->receiver.seqnum = mill_choose_seqnum;
     mill_list_init(&ch->receiver.clauses);
     ch->refcount = 1;
     ch->done = 0;
@@ -88,6 +92,8 @@ static void mill_choose_unblock(struct mill_clause *cl) {
     for(it = mill_slist_begin(&cl->cr->u_choose.clauses);
           it; it = mill_slist_next(it)) {
         itcl = mill_cont(it, struct mill_clause, chitem);
+        if(!itcl->used)
+            continue;
         mill_list_erase(&itcl->ep->clauses, &itcl->epitem);
     }
     mill_resume(cl->cr, cl->idx);
@@ -98,6 +104,7 @@ static void mill_choose_init_(const char *current) {
     mill_slist_init(&mill_running->u_choose.clauses);
     mill_running->u_choose.othws = 0;
     mill_running->u_choose.available = 0;
+    ++mill_choose_seqnum;
 }
 
 void mill_choose_init(const char *current) {
@@ -124,7 +131,15 @@ void mill_choose_in(void *clause, chan ch, size_t sz, int idx) {
     cl->val = NULL;
     cl->idx = idx;
     cl->available = available;
+    cl->used = 1;
     mill_slist_push_back(&mill_running->u_choose.clauses, &cl->chitem);
+    if(cl->ep->seqnum == mill_choose_seqnum) {
+        ++cl->ep->refs;
+        return;
+    }
+    cl->ep->seqnum = mill_choose_seqnum;
+    cl->ep->refs = 1;
+    cl->ep->tmp = -1;
 }
 
 void mill_choose_out(void *clause, chan ch, void *val, size_t sz, int idx) {
@@ -147,7 +162,15 @@ void mill_choose_out(void *clause, chan ch, void *val, size_t sz, int idx) {
     cl->val = val;
     cl->available = available;
     cl->idx = idx;
+    cl->used = 1;
     mill_slist_push_back(&mill_running->u_choose.clauses, &cl->chitem);
+    if(cl->ep->seqnum == mill_choose_seqnum) {
+        ++cl->ep->refs;
+        return;
+    }
+    cl->ep->seqnum = mill_choose_seqnum;
+    cl->ep->refs = 1;
+    cl->ep->tmp = -1;
 }
 
 void mill_choose_otherwise(void) {
@@ -228,6 +251,16 @@ int mill_choose_wait(void) {
        and wait till one of the clauses unblocks. */
     for(it = mill_slist_begin(&uc->clauses); it; it = mill_slist_next(it)) {
         cl = mill_cont(it, struct mill_clause, chitem);
+        if(mill_slow(cl->ep->refs > 1)) {
+            if(cl->ep->tmp == -1)
+                cl->ep->tmp = random() % cl->ep->refs;
+            if(cl->ep->tmp) {
+                --cl->ep->tmp;
+                cl->used = 0;
+                continue;
+            }
+            cl->ep->tmp = -2;
+        }
         mill_list_insert(&cl->ep->clauses, &cl->epitem, NULL);
     }
     /* If choose is being performed from the running coroutine, all the parallel

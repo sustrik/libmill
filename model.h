@@ -101,6 +101,13 @@ extern struct mill_cr *mill_running;
 struct mill_ep {
     /* Thanks to this flag we can cast from ep pointer to chan pointer. */
     enum {MILL_SENDER, MILL_RECEIVER} type;
+    /* Sequence number of the choose operation being initialised. */
+    int seqnum;
+    /* Number of clauses referring to this endpoint within the choose
+       operation being initialised. */
+    int refs;
+    /* Number of refs already processed. */
+    int tmp;
     /* List of clauses waiting for this endpoint. */
     struct mill_list clauses;
 };
@@ -149,6 +156,8 @@ struct mill_clause {
     /* If 0, there's no peer waiting for the clause at the moment.
        If 1, there is one. */
     int available;
+    /* If 1, the clause is in the list of channel's senders/receivers. */
+    int used;
 };
 
 /* Returns pointer to the channel that contains specified endpoint. */

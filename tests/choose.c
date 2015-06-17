@@ -75,6 +75,24 @@ void feeder2(chan ch, int first, int second) {
     }
 }
 
+void feeder3(chan ch, int val) {
+    while(1) {
+        msleep(10);
+        chs(ch, int, val);
+    }
+}
+
+void feeder4(chan ch) {
+    while(1) {
+        choose {
+        out(ch, int, 1):
+        out(ch, int, 2):
+        out(ch, int, 3):
+        end
+        }
+    }
+}
+
 struct large {
     char buf[1024];
 };
@@ -159,6 +177,7 @@ int main() {
     int i;
     int first = 0;
     int second = 0;
+    int third = 0;
     for(i = 0; i != 100; ++i) {
         choose {
         in(ch7, int, val):
@@ -274,7 +293,7 @@ int main() {
     chan ch15 = chmake(struct large, 1);
     chan ch16 = chmake(int, 1);
     go(sender2(chdup(ch16), 1111));
-    goredump();
+//    goredump();
     choose {
     in(ch16, int, val):
         assert(val == 1111);
@@ -304,6 +323,54 @@ int main() {
     end
     }
     chclose(ch18);
+
+    /* Test whether selection of in channels is random when there's nothing
+       immediately available to receive. */
+    first = 0;
+    second = 0;
+    third = 0;
+    chan ch19 = chmake(int, 0);
+    go(feeder3(chdup(ch19), 3333));
+    for(i = 0; i != 100; ++i) {
+        choose {
+        in(ch19, int, val):
+            ++first;
+        in(ch19, int, val):
+            ++second;
+        in(ch19, int, val):
+            ++third;
+        end
+        }
+    }
+    assert(first > 1 && second > 1 && third > 1);
+    chclose(ch19);
+
+    /* Test whether selection of out channels is random when sending
+       cannot be performed immediately. */
+    first = 0;
+    second = 0;
+    third = 0;
+    chan ch20 = chmake(int, 0);
+    go(feeder4(chdup(ch20)));
+    for(i = 0; i != 100; ++i) {
+        msleep(10);
+        val = chr(ch20, int);
+        switch(val) {
+        case 1:
+            ++first;
+            break;
+        case 2:
+            ++second;
+            break;
+        case 3:
+            ++third;
+            break;
+        default:
+            assert(0);
+        }
+    }
+    assert(first > 1 && second > 1 && third > 1);
+    chclose(ch20);
 
     return 0;
 }
