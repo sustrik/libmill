@@ -240,12 +240,15 @@ int mill_choose_wait(void) {
             mill_enqueue(ch, cl->val);
         else
             mill_dequeue(ch, mill_valbuf_alloc(&cl->cr->valbuf, ch->sz));
-        return cl->idx;
+        mill_resume(mill_running, cl->idx);
+        return mill_suspend();
     }
 
     /* If not so but there's an 'otherwise' clause we can go straight to it. */
-    if(uc->othws)
-        return -1;
+    if(uc->othws) {
+        mill_resume(mill_running, -1);
+        return mill_suspend();
+    }
 
     /* In all other cases register this coroutine with the queried channels
        and wait till one of the clauses unblocks. */
