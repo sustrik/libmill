@@ -22,10 +22,10 @@
 
 */
 
+#include "chan.h"
 #include "cr.h"
 #include "debug.h"
 #include "libmill.h"
-#include "model.h"
 #include "utils.h"
 
 #include <assert.h>
@@ -37,6 +37,17 @@
 MILL_CT_ASSERT(MILL_CLAUSELEN == sizeof(struct mill_clause));
 
 static int mill_choose_seqnum = 0;
+
+struct mill_chan *mill_getchan(struct mill_ep *ep) {
+    switch(ep->type) {
+    case MILL_SENDER:
+        return mill_cont(ep, struct mill_chan, sender);
+    case MILL_RECEIVER:
+        return mill_cont(ep, struct mill_chan, receiver);
+    default:
+        assert(0);
+    }
+}
 
 chan mill_chmake(size_t sz, size_t bufsz, const char *created) {
     /* If there's at least one channel created in the user's code

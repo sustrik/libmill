@@ -25,7 +25,6 @@
 #include "cr.h"
 #include "libmill.h"
 #include "list.h"
-#include "model.h"
 #include "poller.h"
 #include "utils.h"
 

@@ -293,7 +293,7 @@ int main() {
     chan ch15 = chmake(struct large, 1);
     chan ch16 = chmake(int, 1);
     go(sender2(chdup(ch16), 1111));
-//    goredump();
+    goredump();
     choose {
     in(ch16, int, val):
         assert(val == 1111);

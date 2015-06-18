@@ -22,8 +22,10 @@
 
 */
 
+#include "chan.h"
+#include "cr.h"
 #include "libmill.h"
-#include "model.h"
+#include "list.h"
 #include "utils.h"
 
 #include <assert.h>

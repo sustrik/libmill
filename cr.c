@@ -25,7 +25,7 @@
 #include "cr.h"
 #include "debug.h"
 #include "libmill.h"
-#include "model.h"
+#include "poller.h"
 #include "stack.h"
 #include "utils.h"
 
@@ -35,6 +35,9 @@
 
 volatile int mill_unoptimisable1 = 1;
 volatile void *mill_unoptimisable2 = NULL;
+
+struct mill_cr mill_main = {0};
+struct mill_cr *mill_running = &mill_main;
 
 /* Queue of coroutines scheduled for execution. */
 static struct mill_slist mill_ready = {0};

@@ -262,7 +262,6 @@ MILL_EXPORT void tcpclose(tcpsock s);
 /******************************************************************************/
 
 MILL_EXPORT void goredump(void);
-
 MILL_EXPORT void trace(int level);
 
 #endif

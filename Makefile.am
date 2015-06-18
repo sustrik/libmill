@@ -34,6 +34,7 @@ millinclude_HEADERS = libmill.h
 lib_LTLIBRARIES = libmill.la
 
 libmill_la_SOURCES = \
+    chan.h\
     chan.c\
     cr.h\
     cr.c\
@@ -41,8 +42,6 @@ libmill_la_SOURCES = \
     debug.c\
     list.h\
     list.c\
-    model.h\
-    model.c\
     poller.h\
     poller.c\
     slist.h\
@@ -95,8 +94,6 @@ noinst_PROGRAMS = \
     perf/chan\
     perf/chs\
     perf/chr
-
-LDADD = libmill.la
 
 ################################################################################
 #  additional packaging-related stuff                                          #
