@@ -30,7 +30,7 @@
 
 /* Size of stack for new coroutines. In bytes. */
 #ifndef MILL_STACK_SIZE
-#define MILL_STACK_SIZE 16384
+#define MILL_STACK_SIZE (256 * 1024)
 #endif
 
 /* Maximum number of unused cached stacks. */
