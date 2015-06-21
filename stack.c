@@ -26,6 +26,7 @@
 #include "stack.h"
 
 #include <assert.h>
+#include <stdint.h>
 #include <stdlib.h>
 
 /* Size of stack for new coroutines. In bytes. */
@@ -37,6 +38,9 @@
 #ifndef MILL_MAX_CACHED_STACKS
 #define MILL_MAX_CACHED_STACKS 64
 #endif
+
+/* 8 bytes written to the bottom of the stack to guard for stack overflows. */
+#define MILL_STACK_GUARD 0xdeadbeefbadcafe0
 
 /* A stack of unused coroutine stacks. This allows for extra-fast allocation
    of a new stack. The FIFO nature of this structure minimises cache misses.
@@ -50,6 +54,7 @@ void *mill_allocstack(void) {
         return (void*)(mill_slist_pop(&mill_cached_stacks) + 1);
     char *ptr = malloc(MILL_STACK_SIZE);
     assert(ptr);
+    *((uint64_t*)ptr) = MILL_STACK_GUARD;
     return ptr + MILL_STACK_SIZE; 
 }
 
@@ -62,5 +67,11 @@ void mill_freestack(void *stack) {
     struct mill_slist_item *item = ((struct mill_slist_item*)stack) - 1;
     mill_slist_push(&mill_cached_stacks, item);
     ++mill_num_cached_stacks;
+}
+
+void mill_checkstack(void *stack, void *ptr) {
+    char *bottom = ((char*) stack) - MILL_STACK_SIZE;
+    assert (ptr <= stack && ptr > (void*)(bottom + 8) &&
+        *((uint64_t*)bottom) == MILL_STACK_GUARD);
 }
 
