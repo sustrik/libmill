@@ -196,7 +196,7 @@ void trace(int level) {
 }
 
 void mill_trace_(const char *location, const char *format, ...) {
-    if(mill_tracelevel <= 0)
+    if(mill_fast(mill_tracelevel <= 0))
         return;
 
     char buf[256];
