@@ -42,6 +42,9 @@
 /* 8 bytes written to the bottom of the stack to guard for stack overflows. */
 #define MILL_STACK_GUARD 0xdeadbeefbadcafe0
 
+static volatile int mill_stack_unoptimisable1 = 1;
+static volatile void *mill_stack_unoptimisable2 = NULL;
+
 /* A stack of unused coroutine stacks. This allows for extra-fast allocation
    of a new stack. The FIFO nature of this structure minimises cache misses.
    When the stack is cached its mill_slist_item is placed on its top rather
@@ -69,9 +72,12 @@ void mill_freestack(void *stack) {
     ++mill_num_cached_stacks;
 }
 
-void mill_checkstack(void *stack, void *ptr) {
+void mill_checkstack(void *stack) {
+    int anchor[mill_stack_unoptimisable1];
+    mill_stack_unoptimisable2 = &anchor;
     char *bottom = ((char*) stack) - MILL_STACK_SIZE;
-    assert (ptr <= stack && ptr > (void*)(bottom + 8) &&
-        *((uint64_t*)bottom) == MILL_STACK_GUARD);
+    assert(((void*)&anchor) <= stack);
+    assert(((void*)&anchor) > (void*)(bottom + 8));
+    assert(*((uint64_t*)bottom) == MILL_STACK_GUARD);
 }
 

@@ -26,6 +26,7 @@
 #include "cr.h"
 #include "libmill.h"
 #include "list.h"
+#include "stack.h"
 #include "utils.h"
 
 #include <assert.h>
@@ -198,6 +199,11 @@ void trace(int level) {
 void mill_trace_(const char *location, const char *format, ...) {
     if(mill_fast(mill_tracelevel <= 0))
         return;
+
+    /* TODO: At the moment, stack overflow checking is done only if tracing
+       is enabled. Think of a better way to do it. */
+    if(mill_running != &mill_main)
+        mill_checkstack(mill_running + 1);
 
     char buf[256];
     
