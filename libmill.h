@@ -25,10 +25,17 @@
 #ifndef LIBMILL_H_INCLUDED
 #define LIBMILL_H_INCLUDED
 
-#include <alloca.h>
+#include "config.h"
+#ifdef HAVE_ALLOCA_H
+# include <alloca.h>
+#endif
 #include <errno.h>
 #include <stddef.h>
 #include <sys/types.h>
+#ifdef HAVE_NETINET_IN_H
+# include <netinet/in.h>
+#endif
+
 
 /******************************************************************************/
 /*  ABI versioning support                                                    */
