@@ -25,7 +25,6 @@
 #ifndef LIBMILL_H_INCLUDED
 #define LIBMILL_H_INCLUDED
 
-#include <alloca.h>
 #include <errno.h>
 #include <stddef.h>
 #include <sys/types.h>
