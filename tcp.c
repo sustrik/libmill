@@ -1,4 +1,4 @@
-/*
+    /*
 
   Copyright (c) 2015 Martin Sustrik
 
@@ -26,6 +26,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <netinet/in.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
