@@ -133,11 +133,11 @@ int mill_fdwait(int fd, int events, long timeout, const char *current) {
     }
     /* Handle the timeout. Clean-up the pollset. */
     if(fd >= 0) {
-        if(mill_pollset_items[i].in = &mill_running->u_fdwait) {
+        if(mill_pollset_items[i].in == &mill_running->u_fdwait) {
             mill_pollset_items[i].in = NULL;
             mill_pollset_fds[i].events &= ~POLLIN;
         }
-        if(mill_pollset_items[i].out = &mill_running->u_fdwait) {
+        if(mill_pollset_items[i].out == &mill_running->u_fdwait) {
             mill_pollset_items[i].out = NULL;
             mill_pollset_fds[i].events &= ~POLLOUT;
         }
