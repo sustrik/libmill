@@ -32,7 +32,4 @@ void *mill_allocstack(void);
 /* Deallocates a stack. The argument is pointer to the top of the stack. */
 void mill_freestack(void *stack);
 
-/* Checks for the signs of stack overflow. */
-void mill_checkstack(void *stack);
-
 #endif

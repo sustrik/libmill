@@ -72,12 +72,3 @@ void mill_freestack(void *stack) {
     ++mill_num_cached_stacks;
 }
 
-void mill_checkstack(void *stack) {
-    int anchor[mill_stack_unoptimisable1];
-    mill_stack_unoptimisable2 = &anchor;
-    char *bottom = ((char*) stack) - MILL_STACK_SIZE;
-    assert(((void*)&anchor) <= stack);
-    assert(((void*)&anchor) > (void*)(bottom + 8));
-    assert(*((uint64_t*)bottom) == MILL_STACK_GUARD);
-}
-
