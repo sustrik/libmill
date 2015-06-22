@@ -206,7 +206,8 @@ void mill_trace_(const char *location, const char *format, ...) {
     struct timeval nw;
     gettimeofday(&nw, NULL);
     struct tm *nwtm = localtime(&nw.tv_sec);
-    strftime(buf, sizeof buf, "%02H:%02M:%02S", nwtm);
+    snprintf(buf, sizeof buf, "%02d:%02d:%02d",
+        (int)nwtm->tm_hour, (int)nwtm->tm_min, (int)nwtm->tm_sec);
     fprintf(stderr, "==> %s.%06d ", buf, (int)nw.tv_usec);
 
     /* Coroutine ID. */
