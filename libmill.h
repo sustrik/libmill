@@ -28,6 +28,10 @@
 #include <errno.h>
 #include <stddef.h>
 #include <sys/types.h>
+#ifdef HAVE_NETINET_IN_H
+# include <netinet/in.h>
+#endif
+
 
 /******************************************************************************/
 /*  ABI versioning support                                                    */
