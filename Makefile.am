@@ -93,7 +93,8 @@ noinst_PROGRAMS = \
     perf/ctxswitch\
     perf/chan\
     perf/chs\
-    perf/chr
+    perf/chr\
+    perf/whispers
 
 ################################################################################
 #  additional packaging-related stuff                                          #
