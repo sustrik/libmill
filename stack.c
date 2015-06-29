@@ -78,6 +78,6 @@ void mill_freestack(void *stack) {
        the unused cached stacks. */
     struct mill_slist_item *x = mill_slist_pop(&mill_cached_stacks);
     assert(x != item);   
-    free((void*)(x + 1));
+    free(((char*)(x + 1)) - MILL_STACK_SIZE);
 }
 
