@@ -76,8 +76,7 @@ void mill_freestack(void *stack) {
        Standard C free() is not required to work when it deallocates its
        own stack from underneath itself. Instead, we'll deallocate one of
        the unused cached stacks. */
-    struct mill_slist_item *x = mill_slist_pop(&mill_cached_stacks);
-    assert(x != item);   
-    free(((char*)(x + 1)) - MILL_STACK_SIZE);
+    item = mill_slist_pop(&mill_cached_stacks);  
+    free(((char*)(item + 1)) - MILL_STACK_SIZE);
 }
 
