@@ -24,6 +24,7 @@
 
 #include "slist.h"
 #include "stack.h"
+#include "utils.h"
 
 #include <assert.h>
 #include <stdint.h>
@@ -36,8 +37,12 @@
 
 /* Maximum number of unused cached stacks. */
 #ifndef MILL_MAX_CACHED_STACKS
-#define MILL_MAX_CACHED_STACKS 128
+#define MILL_MAX_CACHED_STACKS 64
 #endif
+
+/* We have to cache at least one stack, otherwise we would not be able
+   to deallocate it properly. */
+MILL_CT_ASSERT(MILL_MAX_CACHED_STACKS > 0);
 
 static volatile int mill_stack_unoptimisable1 = 1;
 static volatile void *mill_stack_unoptimisable2 = NULL;
@@ -50,21 +55,29 @@ static int mill_num_cached_stacks = 0;
 static struct mill_slist mill_cached_stacks = {0};
 
 void *mill_allocstack(void) {
-    if(!mill_slist_empty(&mill_cached_stacks))
+    if(!mill_slist_empty(&mill_cached_stacks)) {
+        --mill_num_cached_stacks;
         return (void*)(mill_slist_pop(&mill_cached_stacks) + 1);
+    }
     char *ptr = malloc(MILL_STACK_SIZE);
     assert(ptr);
     return ptr + MILL_STACK_SIZE;
 }
 
 void mill_freestack(void *stack) {
-    if(mill_num_cached_stacks >= MILL_MAX_CACHED_STACKS) {
-        char *ptr = ((char*)stack) - MILL_STACK_SIZE;
-        free(ptr);
+    /* Put the stack to the list of cached stacks. */
+    struct mill_slist_item *item = ((struct mill_slist_item*)stack) - 1;
+    mill_slist_push_back(&mill_cached_stacks, item);
+    if(mill_num_cached_stacks < MILL_MAX_CACHED_STACKS) {
+        ++mill_num_cached_stacks;
         return;
     }
-    struct mill_slist_item *item = ((struct mill_slist_item*)stack) - 1;
-    mill_slist_push(&mill_cached_stacks, item);
-    ++mill_num_cached_stacks;
+    /* We can't deallocate the stack we are running on at the moment.
+       Standard C free() is not required to work when it deallocates its
+       own stack from underneath itself. Instead, we'll deallocate one of
+       the unused cached stacks. */
+    struct mill_slist_item *x = mill_slist_pop(&mill_cached_stacks);
+    assert(x != item);   
+    free((void*)(x + 1));
 }
 
