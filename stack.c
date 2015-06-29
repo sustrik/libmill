@@ -36,11 +36,8 @@
 
 /* Maximum number of unused cached stacks. */
 #ifndef MILL_MAX_CACHED_STACKS
-#define MILL_MAX_CACHED_STACKS 64
+#define MILL_MAX_CACHED_STACKS 128
 #endif
-
-/* 8 bytes written to the bottom of the stack to guard for stack overflows. */
-#define MILL_STACK_GUARD 0xdeadbeefbadcafe0
 
 static volatile int mill_stack_unoptimisable1 = 1;
 static volatile void *mill_stack_unoptimisable2 = NULL;
@@ -57,8 +54,7 @@ void *mill_allocstack(void) {
         return (void*)(mill_slist_pop(&mill_cached_stacks) + 1);
     char *ptr = malloc(MILL_STACK_SIZE);
     assert(ptr);
-    *((uint64_t*)ptr) = MILL_STACK_GUARD;
-    return ptr + MILL_STACK_SIZE; 
+    return ptr + MILL_STACK_SIZE;
 }
 
 void mill_freestack(void *stack) {
