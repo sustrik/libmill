@@ -23,7 +23,6 @@
 */
 
 #include "list.h"
-#include "utils.h"
 
 #include <assert.h>
 #include <stddef.h>
@@ -34,41 +33,18 @@ void mill_list_init(struct mill_list *self)
     self->last = NULL;
 }
 
-int mill_list_empty(struct mill_list *self)
-{
-    return self->first ? 0 : 1;
-}
-
-struct mill_list_item *mill_list_begin(struct mill_list *self)
-{
-    return self->first;
-}
-
-struct mill_list_item *mill_list_prev(struct mill_list *self,
-    struct mill_list_item *it)
-{
-    if(!it)
-        return self->last;
-    return it->prev;
-}
-
-struct mill_list_item *mill_list_next(struct mill_list_item *it)
-{
-    return it->next;
-}
-
 void mill_list_insert(struct mill_list *self, struct mill_list_item *item,
     struct mill_list_item *it)
 {
     item->prev = it ? it->prev : self->last;
     item->next = it;
-    if(mill_fast(item->prev))
+    if(item->prev)
         item->prev->next = item;
-    if(mill_fast(item->next))
+    if(item->next)
         item->next->prev = item;
-    if(mill_slow(!self->first || self->first == it))
+    if(!self->first || self->first == it)
         self->first = item;
-    if(mill_slow(!it))
+    if(!it)
         self->last = item;
 }
 
@@ -77,11 +53,11 @@ struct mill_list_item *mill_list_erase(struct mill_list *self,
 {
     struct mill_list_item *next;
 
-    if(mill_fast(item->prev))
+    if(item->prev)
         item->prev->next = item->next;
     else
         self->first = item->next;
-    if(mill_fast(item->next))
+    if(item->next)
         item->next->prev = item->prev;
     else
         self->last = item->prev;

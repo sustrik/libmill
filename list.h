@@ -40,20 +40,15 @@ struct mill_list {
 /* Initialise the list. To statically initialise the list use = {0}. */
 void mill_list_init(struct mill_list *self);
 
-/* Returns 1 is list has zero items, 0 otherwise. */
-int mill_list_empty(struct mill_list *self);
+/* True is the list has no items. */
+#define mill_list_empty(self) (!((self)->first))
 
 /* Returns iterator to the first item in the list or NULL if
    the list is empty. */
-struct mill_list_item *mill_list_begin(struct mill_list *self);
-
-/* Returns iterator to an item prior to the one pointed to by 'it'.
-   Returns NULL when it reaches end of the list. */
-struct mill_list_item *mill_list_prev(struct mill_list *self,
-    struct mill_list_item *it);
+#define mill_list_begin(self) ((self)->first)
 
 /* Returns iterator to one past the item pointed to by 'it'. */
-struct mill_list_item *mill_list_next(struct mill_list_item *it);
+#define mill_list_next(it) ((it)->next)
 
 /* Adds the item to the list before the item pointed to by 'it'.
    If 'it' is NULL the item is inserted to the end of the list. */

@@ -40,8 +40,8 @@ struct mill_slist {
 /* Initialise the list. To statically initialise the list use = {0}. */
 void mill_slist_init(struct mill_slist *self);
 
-/* Returns 1 is list has zero items, 0 otherwise. */
-#define mill_slist_empty(self) ((self)->first ? 0 : 1)
+/* True is the list has no items. */
+#define mill_slist_empty(self) (!((self)->first))
 
 /* Returns iterator to the first item in the list or NULL if
    the list is empty. */

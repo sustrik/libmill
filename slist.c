@@ -23,7 +23,6 @@
 */
 
 #include "slist.h"
-#include "utils.h"
 
 #include <assert.h>
 #include <stddef.h>
