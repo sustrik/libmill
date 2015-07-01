@@ -33,60 +33,29 @@ void mill_slist_init(struct mill_slist *self) {
     self->last = NULL;
 }
 
-void mill_slist_term(struct mill_slist *self) {
-    assert(!self->first);
-    assert(!self->last);
-}
-
-int mill_slist_empty(struct mill_slist *self) {
-    return self->first ? 0 : 1;
-}
-
-struct mill_slist_item *mill_slist_begin(struct mill_slist *self) {
-    return self->first;
-}
-
-struct mill_slist_item *mill_slist_next(struct mill_slist_item *it) {
-    return it->next;
-}
-
 void mill_slist_push(struct mill_slist *self, struct mill_slist_item *item) {
     item->next = self->first;
     self->first = item;
-    if(mill_slow(!self->last))
+    if(!self->last)
         self->last = item;
 }
 
 void mill_slist_push_back(struct mill_slist *self,
       struct mill_slist_item *item) {
     item->next = NULL;
-    if(mill_slow(!self->last)) {
-        self->last = item;
+    if(!self->last)
         self->first = item;
-        return;
-    }
-    self->last->next = item;
+    else
+        self->last->next = item;
     self->last = item;
 }
 
-void mill_slist_insert(struct mill_slist *self, struct mill_slist_item *item,
-      struct mill_slist_item *it) {
-    if(!it) {
-        mill_slist_push(self, item);
-        return;
-    }
-    item->next = it->next;
-    if(it == self->last)
-        self->last = item;
-    it->next = item;
-}
-
 struct mill_slist_item *mill_slist_pop(struct mill_slist *self) {
-    if(mill_slow(!self->first))
+    if(!self->first)
         return NULL;
     struct mill_slist_item *it = self->first;
     self->first = self->first->next;
-    if(mill_slow(!self->first))
+    if(!self->first)
         self->last = NULL;
     return it;
 }
