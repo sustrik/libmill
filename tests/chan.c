@@ -35,7 +35,7 @@ void sender(chan ch, int doyield, int val) {
     if(doyield)
         yield();
     chs(ch, int, val);
-    chclose(ch); 
+    chclose(ch);
 }
 
 void receiver(chan ch, int expected) {
@@ -175,7 +175,7 @@ int main() {
     val = chr(ch13, int);
     assert(val == 0);
     val = chr(ch13, int);
-    assert(val == 0);    
+    assert(val == 0);
     chclose(ch13);
     chclose(ch12);
 

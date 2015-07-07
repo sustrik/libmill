@@ -102,26 +102,26 @@ void goredump(void) {
         case MILL_CHS:
         case MILL_CHOOSE:
             {
-		        int pos = 0;
+                int pos = 0;
                 if(cr->state == MILL_CHR)
                     pos += sprintf(&buf[pos], "chr(");
                 else if(cr->state == MILL_CHS)
                     pos += sprintf(&buf[pos], "chs(");
                 else
                     pos += sprintf(&buf[pos], "choose(");
-		        int first = 1;
+                int first = 1;
                 struct mill_slist_item *it;
                 for(it = mill_slist_begin(&cr->u_choose.clauses); it;
                       it = mill_slist_next(it)) {
-		            if(first)
-		                first = 0;
-		            else
-		                pos += sprintf(&buf[pos], ",");
-		            pos += sprintf(&buf[pos], "<%d>", mill_getchan(
+                if(first)
+                    first = 0;
+                else
+                    pos += sprintf(&buf[pos], ",");
+                pos += sprintf(&buf[pos], "<%d>", mill_getchan(
                         mill_cont(it, struct mill_clause,
                         chitem)->ep)->debug.id);
-		        }
-		        sprintf(&buf[pos], ")");
+            }
+            sprintf(&buf[pos], ")");
             }
             break;
         default:
@@ -185,7 +185,7 @@ void goredump(void) {
             buf,
             (int)ch->refcount,
             ch->done ? "yes" : "no",
-            ch->debug.created);            
+            ch->debug.created);
     }
     fprintf(stderr,"\n");
 }
@@ -201,7 +201,7 @@ void mill_trace_(const char *location, const char *format, ...) {
         return;
 
     char buf[256];
-    
+
     /* First print the timestamp. */
     struct timeval nw;
     gettimeofday(&nw, NULL);
