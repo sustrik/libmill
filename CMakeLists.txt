@@ -10,7 +10,9 @@ file(GLOB test_files tests/*.c)
 foreach(test_file IN LISTS test_files)
   get_filename_component(test_name ${test_file} NAME_WE)
   add_executable(test_${test_name} ${test_file})
-  set_target_properties(test_${test_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/tests)
+  set_target_properties(test_${test_name} PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/tests
+    OUTPUT_NAME ${test_name})
   target_link_libraries(test_${test_name} mill)
 endforeach()
 
@@ -20,7 +22,9 @@ file(GLOB perf_files perf/*.c)
 foreach(perf_file IN LISTS perf_files)
   get_filename_component(perf_name ${perf_file} NAME_WE)
   add_executable(perf_${perf_name} ${perf_file})
-  set_target_properties(perf_${perf_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/perf)
+  set_target_properties(perf_${perf_name} PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/perf
+    OUTPUT_NAME ${perf_name})
   target_link_libraries(perf_${perf_name} mill)
 endforeach()
 
