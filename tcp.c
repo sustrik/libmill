@@ -167,7 +167,7 @@ tcpsock tcpaccept(tcpsock s) {
     if(s->type != MILL_TCPLISTENER)
         mill_panic("trying to accept on a socket that isn't listening");
     struct tcplistener *l = (struct tcplistener*)s;
-	while(1) {
+    while(1) {
         /* Try to get new connection (non-blocking). */
         int as = accept(l->fd, NULL, NULL);
         if (as >= 0) {
@@ -179,7 +179,7 @@ tcpsock tcpaccept(tcpsock s) {
             assert(rc != -1);
 
             /* Create the object. */
-			return &tcpconn_create(as)->sock;
+            return &tcpconn_create(as)->sock;
         }
         assert(as == -1);
         if(errno != EAGAIN && errno != EWOULDBLOCK)
@@ -211,10 +211,10 @@ tcpsock tcpconnect(const char *addr) {
     /* Connect to the remote endpoint. */
     rc = connect(s, (struct sockaddr*)&addr_in, sizeof(addr_in));
     if(rc != 0) {
-		assert(rc == -1);
-		if(errno != EINPROGRESS)
-		    return NULL;
-		rc = fdwait(s, FDW_OUT, -1);
+        assert(rc == -1);
+        if(errno != EINPROGRESS)
+            return NULL;
+        rc = fdwait(s, FDW_OUT, -1);
         assert(rc == FDW_OUT);
         int err;
         socklen_t errsz = sizeof(err);
@@ -233,7 +233,7 @@ tcpsock tcpconnect(const char *addr) {
     }
 
     /* Create the object. */
-	return &tcpconn_create(s)->sock;
+    return &tcpconn_create(s)->sock;
 }
 
 void tcpsend(tcpsock s, const void *buf, size_t len) {
@@ -350,7 +350,7 @@ ssize_t tcprecv(tcpsock s, void *buf, size_t len) {
         }
         else {
             /* If we have just a little to read try to read the full connection
-               buffer to minimise the number of system calls. */    
+               buffer to minimise the number of system calls. */
             ssize_t sz = recv(conn->fd, conn->ibuf, MILL_TCP_BUFLEN, 0);
             assert(sz != 0); // TODO
             if(sz == -1) {

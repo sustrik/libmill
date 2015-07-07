@@ -66,7 +66,7 @@ int mill_fdwait(int fd, int events, long timeout, const char *current) {
     /* If required, start waiting for the timeout. */
     if(timeout >= 0) {
         /* Compute at which point of time will the timer expire. */
-        mill_running->u_fdwait.expiry = mill_now() + timeout;    
+        mill_running->u_fdwait.expiry = mill_now() + timeout;
         /* Move the timer into the right place in the ordered list
            of existing timers. TODO: This is an O(n) operation! */
         struct mill_list_item *it = mill_list_begin(&mill_timers);
@@ -89,15 +89,15 @@ int mill_fdwait(int fd, int events, long timeout, const char *current) {
                 break;
         }
         /* Grow the pollset as needed. */
-        if(i == mill_pollset_size) { 
-		    if(mill_pollset_size == mill_pollset_capacity) {
-		        mill_pollset_capacity = mill_pollset_capacity ?
+        if(i == mill_pollset_size) {
+            if(mill_pollset_size == mill_pollset_capacity) {
+                mill_pollset_capacity = mill_pollset_capacity ?
                     mill_pollset_capacity * 2 : 64;
-		        mill_pollset_fds = realloc(mill_pollset_fds,
-		            mill_pollset_capacity * sizeof(struct pollfd));
-		        mill_pollset_items = realloc(mill_pollset_items,
-		            mill_pollset_capacity * sizeof(struct mill_pollset_item));
-		    }
+                mill_pollset_fds = realloc(mill_pollset_fds,
+                    mill_pollset_capacity * sizeof(struct pollfd));
+                mill_pollset_items = realloc(mill_pollset_items,
+                    mill_pollset_capacity * sizeof(struct mill_pollset_item));
+            }
             ++mill_pollset_size;
             mill_pollset_fds[i].fd = fd;
             mill_pollset_fds[i].events = 0;
