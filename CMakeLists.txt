@@ -1,8 +1,13 @@
 cmake_minimum_required(VERSION 3.0)
 project(libmill C)
+
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wpedantic -Wextra")
+
+# static and shared libs
 file(GLOB sources *.c)
 add_library(mill STATIC ${sources})
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wpedantic -Wextra")
+add_library(mill_s SHARED ${sources})
+set_target_properties(mill_s PROPERTIES OUTPUT_NAME mill)
 
 # tests
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/tests)
