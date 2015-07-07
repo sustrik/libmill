@@ -24,7 +24,6 @@
 
 #include "slist.h"
 
-#include <assert.h>
 #include <stddef.h>
 
 void mill_slist_init(struct mill_slist *self) {
