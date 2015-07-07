@@ -24,7 +24,6 @@
 
 #include "list.h"
 
-#include <assert.h>
 #include <stddef.h>
 
 void mill_list_init(struct mill_list *self)
