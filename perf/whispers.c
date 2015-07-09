@@ -39,7 +39,7 @@ static uint64_t now() {
 
 static void whisper(chan left, chan right) {
     int val = chr(right, int);
-    chs(left, int, val+1);
+    chs(left, int, val + 1);
 }
 
 int main(int argc, char *argv[]) {
@@ -51,22 +51,23 @@ int main(int argc, char *argv[]) {
     long count = atol(argv[1]);
     uint64_t start = now();
 
-    long i;
     chan leftmost = chmake(int, 0);
     chan left = leftmost, right = leftmost;
+    long i;
     for (i = 0; i < count; ++i) {
-        right = chmake (int, 0);
+        right = chmake(int, 0);
         go(whisper(left, right));
         left = right;
     }
 
     chs(right, int, 1);
-    printf("%d\n", chr(leftmost, int));
+    int res = chr(leftmost, int);
+    assert(res == count + 1);
 
     uint64_t stop = now();
     long duration = (long)(stop - start);
 
-    printf ("took %f seconds\n", (float)duration / 1000);
+    printf("took %f seconds\n", (float)duration / 1000);
 
     return 0;
 }

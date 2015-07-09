@@ -277,8 +277,8 @@ int mill_choose_wait(void) {
         }
         mill_list_insert(&cl->ep->clauses, &cl->epitem, NULL);
     }
-    /* If choose is being performed from the running coroutine, all the parallel
-       chooses from other coroutines must be blocked on this line. */
+    /* If there are multiple parallel chooses done from different coroutines
+       all but one must be blocked on the following line. */
     return mill_suspend();
 }
 

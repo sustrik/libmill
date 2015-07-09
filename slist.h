@@ -40,20 +40,16 @@ struct mill_slist {
 /* Initialise the list. To statically initialise the list use = {0}. */
 void mill_slist_init(struct mill_slist *self);
 
-/* Terminates the list. Note that all items must be removed before the
-   termination. */
-void mill_slist_term(struct mill_slist *self);
-
-/* Returns 1 is list has zero items, 0 otherwise. */
-int mill_slist_empty(struct mill_slist *self);
+/* True is the list has no items. */
+#define mill_slist_empty(self) (!((self)->first))
 
 /* Returns iterator to the first item in the list or NULL if
    the list is empty. */
-struct mill_slist_item *mill_slist_begin(struct mill_slist *self);
+#define mill_slist_begin(self) ((self)->first)
 
 /* Returns iterator to one past the item pointed to by 'it'.
    If there are no more items returns NULL. */
-struct mill_slist_item *mill_slist_next(struct mill_slist_item *it);
+#define mill_slist_next(it) ((it)->next)
 
 /* Push the item to the beginning of the list. */
 void mill_slist_push(struct mill_slist *self, struct mill_slist_item *item);
@@ -64,11 +60,6 @@ void mill_slist_push_back(struct mill_slist *self,
 
 /* Pop an item from the beginning of the list. */
 struct mill_slist_item *mill_slist_pop(struct mill_slist *self);
-
-/* Insert the item after the item pointed to by 'it' argument. If 'it' is
-   NULL the item is inserted to the beginning of the list. */
-void mill_slist_insert(struct mill_slist *self, struct mill_slist_item *item,
-    struct mill_slist_item *it);
 
 #endif
 
