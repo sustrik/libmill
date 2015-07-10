@@ -237,7 +237,7 @@ int mill_choose_wait(void) {
     /* If there are clauses that are immediately available
        randomly choose one of them. */
     if(uc->available > 0) {
-        int chosen = uc->available == 1 ? 0 : random() % (uc->available);
+        int chosen = uc->available == 1 ? 0 : (int)(random() % (uc->available));
         for(it = mill_slist_begin(&uc->clauses); it; it = mill_slist_next(it)) {
             cl = mill_cont(it, struct mill_clause, chitem);
             if(!cl->available)
@@ -267,7 +267,7 @@ int mill_choose_wait(void) {
         cl = mill_cont(it, struct mill_clause, chitem);
         if(mill_slow(cl->ep->refs > 1)) {
             if(cl->ep->tmp == -1)
-                cl->ep->tmp = cl->ep->refs == 1 ? 0 : random() % cl->ep->refs;
+                cl->ep->tmp = cl->ep->refs == 1 ? 0 : (int)(random() % cl->ep->refs);
             if(cl->ep->tmp) {
                 --cl->ep->tmp;
                 cl->used = 0;
