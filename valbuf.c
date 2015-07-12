@@ -42,7 +42,7 @@ void *mill_valbuf_alloc(struct mill_valbuf *self, size_t sz) {
        dynamically allocated buffer, if present, or the static buffer. */
     if(self->capacity >= sz)
         return self->ptr ? self->ptr : self->buf;
-    /* Allocate or grow the dyncamic buffer to accommodate the type. */
+    /* Allocate or grow the dynamic buffer to accommodate the type. */
     self->ptr = realloc(self->ptr, sz);
     assert(self->ptr);
     self->capacity = sz;
