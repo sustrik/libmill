@@ -374,7 +374,7 @@ ssize_t tcprecv(tcpsock s, void *buf, size_t len) {
 
         /* Wait till there's more data to read. */
         int res = fdwait(conn->fd, FDW_IN, -1);
-        assert(res == FDW_IN);
+        assert(res & FDW_IN);
     }
 }
 
