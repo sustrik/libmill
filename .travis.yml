@@ -1,7 +1,7 @@
 language: c
 sudo: false
 os:
-  - osx
+#  - osx
   - linux
 env:
   - LIBMILL="git://github.com/sustrik/libmill.git"
