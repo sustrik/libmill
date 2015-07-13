@@ -141,9 +141,12 @@ tcpsock tcplisten(const char *addr) {
     int s = socket(AF_INET, SOCK_STREAM, 0);
     if(s == -1)
         return NULL;
+    int opt = 1;
+    rc = setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof (opt));
+    assert(rc == 0);
 
     /* Make it non-blocking. */
-    int opt = fcntl(s, F_GETFL, 0);
+    opt = fcntl(s, F_GETFL, 0);
     if (opt == -1)
         opt = 0;
     rc = fcntl(s, F_SETFL, opt | O_NONBLOCK);
@@ -200,9 +203,12 @@ tcpsock tcpconnect(const char *addr) {
     int s = socket(AF_INET, SOCK_STREAM, 0);
     if(s == -1)
         return NULL;
+    int opt = 1;
+    rc = setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof (opt));
+    assert(rc == 0);
 
     /* Make it non-blocking. */
-    int opt = fcntl(s, F_GETFL, 0);
+    opt = fcntl(s, F_GETFL, 0);
     if (opt == -1)
         opt = 0;
     rc = fcntl(s, F_SETFL, opt | O_NONBLOCK);
