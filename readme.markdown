@@ -1,6 +1,5 @@
-LIBMILL
+LIBMILL [![Build Status](https://travis-ci.org/sustrik/libmill.svg?branch=master)](https://travis-ci.org/sustrik/libmill)
 =======
-
 Libmill is a library that introduces Go-style concurrency to C.
 It works with x86-64, gcc and Linux/OSX.
 
