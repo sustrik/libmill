@@ -111,7 +111,7 @@ int main() {
     assert(foo2.first == 555 && foo2.second == 222);
     chclose(ch6);
 
-    /* Test buffering. */
+    /* Test message buffering. */
     chan ch7 = chmake(int, 2);
     chs(ch7, int, 222);
     chs(ch7, int, 333);
