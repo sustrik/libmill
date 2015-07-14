@@ -27,6 +27,7 @@
 
 #include <errno.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <sys/types.h>
 
 /******************************************************************************/
@@ -104,7 +105,7 @@ MILL_EXPORT void mill_yield(const char *current);
 
 #define msleep(ms) mill_msleep((ms), __FILE__ ":" mill_string(__LINE__))
 
-MILL_EXPORT void mill_msleep(long ms, const char *current);
+MILL_EXPORT void mill_msleep(uint64_t ms, const char *current);
 
 #define fdwait(fd, events, timeout) mill_fdwait((fd), (events), (timeout),\
     __FILE__ ":" mill_string(__LINE__))
@@ -113,7 +114,7 @@ MILL_EXPORT void mill_msleep(long ms, const char *current);
 #define FDW_OUT 2
 #define FDW_ERR 4
 
-MILL_EXPORT int mill_fdwait(int fd, int events, long timeout,
+MILL_EXPORT int mill_fdwait(int fd, int events, uint64_t *timeout,
     const char *current);
 
 MILL_EXPORT void *cls(void);
