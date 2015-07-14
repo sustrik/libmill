@@ -166,7 +166,7 @@ tcpsock tcplisten(const char *addr) {
     return &l->sock;
 }
 
-tcpsock tcpaccept(tcpsock s) {
+tcpsock tcpaccept(tcpsock s, uint64_t *timeout) {
     if(s->type != MILL_TCPLISTENER)
         mill_panic("trying to accept on a socket that isn't listening");
     struct tcplistener *l = (struct tcplistener*)s;
@@ -188,12 +188,16 @@ tcpsock tcpaccept(tcpsock s) {
         if(errno != EAGAIN && errno != EWOULDBLOCK)
             return NULL;
         /* Wait till new connection is available. */
-        int rc = fdwait(l->fd, FDW_IN, NULL);
+        int rc = fdwait(l->fd, FDW_IN, timeout);
+        if(rc == 0) {
+            errno = ETIMEDOUT;
+            return NULL;
+        }
         assert(rc == FDW_IN);
     }
 }
 
-tcpsock tcpconnect(const char *addr) {
+tcpsock tcpconnect(const char *addr, uint64_t *timeout) {
     struct sockaddr_in addr_in;
     int rc = resolve_ip4_literal_addr(addr, &addr_in);
     if (rc != 0)
@@ -220,7 +224,11 @@ tcpsock tcpconnect(const char *addr) {
         assert(rc == -1);
         if(errno != EINPROGRESS)
             return NULL;
-        rc = fdwait(s, FDW_OUT, NULL);
+        rc = fdwait(s, FDW_OUT, timeout);
+        if(rc == 0) {
+            errno = ETIMEDOUT;
+            return NULL;
+        }
         assert(rc == FDW_OUT);
         int err;
         socklen_t errsz = sizeof(err);
