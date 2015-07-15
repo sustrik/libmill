@@ -325,7 +325,7 @@ int tcpflush(tcpsock s) {
     return 0;
 }
 
-ssize_t tcprecv(tcpsock s, void *buf, size_t len) {
+size_t tcprecv(tcpsock s, void *buf, size_t len, int64_t deadline) {
     if(s->type != MILL_TCPCONN)
         mill_panic("trying to receive from an unconnected socket");
     struct tcpconn *conn = (struct tcpconn*)s;
@@ -334,7 +334,8 @@ ssize_t tcprecv(tcpsock s, void *buf, size_t len) {
         memcpy(buf, &conn->ibuf[conn->ifirst], len);
         conn->ifirst += len;
         conn->ilen -= len;
-        return 0;
+        errno = 0;
+        return len;
     }
 
     /* Let's move all the data from the buffer first. */
@@ -357,8 +358,10 @@ ssize_t tcprecv(tcpsock s, void *buf, size_t len) {
                 assert(errno == EAGAIN && errno == EWOULDBLOCK); // TODO
                 sz = 0;
             }
-            if(sz == remaining)
-                return 0;
+            if(sz == remaining) {
+                errno = 0;
+                return len;
+            }
             pos += sz;
             remaining -= sz;
         }
@@ -382,25 +385,32 @@ ssize_t tcprecv(tcpsock s, void *buf, size_t len) {
                 memcpy(pos, conn->ibuf, remaining);
                 conn->ifirst = remaining;
                 conn->ilen = sz - remaining;
-                return 0;
+                errno = 0;
+                return len;
             }
         }
 
         /* Wait till there's more data to read. */
-        int res = fdwait(conn->fd, FDW_IN, -1);
+        int res = fdwait(conn->fd, FDW_IN, deadline);
+        if(!res) {
+            errno = ETIMEDOUT;
+            return len - remaining;
+        }
         assert(res & FDW_IN);
     }
 }
 
-ssize_t tcprecvuntil(tcpsock s, void *buf, size_t len, char until) {
+size_t tcprecvuntil(tcpsock s, void *buf, size_t len, char until,
+      int64_t deadline) {
     if(s->type != MILL_TCPCONN)
         mill_panic("trying to receive from an unconnected socket");
     char *pos = (char*)buf;
-    size_t i;
+    ssize_t i;
     for(i = 0; i != len; ++i, ++pos) {
-        ssize_t res = tcprecv(s, pos, 1);
-        if (res != 0)
-            return -1;
+        ssize_t res = tcprecv(s, pos, 1, deadline);
+        assert(res == 1); // TODO
+        if (errno != 0)
+            return i;
         if(*pos == until)
             return i + 1;
     }
