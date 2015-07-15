@@ -55,8 +55,11 @@ int main() {
     tcpsock as = tcpaccept(ls, -1);
 
     /* Test deadline. */
-    size_t sz = tcprecv(as, buf, sizeof(buf), now() + 10);
-    assert (sz == 0 && errno == ETIMEDOUT);
+    int64_t deadline = now() + 100;
+    size_t sz = tcprecv(as, buf, sizeof(buf), deadline);
+    assert(sz == 0 && errno == ETIMEDOUT);
+    int64_t diff = now() - deadline;
+    assert(diff > -10 && diff < 10); 
 
     tcpsend(as, "ABC", 3);
     int rc = tcpflush(as);
