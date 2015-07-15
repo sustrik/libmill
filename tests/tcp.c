@@ -31,6 +31,8 @@ void client(void) {
     tcpsock cs = tcpconnect("127.0.0.1:5555", -1);
     assert(cs);
 
+    msleep(now() + 100);
+
     char buf[16];
     ssize_t sz = tcprecv(cs, buf, 3, -1);
     assert(buf[0] == 'A' && buf[1] == 'B' && buf[2] == 'C');
@@ -43,6 +45,8 @@ void client(void) {
 }
 
 int main() {
+    char buf[16];
+
     tcpsock ls = tcplisten("*:5555");
     assert(ls);
 
@@ -50,12 +54,15 @@ int main() {
 
     tcpsock as = tcpaccept(ls, -1);
 
+    /* Test deadline. */
+    size_t sz = tcprecv(as, buf, sizeof(buf), now() + 10);
+    assert (sz == 0 && errno == ETIMEDOUT);
+
     tcpsend(as, "ABC", 3);
     int rc = tcpflush(as);
     assert(rc == 0);
 
-    char buf[16];
-    ssize_t sz = tcprecvuntil(as, buf, sizeof(buf), '\n', -1);
+    sz = tcprecvuntil(as, buf, sizeof(buf), '\n', -1);
     assert(sz == 4);
     assert(buf[0] == '1' && buf[1] == '2' && buf[2] == '3' && buf[3] == '\n');
     sz = tcprecvuntil(as, buf, sizeof(buf), '\n', -1);
