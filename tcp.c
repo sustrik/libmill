@@ -166,7 +166,7 @@ tcpsock tcplisten(const char *addr) {
     return &l->sock;
 }
 
-tcpsock tcpaccept(tcpsock s, uint64_t *timeout) {
+tcpsock tcpaccept(tcpsock s, int64_t *timeout) {
     if(s->type != MILL_TCPLISTENER)
         mill_panic("trying to accept on a socket that isn't listening");
     struct tcplistener *l = (struct tcplistener*)s;
@@ -197,7 +197,7 @@ tcpsock tcpaccept(tcpsock s, uint64_t *timeout) {
     }
 }
 
-tcpsock tcpconnect(const char *addr, uint64_t *timeout) {
+tcpsock tcpconnect(const char *addr, int64_t *timeout) {
     struct sockaddr_in addr_in;
     int rc = resolve_ip4_literal_addr(addr, &addr_in);
     if (rc != 0)

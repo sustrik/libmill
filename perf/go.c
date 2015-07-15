@@ -40,13 +40,13 @@ int main(int argc, char *argv[]) {
     }
     long count = atol(argv[1]) * 1000000;
 
-    uint64_t start = now();
+    int64_t start = now();
 
     long i;
     for(i = 0; i != count; ++i)
         go(worker());
 
-    uint64_t stop = now();
+    int64_t stop = now();
     long duration = (long)(stop - start);
     long ns = (duration * 1000000) / count;
 

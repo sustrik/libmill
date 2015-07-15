@@ -36,9 +36,9 @@ void mill_panic(const char *text) {
     exit(1);
 }
 
-uint64_t now(void) {
+int64_t now(void) {
     struct timeval tv;
     int rc = gettimeofday(&tv, NULL);
     assert(rc == 0);
-    return ((uint64_t)tv.tv_sec) * 1000 + (((uint64_t)tv.tv_usec) / 1000);
+    return ((int64_t)tv.tv_sec) * 1000 + (((int64_t)tv.tv_usec) / 1000);
 }

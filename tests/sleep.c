@@ -30,7 +30,7 @@
 
 int main() {
     /* Test 'msleep'. */
-    uint64_t ms = now();
+    int64_t ms = now();
     msleep(100);
     ms = now() - ms;
     assert(ms > 90 && ms < 110);

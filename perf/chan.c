@@ -48,7 +48,7 @@ int main(int argc, char *argv[]) {
     chan out = chmake(int, 0);
     chan in = chmake(int, 0);
 
-    uint64_t start = now();
+    int64_t start = now();
     go(worker(out, in));
 
     int val = 0;
@@ -58,7 +58,7 @@ int main(int argc, char *argv[]) {
         val = chr(in, int);
     }
 
-    uint64_t stop = now();
+    int64_t stop = now();
     long duration = (long)(stop - start);
     long ns = (duration * 1000000) / (count * 2);
 

@@ -43,13 +43,13 @@ int main(int argc, char *argv[]) {
     for(i = 0; i != count; ++i)
         chs(ch, char, 0);
 
-    uint64_t start = now();
+    int64_t start = now();
 
     char val;
     for(i = 0; i != count; ++i)
         val = chr(ch, char);
 
-    uint64_t stop = now();
+    int64_t stop = now();
     long duration = (long)(stop - start);
     long ns = duration * 1000000 / count;
 

@@ -31,7 +31,7 @@
 #include <sys/types.h>
 #include "../libmill.h"
 
-void trigger(int fd, uint64_t ms) {
+void trigger(int fd, int64_t ms) {
     msleep(ms);
     ssize_t sz = send(fd, "A", 1, 0);
     assert(sz == 1);
@@ -49,14 +49,14 @@ int main() {
     assert(!(rc & ~FDW_OUT));
 
     /* Check with the timeout that doesn't expire. */
-    uint64_t tm = 100;
+    int64_t tm = 100;
     rc = fdwait(fds[0], FDW_OUT, &tm);
     assert(rc);
     assert(rc & FDW_OUT);
     assert(!(rc & ~FDW_OUT));
 
     /* Check with the timeout that does expire. */
-    uint64_t ms = now();
+    int64_t ms = now();
     tm = 100;
     rc = fdwait(fds[0], FDW_IN, &tm);
     assert(rc == 0);
@@ -85,7 +85,7 @@ int main() {
     tm = 90;
     rc = fdwait(fds[1], FDW_IN, &tm);
     assert(rc == FDW_IN);
-    uint64_t delay = now() - ms;
+    int64_t delay = now() - ms;
     assert(delay > 25 && delay < 35);
     sz = recv(fds[1], &c, 1, 0);
     assert(sz == 1);

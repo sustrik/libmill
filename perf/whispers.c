@@ -42,7 +42,7 @@ int main(int argc, char *argv[]) {
     }
 
     long count = atol(argv[1]);
-    uint64_t start = now();
+    int64_t start = now();
 
     chan leftmost = chmake(int, 0);
     chan left = leftmost, right = leftmost;
@@ -57,7 +57,7 @@ int main(int argc, char *argv[]) {
     int res = chr(leftmost, int);
     assert(res == count + 1);
 
-    uint64_t stop = now();
+    int64_t stop = now();
     long duration = (long)(stop - start);
 
     printf("took %f seconds\n", (float)duration / 1000);
