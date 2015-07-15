@@ -55,7 +55,7 @@ int main() {
     tcpsock as = tcpaccept(ls, -1);
 
     /* Test deadline. */
-    int64_t deadline = now() + 100;
+    int64_t deadline = now() + 30;
     size_t sz = tcprecv(as, buf, sizeof(buf), deadline);
     assert(sz == 0 && errno == ETIMEDOUT);
     int64_t diff = now() - deadline;
