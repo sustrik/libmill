@@ -40,7 +40,7 @@
 #define MILL_TCP_LISTEN_BACKLOG 10
 
 #define MILL_TCP_BUFLEN 1500
-
+	
 static void mill_tunesock(int s) {
     /* Make the socket non-blocking. */
     int opt = fcntl(s, F_GETFL, 0);
@@ -81,7 +81,6 @@ struct tcpconn {
     int ifirst;
     int ilen;
     int olen;
-    int oerr;
     char ibuf[MILL_TCP_BUFLEN];
     char obuf[MILL_TCP_BUFLEN];
 };
@@ -94,7 +93,6 @@ static struct tcpconn *tcpconn_create(int fd) {
     conn->ifirst = 0;
     conn->ilen = 0;
     conn->olen = 0;
-    conn->oerr = 0;
     return conn;
 }
 
@@ -245,29 +243,30 @@ tcpsock tcpconnect(const char *addr, int64_t deadline) {
     return &tcpconn_create(s)->sock;
 }
 
-void tcpsend(tcpsock s, const void *buf, size_t len) {
+size_t tcpsend(tcpsock s, const void *buf, size_t len, int64_t deadline) {
     if(s->type != MILL_TCPCONN)
         mill_panic("trying to send to an unconnected socket");
     struct tcpconn *conn = (struct tcpconn*)s;
-    /* If there was already an error don't even try again. */
-    if(conn->oerr)
-        return;
 
     /* If it fits into the output buffer copy it there and be done. */
     if(conn->olen + len <= MILL_TCP_BUFLEN) {
         memcpy(&conn->obuf[conn->olen], buf, len);
         conn->olen += len;
-        return;
+        errno = 0;
+        return len;
     }
 
-    /* Flush the output buffer. */
-    tcpflush(s);
+    /* If it doesn't fit, flush the output buffer first. */
+    tcpflush(s, deadline);
+    if(errno != 0)
+        return 0;
 
     /* Try to fit it into the buffer once again. */
     if(conn->olen + len <= MILL_TCP_BUFLEN) {
         memcpy(&conn->obuf[conn->olen], buf, len);
         conn->olen += len;
-        return;
+        errno = 0;
+        return len;
     }
 
     /* The data chunk to send is longer than the output buffer.
@@ -277,11 +276,13 @@ void tcpsend(tcpsock s, const void *buf, size_t len) {
     while(remaining) {
         ssize_t sz = send(conn->fd, pos, remaining, 0);
         if(sz == -1) {
-            if(errno != EAGAIN && errno != EWOULDBLOCK) {
-                conn->oerr = errno;
-                return;
+            if(errno != EAGAIN && errno != EWOULDBLOCK)
+                return 0;
+            int rc = fdwait(conn->fd, FDW_OUT, deadline);
+            if(rc == 0) {
+                errno = ETIMEDOUT;
+                return len - remaining;
             }
-            int rc = fdwait(conn->fd, FDW_OUT, -1);
             assert(rc == FDW_OUT);
             continue;
         }
@@ -290,26 +291,26 @@ void tcpsend(tcpsock s, const void *buf, size_t len) {
     }
 }
 
-int tcpflush(tcpsock s) {
+void tcpflush(tcpsock s, int64_t deadline) {
     if(s->type != MILL_TCPCONN)
         mill_panic("trying to send to an unconnected socket");
     struct tcpconn *conn = (struct tcpconn*)s;
-    if(conn->oerr) {
-        errno = conn->oerr;
-        conn->oerr = 0;
-        conn->olen = 0;
-        return -1;
+    if(!conn->olen) {
+        errno = 0;
+        return;
     }
-    if(!conn->olen)
-        return 0;
     char *pos = conn->obuf;
     size_t remaining = conn->olen;
     while(remaining) {
         ssize_t sz = send(conn->fd, pos, remaining, 0);
         if(sz == -1) {
             if(errno != EAGAIN && errno != EWOULDBLOCK)
-                return -1;
-            int rc = fdwait(conn->fd, FDW_OUT, -1);
+                return;
+            int rc = fdwait(conn->fd, FDW_OUT, deadline);
+            if(rc == 0) {
+                errno = ETIMEDOUT;
+                return;
+            }
             assert(rc == FDW_OUT);
             continue;
         }
@@ -317,7 +318,7 @@ int tcpflush(tcpsock s) {
         remaining -= sz;
     }
     conn->olen = 0;
-    return 0;
+    errno = 0;
 }
 
 size_t tcprecv(tcpsock s, void *buf, size_t len, int64_t deadline) {
@@ -416,7 +417,7 @@ size_t tcprecvuntil(tcpsock s, void *buf, size_t len, char until,
         if (errno != 0)
             return i + res;
     }
-    return 0;
+    return len;
 }
 
 void tcpclose(tcpsock s) {

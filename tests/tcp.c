@@ -37,9 +37,10 @@ void client(void) {
     size_t sz = tcprecv(cs, buf, 3, -1);
     assert(sz == 3 && buf[0] == 'A' && buf[1] == 'B' && buf[2] == 'C');
 
-    tcpsend(cs, "123\n45\n6789", 11);
-    int rc = tcpflush(cs);
-    assert(rc == 0);
+    sz = tcpsend(cs, "123\n45\n6789", 11, -1);
+    assert(sz == 11 && errno == 0);
+    tcpflush(cs, -1);
+    assert(errno == 0);
 
     tcpclose(cs);
 }
@@ -61,9 +62,10 @@ int main() {
     int64_t diff = now() - deadline;
     assert(diff > -10 && diff < 10); 
 
-    tcpsend(as, "ABC", 3);
-    int rc = tcpflush(as);
-    assert(rc == 0);
+    sz = tcpsend(as, "ABC", 3, -1);
+    assert(sz == 3 && errno == 0);
+    tcpflush(as, -1);
+    assert(errno == 0);
 
     sz = tcprecvuntil(as, buf, sizeof(buf), '\n', -1);
     assert(sz == 4);
@@ -72,7 +74,7 @@ int main() {
     assert(sz == 3);
     assert(buf[0] == '4' && buf[1] == '5' && buf[2] == '\n');
     sz = tcprecvuntil(as, buf, 3, '\n', -1);
-    assert(sz == 0);
+    assert(sz == 3);
     assert(buf[0] == '6' && buf[1] == '7' && buf[2] == '8');
 
     tcpclose(as);
