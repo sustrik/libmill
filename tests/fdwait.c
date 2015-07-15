@@ -31,8 +31,8 @@
 #include <sys/types.h>
 #include "../libmill.h"
 
-void trigger(int fd, int64_t ms) {
-    msleep(ms);
+void trigger(int fd, int64_t deadline) {
+    msleep(deadline);
     ssize_t sz = send(fd, "A", 1, 0);
     assert(sz == 1);
 }
@@ -44,34 +44,32 @@ int main() {
     assert(rc == 0);
 
     /* Check for out. */
-    rc = fdwait(fds[0], FDW_OUT, NULL);
+    rc = fdwait(fds[0], FDW_OUT, -1);
     assert(rc & FDW_OUT);
     assert(!(rc & ~FDW_OUT));
 
     /* Check with the timeout that doesn't expire. */
-    int64_t tm = 100;
-    rc = fdwait(fds[0], FDW_OUT, &tm);
+    rc = fdwait(fds[0], FDW_OUT, now() + 100);
     assert(rc);
     assert(rc & FDW_OUT);
     assert(!(rc & ~FDW_OUT));
 
     /* Check with the timeout that does expire. */
-    int64_t ms = now();
-    tm = 100;
-    rc = fdwait(fds[0], FDW_IN, &tm);
+    int64_t deadline = now() + 100;
+    rc = fdwait(fds[0], FDW_IN, deadline);
     assert(rc == 0);
-    ms = now() - ms;
-    assert(ms > 90 && ms < 110);
+    int64_t diff = now() - deadline;
+    assert(diff > -10 && diff < 10);
 
     /* Check for in. */
     ssize_t sz = send(fds[1], "A", 1, 0);
     assert(sz == 1);
-    rc = fdwait(fds[0], FDW_IN, NULL);
+    rc = fdwait(fds[0], FDW_IN, -1);
     assert(rc & FDW_IN);
     assert(!(rc & ~FDW_IN));
 
     /* Check for both in and out. */
-    rc = fdwait(fds[0], FDW_IN | FDW_OUT, NULL);
+    rc = fdwait(fds[0], FDW_IN | FDW_OUT, -1);
     assert(rc & FDW_IN);
     assert(rc & FDW_OUT);
     assert(!(rc & ~(FDW_IN | FDW_OUT)));
@@ -79,21 +77,13 @@ int main() {
     sz = recv(fds[0], &c, 1, 0);
     assert(sz == 1);
 
-    /* Check complex timeout scenario. */
-    ms = now();
-    go(trigger(fds[0], 30));
-    tm = 90;
-    rc = fdwait(fds[1], FDW_IN, &tm);
+    /* Two interleaved deadlines. */
+    int64_t start = now();
+    go(trigger(fds[0], start + 50));
+    rc = fdwait(fds[1], FDW_IN, start + 90);
     assert(rc == FDW_IN);
-    int64_t delay = now() - ms;
-    assert(delay > 25 && delay < 35);
-    sz = recv(fds[1], &c, 1, 0);
-    assert(sz == 1);
-    msleep(30);
-    rc = fdwait(fds[1], FDW_IN, &tm);
-    assert(rc == 0);
-    delay = now() - ms;
-    assert(delay > 85 && delay < 95);
+    diff = now() - start;
+    assert(diff > 40 && diff < 60);
 
     close(fds[0]);
     close(fds[1]);

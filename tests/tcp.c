@@ -28,7 +28,7 @@
 #include "../libmill.h"
 
 void client(void) {
-    tcpsock cs = tcpconnect("127.0.0.1:5555", NULL);
+    tcpsock cs = tcpconnect("127.0.0.1:5555", -1);
     assert(cs);
 
     char buf[16];
@@ -48,7 +48,7 @@ int main() {
 
     go(client());
 
-    tcpsock as = tcpaccept(ls, NULL);
+    tcpsock as = tcpaccept(ls, -1);
 
     tcpsend(as, "ABC", 3);
     int rc = tcpflush(as);

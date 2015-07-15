@@ -109,18 +109,19 @@ MILL_EXPORT void mill_go_epilogue(void);
 
 MILL_EXPORT void mill_yield(const char *current);
 
-#define msleep(ms) mill_msleep((ms), __FILE__ ":" mill_string(__LINE__))
+#define msleep(deadline) mill_msleep((deadline),\
+    __FILE__ ":" mill_string(__LINE__))
 
-MILL_EXPORT void mill_msleep(int64_t ms, const char *current);
+MILL_EXPORT void mill_msleep(int64_t deadline, const char *current);
 
-#define fdwait(fd, events, timeout) mill_fdwait((fd), (events), (timeout),\
+#define fdwait(fd, events, deadline) mill_fdwait((fd), (events), (deadline),\
     __FILE__ ":" mill_string(__LINE__))
 
 #define FDW_IN 1
 #define FDW_OUT 2
 #define FDW_ERR 4
 
-MILL_EXPORT int mill_fdwait(int fd, int events, int64_t *timeout,
+MILL_EXPORT int mill_fdwait(int fd, int events, int64_t deadline,
     const char *current);
 
 MILL_EXPORT void *cls(void);
@@ -255,8 +256,8 @@ MILL_EXPORT void *mill_choose_val(void);
 typedef struct tcpsock *tcpsock;
 
 MILL_EXPORT tcpsock tcplisten(const char *addr);
-MILL_EXPORT tcpsock tcpaccept(tcpsock s, int64_t *timeout);
-MILL_EXPORT tcpsock tcpconnect(const char *addr, int64_t *timeout);
+MILL_EXPORT tcpsock tcpaccept(tcpsock s, int64_t deadline);
+MILL_EXPORT tcpsock tcpconnect(const char *addr, int64_t deadline);
 MILL_EXPORT void tcpsend(tcpsock s, const void *buf, size_t len);
 MILL_EXPORT int tcpflush(tcpsock s);
 MILL_EXPORT ssize_t tcprecv(tcpsock s, void *buf, size_t len);

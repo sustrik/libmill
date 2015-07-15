@@ -166,7 +166,7 @@ tcpsock tcplisten(const char *addr) {
     return &l->sock;
 }
 
-tcpsock tcpaccept(tcpsock s, int64_t *timeout) {
+tcpsock tcpaccept(tcpsock s, int64_t deadline) {
     if(s->type != MILL_TCPLISTENER)
         mill_panic("trying to accept on a socket that isn't listening");
     struct tcplistener *l = (struct tcplistener*)s;
@@ -188,7 +188,7 @@ tcpsock tcpaccept(tcpsock s, int64_t *timeout) {
         if(errno != EAGAIN && errno != EWOULDBLOCK)
             return NULL;
         /* Wait till new connection is available. */
-        int rc = fdwait(l->fd, FDW_IN, timeout);
+        int rc = fdwait(l->fd, FDW_IN, deadline);
         if(rc == 0) {
             errno = ETIMEDOUT;
             return NULL;
@@ -197,7 +197,7 @@ tcpsock tcpaccept(tcpsock s, int64_t *timeout) {
     }
 }
 
-tcpsock tcpconnect(const char *addr, int64_t *timeout) {
+tcpsock tcpconnect(const char *addr, int64_t deadline) {
     struct sockaddr_in addr_in;
     int rc = resolve_ip4_literal_addr(addr, &addr_in);
     if (rc != 0)
@@ -224,7 +224,7 @@ tcpsock tcpconnect(const char *addr, int64_t *timeout) {
         assert(rc == -1);
         if(errno != EINPROGRESS)
             return NULL;
-        rc = fdwait(s, FDW_OUT, timeout);
+        rc = fdwait(s, FDW_OUT, deadline);
         if(rc == 0) {
             errno = ETIMEDOUT;
             return NULL;
@@ -286,7 +286,7 @@ void tcpsend(tcpsock s, const void *buf, size_t len) {
                 conn->oerr = errno;
                 return;
             }
-            int rc = fdwait(conn->fd, FDW_OUT, NULL);
+            int rc = fdwait(conn->fd, FDW_OUT, -1);
             assert(rc == FDW_OUT);
             continue;
         }
@@ -314,7 +314,7 @@ int tcpflush(tcpsock s) {
         if(sz == -1) {
             if(errno != EAGAIN && errno != EWOULDBLOCK)
                 return -1;
-            int rc = fdwait(conn->fd, FDW_OUT, NULL);
+            int rc = fdwait(conn->fd, FDW_OUT, -1);
             assert(rc == FDW_OUT);
             continue;
         }
@@ -387,7 +387,7 @@ ssize_t tcprecv(tcpsock s, void *buf, size_t len) {
         }
 
         /* Wait till there's more data to read. */
-        int res = fdwait(conn->fd, FDW_IN, NULL);
+        int res = fdwait(conn->fd, FDW_IN, -1);
         assert(res & FDW_IN);
     }
 }

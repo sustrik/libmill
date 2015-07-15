@@ -33,21 +33,13 @@
 #include <stddef.h>
 #include <stdlib.h>
 
-static const int64_t mill_bit64 = ((int64_t)1) << 63;
-
 /* Global linked list of all timers. The list is ordered.
    First timer to be resume comes first and so on. */
 static struct mill_list mill_timers = {0};
 
 /* Pause current coroutine for a specified time interval. */
-void mill_msleep(int64_t ms, const char *current) {
-    /* No point in waiting. Still, let's give other coroutines a chance. */
-    if(ms <= 0) {
-        yield();
-        return;
-    }
-    /* Do the actual waiting. */
-    mill_fdwait(-1, 0, &ms, current);
+void mill_msleep(int64_t deadline, const char *current) {
+    mill_fdwait(-1, 0, deadline, current);
 }
 
 /* Pollset used for waiting for file descriptors. */
@@ -64,17 +56,10 @@ struct mill_pollset_item {
 static struct mill_pollset_item *mill_pollset_items = NULL;
 
 /* Wait for events from a file descriptor, with an optional timeout. */
-int mill_fdwait(int fd, int events, int64_t *timeout, const char *current) {
+int mill_fdwait(int fd, int events, int64_t deadline, const char *current) {
     /* If required, start waiting for the timeout. */
-    if(timeout) {
-        /* Compute at which point of time will the timer expire. */
-        if(*timeout & mill_bit64) {
-            mill_running->u_fdwait.expiry = *timeout & ~mill_bit64;
-        }
-        else {
-            mill_running->u_fdwait.expiry = now() + *timeout;
-            *timeout = mill_running->u_fdwait.expiry | mill_bit64;
-        }
+    if(deadline >= 0) {
+        mill_running->u_fdwait.expiry = deadline;
         /* Move the timer into the right place in the ordered list
            of existing timers. TODO: This is an O(n) operation! */
         struct mill_list_item *it = mill_list_begin(&mill_timers);
@@ -135,7 +120,7 @@ int mill_fdwait(int fd, int events, int64_t *timeout, const char *current) {
     int rc = mill_suspend();
     /* Handle file descriptor events. */
     if(rc >= 0) {
-        if(timeout)
+        if(deadline >= 0)
             mill_list_erase(&mill_timers, &mill_running->u_fdwait.item);
         return rc;
     }

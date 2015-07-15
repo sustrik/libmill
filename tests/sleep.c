@@ -30,10 +30,10 @@
 
 int main() {
     /* Test 'msleep'. */
-    int64_t ms = now();
-    msleep(100);
-    ms = now() - ms;
-    assert(ms > 90 && ms < 110);
+    int64_t deadline = now() + 100;
+    msleep(deadline);
+    int64_t diff = now () - deadline;
+    assert(diff > -10 && diff < 10);
 
     return 0;
 }
