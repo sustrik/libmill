@@ -41,6 +41,26 @@
 
 #define MILL_TCP_BUFLEN 1500
 
+static void mill_tunesock(int s) {
+    /* Make thr socket non-blocking. */
+    int opt = fcntl(s, F_GETFL, 0);
+    if (opt == -1)
+        opt = 0;
+    int rc = fcntl(s, F_SETFL, opt | O_NONBLOCK);
+    assert(rc != -1);
+    /*  Allow re-using the same local address rapidly. */
+    opt = 1;
+    rc = setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof (opt));
+    assert(rc == 0);
+    /* If possible, prevent SIGPIPE signal when writing to the connection
+        already closed by the peer. */
+#ifdef SO_NOSIGPIPE
+    opt = 1;
+    rc = setsockopt (s, SOL_SOCKET, SO_NOSIGPIPE, &opt, sizeof (opt));
+    assert (rc == 0 || errno == EINVAL);
+#endif
+}
+
 enum mill_tcptype {
    MILL_TCPLISTENER,
    MILL_TCPCONN
@@ -141,16 +161,7 @@ tcpsock tcplisten(const char *addr) {
     int s = socket(AF_INET, SOCK_STREAM, 0);
     if(s == -1)
         return NULL;
-    int opt = 1;
-    rc = setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof (opt));
-    assert(rc == 0);
-
-    /* Make it non-blocking. */
-    opt = fcntl(s, F_GETFL, 0);
-    if (opt == -1)
-        opt = 0;
-    rc = fcntl(s, F_SETFL, opt | O_NONBLOCK);
-    assert(rc != -1);
+    mill_tunesock(s);
 
     /* Start listening. */
     rc = bind(s, (struct sockaddr*)&addr_in, sizeof(addr_in));
@@ -174,14 +185,7 @@ tcpsock tcpaccept(tcpsock s, int64_t deadline) {
         /* Try to get new connection (non-blocking). */
         int as = accept(l->fd, NULL, NULL);
         if (as >= 0) {
-            /* Put the newly created connection into non-blocking mode. */
-            int opt = fcntl(as, F_GETFL, 0);
-            if (opt == -1)
-                opt = 0;
-            int rc = fcntl(as, F_SETFL, opt | O_NONBLOCK);
-            assert(rc != -1);
-
-            /* Create the object. */
+            mill_tunesock(as);
             return &tcpconn_create(as)->sock;
         }
         assert(as == -1);
@@ -207,16 +211,7 @@ tcpsock tcpconnect(const char *addr, int64_t deadline) {
     int s = socket(AF_INET, SOCK_STREAM, 0);
     if(s == -1)
         return NULL;
-    int opt = 1;
-    rc = setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof (opt));
-    assert(rc == 0);
-
-    /* Make it non-blocking. */
-    opt = fcntl(s, F_GETFL, 0);
-    if (opt == -1)
-        opt = 0;
-    rc = fcntl(s, F_SETFL, opt | O_NONBLOCK);
-    assert(rc != -1);
+    mill_tunesock(s);
 
     /* Connect to the remote endpoint. */
     rc = connect(s, (struct sockaddr*)&addr_in, sizeof(addr_in));
