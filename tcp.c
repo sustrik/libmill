@@ -358,7 +358,8 @@ size_t tcprecv(tcpsock s, void *buf, size_t len, int64_t deadline) {
 		        return len - remaining;
             }
             if(sz == -1) {
-                assert(errno == EAGAIN && errno == EWOULDBLOCK); // TODO
+                if(errno != EAGAIN && errno != EWOULDBLOCK)
+                    return len - remaining;
                 sz = 0;
             }
             if(sz == remaining) {
@@ -377,7 +378,8 @@ size_t tcprecv(tcpsock s, void *buf, size_t len, int64_t deadline) {
 		        return len - remaining;
             }
             if(sz == -1) {
-                assert(errno == EAGAIN && errno == EWOULDBLOCK); // TODO
+                if(errno != EAGAIN && errno != EWOULDBLOCK)
+                    return len - remaining;
                 sz = 0;
             }
             if(sz < remaining) {
