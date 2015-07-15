@@ -405,7 +405,7 @@ size_t tcprecvuntil(tcpsock s, void *buf, size_t len, char until,
     if(s->type != MILL_TCPCONN)
         mill_panic("trying to receive from an unconnected socket");
     char *pos = (char*)buf;
-    ssize_t i;
+    size_t i;
     for(i = 0; i != len; ++i, ++pos) {
         ssize_t res = tcprecv(s, pos, 1, deadline);
         assert(res == 1); // TODO
