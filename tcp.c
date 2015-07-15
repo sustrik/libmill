@@ -42,7 +42,7 @@
 #define MILL_TCP_BUFLEN 1500
 
 static void mill_tunesock(int s) {
-    /* Make thr socket non-blocking. */
+    /* Make the socket non-blocking. */
     int opt = fcntl(s, F_GETFL, 0);
     if (opt == -1)
         opt = 0;
