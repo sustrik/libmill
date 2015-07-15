@@ -34,8 +34,8 @@ void client(void) {
     msleep(now() + 100);
 
     char buf[16];
-    ssize_t sz = tcprecv(cs, buf, 3, -1);
-    assert(buf[0] == 'A' && buf[1] == 'B' && buf[2] == 'C');
+    size_t sz = tcprecv(cs, buf, 3, -1);
+    assert(sz == 3 && buf[0] == 'A' && buf[1] == 'B' && buf[2] == 'C');
 
     tcpsend(cs, "123\n45\n6789", 11);
     int rc = tcpflush(cs);
