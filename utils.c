@@ -22,6 +22,7 @@
 
 */
 
+#include "libmill.h"
 #include "utils.h"
 
 #include <assert.h>
@@ -35,7 +36,7 @@ void mill_panic(const char *text) {
     exit(1);
 }
 
-uint64_t mill_now() {
+uint64_t now(void) {
     struct timeval tv;
     int rc = gettimeofday(&tv, NULL);
     assert(rc == 0);

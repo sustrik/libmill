@@ -31,13 +31,6 @@
 #include <sys/types.h>
 #include "../libmill.h"
 
-static uint64_t now() {
-    struct timeval tv;
-    int rc = gettimeofday(&tv, NULL);
-    assert(rc == 0);
-    return ((uint64_t)tv.tv_sec) * 1000 + (((uint64_t)tv.tv_usec) / 1000);
-}
-
 void trigger(int fd, uint64_t ms) {
     msleep(ms);
     ssize_t sz = send(fd, "A", 1, 0);

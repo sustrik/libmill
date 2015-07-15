@@ -72,7 +72,7 @@ int mill_fdwait(int fd, int events, uint64_t *timeout, const char *current) {
             mill_running->u_fdwait.expiry = *timeout & ~mill_bit64;
         }
         else {
-            mill_running->u_fdwait.expiry = mill_now() + *timeout;
+            mill_running->u_fdwait.expiry = now() + *timeout;
             *timeout = mill_running->u_fdwait.expiry | mill_bit64;
         }
         /* Move the timer into the right place in the ordered list
@@ -171,7 +171,7 @@ void mill_wait(void) {
         /* Compute the time till next expired sleeping coroutine. */
         int timeout = -1;
         if(!mill_list_empty(&mill_timers)) {
-            uint64_t nw = mill_now();
+            uint64_t nw = now();
             uint64_t expiry = mill_cont(mill_list_begin(&mill_timers),
                 struct mill_fdwait, item)->expiry;
             timeout = nw >= expiry ? 0 : expiry - nw;
@@ -183,7 +183,7 @@ void mill_wait(void) {
 
         /* Fire all expired timers. */
         if(!mill_list_empty(&mill_timers)) {
-            uint64_t nw = mill_now();
+            uint64_t nw = now();
             while(!mill_list_empty(&mill_timers)) {
                 struct mill_fdwait *timer = mill_cont(
                     mill_list_begin(&mill_timers), struct mill_fdwait, item);
