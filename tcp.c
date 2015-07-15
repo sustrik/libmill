@@ -353,7 +353,10 @@ size_t tcprecv(tcpsock s, void *buf, size_t len, int64_t deadline) {
             /* If we still have a lot to read try to read it in one go directly
                into the destination buffer. */
             ssize_t sz = recv(conn->fd, pos, remaining, 0);
-            assert(sz != 0); // TODO
+            if(!sz) {
+		        errno = ECONNRESET;
+		        return len - remaining;
+            }
             if(sz == -1) {
                 assert(errno == EAGAIN && errno == EWOULDBLOCK); // TODO
                 sz = 0;
@@ -369,7 +372,10 @@ size_t tcprecv(tcpsock s, void *buf, size_t len, int64_t deadline) {
             /* If we have just a little to read try to read the full connection
                buffer to minimise the number of system calls. */
             ssize_t sz = recv(conn->fd, conn->ibuf, MILL_TCP_BUFLEN, 0);
-            assert(sz != 0); // TODO
+            if(!sz) {
+		        errno = ECONNRESET;
+		        return len - remaining;
+            }
             if(sz == -1) {
                 assert(errno == EAGAIN && errno == EWOULDBLOCK); // TODO
                 sz = 0;
@@ -407,12 +413,11 @@ size_t tcprecvuntil(tcpsock s, void *buf, size_t len, char until,
     char *pos = (char*)buf;
     size_t i;
     for(i = 0; i != len; ++i, ++pos) {
-        ssize_t res = tcprecv(s, pos, 1, deadline);
-        assert(res == 1); // TODO
-        if (errno != 0)
-            return i;
-        if(*pos == until)
+        size_t res = tcprecv(s, pos, 1, deadline);
+        if(res == 1 && *pos == until)
             return i + 1;
+        if (errno != 0)
+            return i + res;
     }
     return 0;
 }
