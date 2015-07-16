@@ -73,6 +73,7 @@ struct tcpsock {
 struct tcplistener {
     struct tcpsock sock;
     int fd;
+    int port;
 };
 
 struct tcpconn {
@@ -167,13 +168,40 @@ tcpsock tcplisten(const char *addr, int port) {
     rc = listen(s, MILL_TCP_LISTEN_BACKLOG);
     assert(rc != -1);
 
+    /* If the user requested an ephemeral port,
+       retrieve the port number assigned by the OS now. */
+    if(!port) {
+        len = sizeof(ss);
+        rc = getsockname(s, (struct sockaddr*)&ss, &len);
+        if(rc == -1) {
+            int err = errno;
+            close(s);
+            errno = err;
+            return NULL;
+        }
+        if(ss.ss_family == AF_INET)
+            port = ((struct sockaddr_in*)&ss)->sin_port;
+        else if(ss.ss_family == AF_INET6)
+            port = ((struct sockaddr_in6*)&ss)->sin6_port;
+        else
+            assert(0);
+    }
+
     /* Create the object. */
     struct tcplistener *l = malloc(sizeof(struct tcplistener));
     assert(l);
     l->sock.type = MILL_TCPLISTENER;
     l->fd = s;
+    l->port = port;
     errno = 0;
     return &l->sock;
+}
+
+int tcpport(tcpsock s) {
+    if(s->type != MILL_TCPLISTENER)
+        mill_panic("trying to get port from a socket that isn't listening");
+    struct tcplistener *l = (struct tcplistener*)s;
+    return l->port;
 }
 
 tcpsock tcpaccept(tcpsock s, int64_t deadline) {
