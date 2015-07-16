@@ -172,6 +172,7 @@ tcpsock tcplisten(const char *addr) {
     assert(l);
     l->sock.type = MILL_TCPLISTENER;
     l->fd = s;
+    errno = 0;
     return &l->sock;
 }
 
@@ -184,6 +185,7 @@ tcpsock tcpaccept(tcpsock s, int64_t deadline) {
         int as = accept(l->fd, NULL, NULL);
         if (as >= 0) {
             mill_tunesock(as);
+            errno = 0;
             return &tcpconn_create(as)->sock;
         }
         assert(as == -1);
@@ -240,6 +242,7 @@ tcpsock tcpconnect(const char *addr, int64_t deadline) {
     }
 
     /* Create the object. */
+    errno = 0;
     return &tcpconn_create(s)->sock;
 }
 
