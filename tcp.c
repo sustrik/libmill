@@ -435,11 +435,11 @@ size_t tcprecv(tcpsock s, void *buf, size_t len, int64_t deadline) {
     }
 }
 
-size_t tcprecvuntil(tcpsock s, void *buf, size_t len, char until,
+size_t tcprecvuntil(tcpsock s, void *buf, size_t len, unsigned char until,
       int64_t deadline) {
     if(s->type != MILL_TCPCONN)
         mill_panic("trying to receive from an unconnected socket");
-    char *pos = (char*)buf;
+    unsigned char *pos = (unsigned char*)buf;
     size_t i;
     for(i = 0; i != len; ++i, ++pos) {
         size_t res = tcprecv(s, pos, 1, deadline);

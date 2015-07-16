@@ -264,8 +264,8 @@ MILL_EXPORT void tcpflush(tcpsock s,
     int64_t deadline);
 MILL_EXPORT size_t tcprecv(tcpsock s, void *buf, size_t len,
     int64_t deadline);
-MILL_EXPORT size_t tcprecvuntil(tcpsock s, void *buf, size_t len, char until,
-    int64_t deadline);
+MILL_EXPORT size_t tcprecvuntil(tcpsock s, void *buf, size_t len,
+    unsigned char until, int64_t deadline);
 MILL_EXPORT void tcpclose(tcpsock s);
 
 /******************************************************************************/
