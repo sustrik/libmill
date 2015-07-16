@@ -28,7 +28,7 @@
 #include "../libmill.h"
 
 void client(void) {
-    tcpsock cs = tcpconnect("127.0.0.1:5555", -1);
+    tcpsock cs = tcpconnect("127.0.0.1", 5555, -1);
     assert(cs);
 
     msleep(now() + 100);
@@ -48,7 +48,7 @@ void client(void) {
 int main() {
     char buf[16];
 
-    tcpsock ls = tcplisten("*:5555");
+    tcpsock ls = tcplisten(NULL, 5555);
     assert(ls);
 
     go(client());

@@ -254,9 +254,9 @@ MILL_EXPORT void *mill_choose_val(void);
 
 typedef struct tcpsock *tcpsock;
 
-MILL_EXPORT tcpsock tcplisten(const char *addr);
+MILL_EXPORT tcpsock tcplisten(const char *addr, int port);
 MILL_EXPORT tcpsock tcpaccept(tcpsock s, int64_t deadline);
-MILL_EXPORT tcpsock tcpconnect(const char *addr, int64_t deadline);
+MILL_EXPORT tcpsock tcpconnect(const char *addr, int port, int64_t deadline);
 MILL_EXPORT size_t tcpsend(tcpsock s, const void *buf, size_t len,
     int64_t deadline);
 MILL_EXPORT void tcpflush(tcpsock s,

@@ -96,73 +96,73 @@ static struct tcpconn *tcpconn_create(int fd) {
     return conn;
 }
 
-static int resolve_ip4_literal_addr(const char *addr,
-      struct sockaddr_in *addr_in) {
-    memset(addr_in, 0, sizeof(struct sockaddr_in));
-    addr_in->sin_family = AF_INET;
-    char *colon = strrchr(addr, ':');
-
-    /* Port. */
-    int port = 0;
-    if(colon) {
-        const char *pos = colon + 1;
-        while(*pos) {
-          if(*pos < '0' || *pos > '9') {
-            errno = EINVAL;
-            return -1;
-          }
-          port *= 10;
-          port += *pos - '0';
-          ++pos;
-        }
-        if(port < 0 || port > 0xffff) {
-            errno = EINVAL;
-            return -1;
-        }
-    }
-    addr_in->sin_port = htons(port);
-
-    /* Get the IP address part of the string. */
-    const char *straddr;
-    char straddrbuf[256];
-    if(!colon)
-        straddr = addr;
-    else {
-        assert(colon - addr + 1 <= sizeof(straddrbuf));
-        memcpy(straddrbuf, addr, colon - addr);
-        straddrbuf[colon - addr] = 0;
-        straddr = straddrbuf;
-    }
-
-    /* Wildcard address. */
-    if(strcmp(straddr, "*") == 0) {
-        addr_in->sin_addr.s_addr = INADDR_ANY;
-        return 0;
-    }
-
-    /* IPv4 address. */
-    int rc = inet_pton(AF_INET, straddr, &addr_in->sin_addr);
-    if(rc != 1) {
+/* Convert textual IPv4 or IPv6 address to a binary one. */
+static int mill_tcpresolve(const char *addr, int port,
+      struct sockaddr_storage *ss, socklen_t *len) {
+    assert(ss);
+    if(port < 0 || port > 0xffff) {
         errno = EINVAL;
         return -1;
     }
-    return 0;
+    // NULL translates to INADDR_ANY.
+    // TODO: Consider using in6addr_any. AFAICS that should account for IPv4
+    //       addresses as well. However, would it work on all systems?
+    if(!addr) {
+        struct sockaddr_in *ipv4 = (struct sockaddr_in*)ss;
+        ipv4->sin_family = AF_INET;
+        ipv4->sin_addr.s_addr = INADDR_ANY;
+        ipv4->sin_port = htons((uint16_t)port);
+        if(len)
+            *len = sizeof(struct sockaddr_in);
+        errno = 0;
+        return 0;
+    }
+    // Try to interpret the string is IPv4 address.
+    int rc = inet_pton(AF_INET, addr, ss);
+    assert(rc >= 0);
+    if(rc == 1) {
+        struct sockaddr_in *ipv4 = (struct sockaddr_in*)ss;
+        ipv4->sin_family = AF_INET;
+        ipv4->sin_port = htons((uint16_t)port);
+        if(len)
+            *len = sizeof(struct sockaddr_in);
+        errno = 0;
+        return 0;
+    }
+
+    // It's not an IPv4 address. Let's try to interpret it as IPv6 address.
+    rc = inet_pton(AF_INET6, addr, ss);
+    assert(rc >= 0);
+    if(rc == 1) {
+        struct sockaddr_in6 *ipv6 = (struct sockaddr_in6*)ss;
+        ipv6->sin6_family = AF_INET6;
+        ipv6->sin6_port = htons((uint16_t)port);
+        if(len)
+            *len = sizeof(struct sockaddr_in6);
+        errno = 0;
+        return 0;
+    }
+    
+    // It's neither IPv4, nor IPv6 address.
+    errno = EINVAL;
+    return -1;
 }
 
-tcpsock tcplisten(const char *addr) {
-    struct sockaddr_in addr_in;
-    int rc = resolve_ip4_literal_addr(addr, &addr_in);
+tcpsock tcplisten(const char *addr, int port) {
+    struct sockaddr_storage ss;
+    socklen_t len;
+    int rc = mill_tcpresolve(addr, port, &ss, &len);
     if (rc != 0)
         return NULL;
 
     /* Open the listening socket. */
-    int s = socket(AF_INET, SOCK_STREAM, 0);
+    int s = socket(ss.ss_family, SOCK_STREAM, 0);
     if(s == -1)
         return NULL;
     mill_tunesock(s);
 
     /* Start listening. */
-    rc = bind(s, (struct sockaddr*)&addr_in, sizeof(addr_in));
+    rc = bind(s, (struct sockaddr*)&ss, len);
     assert(rc != -1);
     rc = listen(s, MILL_TCP_LISTEN_BACKLOG);
     assert(rc != -1);
@@ -201,20 +201,21 @@ tcpsock tcpaccept(tcpsock s, int64_t deadline) {
     }
 }
 
-tcpsock tcpconnect(const char *addr, int64_t deadline) {
-    struct sockaddr_in addr_in;
-    int rc = resolve_ip4_literal_addr(addr, &addr_in);
+tcpsock tcpconnect(const char *addr, int port, int64_t deadline) {
+    struct sockaddr_storage ss;
+    socklen_t len;
+    int rc = mill_tcpresolve(addr, port, &ss, &len);
     if (rc != 0)
         return NULL;
 
     /* Open a socket. */
-    int s = socket(AF_INET, SOCK_STREAM, 0);
+    int s = socket(ss.ss_family, SOCK_STREAM, 0);
     if(s == -1)
         return NULL;
     mill_tunesock(s);
 
     /* Connect to the remote endpoint. */
-    rc = connect(s, (struct sockaddr*)&addr_in, sizeof(addr_in));
+    rc = connect(s, (struct sockaddr*)&ss, len);
     if(rc != 0) {
         assert(rc == -1);
         if(errno != EINPROGRESS)
@@ -224,7 +225,6 @@ tcpsock tcpconnect(const char *addr, int64_t deadline) {
             errno = ETIMEDOUT;
             return NULL;
         }
-        assert(rc == FDW_OUT);
         int err;
         socklen_t errsz = sizeof(err);
         rc = getsockopt(s, SOL_SOCKET, SO_ERROR, (void*)&err, &errsz);
