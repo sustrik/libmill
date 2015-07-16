@@ -448,6 +448,7 @@ size_t tcprecvuntil(tcpsock s, void *buf, size_t len, unsigned char until,
         if (errno != 0)
             return i + res;
     }
+    errno = ENOBUFS;
     return len;
 }
 
