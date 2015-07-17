@@ -27,42 +27,54 @@
 
 #include "../libmill.h"
 
-void client(void) {
-    tcpsock cs = tcpconnect("127.0.0.1:5555");
+void client(int port) {
+    tcpsock cs = tcpconnect("127.0.0.1", port, -1);
     assert(cs);
 
-    char buf[16];
-    ssize_t sz = tcprecv(cs, buf, 3);
-    assert(buf[0] == 'A' && buf[1] == 'B' && buf[2] == 'C');
+    msleep(now() + 100);
 
-    tcpsend(cs, "123\n45\n6789", 11);
-    int rc = tcpflush(cs);
-    assert(rc == 0);
+    char buf[16];
+    size_t sz = tcprecv(cs, buf, 3, -1);
+    assert(sz == 3 && buf[0] == 'A' && buf[1] == 'B' && buf[2] == 'C');
+
+    sz = tcpsend(cs, "123\n45\n6789", 11, -1);
+    assert(sz == 11 && errno == 0);
+    tcpflush(cs, -1);
+    assert(errno == 0);
 
     tcpclose(cs);
 }
 
 int main() {
-    tcpsock ls = tcplisten("*:5555");
+    char buf[16];
+
+    tcpsock ls = tcplisten(NULL, 5555);
     assert(ls);
 
-    go(client());
+    go(client(tcpport(ls)));
 
-    tcpsock as = tcpaccept(ls);
+    tcpsock as = tcpaccept(ls, -1);
 
-    tcpsend(as, "ABC", 3);
-    int rc = tcpflush(as);
-    assert(rc == 0);
+    /* Test deadline. */
+    int64_t deadline = now() + 30;
+    size_t sz = tcprecv(as, buf, sizeof(buf), deadline);
+    assert(sz == 0 && errno == ETIMEDOUT);
+    int64_t diff = now() - deadline;
+    assert(diff > -10 && diff < 10); 
 
-    char buf[16];
-    ssize_t sz = tcprecvuntil(as, buf, sizeof(buf), '\n');
+    sz = tcpsend(as, "ABC", 3, -1);
+    assert(sz == 3 && errno == 0);
+    tcpflush(as, -1);
+    assert(errno == 0);
+
+    sz = tcprecvuntil(as, buf, sizeof(buf), '\n', -1);
     assert(sz == 4);
     assert(buf[0] == '1' && buf[1] == '2' && buf[2] == '3' && buf[3] == '\n');
-    sz = tcprecvuntil(as, buf, sizeof(buf), '\n');
+    sz = tcprecvuntil(as, buf, sizeof(buf), '\n', -1);
     assert(sz == 3);
     assert(buf[0] == '4' && buf[1] == '5' && buf[2] == '\n');
-    sz = tcprecvuntil(as, buf, 3, '\n');
-    assert(sz == 0);
+    sz = tcprecvuntil(as, buf, 3, '\n', -1);
+    assert(sz == 3);
     assert(buf[0] == '6' && buf[1] == '7' && buf[2] == '8');
 
     tcpclose(as);

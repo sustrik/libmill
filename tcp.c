@@ -40,6 +40,26 @@
 #define MILL_TCP_LISTEN_BACKLOG 10
 
 #define MILL_TCP_BUFLEN 1500
+	
+static void mill_tunesock(int s) {
+    /* Make the socket non-blocking. */
+    int opt = fcntl(s, F_GETFL, 0);
+    if (opt == -1)
+        opt = 0;
+    int rc = fcntl(s, F_SETFL, opt | O_NONBLOCK);
+    assert(rc != -1);
+    /*  Allow re-using the same local address rapidly. */
+    opt = 1;
+    rc = setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof (opt));
+    assert(rc == 0);
+    /* If possible, prevent SIGPIPE signal when writing to the connection
+        already closed by the peer. */
+#ifdef SO_NOSIGPIPE
+    opt = 1;
+    rc = setsockopt (s, SOL_SOCKET, SO_NOSIGPIPE, &opt, sizeof (opt));
+    assert (rc == 0 || errno == EINVAL);
+#endif
+}
 
 enum mill_tcptype {
    MILL_TCPLISTENER,
@@ -53,6 +73,7 @@ struct tcpsock {
 struct tcplistener {
     struct tcpsock sock;
     int fd;
+    int port;
 };
 
 struct tcpconn {
@@ -61,7 +82,6 @@ struct tcpconn {
     int ifirst;
     int ilen;
     int olen;
-    int oerr;
     char ibuf[MILL_TCP_BUFLEN];
     char obuf[MILL_TCP_BUFLEN];
 };
@@ -74,96 +94,117 @@ static struct tcpconn *tcpconn_create(int fd) {
     conn->ifirst = 0;
     conn->ilen = 0;
     conn->olen = 0;
-    conn->oerr = 0;
     return conn;
 }
 
-static int resolve_ip4_literal_addr(const char *addr,
-      struct sockaddr_in *addr_in) {
-    memset(addr_in, 0, sizeof(struct sockaddr_in));
-    addr_in->sin_family = AF_INET;
-    char *colon = strrchr(addr, ':');
-
-    /* Port. */
-    int port = 0;
-    if(colon) {
-        const char *pos = colon + 1;
-        while(*pos) {
-          if(*pos < '0' || *pos > '9') {
-            errno = EINVAL;
-            return -1;
-          }
-          port *= 10;
-          port += *pos - '0';
-          ++pos;
-        }
-        if(port < 0 || port > 0xffff) {
-            errno = EINVAL;
-            return -1;
-        }
-    }
-    addr_in->sin_port = htons(port);
-
-    /* Get the IP address part of the string. */
-    const char *straddr;
-    char straddrbuf[256];
-    if(!colon)
-        straddr = addr;
-    else {
-        assert(colon - addr + 1 <= sizeof(straddrbuf));
-        memcpy(straddrbuf, addr, colon - addr);
-        straddrbuf[colon - addr] = 0;
-        straddr = straddrbuf;
-    }
-
-    /* Wildcard address. */
-    if(strcmp(straddr, "*") == 0) {
-        addr_in->sin_addr.s_addr = INADDR_ANY;
-        return 0;
-    }
-
-    /* IPv4 address. */
-    int rc = inet_pton(AF_INET, straddr, &addr_in->sin_addr);
-    if(rc != 1) {
+/* Convert textual IPv4 or IPv6 address to a binary one. */
+static int mill_tcpresolve(const char *addr, int port,
+      struct sockaddr_storage *ss, socklen_t *len) {
+    assert(ss);
+    if(port < 0 || port > 0xffff) {
         errno = EINVAL;
         return -1;
     }
-    return 0;
+    // NULL translates to INADDR_ANY.
+    // TODO: Consider using in6addr_any. AFAICS that should account for IPv4
+    //       addresses as well. However, would it work on all systems?
+    if(!addr) {
+        struct sockaddr_in *ipv4 = (struct sockaddr_in*)ss;
+        ipv4->sin_family = AF_INET;
+        ipv4->sin_addr.s_addr = INADDR_ANY;
+        ipv4->sin_port = htons((uint16_t)port);
+        if(len)
+            *len = sizeof(struct sockaddr_in);
+        errno = 0;
+        return 0;
+    }
+    // Try to interpret the string is IPv4 address.
+    int rc = inet_pton(AF_INET, addr, ss);
+    assert(rc >= 0);
+    if(rc == 1) {
+        struct sockaddr_in *ipv4 = (struct sockaddr_in*)ss;
+        ipv4->sin_family = AF_INET;
+        ipv4->sin_port = htons((uint16_t)port);
+        if(len)
+            *len = sizeof(struct sockaddr_in);
+        errno = 0;
+        return 0;
+    }
+
+    // It's not an IPv4 address. Let's try to interpret it as IPv6 address.
+    rc = inet_pton(AF_INET6, addr, ss);
+    assert(rc >= 0);
+    if(rc == 1) {
+        struct sockaddr_in6 *ipv6 = (struct sockaddr_in6*)ss;
+        ipv6->sin6_family = AF_INET6;
+        ipv6->sin6_port = htons((uint16_t)port);
+        if(len)
+            *len = sizeof(struct sockaddr_in6);
+        errno = 0;
+        return 0;
+    }
+    
+    // It's neither IPv4, nor IPv6 address.
+    errno = EINVAL;
+    return -1;
 }
 
-tcpsock tcplisten(const char *addr) {
-    struct sockaddr_in addr_in;
-    int rc = resolve_ip4_literal_addr(addr, &addr_in);
+tcpsock tcplisten(const char *addr, int port) {
+    struct sockaddr_storage ss;
+    socklen_t len;
+    int rc = mill_tcpresolve(addr, port, &ss, &len);
     if (rc != 0)
         return NULL;
 
     /* Open the listening socket. */
-    int s = socket(AF_INET, SOCK_STREAM, 0);
+    int s = socket(ss.ss_family, SOCK_STREAM, 0);
     if(s == -1)
         return NULL;
-
-    /* Make it non-blocking. */
-    int opt = fcntl(s, F_GETFL, 0);
-    if (opt == -1)
-        opt = 0;
-    rc = fcntl(s, F_SETFL, opt | O_NONBLOCK);
-    assert(rc != -1);
+    mill_tunesock(s);
 
     /* Start listening. */
-    rc = bind(s, (struct sockaddr*)&addr_in, sizeof(addr_in));
+    rc = bind(s, (struct sockaddr*)&ss, len);
     assert(rc != -1);
     rc = listen(s, MILL_TCP_LISTEN_BACKLOG);
     assert(rc != -1);
+
+    /* If the user requested an ephemeral port,
+       retrieve the port number assigned by the OS now. */
+    if(!port) {
+        len = sizeof(ss);
+        rc = getsockname(s, (struct sockaddr*)&ss, &len);
+        if(rc == -1) {
+            int err = errno;
+            close(s);
+            errno = err;
+            return NULL;
+        }
+        if(ss.ss_family == AF_INET)
+            port = ((struct sockaddr_in*)&ss)->sin_port;
+        else if(ss.ss_family == AF_INET6)
+            port = ((struct sockaddr_in6*)&ss)->sin6_port;
+        else
+            assert(0);
+    }
 
     /* Create the object. */
     struct tcplistener *l = malloc(sizeof(struct tcplistener));
     assert(l);
     l->sock.type = MILL_TCPLISTENER;
     l->fd = s;
+    l->port = port;
+    errno = 0;
     return &l->sock;
 }
 
-tcpsock tcpaccept(tcpsock s) {
+int tcpport(tcpsock s) {
+    if(s->type != MILL_TCPLISTENER)
+        mill_panic("trying to get port from a socket that isn't listening");
+    struct tcplistener *l = (struct tcplistener*)s;
+    return l->port;
+}
+
+tcpsock tcpaccept(tcpsock s, int64_t deadline) {
     if(s->type != MILL_TCPLISTENER)
         mill_panic("trying to accept on a socket that isn't listening");
     struct tcplistener *l = (struct tcplistener*)s;
@@ -171,51 +212,47 @@ tcpsock tcpaccept(tcpsock s) {
         /* Try to get new connection (non-blocking). */
         int as = accept(l->fd, NULL, NULL);
         if (as >= 0) {
-            /* Put the newly created connection into non-blocking mode. */
-            int opt = fcntl(as, F_GETFL, 0);
-            if (opt == -1)
-                opt = 0;
-            int rc = fcntl(as, F_SETFL, opt | O_NONBLOCK);
-            assert(rc != -1);
-
-            /* Create the object. */
+            mill_tunesock(as);
+            errno = 0;
             return &tcpconn_create(as)->sock;
         }
         assert(as == -1);
         if(errno != EAGAIN && errno != EWOULDBLOCK)
             return NULL;
         /* Wait till new connection is available. */
-        int rc = fdwait(l->fd, FDW_IN, -1);
+        int rc = fdwait(l->fd, FDW_IN, deadline);
+        if(rc == 0) {
+            errno = ETIMEDOUT;
+            return NULL;
+        }
         assert(rc == FDW_IN);
     }
 }
 
-tcpsock tcpconnect(const char *addr) {
-    struct sockaddr_in addr_in;
-    int rc = resolve_ip4_literal_addr(addr, &addr_in);
+tcpsock tcpconnect(const char *addr, int port, int64_t deadline) {
+    struct sockaddr_storage ss;
+    socklen_t len;
+    int rc = mill_tcpresolve(addr, port, &ss, &len);
     if (rc != 0)
         return NULL;
 
     /* Open a socket. */
-    int s = socket(AF_INET, SOCK_STREAM, 0);
+    int s = socket(ss.ss_family, SOCK_STREAM, 0);
     if(s == -1)
         return NULL;
-
-    /* Make it non-blocking. */
-    int opt = fcntl(s, F_GETFL, 0);
-    if (opt == -1)
-        opt = 0;
-    rc = fcntl(s, F_SETFL, opt | O_NONBLOCK);
-    assert(rc != -1);
+    mill_tunesock(s);
 
     /* Connect to the remote endpoint. */
-    rc = connect(s, (struct sockaddr*)&addr_in, sizeof(addr_in));
+    rc = connect(s, (struct sockaddr*)&ss, len);
     if(rc != 0) {
         assert(rc == -1);
         if(errno != EINPROGRESS)
             return NULL;
-        rc = fdwait(s, FDW_OUT, -1);
-        assert(rc == FDW_OUT);
+        rc = fdwait(s, FDW_OUT, deadline);
+        if(rc == 0) {
+            errno = ETIMEDOUT;
+            return NULL;
+        }
         int err;
         socklen_t errsz = sizeof(err);
         rc = getsockopt(s, SOL_SOCKET, SO_ERROR, (void*)&err, &errsz);
@@ -233,32 +270,34 @@ tcpsock tcpconnect(const char *addr) {
     }
 
     /* Create the object. */
+    errno = 0;
     return &tcpconn_create(s)->sock;
 }
 
-void tcpsend(tcpsock s, const void *buf, size_t len) {
+size_t tcpsend(tcpsock s, const void *buf, size_t len, int64_t deadline) {
     if(s->type != MILL_TCPCONN)
         mill_panic("trying to send to an unconnected socket");
     struct tcpconn *conn = (struct tcpconn*)s;
-    /* If there was already an error don't even try again. */
-    if(conn->oerr)
-        return;
 
     /* If it fits into the output buffer copy it there and be done. */
     if(conn->olen + len <= MILL_TCP_BUFLEN) {
         memcpy(&conn->obuf[conn->olen], buf, len);
         conn->olen += len;
-        return;
+        errno = 0;
+        return len;
     }
 
-    /* Flush the output buffer. */
-    tcpflush(s);
+    /* If it doesn't fit, flush the output buffer first. */
+    tcpflush(s, deadline);
+    if(errno != 0)
+        return 0;
 
     /* Try to fit it into the buffer once again. */
     if(conn->olen + len <= MILL_TCP_BUFLEN) {
         memcpy(&conn->obuf[conn->olen], buf, len);
         conn->olen += len;
-        return;
+        errno = 0;
+        return len;
     }
 
     /* The data chunk to send is longer than the output buffer.
@@ -268,11 +307,13 @@ void tcpsend(tcpsock s, const void *buf, size_t len) {
     while(remaining) {
         ssize_t sz = send(conn->fd, pos, remaining, 0);
         if(sz == -1) {
-            if(errno != EAGAIN && errno != EWOULDBLOCK) {
-                conn->oerr = errno;
-                return;
+            if(errno != EAGAIN && errno != EWOULDBLOCK)
+                return 0;
+            int rc = fdwait(conn->fd, FDW_OUT, deadline);
+            if(rc == 0) {
+                errno = ETIMEDOUT;
+                return len - remaining;
             }
-            int rc = fdwait(conn->fd, FDW_OUT, -1);
             assert(rc == FDW_OUT);
             continue;
         }
@@ -281,26 +322,26 @@ void tcpsend(tcpsock s, const void *buf, size_t len) {
     }
 }
 
-int tcpflush(tcpsock s) {
+void tcpflush(tcpsock s, int64_t deadline) {
     if(s->type != MILL_TCPCONN)
         mill_panic("trying to send to an unconnected socket");
     struct tcpconn *conn = (struct tcpconn*)s;
-    if(conn->oerr) {
-        errno = conn->oerr;
-        conn->oerr = 0;
-        conn->olen = 0;
-        return -1;
+    if(!conn->olen) {
+        errno = 0;
+        return;
     }
-    if(!conn->olen)
-        return 0;
     char *pos = conn->obuf;
     size_t remaining = conn->olen;
     while(remaining) {
         ssize_t sz = send(conn->fd, pos, remaining, 0);
         if(sz == -1) {
             if(errno != EAGAIN && errno != EWOULDBLOCK)
-                return -1;
-            int rc = fdwait(conn->fd, FDW_OUT, -1);
+                return;
+            int rc = fdwait(conn->fd, FDW_OUT, deadline);
+            if(rc == 0) {
+                errno = ETIMEDOUT;
+                return;
+            }
             assert(rc == FDW_OUT);
             continue;
         }
@@ -308,10 +349,10 @@ int tcpflush(tcpsock s) {
         remaining -= sz;
     }
     conn->olen = 0;
-    return 0;
+    errno = 0;
 }
 
-ssize_t tcprecv(tcpsock s, void *buf, size_t len) {
+size_t tcprecv(tcpsock s, void *buf, size_t len, int64_t deadline) {
     if(s->type != MILL_TCPCONN)
         mill_panic("trying to receive from an unconnected socket");
     struct tcpconn *conn = (struct tcpconn*)s;
@@ -320,7 +361,8 @@ ssize_t tcprecv(tcpsock s, void *buf, size_t len) {
         memcpy(buf, &conn->ibuf[conn->ifirst], len);
         conn->ifirst += len;
         conn->ilen -= len;
-        return 0;
+        errno = 0;
+        return len;
     }
 
     /* Let's move all the data from the buffer first. */
@@ -338,13 +380,19 @@ ssize_t tcprecv(tcpsock s, void *buf, size_t len) {
             /* If we still have a lot to read try to read it in one go directly
                into the destination buffer. */
             ssize_t sz = recv(conn->fd, pos, remaining, 0);
-            assert(sz != 0); // TODO
+            if(!sz) {
+		        errno = ECONNRESET;
+		        return len - remaining;
+            }
             if(sz == -1) {
-                assert(errno == EAGAIN && errno == EWOULDBLOCK); // TODO
+                if(errno != EAGAIN && errno != EWOULDBLOCK)
+                    return len - remaining;
                 sz = 0;
             }
-            if(sz == remaining)
-                return 0;
+            if(sz == remaining) {
+                errno = 0;
+                return len;
+            }
             pos += sz;
             remaining -= sz;
         }
@@ -352,9 +400,13 @@ ssize_t tcprecv(tcpsock s, void *buf, size_t len) {
             /* If we have just a little to read try to read the full connection
                buffer to minimise the number of system calls. */
             ssize_t sz = recv(conn->fd, conn->ibuf, MILL_TCP_BUFLEN, 0);
-            assert(sz != 0); // TODO
+            if(!sz) {
+		        errno = ECONNRESET;
+		        return len - remaining;
+            }
             if(sz == -1) {
-                assert(errno == EAGAIN && errno == EWOULDBLOCK); // TODO
+                if(errno != EAGAIN && errno != EWOULDBLOCK)
+                    return len - remaining;
                 sz = 0;
             }
             if(sz < remaining) {
@@ -368,29 +420,36 @@ ssize_t tcprecv(tcpsock s, void *buf, size_t len) {
                 memcpy(pos, conn->ibuf, remaining);
                 conn->ifirst = remaining;
                 conn->ilen = sz - remaining;
-                return 0;
+                errno = 0;
+                return len;
             }
         }
 
         /* Wait till there's more data to read. */
-        int res = fdwait(conn->fd, FDW_IN, -1);
-        assert(res == FDW_IN);
+        int res = fdwait(conn->fd, FDW_IN, deadline);
+        if(!res) {
+            errno = ETIMEDOUT;
+            return len - remaining;
+        }
+        assert(res & FDW_IN);
     }
 }
 
-ssize_t tcprecvuntil(tcpsock s, void *buf, size_t len, char until) {
+size_t tcprecvuntil(tcpsock s, void *buf, size_t len, unsigned char until,
+      int64_t deadline) {
     if(s->type != MILL_TCPCONN)
         mill_panic("trying to receive from an unconnected socket");
-    char *pos = (char*)buf;
+    unsigned char *pos = (unsigned char*)buf;
     size_t i;
     for(i = 0; i != len; ++i, ++pos) {
-        ssize_t res = tcprecv(s, pos, 1);
-        if (res != 0)
-            return -1;
-        if(*pos == until)
+        size_t res = tcprecv(s, pos, 1, deadline);
+        if(res == 1 && *pos == until)
             return i + 1;
+        if (errno != 0)
+            return i + res;
     }
-    return 0;
+    errno = ENOBUFS;
+    return len;
 }
 
 void tcpclose(tcpsock s) {
@@ -410,5 +469,4 @@ void tcpclose(tcpsock s) {
     }
     assert(0);
 }
-
 

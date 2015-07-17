@@ -31,11 +31,10 @@
 #include <sys/types.h>
 #include "../libmill.h"
 
-static uint64_t now() {
-    struct timeval tv;
-    int rc = gettimeofday(&tv, NULL);
-    assert(rc == 0);
-    return ((uint64_t)tv.tv_sec) * 1000 + (((uint64_t)tv.tv_usec) / 1000);
+void trigger(int fd, int64_t deadline) {
+    msleep(deadline);
+    ssize_t sz = send(fd, "A", 1, 0);
+    assert(sz == 1);
 }
 
 int main() {
@@ -50,17 +49,17 @@ int main() {
     assert(!(rc & ~FDW_OUT));
 
     /* Check with the timeout that doesn't expire. */
-    rc = fdwait(fds[0], FDW_OUT, 100);
+    rc = fdwait(fds[0], FDW_OUT, now() + 100);
     assert(rc);
     assert(rc & FDW_OUT);
     assert(!(rc & ~FDW_OUT));
 
     /* Check with the timeout that does expire. */
-    uint64_t ms = now();
-    rc = fdwait(fds[0], FDW_IN, 100);
+    int64_t deadline = now() + 100;
+    rc = fdwait(fds[0], FDW_IN, deadline);
     assert(rc == 0);
-    ms = now() - ms;
-    assert(ms > 90 && ms < 110);
+    int64_t diff = now() - deadline;
+    assert(diff > -10 && diff < 10);
 
     /* Check for in. */
     ssize_t sz = send(fds[1], "A", 1, 0);
@@ -74,6 +73,17 @@ int main() {
     assert(rc & FDW_IN);
     assert(rc & FDW_OUT);
     assert(!(rc & ~(FDW_IN | FDW_OUT)));
+    char c;
+    sz = recv(fds[0], &c, 1, 0);
+    assert(sz == 1);
+
+    /* Two interleaved deadlines. */
+    int64_t start = now();
+    go(trigger(fds[0], start + 50));
+    rc = fdwait(fds[1], FDW_IN, start + 90);
+    assert(rc == FDW_IN);
+    diff = now() - start;
+    assert(diff > 40 && diff < 60);
 
     close(fds[0]);
     close(fds[1]);

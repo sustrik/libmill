@@ -107,7 +107,7 @@ void unused(void) {
 int main() {
     /* In this test we are also going to make sure that the debugging support
        doesn't crash the application. */
-    trace(1);
+    gotrace(1);
 
     /* Non-blocking receiver case. */
     chan ch1 = chmake(int, 0);

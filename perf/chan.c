@@ -30,13 +30,6 @@
 #include <stdio.h>
 #include <sys/time.h>
 
-static uint64_t now() {
-    struct timeval tv;
-    int rc = gettimeofday(&tv, NULL);
-    assert(rc == 0);
-    return ((uint64_t)tv.tv_sec) * 1000 + (((uint64_t)tv.tv_usec) / 1000);
-}
-
 static void worker(chan in, chan out) {
     int val;
     while(1) {
@@ -55,7 +48,7 @@ int main(int argc, char *argv[]) {
     chan out = chmake(int, 0);
     chan in = chmake(int, 0);
 
-    uint64_t start = now();
+    int64_t start = now();
     go(worker(out, in));
 
     int val = 0;
@@ -65,7 +58,7 @@ int main(int argc, char *argv[]) {
         val = chr(in, int);
     }
 
-    uint64_t stop = now();
+    int64_t stop = now();
     long duration = (long)(stop - start);
     long ns = (duration * 1000000) / (count * 2);
 

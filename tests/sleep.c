@@ -28,19 +28,12 @@
 #include <sys/time.h>
 #include "../libmill.h"
 
-static uint64_t now() {
-    struct timeval tv;
-    int rc = gettimeofday(&tv, NULL);
-    assert(rc == 0);
-    return ((uint64_t)tv.tv_sec) * 1000 + (((uint64_t)tv.tv_usec) / 1000);
-}
-
 int main() {
     /* Test 'msleep'. */
-    uint64_t ms = now();
-    msleep(100);
-    ms = now() - ms;
-    assert(ms > 90 && ms < 110);
+    int64_t deadline = now() + 100;
+    msleep(deadline);
+    int64_t diff = now () - deadline;
+    assert(diff > -10 && diff < 10);
 
     return 0;
 }

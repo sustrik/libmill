@@ -30,13 +30,6 @@
 #include <stdio.h>
 #include <sys/time.h>
 
-static uint64_t now() {
-    struct timeval tv;
-    int rc = gettimeofday(&tv, NULL);
-    assert(rc == 0);
-    return ((uint64_t)tv.tv_sec) * 1000 + (((uint64_t)tv.tv_usec) / 1000);
-}
-
 static void whisper(chan left, chan right) {
     int val = chr(right, int);
     chs(left, int, val + 1);
@@ -49,7 +42,7 @@ int main(int argc, char *argv[]) {
     }
 
     long count = atol(argv[1]);
-    uint64_t start = now();
+    int64_t start = now();
 
     chan leftmost = chmake(int, 0);
     chan left = leftmost, right = leftmost;
@@ -64,7 +57,7 @@ int main(int argc, char *argv[]) {
     int res = chr(leftmost, int);
     assert(res == count + 1);
 
-    uint64_t stop = now();
+    int64_t stop = now();
     long duration = (long)(stop - start);
 
     printf("took %f seconds\n", (float)duration / 1000);

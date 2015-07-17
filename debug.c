@@ -192,7 +192,7 @@ void goredump(void) {
 
 int mill_tracelevel = 0;
 
-void trace(int level) {
+void gotrace(int level) {
     mill_tracelevel = level;
 }
 
@@ -232,6 +232,6 @@ void mill_preserve_debug(void) {
     if(unoptimisable)
         return;
     goredump();
-    trace(0);
+    gotrace(0);
 }
 

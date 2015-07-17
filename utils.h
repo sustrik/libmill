@@ -45,9 +45,6 @@ void mill_panic(const char *text);
 #define mill_cont(ptr, type, member) \
     (ptr ? ((type*) (((char*) ptr) - offsetof(type, member))) : NULL)
 
-/* Current time. Millisecond precision. */
-uint64_t mill_now();
-
 /* Compile-time assert. */
 #define MILL_CT_ASSERT_HELPER2(prefix, line) \
     prefix##line

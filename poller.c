@@ -38,14 +38,8 @@
 static struct mill_list mill_timers = {0};
 
 /* Pause current coroutine for a specified time interval. */
-void mill_msleep(long ms, const char *current) {
-    /* No point in waiting. Still, let's give other coroutines a chance. */
-    if(ms <= 0) {
-        yield();
-        return;
-    }
-    /* Do the actual waiting. */
-    mill_fdwait(-1, 0, ms, current);
+void mill_msleep(int64_t deadline, const char *current) {
+    mill_fdwait(-1, 0, deadline, current);
 }
 
 /* Pollset used for waiting for file descriptors. */
@@ -62,11 +56,10 @@ struct mill_pollset_item {
 static struct mill_pollset_item *mill_pollset_items = NULL;
 
 /* Wait for events from a file descriptor, with an optional timeout. */
-int mill_fdwait(int fd, int events, long timeout, const char *current) {
+int mill_fdwait(int fd, int events, int64_t deadline, const char *current) {
     /* If required, start waiting for the timeout. */
-    if(timeout >= 0) {
-        /* Compute at which point of time will the timer expire. */
-        mill_running->u_fdwait.expiry = mill_now() + timeout;
+    if(deadline >= 0) {
+        mill_running->u_fdwait.expiry = deadline;
         /* Move the timer into the right place in the ordered list
            of existing timers. TODO: This is an O(n) operation! */
         struct mill_list_item *it = mill_list_begin(&mill_timers);
@@ -127,7 +120,7 @@ int mill_fdwait(int fd, int events, long timeout, const char *current) {
     int rc = mill_suspend();
     /* Handle file descriptor events. */
     if(rc >= 0) {
-        if(timeout >= 0)
+        if(deadline >= 0)
             mill_list_erase(&mill_timers, &mill_running->u_fdwait.item);
         return rc;
     }
@@ -163,8 +156,8 @@ void mill_wait(void) {
         /* Compute the time till next expired sleeping coroutine. */
         int timeout = -1;
         if(!mill_list_empty(&mill_timers)) {
-            uint64_t nw = mill_now();
-            uint64_t expiry = mill_cont(mill_list_begin(&mill_timers),
+            int64_t nw = now();
+            int64_t expiry = mill_cont(mill_list_begin(&mill_timers),
                 struct mill_fdwait, item)->expiry;
             timeout = nw >= expiry ? 0 : expiry - nw;
         }
@@ -175,7 +168,7 @@ void mill_wait(void) {
 
         /* Fire all expired timers. */
         if(!mill_list_empty(&mill_timers)) {
-            uint64_t nw = mill_now();
+            int64_t nw = now();
             while(!mill_list_empty(&mill_timers)) {
                 struct mill_fdwait *timer = mill_cont(
                     mill_list_begin(&mill_timers), struct mill_fdwait, item);

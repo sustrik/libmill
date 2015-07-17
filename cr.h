@@ -51,7 +51,7 @@ struct mill_fdwait {
     /* Item in the global list of timers. */
     struct mill_list_item item;
     /* The timepoint when the timer expires. */
-    uint64_t expiry;
+    int64_t expiry;
 };
 
 /* This structure covers chr, chs and choose operations. */

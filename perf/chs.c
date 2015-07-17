@@ -30,13 +30,6 @@
 #include <stdio.h>
 #include <sys/time.h>
 
-static uint64_t now() {
-    struct timeval tv;
-    int rc = gettimeofday(&tv, NULL);
-    assert(rc == 0);
-    return ((uint64_t)tv.tv_sec) * 1000 + (((uint64_t)tv.tv_usec) / 1000);
-}
-
 int main(int argc, char *argv[]) {
     if(argc != 2) {
         printf("usage: chs <millions-of-messages>\n");
@@ -46,13 +39,13 @@ int main(int argc, char *argv[]) {
 
     chan ch = chmake(char, count);
 
-    uint64_t start = now();
+    int64_t start = now();
 
     long i;
     for(i = 0; i != count; ++i)
         chs(ch, char, 0);
 
-    uint64_t stop = now();
+    int64_t stop = now();
     long duration = (long)(stop - start);
     long ns = duration * 1000000 / count;
 
