@@ -288,9 +288,10 @@ if(events & FDW_ERR) {
 </pre>
 
 <p><tt>FDW_IN</tt> waits until there's at least one byte available to be
-received from the socket.</p>
+read from the file descriptor.</p>
 
-<p><tt>FDW_OUT</tt> waits until at least one byte can be sent to the socket.</p>
+<p><tt>FDW_OUT</tt> waits until at least one byte can be written to the file
+descriptor.</p>
 
 <p><tt>FDW_ERR</tt> cannot be used as an argument to <tt>fdwait()</tt>, but it
 can be returned from the function irrespective of whether you want it or
@@ -299,7 +300,7 @@ not.</p>
 <p>If an error happens while there are still bytes to be received from the
 socket combination of <tt>FDW_ERR</tt> and <tt>FDW_IN</tt> may be returned.
 
-<p>The third parameter to <tt>fdwait()</tt> is deadline. If deadline is hit
+<p>The third parameter to <tt>fdwait()</tt> is a deadline. If deadline is hit
 the function returns zero.</p>
 
 <h3 id="tcp">TCP library</h3>
@@ -336,9 +337,9 @@ while(1) {
 }
 </pre>
 
-<p><tt>tcplisten()</tt> accepts IP address (either IPv4 or IPv6) of the local
-network interface to bind to and a port number. If the address is NULL, all
-local interfaces will be used. If port number is zero an ephemeral port
+<p><tt>tcplisten()</tt> arguments are IP address (either IPv4 or IPv6) of the
+local network interface to bind to and a port number. If the address is NULL,
+all local interfaces will be used. If port number is zero an ephemeral port
 number will be chosen by the operating system. In such case you can retrieve the
 port number using <tt>tcppport()</tt> function:</p>
 
@@ -377,7 +378,7 @@ is returned.</p>
 is broken it is set to <tt>ECONNRESET</tt>. If the deadline expires it is
 set to <tt>ETIMEDOUT</tt>.</p>
 
-<p>To optimise the throughput <tt>tcpwrite</tt> may store the data into output
+<p>To optimise the throughput <tt>tcpwrite()</tt> may store the data into output
 buffer and not flush it into the network immediately. To force actual sending
 of the data use <tt>tcpflush</tt> function.</p>
 
