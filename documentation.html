@@ -26,8 +26,11 @@
   <li><a href="#coroutines">Coroutines</a></li>
   <li><a href="#channels">Channels</a></li>
   <li><a href="#choose">Choose statement</a></li>
-  <li><a href="#cls">Coroutine-local storage</a></li>
+  <li><a href="#deadlines">Deadlines</a></li>
+  <li><a href="#sleeping">Sleeping</a></li>
+  <li><a href="#fds">Waiting for file descriptors</a></li>
   <li><a href="#tcp">TCP library</a></li>
+  <li><a href="#cls">Coroutine-local storage</a></li>
   <li><a href="#debug">Debugging</a></li>
 </ul>
 
@@ -60,7 +63,7 @@ $ sudo make install
 as well as dynamic library <tt>libmill.so</tt> and static library
 <tt>libmill.a</tt>.</p>
 
-<p>A program using the library can look for example like this:</p>
+<p>A program using the library can look like this:</p>
 
 <pre>
 #include &lt;stdio.h&gt;
@@ -112,37 +115,11 @@ If one coroutine blocks, for example by calling <tt>sleep()</tt>, it blocks
 the entire process. Therefore, coroutine-friendly versions of blocking functions
 (such as <tt>msleep()</tt> or <tt>fdwait()</tt>, see below) should be used.</p>
 
-<p>In addition, you can yield CPU to other coroutines explicitly:</p>
+<p>In case of need, you can yield CPU to other coroutines explicitly:</p>
 
 <pre>
 yield();
 </pre>
-
-<p>To sleep without blocking the entire process:</p>
-
-<pre>
-void msleep(unsigned long ms);
-</pre>
-
-<p>To wait for an event from a file descriptor use <tt>fdwait</tt> function:</p>
-
-<pre>
-int events = fdwait(fd, FDW_IN | FDW_OUT, -1);
-if(events & FDW_IN) {
-    ...
-}
-if(events & FDW_OUT) {
-    ...
-}
-if(events & FDW_ERR) {
-    ...
-}
-</pre>
-
-<p>Note that error (<tt>FDW_ERR</tt>) can be returned from the function
-irrespective of whether you asked for it or not.</p>
-
-<p>The third parameter is timeout, in milliseconds. -1 means no timeout.</p>
 
 <h3 id="channels">Channels</h3>
 
@@ -155,40 +132,40 @@ to zero creates an unbuffered channel:</p>
 chan ch = chmake(int, 0);
 </pre>
 
-<p>To send a value to the channel use <tt>chs</tt>. Note that it is a statement,
-not a function returning a value. The type specified as the second parameter
-must match the type of the channel otherwise you'll get runtime exception.</p>
+<p>To send a value to the channel use <tt>chs()</tt> function. The type
+specified as the second parameter must match the type of the channel otherwise
+you'll get runtime exception:</p>
 
 <pre>
 chs(ch, int, 42);
 </pre>
 
-<p>To receive a value from the channel use <tt>chr</tt>. The type
+<p>To receive a value from the channel use <tt>chr()</tt> function. The type
 specified as the second parameter must match the type of the channel otherwise
-the program will abort with runtime exception.</p>
+the program will abort with runtime exception:</p>
 
 <pre>
 int i = chr(ch, int);
 </pre>
 
-<p>When the sender is done with sending it can announce the fact using
-<tt>chdone</tt> function. It will cause all the receivers on the channel to
+<p>When sender is done with sending it can announce the fact using
+<tt>chdone()</tt> function. It will cause all the receivers on the channel to
 receive the value specified in the third parameter indefinitely:</p>
 
 <pre>
 chdone(ch, int, -1);
 </pre>
 
-<p>To deallocate the channel use <tt>chclose</tt> function:</p>
+<p>To deallocate the channel use <tt>chclose()</tt> function:</p>
 
 <pre>
 chclose(ch);
 </pre>
 
-<p>Note that <tt>chclose</tt> deallocates any elements remaining the channel,
+<p>Note that <tt>chclose()</tt> deallocates any elements remaining the channel,
 however, if the element itself has a pointer to a different object, that object
-won't be deallocated. In this respect <tt>chclose</tt> is similar to the
-standard <tt>free</tt> function.</p>
+won't be deallocated. In this respect <tt>chclose()</tt> is similar to the
+standard <tt>free()</tt> function.</p>
 
 <p>When sharing a channel between two or more coroutines you can duplicate
 the channel handle. Channel is deallocated only after all its handles
@@ -213,34 +190,13 @@ int main() {
 <h3 id="choose">Choose statement</h3>
 
 <p>Choose statement is equivalent to Go's <tt>select</tt> statement. It can be
-used for waiting to send or receive data from multiple channels.</p>
+used to wait for multiple channels.</p>
 
-<p>Within <tt>choose</tt> there's a list of clauses containing multiple
-<tt>in</tt> and <tt>out</tt> statements and at most one <tt>otherwise</tt>
-statement. Don't forget to add <tt>end</tt> statement before the closing
-parenthesis.</p>
-
-<p>Clause <tt>in</tt> causes <tt>choose</tt> to wait for a message coming
-from channel <tt>ch</tt>. The clause declares variable <tt>var</tt> of type
-<tt>type</tt> and stores the incoming message into it. If <tt>type</tt> doesn't
-match the actual type of the channel you'll get a runtime exception.</p>
-
-<pre>
-in(ch, type, var):
-</pre>
-
-<p>Clause <tt>out</tt> causes <tt>choose</tt> to wait while value <tt>val</tt>
-of type <tt>type</tt> can be sent to channel <tt>ch</tt>. Same way as with
-</tt>in</tt>, if <tt>type</tt> doesn't match the actual type of channel
-<tt>ch</tt> runtime exception is generated.</p>
-
-<pre>
-out(ch, type, val):
-</pre>
-
-<p>Clause <tt>otherwise</tt> is optional. It is executed only if no other
-clauses can be matched immediately. Therefore, <tt>choose</tt> statement
-with <tt>otherwise</tt> clause will never block.</p>
+<p>Within <tt>choose</tt> there's a list of clauses. Each clause is either an
+<tt>in</tt> clause (waiting for incoming messages) or an <tt>out</tt> clause
+(waiting till a message can be sent to the channel). Last cause can optionally
+be an <tt>otherwise</tt> clause. Don't forget to add <tt>end</tt> keyword before
+the closing parenthesis:</p>
 
 <pre>
 choose {
@@ -254,11 +210,228 @@ end
 }
 </pre>
 
-<p><tt>choose</tt> statement waits for the first available clause and executes
-the code that follows it. If there are multiple clauses available one of them
-is chosen at random.</p>
+<p>Clause <tt>in</tt> causes <tt>choose</tt> to wait for a message coming
+from channel <tt>ch</tt>. The clause declares variable <tt>var</tt> of type
+<tt>type</tt> and stores the incoming message into it. If <tt>type</tt> doesn't
+match the actual type of the channel you'll get a runtime exception:</p>
+
+<pre>
+in(ch, type, var):
+</pre>
+
+<p>Clause <tt>out</tt> causes <tt>choose</tt> to wait while value <tt>val</tt>
+of type <tt>type</tt> can be sent to channel <tt>ch</tt>. Same way as with
+</tt>in</tt>, if <tt>type</tt> doesn't match the actual type of channel
+<tt>ch</tt> runtime exception is generated:</p>
+
+<pre>
+out(ch, type, val):
+</pre>
+
+<p>Clause <tt>otherwise</tt> is optional. It is executed only if no other
+clauses can be matched immediately. Therefore, <tt>choose</tt> statement
+with <tt>otherwise</tt> clause will never block.</p>
+
+<p><tt>choose</tt> statement waits for the first clause that can be executed,
+executes it and then jumps to the code following the clause. If there are
+multiple clauses that can be executed one of them is chosen at random.</p>
 
 <p>There's no fall-through among the clauses.</p>
+
+<h3 id="deadlines">Deadlines</h3>
+
+<p>Unlike standard POSIX functions, libmill uses dealines rather than
+timeouts.</p>
+
+<p>Deadline is a point in time when a function should finish. Function
+<tt>now()</tt> returns the current point in time. You can add milliseconds to
+it to get a point in time in the future. Following example defines a deadline
+that expires one second from now:</p>
+
+<pre>
+int64_t deadline = now() + 1000;
+</pre>
+
+<p>The advantage of deadlines over timeouts is that a single deadline can be
+reused in many subsequent function calls without having to worry about
+readjusting its value to account for time already elapsed since the deadline
+was created.</p>
+
+<p>Value of -1 is used to specify that there is no deadline or, if you will,
+that the deadline is infinite.</p>
+
+<h3 id="sleeping">Sleeping</h3>
+
+<p>It was already mentioned that a sigle call to <tt>sleep()</tt> can block
+the entire process. To avoid the problem use <tt>msleep()</tt> instead.
+Note that the argument is a deadline, not a timeout:</p>
+
+<pre>
+msleep(now() + 1000);
+</pre>
+
+<h3 id="fds">Waiting for file descriptors</h3>
+
+<p>To wait for an event from a file descriptor use <tt>fdwait</tt> function:</p>
+
+<pre>
+int events = fdwait(fd, FDW_IN | FDW_OUT, -1);
+if(events & FDW_IN) {
+    ...
+}
+if(events & FDW_OUT) {
+    ...
+}
+if(events & FDW_ERR) {
+    ...
+}
+</pre>
+
+<p><tt>FDW_IN</tt> waits until there's at least one byte available to be
+received from the socket.</p>
+
+<p><tt>FDW_OUT</tt> waits until at least one byte can be sent to the socket.</p>
+
+<p><tt>FDW_ERR</tt> cannot be used as an argument to <tt>fdwait()</tt>, but it
+can be returned from the function irrespective of whether you want it or
+not.</p>
+
+<p>If an error happens while there are still bytes to be received from the
+socket combination of <tt>FDW_ERR</tt> and <tt>FDW_IN</tt> may be returned.
+
+<p>The third parameter to <tt>fdwait()</tt> is deadline. If deadline is hit
+the function returns zero.</p>
+
+<h3 id="tcp">TCP library</h3>
+
+<p>TCP can be accessed via standard POSIX functions provided that you do it
+in a non-blocking way. To save you the trouble though, libmill provides a
+simple convenience wrapper for the functionality.</p>
+
+<h4>Connecting to a remote endpoint</h4>
+
+<p>To connect to a remote server, use <tt>tcpconnect()</tt> function:
+
+<pre>
+tcpsock s = tcpconnect("192.168.0.111", 5555, -1);
+</pre>
+
+<p>The arguments are IP address (either IPv4 or IPv6), port number and a
+deadline.</p>
+
+<p>In case of error the function returns NULL and sets <tt>errno</tt> to one
+of the standard POSIX error values. If the deadline is reached, <tt>errno</tt>
+is set to <tt>ETIMEDOUT</tt>.</p>
+
+<h4>Listening for incoming connections</h4>
+
+<p>To start listening for incoming TCP connections use <tt>tcplisten()</tt>
+function. To accept a new connection use <tt>tcpaccept()</tt> function:</p>
+
+<pre>
+tcpsock ls = tcplisten(NULL, 5555);
+while(1) {
+    tcpsock s = tcpaccept(ls, -1);
+    ...
+}
+</pre>
+
+<p><tt>tcplisten()</tt> accepts IP address (either IPv4 or IPv6) of the local
+network interface to bind to and a port number. If the address is NULL, all
+local interfaces will be used. If port number is zero an ephemeral port
+number will be chosen by the operating system. In such case you can retrieve the
+port number using <tt>tcppport()</tt> function:</p>
+
+<pre>
+tcpsock ls = tcplisten("192.168.0.111", 0);
+int port = tcpport(ls);
+</pre>
+
+<p>In case of error <tt>tcplisten()</tt> function returns NULL and sets
+<tt>errno</tt> to one of the standard POSIX error values.</p>
+
+<p><tt>tcpaccept()</tt> function takes the listening socket and a deadline
+as arguments and returns the newly accepted socket:</p>
+
+<pre>
+tcpsock s = tcpaccept(ls, now() + 1000);
+</pre>
+
+<p>In case of error it returns NULL and sets <tt>errno</tt> to one of the
+standard POSIX error values. If the deadline is reached, <tt>errno</tt>
+is set to <tt>ETIMEDOUT</tt>.</p>
+
+<h4>Sending data</h4>
+
+<p>To send data to the connection use <tt>tcpsend()</tt> function:</p>
+
+<pre>
+size_t nbytes = tcpsend(s, "ABC", 3, -1);
+</pre>
+
+<p>The arguments are the socket to send the data to, the buffer to send,
+number of bytes to send and a deadline. Number of bytes actually sent
+is returned.</p>
+
+<p>In the case of success, <tt>errno</tt> is set to zero. If the connection
+is broken it is set to <tt>ECONNRESET</tt>. If the deadline expires it is
+set to <tt>ETIMEDOUT</tt>.</p>
+
+<p>To optimise the throughput <tt>tcpwrite</tt> may store the data into output
+buffer and not flush it into the network immediately. To force actual sending
+of the data use <tt>tcpflush</tt> function.</p>
+
+<pre>
+tcpflush(s, -1);
+</pre>
+
+<p>Arguments are the socket to flush and a deadline.</p>
+
+<p>In the case of success, <tt>errno</tt> is set to zero. If the connection
+is broken it is set to <tt>ECONNRESET</tt>. If the deadline expires it is
+set to <tt>ETIMEDOUT</tt>.</p>
+
+<h4>Receiving data</h4>
+
+<p>To read data from a connection use <tt>tcprecv()</tt> function:</p>
+
+<pre>
+size_t nbytes = tcprecv(s, buf, 256, -1);
+</pre>
+
+<p>The arguments are the socket to receive from, the buffer to receive to,
+size of the buffer and a deadline. Number of bytes actually received is
+returned.</p>
+
+<p>In the case of success, <tt>errno</tt> is set to zero. If the connection
+breaks it is set to <tt>ECONNRESET</tt>. If the deadline expires it is
+set to <tt>ETIMEDOUT</tt>.</p>
+
+<p>To help with dealing with text-based protocols libmill provides
+<tt>tcprecvuntil()</tt> function. It acts the same as <tt>tcpread()</tt> except
+that the reading stops when a specific character is encountered:</p>
+
+<pre>
+size_t nbytes = tcprecvuntil(conn, buf, 256, '\n', -1);
+</pre>
+
+<p>The arguments are the socket to receive from, the buffer to receive to,
+size of the buffer, the delimiter character and a deadline. Number of bytes
+actually received, including the delimiter character, is returned.</p>
+
+<p>In the case of success, <tt>errno</tt> is set to zero. If the connection
+breaks it is set to <tt>ECONNRESET</tt>. If the deadline expires it is
+set to <tt>ETIMEDOUT</tt>. If the entire buffer was filled without encountering
+the delimiter character, <tt>errno</tt> is set to <tt>ENOBUFS</tt>.</p>
+
+<h4>Cleaning up</h4>
+
+<p>To close sockets (both listening and connected ones) use <tt>tcpclose()</tt>
+function:</p>
+
+<pre>
+tcpclose(s);
+</pre>
 
 <h3 id="cls">Coroutine-local storage</h3>
 
@@ -283,80 +456,6 @@ void *data = cls();
 
 <p>It can be safely assumed that before coroutine-local data are set,
 <tt>cls</tt> function will return <tt>NULL</tt>.</p>
-
-<h3 id="tcp">TCP library</h3>
-
-<p><b>Experimental. Subject to change!</b></p>
-
-<p>TCP can be accessed via standard POSIX functions. However, libmill provides
-a simple convenience wrapper for the functionality.</p>
-
-<p>To connect to a remote server, use <tt>tcpconnect</tt> function:
-
-<pre>
-tcpsock s = tcpconnect("192.168.0.111:5555");
-</pre>
-
-<p>To start listening for incoming TCP connections use <tt>tcplisten</tt>
-function. To accept next connection use <tt>tcpaccept</tt>function:</p>
-
-<pre>
-tcpsock l = tcplisten("*:5555");
-while(1) {
-    tcpsock s = tcpaccept(l);
-    ...
-}
-</pre>
-
-<p>Note that asterisk (*) can be used instead of IP address to denote all local
-network interfaces.</p>
-
-<p>To send data to the connection use <tt>tcpsend</tt> function:</p>
-
-<pre>
-tcpsend(s, "ABC", 3);
-</pre>
-
-<p>To optimise the throughput <tt>tcpwrite</tt> may store the data into output
-buffer and not flush it into the network immediately. To force actual sending
-of the data use <tt>tcpflush</tt> function.</p>
-
-</p>The function returns 0 in case of success and -1 in case of error:</p>
-
-<pre>
-int rc = tcpflush(s);
-assert(rc == 0);
-</pre>
-
-<p>To read data from a connection use <tt>tcprecv</tt> function:</p>
-
-<pre>
-char buf[3];
-ssize_t n = tcprecv(s, buf, sizeof(buf));
-</pre>
-
-</p>The function returns 0 in case of success and -1 in case of error.</p>
-
-<p>To help with dealing with text-based protocols libmill provides
-<tt>tcprecvuntil</tt> function. It is the same as <tt>tcpread</tt> except
-that the reading stops when a specific character is encountered:</p>
-
-<pre>
-char buf[256];
-ssize_t n = tcprecvuntil(conn, buf, sizeof(buf), '\n');
-</pre>
-
-</p>If function managed to fill the entire buffer it returns 0. If the delimiter
-character was encountered in the process return value is the total amount of
-characters read including the delimiter character. In case of error the function
-returns -1.</p>
-
-<p>To close a socket (both listening and connected one) use <tt>tcpclose</tt>
-function:</p>
-
-<pre>
-tcpclose(s);
-</pre>
 
 <h3 id="debug">Debugging</h3>
 
@@ -467,9 +566,9 @@ CHANNEL  msgs/max    senders/receivers     refs  done  created
 <p>If there are no coroutines waiting to send or receive messages from the
 channel the field is kept empty.</p>
 
-<h4>trace</h4>
+<h4>gotrace</h4>
 
-<p>It is possible to switch on tracing via <tt>trace</tt> function. You can
+<p>It is possible to switch on tracing via <tt>gotrace()</tt> function. You can
 do so either programmatically or from the debugger:</p>
 
 <pre>
