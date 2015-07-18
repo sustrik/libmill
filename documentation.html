@@ -537,7 +537,7 @@ COROUTINE  state                  current           created
 <p>If there are any channels created by the user coroutine dump will be followed
 by a channel dump. Each record in the dump corresponds to one channel instance
 and contains its ID, number of messages buffered in the channel, channel
-capacity, its reference count, whether <tt>chdone</tt> was already called
+capacity, its reference count, whether <tt>chdone()</tt> was already called
 and a the line of code that created the channel.</p> 
 
 <p>Additionally, if there are any coroutines waiting for messages from the
