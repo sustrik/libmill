@@ -252,7 +252,7 @@ MILL_EXPORT void *mill_choose_val(void);
 /*  TCP library                                                               */
 /******************************************************************************/
 
-typedef struct tcpsock *tcpsock;
+typedef struct mill_tcpsock *tcpsock;
 
 MILL_EXPORT tcpsock tcplisten(const char *addr, int port);
 MILL_EXPORT int tcpport(tcpsock s);
