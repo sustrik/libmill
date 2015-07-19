@@ -66,18 +66,18 @@ enum mill_tcptype {
    MILL_TCPCONN
 };
 
-struct tcpsock {
+struct mill_tcpsock {
     enum mill_tcptype type;
 };
 
 struct tcplistener {
-    struct tcpsock sock;
+    struct mill_tcpsock sock;
     int fd;
     int port;
 };
 
 struct tcpconn {
-    struct tcpsock sock;
+    struct mill_tcpsock sock;
     int fd;
     int ifirst;
     int ilen;
