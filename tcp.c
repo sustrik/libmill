@@ -70,13 +70,13 @@ struct mill_tcpsock {
     enum mill_tcptype type;
 };
 
-struct tcplistener {
+struct mill_tcplistener {
     struct mill_tcpsock sock;
     int fd;
     int port;
 };
 
-struct tcpconn {
+struct mill_tcpconn {
     struct mill_tcpsock sock;
     int fd;
     int ifirst;
@@ -86,8 +86,8 @@ struct tcpconn {
     char obuf[MILL_TCP_BUFLEN];
 };
 
-static struct tcpconn *tcpconn_create(int fd) {
-    struct tcpconn *conn = malloc(sizeof(struct tcpconn));
+static struct mill_tcpconn *tcpconn_create(int fd) {
+    struct mill_tcpconn *conn = malloc(sizeof(struct mill_tcpconn));
     assert(conn);
     conn->sock.type = MILL_TCPCONN;
     conn->fd = fd;
@@ -188,7 +188,7 @@ tcpsock tcplisten(const char *addr, int port) {
     }
 
     /* Create the object. */
-    struct tcplistener *l = malloc(sizeof(struct tcplistener));
+    struct mill_tcplistener *l = malloc(sizeof(struct mill_tcplistener));
     assert(l);
     l->sock.type = MILL_TCPLISTENER;
     l->fd = s;
@@ -200,14 +200,14 @@ tcpsock tcplisten(const char *addr, int port) {
 int tcpport(tcpsock s) {
     if(s->type != MILL_TCPLISTENER)
         mill_panic("trying to get port from a socket that isn't listening");
-    struct tcplistener *l = (struct tcplistener*)s;
+    struct mill_tcplistener *l = (struct mill_tcplistener*)s;
     return l->port;
 }
 
 tcpsock tcpaccept(tcpsock s, int64_t deadline) {
     if(s->type != MILL_TCPLISTENER)
         mill_panic("trying to accept on a socket that isn't listening");
-    struct tcplistener *l = (struct tcplistener*)s;
+    struct mill_tcplistener *l = (struct mill_tcplistener*)s;
     while(1) {
         /* Try to get new connection (non-blocking). */
         int as = accept(l->fd, NULL, NULL);
@@ -277,7 +277,7 @@ tcpsock tcpconnect(const char *addr, int port, int64_t deadline) {
 size_t tcpsend(tcpsock s, const void *buf, size_t len, int64_t deadline) {
     if(s->type != MILL_TCPCONN)
         mill_panic("trying to send to an unconnected socket");
-    struct tcpconn *conn = (struct tcpconn*)s;
+    struct mill_tcpconn *conn = (struct mill_tcpconn*)s;
 
     /* If it fits into the output buffer copy it there and be done. */
     if(conn->olen + len <= MILL_TCP_BUFLEN) {
@@ -325,7 +325,7 @@ size_t tcpsend(tcpsock s, const void *buf, size_t len, int64_t deadline) {
 void tcpflush(tcpsock s, int64_t deadline) {
     if(s->type != MILL_TCPCONN)
         mill_panic("trying to send to an unconnected socket");
-    struct tcpconn *conn = (struct tcpconn*)s;
+    struct mill_tcpconn *conn = (struct mill_tcpconn*)s;
     if(!conn->olen) {
         errno = 0;
         return;
@@ -355,7 +355,7 @@ void tcpflush(tcpsock s, int64_t deadline) {
 size_t tcprecv(tcpsock s, void *buf, size_t len, int64_t deadline) {
     if(s->type != MILL_TCPCONN)
         mill_panic("trying to receive from an unconnected socket");
-    struct tcpconn *conn = (struct tcpconn*)s;
+    struct mill_tcpconn *conn = (struct mill_tcpconn*)s;
     /* If there's enough data in the buffer it's easy. */
     if(conn->ilen >= len) {
         memcpy(buf, &conn->ibuf[conn->ifirst], len);
@@ -454,14 +454,14 @@ size_t tcprecvuntil(tcpsock s, void *buf, size_t len, unsigned char until,
 
 void tcpclose(tcpsock s) {
     if(s->type == MILL_TCPLISTENER) {
-        struct tcplistener *l = (struct tcplistener*)s;
+        struct mill_tcplistener *l = (struct mill_tcplistener*)s;
         int rc = close(l->fd);
         assert(rc == 0);
         free(l);
         return;
     }
     if(s->type == MILL_TCPCONN) {
-        struct tcpconn *c = (struct tcpconn*)s;
+        struct mill_tcpconn *c = (struct mill_tcpconn*)s;
         int rc = close(c->fd);
         assert(rc == 0);
         free(c);
