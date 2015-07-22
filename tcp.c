@@ -163,9 +163,11 @@ tcpsock tcplisten(const char *addr, int port) {
 
     /* Start listening. */
     rc = bind(s, (struct sockaddr*)&ss, len);
-    mill_assert(rc != -1);
+    if(rc != 0)
+        return NULL;
     rc = listen(s, MILL_TCP_LISTEN_BACKLOG);
-    mill_assert(rc != -1);
+    if(rc != 0)
+        return NULL;
 
     /* If the user requested an ephemeral port,
        retrieve the port number assigned by the OS now. */
