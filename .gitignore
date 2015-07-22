@@ -48,3 +48,5 @@ perf/chan
 perf/chs
 perf/chr
 perf/whispers
+examples/.dirstamp
+examples/greetserver
