@@ -41,32 +41,32 @@ Connection closed by foreign host.
 <p>In the process you will learn how to use coroutines, channels and the TCP
 library.</p>
 
-<h3>Step 1</h3>
+<h3>Step 1: Setting up the stage</h3>
 
 <p>First, include libmill's header file. Later on you will also need errno,
 stdio and stdlib, so include those as well:</p> 
 
 <pre>
-#include <libmill.h>
-#include <errno.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include &lt;libmill.h&gt;
+#include &lt;errno.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
 </pre>
 
-<p>Add the <tt>main</function>. We'll assume, that the first argument,
+<p>Add the <tt>main</tt> function. We'll assume, that the first argument,
 if present, will be port number to be used by the server. If not specified,
 we will default to 5555:</p>
 
 <pre>
 int main(int argc, char *argv[]) {
     int port = 5555;
-    if(argc > 1)
+    if(argc &gt; 1)
         port = atoi(argv[1]);
     return 0;
 }
 </pre>
 
-<p>Now we can start doing actual interesting stuff.</p>
+<p>Now we can start doing the actual interesting stuff.</p>
 
 <p>Libmill's <tt>tcplisten()</tt> function can be used to create listening
 TCP socket. The socket will be used to accept new TCP connections from the
@@ -123,12 +123,14 @@ whether error hadling works as expected we can try to use invalid port
 number:</p>
 
 <pre>
-$ ./step1 70000
+$ ./greetserver 70000
 Can't open listening socket: Invalid argument
 $
 </pre>
 
 <p>Yay! Everyting seems to work as expected. Let's now move to the step 2.</p>
+
+<h3>Step 2: The business logic</h3>
 
 </body>
 </html>
