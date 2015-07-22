@@ -50,3 +50,5 @@ perf/chr
 perf/whispers
 examples/.dirstamp
 examples/greetserver
+tutorial/.dirstamp
+tutorial/step1
