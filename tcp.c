@@ -203,6 +203,16 @@ int tcpport(tcpsock s) {
     return l->port;
 }
 
+int tcpfd(tcpsock s) {
+    if (s->type == MILL_TCPLISTENER) {
+      struct mill_tcplistener *l = (struct mill_tcplistener*)s;
+      return l->fd;
+    } else {
+      struct mill_tcpconn *c = (struct mill_tcpconn*)s;
+      return c->fd;
+    }
+}
+
 tcpsock tcpaccept(tcpsock s, int64_t deadline) {
     if(s->type != MILL_TCPLISTENER)
         mill_panic("trying to accept on a socket that isn't listening");

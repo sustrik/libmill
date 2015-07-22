@@ -256,6 +256,7 @@ typedef struct mill_tcpsock *tcpsock;
 
 MILL_EXPORT tcpsock tcplisten(const char *addr, int port);
 MILL_EXPORT int tcpport(tcpsock s);
+MILL_EXPORT int tcpfd(tcpsock s);
 MILL_EXPORT tcpsock tcpaccept(tcpsock s, int64_t deadline);
 MILL_EXPORT tcpsock tcpconnect(const char *addr, int port, int64_t deadline);
 MILL_EXPORT size_t tcpsend(tcpsock s, const void *buf, size_t len,
