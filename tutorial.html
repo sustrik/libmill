@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>libmill</title>
+  <link rel="stylesheet" type="text/css" href="main.css">
+</head>
+<body>
+
+<img src="libmill.png"/>
+
+<p><b>Go-style concurrency in C</b></p>
+
+<ul id='toplist'>
+<li><a href="index.html">Home</a></li>
+<li><a href="download.html">Download</a></li>
+<li><a href="documentation.html">Documentation</a></li>
+<li><a href="development.html">Development</a></li>
+<li><a href="community.html">Community</a></li>
+</ul>
+
+<h2>Tutorial</h2>
+
+<p>In this tutorial you will develop a simple TCP "greet" server. The client
+is meant to connect to it via telnet. After doing so, the server will ask
+for their name, reply with a greeting and close the connection.</p>
+
+<p>An interaction with our server will look like this:</p>
+
+<pre>
+$ telnet 127.0.0.1 5555
+Trying 127.0.0.1...
+Connected to 127.0.0.1.
+Escape character is '^]'.
+What's your name?
+Bartholomaeus
+Hello, Bartholomaeus!
+Connection closed by foreign host.
+</pre>
+
+<p>In the process you will learn how to use coroutines, channels and the TCP
+library.</p>
+
+<h3>Step 1</h3>
+
+<p>First, include libmill's header file. Later on you will also need errno,
+stdio and stdlib, so include those as well:</p> 
+
+<pre>
+#include <libmill.h>
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+</pre>
+
+<p>Add the <tt>main</function>. We'll assume, that the first argument,
+if present, will be port number to be used by the server. If not specified,
+we will default to 5555:</p>
+
+<pre>
+int main(int argc, char *argv[]) {
+    int port = 5555;
+    if(argc > 1)
+        port = atoi(argv[1]);
+    return 0;
+}
+</pre>
+
+<p>Now we can start doing actual interesting stuff.</p>
+
+<p>Libmill's <tt>tcplisten()</tt> function can be used to create listening
+TCP socket. The socket will be used to accept new TCP connections from the
+clients:</p>
+
+<pre>
+tcpsock ls = tcplisten(NULL, port);
+if(!ls) {
+    perror("Can't open listening socket");
+    return 1;
+}
+</pre>
+
+<p>First argument to the function can be used to specify local network interface
+to bind to. This is an advanced functionality and you likely won't need it.
+Conveniently, you can just ignore it and pass <tt>NULL</tt> to the function.
+The server will then bind to all available local network interfaces.</p>
+
+<p>The second argument is, unsurprisingly, the port that the clients will
+connect to. When testing the program keep in mind that the range of valid port
+numbers is 1 to 65535 and that ports from 1 to 1023 typically require superuser
+privileges.</p>
+
+<p>If <tt>tcplisten()</tt> fails it returns NULL and sets <tt>errno</tt> to
+appropriate error code. Libmill's TCP functions are in this respect very similar
+to standard POSIX APIs. What it means is that we can use standard POSIX
+mechanims -- <tt>perror()</tt> in this case -- to deal with errors.</p>
+
+<p>Finally, we can clean up by closing the socket:</p>
+
+<pre>
+tcpclose(ls);
+</pre>
+
+<p>The source code for this step can be found in <tt>tutotial/step1.c</tt>.
+Source code for all the following steps will be also available in the same
+directory.</p>
+
+<p>Build the code like this:</p>
+
+<pre>
+$ gcc -o greetserver step1.c -lmill
+</pre>
+
+<p>Then run the resulting executable:</p>
+
+<pre>
+$ ./greetserver
+$
+</pre>
+
+<p>As a well-behaved UNIX program, greetserver will succeed silently. To test
+whether error hadling works as expected we can try to use invalid port
+number:</p>
+
+<pre>
+$ ./step1 70000
+Can't open listening socket: Invalid argument
+$
+</pre>
+
+<p>Yay! Everyting seems to work as expected. Let's now move to the step 2.</p>
+
+</body>
+</html>
+
