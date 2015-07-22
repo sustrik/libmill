@@ -28,6 +28,8 @@
 #include <setjmp.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 /* For now use longjmp. Replace by a different mechanism as needed. */
 struct mill_ctx {
@@ -60,6 +62,18 @@ void mill_panic(const char *text);
 #define mill_fast(x) (x)
 #define mill_slow(x) (x)
 #endif
+
+/* Define our own assert. This way we are sure that it stays in place even
+   if the standard C assert would be thrown away by the compiler. */
+#define mill_assert(x) \
+    do {\
+        if (mill_slow(!(x))) {\
+            fprintf(stderr, "Assert failed: " #x " (%s:%d)\n",\
+                __FILE__, __LINE__);\
+            fflush(stderr);\
+            abort();\
+        }\
+    } while (0)
 
 #endif
 

@@ -23,7 +23,6 @@
 */
 
 #include <arpa/inet.h>
-#include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <netinet/in.h>
@@ -47,17 +46,17 @@ static void mill_tunesock(int s) {
     if (opt == -1)
         opt = 0;
     int rc = fcntl(s, F_SETFL, opt | O_NONBLOCK);
-    assert(rc != -1);
+    mill_assert(rc != -1);
     /*  Allow re-using the same local address rapidly. */
     opt = 1;
     rc = setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof (opt));
-    assert(rc == 0);
+    mill_assert(rc == 0);
     /* If possible, prevent SIGPIPE signal when writing to the connection
         already closed by the peer. */
 #ifdef SO_NOSIGPIPE
     opt = 1;
     rc = setsockopt (s, SOL_SOCKET, SO_NOSIGPIPE, &opt, sizeof (opt));
-    assert (rc == 0 || errno == EINVAL);
+    mill_assert (rc == 0 || errno == EINVAL);
 #endif
 }
 
@@ -88,7 +87,7 @@ struct mill_tcpconn {
 
 static struct mill_tcpconn *tcpconn_create(int fd) {
     struct mill_tcpconn *conn = malloc(sizeof(struct mill_tcpconn));
-    assert(conn);
+    mill_assert(conn);
     conn->sock.type = MILL_TCPCONN;
     conn->fd = fd;
     conn->ifirst = 0;
@@ -100,7 +99,7 @@ static struct mill_tcpconn *tcpconn_create(int fd) {
 /* Convert textual IPv4 or IPv6 address to a binary one. */
 static int mill_tcpresolve(const char *addr, int port,
       struct sockaddr_storage *ss, socklen_t *len) {
-    assert(ss);
+    mill_assert(ss);
     if(port < 0 || port > 0xffff) {
         errno = EINVAL;
         return -1;
@@ -120,7 +119,7 @@ static int mill_tcpresolve(const char *addr, int port,
     }
     // Try to interpret the string is IPv4 address.
     int rc = inet_pton(AF_INET, addr, ss);
-    assert(rc >= 0);
+    mill_assert(rc >= 0);
     if(rc == 1) {
         struct sockaddr_in *ipv4 = (struct sockaddr_in*)ss;
         ipv4->sin_family = AF_INET;
@@ -133,7 +132,7 @@ static int mill_tcpresolve(const char *addr, int port,
 
     // It's not an IPv4 address. Let's try to interpret it as IPv6 address.
     rc = inet_pton(AF_INET6, addr, ss);
-    assert(rc >= 0);
+    mill_assert(rc >= 0);
     if(rc == 1) {
         struct sockaddr_in6 *ipv6 = (struct sockaddr_in6*)ss;
         ipv6->sin6_family = AF_INET6;
@@ -164,9 +163,9 @@ tcpsock tcplisten(const char *addr, int port) {
 
     /* Start listening. */
     rc = bind(s, (struct sockaddr*)&ss, len);
-    assert(rc != -1);
+    mill_assert(rc != -1);
     rc = listen(s, MILL_TCP_LISTEN_BACKLOG);
-    assert(rc != -1);
+    mill_assert(rc != -1);
 
     /* If the user requested an ephemeral port,
        retrieve the port number assigned by the OS now. */
@@ -184,12 +183,12 @@ tcpsock tcplisten(const char *addr, int port) {
         else if(ss.ss_family == AF_INET6)
             port = ((struct sockaddr_in6*)&ss)->sin6_port;
         else
-            assert(0);
+            mill_assert(0);
     }
 
     /* Create the object. */
     struct mill_tcplistener *l = malloc(sizeof(struct mill_tcplistener));
-    assert(l);
+    mill_assert(l);
     l->sock.type = MILL_TCPLISTENER;
     l->fd = s;
     l->port = port;
@@ -216,7 +215,7 @@ tcpsock tcpaccept(tcpsock s, int64_t deadline) {
             errno = 0;
             return &tcpconn_create(as)->sock;
         }
-        assert(as == -1);
+        mill_assert(as == -1);
         if(errno != EAGAIN && errno != EWOULDBLOCK)
             return NULL;
         /* Wait till new connection is available. */
@@ -225,7 +224,7 @@ tcpsock tcpaccept(tcpsock s, int64_t deadline) {
             errno = ETIMEDOUT;
             return NULL;
         }
-        assert(rc == FDW_IN);
+        mill_assert(rc == FDW_IN);
     }
 }
 
@@ -245,7 +244,7 @@ tcpsock tcpconnect(const char *addr, int port, int64_t deadline) {
     /* Connect to the remote endpoint. */
     rc = connect(s, (struct sockaddr*)&ss, len);
     if(rc != 0) {
-        assert(rc == -1);
+        mill_assert(rc == -1);
         if(errno != EINPROGRESS)
             return NULL;
         rc = fdwait(s, FDW_OUT, deadline);
@@ -314,7 +313,7 @@ size_t tcpsend(tcpsock s, const void *buf, size_t len, int64_t deadline) {
                 errno = ETIMEDOUT;
                 return len - remaining;
             }
-            assert(rc == FDW_OUT);
+            mill_assert(rc == FDW_OUT);
             continue;
         }
         pos += sz;
@@ -342,7 +341,7 @@ void tcpflush(tcpsock s, int64_t deadline) {
                 errno = ETIMEDOUT;
                 return;
             }
-            assert(rc == FDW_OUT);
+            mill_assert(rc == FDW_OUT);
             continue;
         }
         pos += sz;
@@ -374,7 +373,7 @@ size_t tcprecv(tcpsock s, void *buf, size_t len, int64_t deadline) {
     conn->ifirst = 0;
     conn->ilen = 0;
 
-    assert(remaining);
+    mill_assert(remaining);
     while(1) {
         if(remaining > MILL_TCP_BUFLEN) {
             /* If we still have a lot to read try to read it in one go directly
@@ -431,7 +430,7 @@ size_t tcprecv(tcpsock s, void *buf, size_t len, int64_t deadline) {
             errno = ETIMEDOUT;
             return len - remaining;
         }
-        assert(res & FDW_IN);
+        mill_assert(res & FDW_IN);
     }
 }
 
@@ -456,17 +455,17 @@ void tcpclose(tcpsock s) {
     if(s->type == MILL_TCPLISTENER) {
         struct mill_tcplistener *l = (struct mill_tcplistener*)s;
         int rc = close(l->fd);
-        assert(rc == 0);
+        mill_assert(rc == 0);
         free(l);
         return;
     }
     if(s->type == MILL_TCPCONN) {
         struct mill_tcpconn *c = (struct mill_tcpconn*)s;
         int rc = close(c->fd);
-        assert(rc == 0);
+        mill_assert(rc == 0);
         free(c);
         return;
     }
-    assert(0);
+    mill_assert(0);
 }
 

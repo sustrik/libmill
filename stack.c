@@ -26,7 +26,6 @@
 #include "stack.h"
 #include "utils.h"
 
-#include <assert.h>
 #include <stdint.h>
 #include <stdlib.h>
 
@@ -60,7 +59,7 @@ void *mill_allocstack(void) {
         return (void*)(mill_slist_pop(&mill_cached_stacks) + 1);
     }
     char *ptr = malloc(MILL_STACK_SIZE);
-    assert(ptr);
+    mill_assert(ptr);
     return ptr + MILL_STACK_SIZE;
 }
 

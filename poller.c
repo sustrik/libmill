@@ -28,7 +28,6 @@
 #include "poller.h"
 #include "utils.h"
 
-#include <assert.h>
 #include <poll.h>
 #include <stddef.h>
 #include <stdlib.h>
@@ -164,7 +163,7 @@ void mill_wait(void) {
 
         /* Wait for events. */
         rc = poll(mill_pollset_fds, mill_pollset_size, timeout);
-        assert(rc >= 0);
+        mill_assert(rc >= 0);
 
         /* Fire all expired timers. */
         if(!mill_list_empty(&mill_timers)) {
@@ -229,7 +228,8 @@ void mill_wait(void) {
         }
         /* If nobody is polling for the fd remove it from the pollset. */
         if(!mill_pollset_fds[i].events) {
-            assert(!mill_pollset_items[i].in && !mill_pollset_items[i].out);
+            mill_assert(!mill_pollset_items[i].in &&
+                !mill_pollset_items[i].out);
             mill_pollset_fds[i] = mill_pollset_fds[mill_pollset_size - 1];
             mill_pollset_items[i] = mill_pollset_items[mill_pollset_size - 1];
             --mill_pollset_size;

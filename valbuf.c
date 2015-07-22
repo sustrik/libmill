@@ -22,9 +22,9 @@
 
 */
 
+#include "utils.h"
 #include "valbuf.h"
 
-#include <assert.h>
 #include <stdlib.h>
 
 void mill_valbuf_init(struct mill_valbuf *self) {
@@ -44,7 +44,7 @@ void *mill_valbuf_alloc(struct mill_valbuf *self, size_t sz) {
         return self->ptr ? self->ptr : self->buf;
     /* Allocate or grow the dynamic buffer to accommodate the type. */
     self->ptr = realloc(self->ptr, sz);
-    assert(self->ptr);
+    mill_assert(self->ptr);
     self->capacity = sz;
     return self->ptr;
 }
