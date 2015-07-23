@@ -1,17 +1,14 @@
 language: c
+
 sudo: false
+
 os:
 #  - osx
   - linux
-env:
-  - LIBMILL="git://github.com/sustrik/libmill.git"
+
 branches:
   only:
     - master
-
-before_install:
-  - git clone $LIBMILL
-  - cd libmill
 
 install:
   - ./autogen.sh
