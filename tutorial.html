@@ -51,8 +51,8 @@ library.</p>
 
 <h3>Step 1: Setting up the stage</h3>
 
-<p>First, include libmill's header file. Later on you will some functionality
-from the standard library, so include those headers as well:</p> 
+<p>First, include libmill's header file. Later on you will want some
+functionality from the standard library, so include those headers as well:</p>
 
 <pre>
 #include &lt;libmill.h&gt;
@@ -184,7 +184,7 @@ very much like POSIX <tt>send()</tt>. Zero is a perfectly valid byte to send
 and thus we can't use it as a termination marker in the outgoing buffer.
 Instead we have to specify the size of the buffer explicitly (19).</pp>
 
-<p>Also note how the seding is done in two steps. The reason for that is that
+<p>Also note how the sending is done in two steps. The reason for that is that
 libmill is designed for extremely high performance and thus it tries to
 minimise the number of calls to the operating system. <tt>tcpsend()</tt>
 function stores the data in user space and <tt>tcpflush()</tt> pushes it to the
@@ -217,7 +217,7 @@ if(errno != 0) {
 }
 </pre>
 
-<p>This piece of code simply reads the reply from the client until in
+<p>This piece of code simply reads the reply from the client until it
 encounters a carriage return character ('\r') which is used,
 in combination with a newline ('\n'), by telnet to terminate individual
 lines.</p>
