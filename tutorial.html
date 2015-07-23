@@ -21,6 +21,14 @@
 
 <h2>Tutorial</h2>
 
+<ul id="toc">
+  <li><a href="#introduction">Introduction</a></li>
+  <li><a href="#step1">Step 1: Setting up the stage</a></li>
+  <li><a href="#step2">Step 2: The business logic</a></li>
+</ul>
+
+<h3>Introduction</h3>
+
 <p>In this tutorial you will develop a simple TCP "greet" server. The client
 is meant to connect to it via telnet. After doing so, the server will ask
 for their name, reply with a greeting and close the connection.</p>
@@ -43,14 +51,15 @@ library.</p>
 
 <h3>Step 1: Setting up the stage</h3>
 
-<p>First, include libmill's header file. Later on you will also need errno,
-stdio and stdlib, so include those as well:</p> 
+<p>First, include libmill's header file. Later on you will some functionality
+from the standard library, so include those headers as well:</p> 
 
 <pre>
 #include &lt;libmill.h&gt;
 #include &lt;errno.h&gt;
 #include &lt;stdio.h&gt;
 #include &lt;stdlib.h&gt;
+#include &lt;string.h&gt;
 </pre>
 
 <p>Add the <tt>main</tt> function. We'll assume, that the first argument,
@@ -95,15 +104,32 @@ appropriate error code. Libmill's TCP functions are in this respect very similar
 to standard POSIX APIs. What it means is that we can use standard POSIX
 mechanims -- <tt>perror()</tt> in this case -- to deal with errors.</p>
 
-<p>Finally, we can clean up by closing the socket:</p>
+<p>If you run the program at this stage you'll find out that it finishes
+immediately rather than pausing and waiting for a connection from the client
+to arrive. That is what <tt>tcpaccept()</tt> function is for:
 
 <pre>
+tcpsock as = tcpaccept(ls, -1);
+if(!as) {
+    perror("Can't accept incoming connection");
+    return 1;
+}
+</pre>
+
+<p>The second argument of the function is a deadline. We'll cover the
+deadlines later on in this tutorial. For now, remember that constant -1 can
+be used to mean 'no deadline' -- if there is no incoming connection
+the call will block forever.</p>
+
+<p>Finally, we can clean up by closing the sockets:</p>
+
+<pre>
+tcpclose(as);
 tcpclose(ls);
 </pre>
 
 <p>The source code for this step can be found in <tt>tutotial/step1.c</tt>.
-Source code for all the following steps will be also available in the same
-directory.</p>
+All the following steps will be available in the same directory.</p>
 
 <p>Build the code like this:</p>
 
@@ -115,12 +141,17 @@ $ gcc -o greetserver step1.c -lmill
 
 <pre>
 $ ./greetserver
-$
 </pre>
 
-<p>As a well-behaved UNIX program, greetserver will succeed silently. To test
-whether error hadling works as expected we can try to use invalid port
-number:</p>
+<p>The server now wait for a new connection. Establish one from a different
+console using telnet:</p>
+
+<pre>
+$ telnet 127.0.0.1 5555
+</pre>
+
+<p>Being a well-behaved UNIX program, greetserver succeeds silently. To test
+whether error hadling works as expected try to use invalid port number:</p>
 
 <pre>
 $ ./greetserver 70000
@@ -131,6 +162,98 @@ $
 <p>Yay! Everyting seems to work as expected. Let's now move to the step 2.</p>
 
 <h3>Step 2: The business logic</h3>
+
+<p>When new connection arrives, the first thing that we want to do is to send
+the "What's your name?" question to the client:</p>
+
+<pre>
+tcpsend(as, "What's your name?\r\n", 19, -1);
+if(errno != 0) {
+    perror("Can't send");
+    return 1;
+}
+tcpflush(as, -1);
+if(errno != 0) {
+    perror("Can't flush");
+    return 1;
+}
+</pre>
+
+<p>First, note that <tt>tcpsend()</tt> works with bytes, not strings,
+very much like POSIX <tt>send()</tt>. Zero is a perfectly valid byte to send
+and thus we can't use it as a termination marker in the outgoing buffer.
+Instead we have to specify the size of the buffer explicitly (19).</pp>
+
+<p>Also note how the seding is done in two steps. The reason for that is that
+libmill is designed for extremely high performance and thus it tries to
+minimise the number of calls to the operating system. <tt>tcpsend()</tt>
+function stores the data in user space and <tt>tcpflush()</tt> pushes it to the
+kernel. That way, you can compose the message using many small, fast
+<tt>tcpsend()</tt> calls and then flush it to the network using a single system
+call.</p>
+
+<p>Finally, note that error handling works a tad differently in this case.</p>
+
+<p>The family of functions related to sending and receiving function, generally
+speaking, returns the number of bytes sent or received and sets the
+<tt>errno</tt> to indicate success or failure irrespective of the return value.
+</p>
+
+<p>Imagine the case where we are reading data from a TCP connection. We want
+4 bytes. The peer sends 4 bytes and closes the connection. <tt>tcprecv()</tt>
+function returns the size of received buffer (4) but sets <tt>errno</tt> to
+<tt>ECONNRESET</tt> to indicate that the connection was closed. If there's no
+error <tt>errno</tt> is set to zero.<p>
+
+<p>Practical example can be seen in the next piece of code we are going to add
+to our program:</p>
+
+<pre>
+char inbuf[256];
+size_t sz = tcprecvuntil(as, inbuf, sizeof(inbuf), '\r', -1);
+if(errno != 0) {
+    perror("Receiving failed");
+    return 1;
+}
+</pre>
+
+<p>This piece of code simply reads the reply from the client until in
+encounters a carriage return character ('\r') which is used,
+in combination with a newline ('\n'), by telnet to terminate individual
+lines.</p>
+
+<p>Network protocols tend use size-prefixed fields, for example, integer 12,
+followed by "Hello, world!" string. In such cases, <tt>tcprecv()</tt> function
+does a good job.</tt>
+
+<p>Other protocols though, mostly the text-based ones, rely on delimiters to
+separate the fields. In such case "Hello, world!" string would be sent first,
+followed by a newline to indicate that the string ends. Here,
+<tt>tcprecvuntil()</tt> function does a better job  as it allows you to specify
+the character upon receiving which it will stop receiving further.</p>
+
+<p>Having received the reply from the client, we can now construct the greeting
+and send it to the client. The analysis of this code is left as an exercise to
+the reader:</p>
+
+<pre>
+inbuf[sz - 1] = 0;
+char outbuf[256];
+int rc = snprintf(outbuf, sizeof(outbuf), "Hello, %s!\n", inbuf);
+
+sz = tcpsend(as, outbuf, rc, -1);
+if(errno != 0) {
+    perror("Can't send");
+    return 1;
+}
+tcpflush(as, -1);
+if(errno != 0) {
+    perror("Can't flush");
+    return 1;
+}
+</pre>
+
+<p>Compile the program and check that it works like expected!</p>
 
 </body>
 </html>
