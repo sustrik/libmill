@@ -108,7 +108,8 @@ noinst_PROGRAMS += \
 ################################################################################
 
 noinst_PROGRAMS += \
-    tutorial/step1
+    tutorial/step1 \
+    tutotial/step2
 
 ################################################################################
 #  additional packaging-related stuff                                          #

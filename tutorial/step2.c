@@ -46,6 +46,39 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    tcpsend(as, "What's your name?\r\n", 19, -1);
+    if(errno != 0) {
+        perror("Can't send");
+        return 1;
+    }
+    tcpflush(as, -1);
+    if(errno != 0) {
+        perror("Can't flush");
+        return 1;
+    }
+
+    char inbuf[256];
+    size_t sz = tcprecvuntil(as, inbuf, sizeof(inbuf), '\r', -1);
+    if(errno != 0) {
+        perror("Receiving failed");
+        return 1;
+    }
+
+    inbuf[sz - 1] = 0;
+    char outbuf[256];
+    int rc = snprintf(outbuf, sizeof(outbuf), "Hello, %s!\n", inbuf);
+
+    sz = tcpsend(as, outbuf, rc, -1);
+    if(errno != 0) {
+        perror("Can't send");
+        return 1;
+    }
+    tcpflush(as, -1);
+    if(errno != 0) {
+        perror("Can't flush");
+        return 1;
+    }
+
     tcpclose(as);
     tcpclose(ls);
     return 0;
