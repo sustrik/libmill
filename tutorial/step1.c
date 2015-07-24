@@ -40,14 +40,10 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    tcpsock as = tcpaccept(ls, -1);
-    if(!as) {
-        perror("Can't accept incoming connection");
-        return 1;
+    while(1) {
+        tcpsock as = tcpaccept(ls, -1);
+        printf("New connection!\n");
+        tcpclose(as);
     }
-
-    tcpclose(as);
-    tcpclose(ls);
-    return 0;
 }
 
