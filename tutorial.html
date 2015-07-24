@@ -230,15 +230,18 @@ tcpflush(as, -1);
 
 <p>Compile the program and check whether it works like expected!</p>
 
-<!--
 <h3 id="step3">Step 3: Making it robust</h3>
 
-<p>Finally, note that error handling works a tad differently in this case.</p>
+<p>Now that the program does what it is supposed to let's make it work in
+actual real-world-like environment.</p>
 
-<p>The family of functions related to sending and receiving function, generally
-speaking, returns the number of bytes sent or received and sets the
-<tt>errno</tt> to indicate success or failure irrespective of the return value.
-</p>
+<p>Specifically, we don't want the client to be able to crash the server, so we
+have to handle the errors from TCP functions. </p>
+
+<p>The functions related to sending and receiving report the errors in a bit
+different way. They return the number of bytes sent or received (as already seen
+in the previous step) and at the same time they set the <tt>errno</tt> to
+indicate success or failure.</p>
 
 <p>Imagine the case where we are reading data from a TCP connection. We want
 4 bytes. The peer sends 4 bytes and closes the connection. <tt>tcprecv()</tt>
@@ -246,69 +249,35 @@ function returns the size of received buffer (4) but sets <tt>errno</tt> to
 <tt>ECONNRESET</tt> to indicate that the connection was closed. If there's no
 error <tt>errno</tt> is set to zero.<p>
 
-<p>Now that the program does what it is supposed to let's make it work in
-actual real-world-like scenarios.</p>
-
-<p>First of all, the server now serves one client request and exits. We want
-it to serve new requests over and over.</p>
-
-<p>To do that we just have to do <tt>tcpaccept()</tt> in a loop. The loop
-will accept a new connection from a client, do its work and repeat:</p>
-
-<pre>
-int main(int argc, char *argv[]) {
-
-    ...
-
-    tcpsock ls = tcplisten(NULL, port);
-    if(!ls) {
-        perror("Can't open listening socket");
-        return 1;
-    }
-
-    while(1) {
-
-        tcpsock as = tcpaccept(ls, -1);
-        if(!as) {
-            perror("Can't accept incoming connection");
-            return 1;
-        }
-
-        ...
-
-        tcpclose(as);
-    }
-}
-</pre>
-
-<p>Note that the loop above is infinite. That's why the final
-<tt>tcpclose(ls);</tt> and <tt>return 0;</tt> was removed. The code was
-unreachable anyway.</p>
-
-<p>But let's make the program somehow more robust. At this point the client
-can crash the server simply be closing the connection in the middle of the
-dialogue. We want the server to handle such cases decently. The code can be
-achieved by jumping to the cleanup code (<tt>tcpclose(as)</tt>) in case
-of error instead of exiting:</p>
+<p>In our program we'll handle the errors silently, by jumping to the cleanup
+code (<tt>tcpclose(as)</tt>):</p>
 
 <pre>
 while(1) {
-
     tcpsock as = tcpaccept(ls, -1);
-    if(!as)
-        continue;
 
     tcpsend(as, "What's your name?\r\n", 19, -1);
     if(errno != 0)
         goto cleanup;
-    
+
     ...
 
-cleanup:
+    cleanup:
     tcpclose(as);
 }
 </pre>
 
+<p>We should also handle errors from <tt>tcpaccept()</tt>. Given that in such
+case there's no connection established yet, we'll just retry instead
+of jumping to the cleanup code:</p>
+
+<pre>
+tcpsock as = tcpaccept(ls, -1);
+if(!as)
+    continue;
+</pre>
+
+<!--
 <h3 id="step4">Step 4: Making it parallel</h3>
 
 <p>At this point the client can't crash the server, but it can block it.
