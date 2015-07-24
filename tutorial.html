@@ -277,7 +277,6 @@ if(!as)
     continue;
 </pre>
 
-<!--
 <h3 id="step4">Step 4: Making it parallel</h3>
 
 <p>At this point the client can't crash the server, but it can block it.
@@ -285,13 +284,51 @@ Do the following experiment:</p>
 
 <ol>
     <li>Start the server.</li>
-    <li>From a different terminal start the telnet session and let it hanging
+    <li>From a different terminal start a telnet session and let it hang
         without entering your name.</li>
     <li>From yet different terminal open a new telnet session.</li>
     <li>Observe that the second session hangs without even asking you for your
         name.</li>
 </ol>
--->
+
+<p>The reason for the behaviour is that the program doesn't even start accepting
+new connection until the entire dialogue with the client is finished. What we
+want instead is running any number of dialogues with the clients in parallel.
+And that is where coroutines kick in.</p>
+
+<p>Coroutines are very much like threads. They are very lightweight though.
+Measuring on a modern hardware you can run up to something like twenty million
+coroutines per second.</p>
+
+<p>Coroutines are launched using <tt>go()</tt> construct.</p>
+
+<p> In our case we can move the code performing the dialogue with the client
+into a separate function and launch it as a coroutine:</p>
+
+<pre>
+void dialogue(tcpsock as) {
+    tcpsend(as, "What's your name?\r\n", 19, -1);
+
+    ...
+
+    tcpclose(as);
+}
+
+int main(int argc, char *argv[]) {
+
+    ...
+
+    while(1) {
+        tcpsock as = tcpaccept(ls, -1);
+        if(!as)
+            continue;
+        go(dialogue(as));
+    }
+}
+</pre>
+
+<p>Let's compile it and try to initial experiment once again. As can be seen,
+one client now cannot block another one. Great. Let's move on.</p>
 
 </body>
 </html>
