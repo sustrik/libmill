@@ -4,18 +4,22 @@ Makefile
 Makefile.in
 aclocal.m4
 autom4te.cache/
-config.log
-config.status
+compile
+config.*
 configure
 install-sh
 missing
 *.o
 *.a
+.libs
 .deps/
 depcomp
 
 # Generated from clexer.rl
 gen/clexer.rb
+
+perf
+m4
 
 # Generated from stdmill.[mc,mh]
 stdmill.c
@@ -23,3 +27,11 @@ stdmill.h
 
 tests/*
 !tests/*.mc
+test-*
+
+doltcompile
+doltlibtool
+libmill.*
+libmill_la*
+libtool
+ltmain.sh
