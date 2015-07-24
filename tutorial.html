@@ -25,9 +25,11 @@
   <li><a href="#introduction">Introduction</a></li>
   <li><a href="#step1">Step 1: Setting up the stage</a></li>
   <li><a href="#step2">Step 2: The business logic</a></li>
+  <li><a href="#step3">Step 3: Making it robust</a></li>
+  <li><a href="#step4">Step 4: Making it parallel</a></li>
 </ul>
 
-<h3>Introduction</h3>
+<h3 id="introduction">Introduction</h3>
 
 <p>In this tutorial you will develop a simple TCP "greet" server. The client
 is meant to connect to it via telnet. After doing so, the server will ask
@@ -49,7 +51,7 @@ Connection closed by foreign host.
 <p>In the process you will learn how to use coroutines, channels and the TCP
 library.</p>
 
-<h3>Step 1: Setting up the stage</h3>
+<h3 id="step1">Step 1: Setting up the stage</h3>
 
 <p>First, include libmill's header file. Later on you will some functionality
 from the standard library, so include those headers as well:</p> 
@@ -63,7 +65,7 @@ from the standard library, so include those headers as well:</p>
 </pre>
 
 <p>Add the <tt>main</tt> function. We'll assume, that the first argument,
-if present, will be port number to be used by the server. If not specified,
+if present, will be the port number to be used by the server. If not specified,
 we will default to 5555:</p>
 
 <pre>
@@ -71,6 +73,7 @@ int main(int argc, char *argv[]) {
     int port = 5555;
     if(argc &gt; 1)
         port = atoi(argv[1]);
+
     return 0;
 }
 </pre>
@@ -91,13 +94,13 @@ if(!ls) {
 
 <p>First argument to the function can be used to specify local network interface
 to bind to. This is an advanced functionality and you likely won't need it.
-Conveniently, you can just ignore it and pass <tt>NULL</tt> to the function.
+Conveniently, you can just ignore it and set the argument to <tt>NULL</tt>.
 The server will then bind to all available local network interfaces.</p>
 
 <p>The second argument is, unsurprisingly, the port that the clients will
 connect to. When testing the program keep in mind that the range of valid port
-numbers is 1 to 65535 and that ports from 1 to 1023 typically require superuser
-privileges.</p>
+numbers is 1 to 65535 and binding to the ports from 1 to 1023 typically requires
+superuser privileges.</p>
 
 <p>If <tt>tcplisten()</tt> fails it returns NULL and sets <tt>errno</tt> to
 appropriate error code. Libmill's TCP functions are in this respect very similar
@@ -110,10 +113,6 @@ to arrive. That is what <tt>tcpaccept()</tt> function is for:
 
 <pre>
 tcpsock as = tcpaccept(ls, -1);
-if(!as) {
-    perror("Can't accept incoming connection");
-    return 1;
-}
 </pre>
 
 <p>The second argument of the function is a deadline. We'll cover the
@@ -121,17 +120,24 @@ deadlines later on in this tutorial. For now, remember that constant -1 can
 be used to mean 'no deadline' -- if there is no incoming connection
 the call will block forever.</p>
 
-<p>Finally, we can clean up by closing the sockets:</p>
+<p>Finally, we want to handle many connections from the clients rather than
+a single one so we put the <tt>tcpaccept()</tt> call into an infinite loop.</p>
+
+<p>For now we'll just print a message when new connection is established
+and close it immediately:</p>
 
 <pre>
-tcpclose(as);
-tcpclose(ls);
+while(1) {
+    tcpsock as = tcpaccept(ls, -1);
+    printf("New connection!\n");
+    tcpclose(as);
+}
 </pre>
 
 <p>The source code for this step can be found in <tt>tutotial/step1.c</tt>.
 All the following steps will be available in the same directory.</p>
 
-<p>Build the code like this:</p>
+<p>Build it like this:</p>
 
 <pre>
 $ gcc -o greetserver step1.c -lmill
@@ -143,15 +149,15 @@ $ gcc -o greetserver step1.c -lmill
 $ ./greetserver
 </pre>
 
-<p>The server now wait for a new connection. Establish one from a different
-console using telnet:</p>
+<p>The server now waits for a new connection. Establish one from a different
+terminal using telnet and check whether it works like expected:</p>
 
 <pre>
 $ telnet 127.0.0.1 5555
 </pre>
 
-<p>Being a well-behaved UNIX program, greetserver succeeds silently. To test
-whether error hadling works as expected try to use invalid port number:</p>
+<p>To test whether error hadling works all right try to use invalid port
+number:</p>
 
 <pre>
 $ ./greetserver 70000
@@ -161,22 +167,14 @@ $
 
 <p>Yay! Everyting seems to work as expected. Let's now move to the step 2.</p>
 
-<h3>Step 2: The business logic</h3>
+<h3 id="step2">Step 2: The business logic</h3>
 
 <p>When new connection arrives, the first thing that we want to do is to send
 the "What's your name?" question to the client:</p>
 
 <pre>
 tcpsend(as, "What's your name?\r\n", 19, -1);
-if(errno != 0) {
-    perror("Can't send");
-    return 1;
-}
 tcpflush(as, -1);
-if(errno != 0) {
-    perror("Can't flush");
-    return 1;
-}
 </pre>
 
 <p>First, note that <tt>tcpsend()</tt> works with bytes, not strings,
@@ -192,29 +190,9 @@ kernel. That way, you can compose the message using many small, fast
 <tt>tcpsend()</tt> calls and then flush it to the network using a single system
 call.</p>
 
-<p>Finally, note that error handling works a tad differently in this case.</p>
-
-<p>The family of functions related to sending and receiving function, generally
-speaking, returns the number of bytes sent or received and sets the
-<tt>errno</tt> to indicate success or failure irrespective of the return value.
-</p>
-
-<p>Imagine the case where we are reading data from a TCP connection. We want
-4 bytes. The peer sends 4 bytes and closes the connection. <tt>tcprecv()</tt>
-function returns the size of received buffer (4) but sets <tt>errno</tt> to
-<tt>ECONNRESET</tt> to indicate that the connection was closed. If there's no
-error <tt>errno</tt> is set to zero.<p>
-
-<p>Practical example can be seen in the next piece of code we are going to add
-to our program:</p>
-
 <pre>
 char inbuf[256];
 size_t sz = tcprecvuntil(as, inbuf, sizeof(inbuf), '\r', -1);
-if(errno != 0) {
-    perror("Receiving failed");
-    return 1;
-}
 </pre>
 
 <p>This piece of code simply reads the reply from the client until in
@@ -232,6 +210,9 @@ followed by a newline to indicate that the string ends. Here,
 <tt>tcprecvuntil()</tt> function does a better job  as it allows you to specify
 the character upon receiving which it will stop receiving further.</p>
 
+<p>Finally, keep in mind that both sending and receiving TCP functions return
+the number of characters sent or received.</p>
+
 <p>Having received the reply from the client, we can now construct the greeting
 and send it to the client. The analysis of this code is left as an exercise to
 the reader:</p>
@@ -240,20 +221,103 @@ the reader:</p>
 inbuf[sz - 1] = 0;
 char outbuf[256];
 int rc = snprintf(outbuf, sizeof(outbuf), "Hello, %s!\n", inbuf);
-
-sz = tcpsend(as, outbuf, rc, -1);
-if(errno != 0) {
-    perror("Can't send");
-    return 1;
-}
+tcpsend(as, outbuf, rc, -1);
 tcpflush(as, -1);
-if(errno != 0) {
-    perror("Can't flush");
-    return 1;
-}
 </pre>
 
 <p>Compile the program and check that it works like expected!</p>
+
+<h3 id="step3">Step 3: Making it robust</h3>
+
+<p>Finally, note that error handling works a tad differently in this case.</p>
+
+<p>The family of functions related to sending and receiving function, generally
+speaking, returns the number of bytes sent or received and sets the
+<tt>errno</tt> to indicate success or failure irrespective of the return value.
+</p>
+
+<p>Imagine the case where we are reading data from a TCP connection. We want
+4 bytes. The peer sends 4 bytes and closes the connection. <tt>tcprecv()</tt>
+function returns the size of received buffer (4) but sets <tt>errno</tt> to
+<tt>ECONNRESET</tt> to indicate that the connection was closed. If there's no
+error <tt>errno</tt> is set to zero.<p>
+
+<p>Now that the program does what it is supposed to let's make it work in
+actual real-world-like scenarios.</p>
+
+<p>First of all, the server now serves one client request and exits. We want
+it to serve new requests over and over.</p>
+
+<p>To do that we just have to do <tt>tcpaccept()</tt> in a loop. The loop
+will accept a new connection from a client, do its work and repeat:</p>
+
+<pre>
+int main(int argc, char *argv[]) {
+
+    ...
+
+    tcpsock ls = tcplisten(NULL, port);
+    if(!ls) {
+        perror("Can't open listening socket");
+        return 1;
+    }
+
+    while(1) {
+
+        tcpsock as = tcpaccept(ls, -1);
+        if(!as) {
+            perror("Can't accept incoming connection");
+            return 1;
+        }
+
+        ...
+
+        tcpclose(as);
+    }
+}
+</pre>
+
+<p>Note that the loop above is infinite. That's why the final
+<tt>tcpclose(ls);</tt> and <tt>return 0;</tt> was removed. The code was
+unreachable anyway.</p>
+
+<p>But let's make the program somehow more robust. At this point the client
+can crash the server simply be closing the connection in the middle of the
+dialogue. We want the server to handle such cases decently. The code can be
+achieved by jumping to the cleanup code (<tt>tcpclose(as)</tt>) in case
+of error instead of exiting:</p>
+
+<pre>
+while(1) {
+
+    tcpsock as = tcpaccept(ls, -1);
+    if(!as)
+        continue;
+
+    tcpsend(as, "What's your name?\r\n", 19, -1);
+    if(errno != 0)
+        goto cleanup;
+    
+    ...
+
+cleanup:
+    tcpclose(as);
+}
+</pre>
+
+<h3 id="step4">Step 4: Making it parallel</h3>
+
+<p>At this point the client can't crash the server, but it can block it.
+Do the following experiment:</p>
+
+<ol>
+    <li>Start the server.</li>
+    <li>From a different terminal start the telnet session and let it hanging
+        without entering your name.</li>
+    <li>From yet different terminal open a new telnet session.</li>
+    <li>Observe that the second session hangs without even asking you for your
+        name.</li>
+</ol>
 
 </body>
 </html>
