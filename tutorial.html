@@ -115,6 +115,8 @@ to arrive. That is what <tt>tcpaccept()</tt> function is for:
 tcpsock as = tcpaccept(ls, -1);
 </pre>
 
+<p>The function returns the newly established connection.</p>
+
 <p>The second argument of the function is a deadline. We'll cover the
 deadlines later on in this tutorial. For now, remember that constant -1 can
 be used to mean 'no deadline' -- if there is no incoming connection
@@ -221,12 +223,14 @@ the reader:</p>
 inbuf[sz - 1] = 0;
 char outbuf[256];
 int rc = snprintf(outbuf, sizeof(outbuf), "Hello, %s!\n", inbuf);
+
 tcpsend(as, outbuf, rc, -1);
 tcpflush(as, -1);
 </pre>
 
-<p>Compile the program and check that it works like expected!</p>
+<p>Compile the program and check whether it works like expected!</p>
 
+<!--
 <h3 id="step3">Step 3: Making it robust</h3>
 
 <p>Finally, note that error handling works a tad differently in this case.</p>
@@ -318,6 +322,7 @@ Do the following experiment:</p>
     <li>Observe that the second session hangs without even asking you for your
         name.</li>
 </ol>
+-->
 
 </body>
 </html>
