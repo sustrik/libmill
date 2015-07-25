@@ -28,6 +28,7 @@
   <li><a href="#step3">Step 3: Making it robust</a></li>
   <li><a href="#step4">Step 4: Making it parallel</a></li>
   <li><a href="#step5">Step 5: Deadlines</a></li>
+  <li><a href="#step6">Step 6: Communicating among coroutines</a></li>
 </ul>
 
 <h3 id="introduction">Introduction</h3>
@@ -168,7 +169,7 @@ Can't open listening socket: Invalid argument
 $
 </pre>
 
-<p>Yay! Everyting seems to work as expected. Let's now move to the step 2.</p>
+<p>Everyting seems to work as expected. Let's now move to the step 2.</p>
 
 <h3 id="step2">Step 2: The business logic</h3>
 
@@ -368,6 +369,153 @@ if(errno != 0)
 is reached. However, we treat all the errors in the same way (by closing the
 connection) and thus we don't have to do any specific provisions for the
 deadline case.</p>
+
+<h3 id="step6">Step 6: Communicating among coroutines</h3>
+
+<p>Imagine we want to keep statistics in the greetserver: Number of overall
+connections, number of those that are active at the moment and number of
+those that have failed.</p>
+
+<p>In a classic thread-based application we would keep the statistics in
+global variables and synchronise access to them using mutexes.</p>
+
+<p>With libmill, however, we are aiming at "concurrency by message passing"
+and thus we are going to implement the feature in a different way.</p>
+
+<p>We will create a new coroutine that will keep track of the statistics and
+a channel that will be used by <tt>dialogue()</tt> coroutines to communicate
+with it:</p>
+
+<p><img src="tutorial1.jpeg"/></p>
+
+<p>First, we define values that will be passed through the channel:</p>
+
+<pre>
+#define CONN_ESTABLISHED 1
+#define CONN_SUCCEEDED 2
+#define CONN_FAILED 3
+</pre>
+
+<p>Now we can create the channel and pass it to <tt>dialogue()</tt> coroutines:
+</p>
+
+<pre>
+void dialogue(tcpsock as, chan ch) {
+    ...
+}
+
+int main(int argc, char *argv[]) {
+
+    ...
+
+    chan ch = chmake(int, 0);
+
+    while(1) {
+        tcpsock as = tcpaccept(ls, -1);
+        if(!as)
+            continue;
+        go(dialogue(as, ch));
+    }
+}
+</pre>
+
+<p>The first argument to <tt>chmake()</tt> is the type of the values that
+will be passed through the channel. In our case, they are simple integers.</p>
+
+<p>The second argument is the size of channel's buffer. Setting it to zero means
+that the channel is "unbuffered" or, in other words, that the sending coroutine
+will block each time until the receiving coroutine can process the message.</p>
+
+<p>This kind of behaviour could, in theory, become a bottleneck, however,
+in our case we assume that <tt>statistics()</tt> coroutine will be extremely
+fast and not likely to turn into a performance bottleneck.</p>
+
+<p>At this point we can implement the <tt>statistics()</tt> coroutine that
+will run forever in a busy loop and collect the statistics from all the
+<tt>dialogue()</tt> coroutines. Each time the statistics change, it will print
+them to <tt>stdout</tt>:</p>
+
+<pre>
+void statistics(chan ch) {
+    int connections = 0;
+    int active = 0;
+    int failed = 0;
+    
+    while(1) {
+        int op = chr(ch, int);
+
+        if(op == CONN_ESTABLISHED)
+            ++connections, ++active;
+        else
+            --active;
+        if(op == CONN_FAILED)
+            ++failed;
+
+        printf("Total number of connections: %d\n", connections);
+        printf("Active connections: %d\n", active);
+        printf("Failed connections: %d\n\n", failed);
+    }
+}
+
+int main(int argc, char *argv[]) {
+
+    ...
+
+    chan ch = chmake(int, 0);
+    go(statistics(ch));
+
+    ...
+
+}
+</pre>
+
+<p><tt>chr()</tt> function will retrieve one message from the channel or block
+if there is none available. At the moment we are not sending anything to the
+channel, so the coroutine will simply block forever.</p>
+
+<p>To fix that, let's modify <tt>dialogue()</tt> coroutine to send some
+messages to the channel. <tt>chs()</tt> function will be used to do that:</p>
+
+<pre>
+void dialogue(tcpsock as, chan ch) {
+    chs(ch, int, CONN_ESTABLISHED);
+
+    ...
+
+    cleanup:
+    if(errno == 0)
+        chs(ch, int, CONN_SUCCEEDED);
+    else
+        chs(ch, int, CONN_FAILED);
+    tcpclose(as);
+}
+</pre>
+
+<p>Now compile the server and run it. Create a telnet session and let it
+timeout. The output on the server side will look like this:</p>
+
+<pre>
+$ ./greetserver
+Total number of connections: 1
+Active connections: 1
+Failed connections: 0
+
+Total number of connections: 1
+Active connections: 0
+Failed connections: 1
+</pre>
+
+<p>The first block of text is displayed when the connection is established:
+There have been 1 connection ever and 1 is active at the moment.</p>
+
+<p>Second block shows up when the connection times out: There have been 1
+connection ever, there are no active connection any longer and one connection
+have failed in the past.</p>
+
+<p>Yay! Everything works as expected.</p>
+
+<p>Enjoy your time with the library and send any question you may have to
+libmill@freelists.org</p>
 
 </body>
 </html>
