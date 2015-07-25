@@ -321,6 +321,7 @@ size_t tcpsend(tcpsock s, const void *buf, size_t len, int64_t deadline) {
         pos += sz;
         remaining -= sz;
     }
+    return len;
 }
 
 void tcpflush(tcpsock s, int64_t deadline) {
