@@ -29,6 +29,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/time.h>
+#include <time.h>
 
 void mill_panic(const char *text) {
     fprintf(stderr, "panic: %s\n", text);
@@ -37,8 +38,16 @@ void mill_panic(const char *text) {
 }
 
 int64_t now(void) {
+    /* TODO: OSX allegedly doesn't support CLOCK_MONOTONIC. */
+#if defined CLOCK_MONOTONIC
+    struct timespec ts;
+    int rc = clock_gettime(CLOCK_MONOTONIC, &ts);
+    mill_assert (rc == 0);
+    return ((int64_t)ts.tv_sec) * 1000 + (((int64_t)ts.tv_nsec) / 1000000);
+#else
     struct timeval tv;
     int rc = gettimeofday(&tv, NULL);
     assert(rc == 0);
     return ((int64_t)tv.tv_sec) * 1000 + (((int64_t)tv.tv_usec) / 1000);
+#endif
 }
