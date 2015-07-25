@@ -118,10 +118,10 @@ static int mill_tcpresolve(const char *addr, int port,
         return 0;
     }
     // Try to interpret the string is IPv4 address.
-    int rc = inet_pton(AF_INET, addr, ss);
+    struct sockaddr_in *ipv4 = (struct sockaddr_in*)ss;
+    int rc = inet_pton(AF_INET, addr, &ipv4->sin_addr);
     mill_assert(rc >= 0);
     if(rc == 1) {
-        struct sockaddr_in *ipv4 = (struct sockaddr_in*)ss;
         ipv4->sin_family = AF_INET;
         ipv4->sin_port = htons((uint16_t)port);
         if(len)
@@ -131,10 +131,10 @@ static int mill_tcpresolve(const char *addr, int port,
     }
 
     // It's not an IPv4 address. Let's try to interpret it as IPv6 address.
-    rc = inet_pton(AF_INET6, addr, ss);
+    struct sockaddr_in6 *ipv6 = (struct sockaddr_in6*)ss;
+    rc = inet_pton(AF_INET6, addr, &ipv6->sin6_addr);
     mill_assert(rc >= 0);
     if(rc == 1) {
-        struct sockaddr_in6 *ipv6 = (struct sockaddr_in6*)ss;
         ipv6->sin6_family = AF_INET6;
         ipv6->sin6_port = htons((uint16_t)port);
         if(len)
