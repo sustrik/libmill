@@ -29,9 +29,10 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-/* Size of stack for new coroutines. In bytes. */
+/* Size of stack for new coroutines. In bytes. Default size is slightly smaller
+   than page size to account for malloc's chunk header. */
 #ifndef MILL_STACK_SIZE
-#define MILL_STACK_SIZE (256 * 1024)
+#define MILL_STACK_SIZE (256 * 1024 - 256)
 #endif
 
 /* Maximum number of unused cached stacks. */
