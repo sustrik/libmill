@@ -27,6 +27,7 @@
   <li><a href="#step2">Step 2: The business logic</a></li>
   <li><a href="#step3">Step 3: Making it robust</a></li>
   <li><a href="#step4">Step 4: Making it parallel</a></li>
+  <li><a href="#step5">Step 5: Deadlines</a></li>
 </ul>
 
 <h3 id="introduction">Introduction</h3>
@@ -329,6 +330,44 @@ int main(int argc, char *argv[]) {
 
 <p>Let's compile it and try to initial experiment once again. As can be seen,
 one client now cannot block another one. Great. Let's move on.</p>
+
+<h3 id="step5">Step 5: Deadlines</h3>
+
+<p>File descriptors can be a scarce resource. If a client connects to
+greetserver and lets the dialogue hang without entering the name, one file
+descriptor on the server side is, for all practical purposes, wasted.</p>
+
+<p>To deal with the problem we are going to timeout the whole client/server
+dialogue. If it takes more than 10 seconds, server will kill the connection
+straight away.</p>
+
+<p>One thing to note is that libmill uses deadlines rather than more
+conventional timeouts. In other words, you specify the time instant when
+you want the operation to finish rather than maximum time it should take to
+run. To construct deadlines easily, libmill provides <tt>now()</tt> function.
+The deadline is expressed in milliseconds so you can create a deadline
+10 seconds in the future like this:</p>
+
+<pre>
+int64_t deadline = now() + 10000;
+</pre>
+
+<p>Further, you have to modify all the potentially blocking function calls in
+the program to take the deadline parameter. For example:</p>
+
+<pre>
+tcpsend(as, "What's your name?\r\n", 19, deadline);
+if(errno != 0)
+    goto cleanup;
+tcpflush(as, deadline);
+if(errno != 0)
+    goto cleanup;
+</pre>
+
+<p>Note that <tt>errno</tt> is set to <tt>ETIMEDOUT</tt> in case the deadline
+is reached. However, we treat all the errors in the same way (by closing the
+connection) and thus we don't have to do any specific provisions for the
+deadline case.</p>
 
 </body>
 </html>
