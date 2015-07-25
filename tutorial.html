@@ -185,7 +185,7 @@ tcpflush(as, -1);
 <p>First, note that <tt>tcpsend()</tt> works with bytes, not strings,
 very much like POSIX <tt>send()</tt>. Zero is a perfectly valid byte to send
 and thus we can't use it as a termination marker in the outgoing buffer.
-Instead we have to specify the size of the buffer explicitly (19).</pp>
+Instead we have to specify the size of the buffer explicitly (19 bytes).</pp>
 
 <p>Also note how the sending is done in two steps. The reason for that is that
 libmill is designed for extremely high performance and thus it tries to
@@ -205,7 +205,7 @@ encounters a carriage return character ('\r') which is used,
 in combination with a newline ('\n'), by telnet to terminate individual
 lines.</p>
 
-<p>Network protocols tend use size-prefixed fields, for example, integer 12,
+<p>Network protocols tend use size-prefixed fields, for example integer 12
 followed by "Hello, world!" string. In such cases, <tt>tcprecv()</tt> function
 does a good job.</tt>
 
@@ -301,7 +301,7 @@ And that is where coroutines kick in.</p>
 
 <p>Coroutines are very much like threads. They are very lightweight though.
 Measuring on a modern hardware you can run up to something like twenty million
-coroutines per second.</p>
+libmill coroutines per second.</p>
 
 <p>Coroutines are launched using <tt>go()</tt> construct.</p>
 
