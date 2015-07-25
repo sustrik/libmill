@@ -111,7 +111,8 @@ noinst_PROGRAMS += \
     tutorial/step1 \
     tutorial/step2 \
     tutorial/step3 \
-    tutorial/step4
+    tutorial/step4 \
+    tutorial/step5
 
 ################################################################################
 #  additional packaging-related stuff                                          #
