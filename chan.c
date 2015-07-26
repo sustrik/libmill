@@ -288,7 +288,7 @@ void *mill_choose_val(void) {
 }
 
 void mill_chs(chan ch, void *val, size_t sz, const char *current) {
-    mill_trace(current, "chr(<%d>)", (int)ch->debug.id);
+    mill_trace(current, "chs(<%d>)", (int)ch->debug.id);
     mill_choose_init_(current);
     mill_running->state = MILL_CHS;
     struct mill_clause cl;
