@@ -44,7 +44,7 @@ void mill_panic(const char *text) {
 
 int64_t now(void) {
 #if defined __APPLE__
-    if (nn_slow (!mill_mtid.denom))
+    if (mill_slow(!mill_mtid.denom))
         mach_timebase_info(&mill_mtid);
     uint64_t ticks = mach_absolute_time();
     return (int64_t)(ticks * mill_mtid.numer / mill_mtid.denom / 1000000);
