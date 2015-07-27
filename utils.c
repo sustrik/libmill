@@ -31,6 +31,11 @@
 #include <sys/time.h>
 #include <time.h>
 
+#if defined __APPLE__
+#include <mach/mach_time.h>
+static mach_timebase_info_data_t mill_mtid = {0};
+#endif
+
 void mill_panic(const char *text) {
     fprintf(stderr, "panic: %s\n", text);
     fflush(stderr);
@@ -38,8 +43,12 @@ void mill_panic(const char *text) {
 }
 
 int64_t now(void) {
-    /* TODO: OSX allegedly doesn't support CLOCK_MONOTONIC. */
-#if defined CLOCK_MONOTONIC
+#if defined __APPLE__
+    if (nn_slow (!mill_mtid.denom))
+        mach_timebase_info(&mill_mtid);
+    uint64_t ticks = mach_absolute_time();
+    return (int64_t)(ticks * mill_mtid.numer / mill_mtid.denom / 1000000);
+#elif defined CLOCK_MONOTONIC
     struct timespec ts;
     int rc = clock_gettime(CLOCK_MONOTONIC, &ts);
     mill_assert (rc == 0);
