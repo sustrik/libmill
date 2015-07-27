@@ -3,7 +3,7 @@ language: c
 sudo: false
 
 os:
-#  - osx
+  - osx
   - linux
 
 branches:
