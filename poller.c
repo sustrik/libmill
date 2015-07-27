@@ -73,9 +73,9 @@ int mill_fdwait(int fd, int events, int64_t deadline, const char *current) {
         mill_list_insert(&mill_timers, &mill_running->u_fdwait.item, it);
     }
     /* If required, start waiting for the file descriptor. */
-    int i;
     if(fd >= 0) {
         /* Find the fd in the pollset. TODO: This is O(n) operation! */
+        int i;
         for(i = 0; i != mill_pollset_size; ++i) {
             if(mill_pollset_fds[i].fd == fd)
                 break;
@@ -125,6 +125,14 @@ int mill_fdwait(int fd, int events, int64_t deadline, const char *current) {
     }
     /* Handle the timeout. Clean-up the pollset. */
     if(fd >= 0) {
+        /* Find the fd in the pollset. We have to do this again because the
+           pollset may have changed while the coroutine was suspended.
+           TODO: This is O(n) operation! */
+        int i;
+        for(i = 0; i != mill_pollset_size; ++i) {
+            if(mill_pollset_fds[i].fd == fd)
+                break;
+        }
         if(mill_pollset_items[i].in == &mill_running->u_fdwait) {
             mill_pollset_items[i].in = NULL;
             mill_pollset_fds[i].events &= ~POLLIN;
