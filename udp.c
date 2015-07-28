@@ -105,25 +105,17 @@ int udpport(udpsock s) {
     return s->port;
 }
 
-size_t udpsend(udpsock s, udpaddr addr, const void *buf, size_t len,
-      int64_t deadline) {
+void udpsend(udpsock s, udpaddr addr, const void *buf, size_t len) {
     struct sockaddr *saddr = (struct sockaddr*) &addr;
-    while(1) {
-        ssize_t ss = sendto(s->fd, buf, len, 0, saddr, saddr->sa_family ==
-            AF_INET ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6));
-        if(ss == len)
-            break;
-        mill_assert(ss < 0);
-        if(errno != EAGAIN && errno != EWOULDBLOCK)
-            return 0;
-        int rc = fdwait(s->fd, FDW_OUT, deadline);
-        if(rc == 0) {
-            errno = ETIMEDOUT;
-            return 0;
-        }
+    ssize_t ss = sendto(s->fd, buf, len, 0, saddr, saddr->sa_family ==
+        AF_INET ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6));
+    if(mill_fast(ss == len)) {
+        errno = 0;
+        return;
     }
-    errno = 0;
-    return len;
+    mill_assert(ss < 0);
+    if(errno == EAGAIN || errno == EWOULDBLOCK)
+        errno = 0;
 }
 
 size_t udprecv(udpsock s, udpaddr *addr, void *buf, size_t len,

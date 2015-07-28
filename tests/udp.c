@@ -35,12 +35,11 @@ int main() {
     udpaddr addr = udpresolve("127.0.0.1", 5556);
 
     while(1) {
-        size_t sz = udpsend(s1, addr, "ABC", 3, -1);
+        udpsend(s1, addr, "ABC", 3);
         assert(errno == 0);
-        assert(sz == 3);
-
+        
         char buf[3];
-        sz = udprecv(s2, &addr, buf, sizeof(buf), now() + 100);
+        size_t sz = udprecv(s2, &addr, buf, sizeof(buf), now() + 100);
         if(errno == ETIMEDOUT)
             continue;
         assert(errno == 0);
@@ -49,12 +48,11 @@ int main() {
     }
 
     while(1) {
-        size_t sz = udpsend(s2, addr, "DEF", 3, -1);
+        udpsend(s2, addr, "DEF", 3);
         assert(errno == 0);
-        assert(sz == 3);
 
         char buf[3];
-        sz = udprecv(s1, &addr, buf, sizeof(buf), now() + 100);
+        size_t sz = udprecv(s1, &addr, buf, sizeof(buf), now() + 100);
         if(errno == ETIMEDOUT)
             continue;
         assert(errno == 0);
