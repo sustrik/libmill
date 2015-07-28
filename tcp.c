@@ -34,31 +34,12 @@
 #include <unistd.h>
 
 #include "libmill.h"
+#include "net.h"
 #include "utils.h"
 
 #define MILL_TCP_LISTEN_BACKLOG 10
 
 #define MILL_TCP_BUFLEN 1500
-	
-static void mill_tunesock(int s) {
-    /* Make the socket non-blocking. */
-    int opt = fcntl(s, F_GETFL, 0);
-    if (opt == -1)
-        opt = 0;
-    int rc = fcntl(s, F_SETFL, opt | O_NONBLOCK);
-    mill_assert(rc != -1);
-    /*  Allow re-using the same local address rapidly. */
-    opt = 1;
-    rc = setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof (opt));
-    mill_assert(rc == 0);
-    /* If possible, prevent SIGPIPE signal when writing to the connection
-        already closed by the peer. */
-#ifdef SO_NOSIGPIPE
-    opt = 1;
-    rc = setsockopt (s, SOL_SOCKET, SO_NOSIGPIPE, &opt, sizeof (opt));
-    mill_assert (rc == 0 || errno == EINVAL);
-#endif
-}
 
 enum mill_tcptype {
    MILL_TCPLISTENER,
@@ -85,6 +66,26 @@ struct mill_tcpconn {
     char obuf[MILL_TCP_BUFLEN];
 };
 
+static void mill_tcptune(int s) {
+    /* Make the socket non-blocking. */
+    int opt = fcntl(s, F_GETFL, 0);
+    if (opt == -1)
+        opt = 0;
+    int rc = fcntl(s, F_SETFL, opt | O_NONBLOCK);
+    mill_assert(rc != -1);
+    /*  Allow re-using the same local address rapidly. */
+    opt = 1;
+    rc = setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof (opt));
+    mill_assert(rc == 0);
+    /* If possible, prevent SIGPIPE signal when writing to the connection
+        already closed by the peer. */
+#ifdef SO_NOSIGPIPE
+    opt = 1;
+    rc = setsockopt (s, SOL_SOCKET, SO_NOSIGPIPE, &opt, sizeof (opt));
+    mill_assert (rc == 0 || errno == EINVAL);
+#endif
+}
+
 static struct mill_tcpconn *tcpconn_create(int fd) {
     struct mill_tcpconn *conn = malloc(sizeof(struct mill_tcpconn));
     mill_assert(conn);
@@ -96,62 +97,10 @@ static struct mill_tcpconn *tcpconn_create(int fd) {
     return conn;
 }
 
-/* Convert textual IPv4 or IPv6 address to a binary one. */
-static int mill_tcpresolve(const char *addr, int port,
-      struct sockaddr_storage *ss, socklen_t *len) {
-    mill_assert(ss);
-    if(port < 0 || port > 0xffff) {
-        errno = EINVAL;
-        return -1;
-    }
-    // NULL translates to INADDR_ANY.
-    // TODO: Consider using in6addr_any. AFAICS that should account for IPv4
-    //       addresses as well. However, would it work on all systems?
-    if(!addr) {
-        struct sockaddr_in *ipv4 = (struct sockaddr_in*)ss;
-        ipv4->sin_family = AF_INET;
-        ipv4->sin_addr.s_addr = INADDR_ANY;
-        ipv4->sin_port = htons((uint16_t)port);
-        if(len)
-            *len = sizeof(struct sockaddr_in);
-        errno = 0;
-        return 0;
-    }
-    // Try to interpret the string is IPv4 address.
-    struct sockaddr_in *ipv4 = (struct sockaddr_in*)ss;
-    int rc = inet_pton(AF_INET, addr, &ipv4->sin_addr);
-    mill_assert(rc >= 0);
-    if(rc == 1) {
-        ipv4->sin_family = AF_INET;
-        ipv4->sin_port = htons((uint16_t)port);
-        if(len)
-            *len = sizeof(struct sockaddr_in);
-        errno = 0;
-        return 0;
-    }
-
-    // It's not an IPv4 address. Let's try to interpret it as IPv6 address.
-    struct sockaddr_in6 *ipv6 = (struct sockaddr_in6*)ss;
-    rc = inet_pton(AF_INET6, addr, &ipv6->sin6_addr);
-    mill_assert(rc >= 0);
-    if(rc == 1) {
-        ipv6->sin6_family = AF_INET6;
-        ipv6->sin6_port = htons((uint16_t)port);
-        if(len)
-            *len = sizeof(struct sockaddr_in6);
-        errno = 0;
-        return 0;
-    }
-    
-    // It's neither IPv4, nor IPv6 address.
-    errno = EINVAL;
-    return -1;
-}
-
 tcpsock tcplisten(const char *addr, int port) {
     struct sockaddr_storage ss;
     socklen_t len;
-    int rc = mill_tcpresolve(addr, port, &ss, &len);
+    int rc = mill_resolve(addr, port, &ss, &len);
     if (rc != 0)
         return NULL;
 
@@ -159,7 +108,7 @@ tcpsock tcplisten(const char *addr, int port) {
     int s = socket(ss.ss_family, SOCK_STREAM, 0);
     if(s == -1)
         return NULL;
-    mill_tunesock(s);
+    mill_tcptune(s);
 
     /* Start listening. */
     rc = bind(s, (struct sockaddr*)&ss, len);
@@ -213,7 +162,7 @@ tcpsock tcpaccept(tcpsock s, int64_t deadline) {
         /* Try to get new connection (non-blocking). */
         int as = accept(l->fd, NULL, NULL);
         if (as >= 0) {
-            mill_tunesock(as);
+            mill_tcptune(as);
             errno = 0;
             return &tcpconn_create(as)->sock;
         }
@@ -233,7 +182,7 @@ tcpsock tcpaccept(tcpsock s, int64_t deadline) {
 tcpsock tcpconnect(const char *addr, int port, int64_t deadline) {
     struct sockaddr_storage ss;
     socklen_t len;
-    int rc = mill_tcpresolve(addr, port, &ss, &len);
+    int rc = mill_resolve(addr, port, &ss, &len);
     if (rc != 0)
         return NULL;
 
@@ -241,7 +190,7 @@ tcpsock tcpconnect(const char *addr, int port, int64_t deadline) {
     int s = socket(ss.ss_family, SOCK_STREAM, 0);
     if(s == -1)
         return NULL;
-    mill_tunesock(s);
+    mill_tcptune(s);
 
     /* Connect to the remote endpoint. */
     rc = connect(s, (struct sockaddr*)&ss, len);

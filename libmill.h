@@ -269,6 +269,23 @@ MILL_EXPORT size_t tcprecvuntil(tcpsock s, void *buf, size_t len,
 MILL_EXPORT void tcpclose(tcpsock s);
 
 /******************************************************************************/
+/*  UDP library                                                               */
+/******************************************************************************/
+
+typedef struct mill_udpsock *udpsock;
+
+typedef struct {char data[32];} udpaddr;
+
+MILL_EXPORT udpaddr udpresolve(const char *addr, int port);
+MILL_EXPORT udpsock udplisten(const char *addr, int port);
+MILL_EXPORT int udpport(udpsock s);
+MILL_EXPORT size_t udpsend(udpsock s, udpaddr addr,
+    const void *buf, size_t len, int64_t deadline);
+MILL_EXPORT size_t udprecv(udpsock s, udpaddr *addr,
+    void *buf, size_t len, int64_t deadline);
+MILL_EXPORT void udpclose(udpsock s);
+
+/******************************************************************************/
 /*  Debugging                                                                 */
 /******************************************************************************/
 
