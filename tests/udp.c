@@ -29,7 +29,6 @@
 #include <stdio.h>
 
 int main() {
-    assert(0);
     udpsock s1 = udplisten(NULL, 5555);
     udpsock s2 = udplisten(NULL, 5556);
 
