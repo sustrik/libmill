@@ -23,7 +23,6 @@ libmill.pc
 libtool
 ltmain.sh
 missing
-test-driver
 test-suite.log
 tests/.dirstamp
 m4/libtool.m4
