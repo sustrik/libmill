@@ -130,7 +130,6 @@ echo ":copy-in-global-log: $gcopy" >> $trs_file
 
 if test $estatus != 0
 then
-    echo "Console output:"
     cat $log_file 
 fi
 
