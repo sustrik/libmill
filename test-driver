@@ -106,6 +106,7 @@ trap "st=143; $do_exit" 15
 # Test script is run here.
 "$@" >$log_file 2>&1
 estatus=$?
+echo $estatus
 if test $enable_hard_errors = no && test $estatus -eq 99; then
   estatus=1
 fi
