@@ -39,6 +39,7 @@ tests/choose
 tests/sleep
 tests/fdwait
 tests/tcp
+tests/udp
 tests/*.trs
 tests/*.log
 perf/.dirstamp
