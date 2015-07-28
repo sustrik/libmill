@@ -128,7 +128,7 @@ size_t udpsend(udpsock s, udpaddr addr, const void *buf, size_t len,
 
 size_t udprecv(udpsock s, udpaddr *addr, void *buf, size_t len,
       int64_t deadline) {
-    size_t ss;
+    ssize_t ss;
     while(1) {
         socklen_t slen = sizeof(udpaddr);
         ss = recvfrom(s->fd, buf, len, 0,
