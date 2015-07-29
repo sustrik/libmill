@@ -41,9 +41,10 @@
 
 /* The buffer size is based on typical Ethernet MTU (1500 bytes). Making it
    smaller would yield small suboptimal packets. Making it higher would bring
-   no substantial benefit. The value is made smaller to account for IP and
-   TCP headers. */
-#define MILL_TCP_BUFLEN (1500 - 48)
+   no substantial benefit. The value is made smaller to account for IPv4/IPv6
+   and TCP headers. Few more bytes are subtracted to account for any possible
+   IP or TCP options */
+#define MILL_TCP_BUFLEN (1500 - 68)
 
 enum mill_tcptype {
    MILL_TCPLISTENER,
