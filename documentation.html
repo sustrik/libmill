@@ -32,6 +32,7 @@
   <li><a href="#fds">Waiting for file descriptors</a></li>
   <li><a href="#tcp">TCP library</a></li>
   <li><a href="#unix">UNIX library</a></li>
+  <li><a href="#udp">UDP library</a></li>
   <li><a href="#cls">Coroutine-local storage</a></li>
   <li><a href="#debug">Debugging</a></li>
 </ul>
@@ -438,7 +439,7 @@ tcpclose(s);
 
 <h3 id="unix">UNIX library</h3>
 
-<p><b>This feature is unreleased yet and available only from the head of
+<p><b>This feature isn't released yet and is available only from the head of
 the source code repository.</b></p>
 
 <p>Unix sockets are used for communicating between processes on the same
@@ -453,6 +454,75 @@ IP addresses. Also, there are no ports:</tt>
 
 <pre>
 unixsock s = unixconnect("/tmp/test.unix", -1);
+</pre>
+
+<h3 id="udp">UDP library</h3>
+
+<p><b>This feature isn't released yet and is available only from the head of
+the source code repository.</b></p>
+
+<p>To open an UDP socket use <tt>tcplisten()</tt> function. IP address of the
+local network interface and port should be supplied. If the address is NULL
+the socket will bind to all local network interfaces:</p>
+
+<pre>
+udpsock s = udplisten("192.168.0.111", 5555);
+</pre>
+
+<p>If port is set to zero operating system selects an unused port. The number
+of the port can be retrieved using <tt>udpport()</tt> function:</tt>
+
+<pre>
+int port = udpport(s);
+</pre>
+
+<p>Once the socket is open it can be immediately used for both sending and
+receiving.</p>
+
+<p>Given that UDP transport is unconnected by its very nature and address of
+the remote endpoint has to be used in each <tt>udpsend()</tt> and
+<tt>udprecv()</tt> call, libmill's UDP library uses binary version of
+the address to avoid excessive string processing.</p>
+
+<tt>udpaddr</tt> type represents the binary address and <tt>udpresolve()</tt>
+function can be used to convert textual address to the binary one:</tt>
+
+<pre>
+udpaddr addr = udpresolve("192.168.0.121", 5555);
+</pre>
+
+<p>To send a packet to the remote peer with address <tt>addr</tt> use
+<tt>udpsend()</tt> function:</p>
+
+<pre>
+udpsend(s, addr, "Hello, world!", 13);
+</pre>
+
+<p>The function has no return value but in the case of failure it sets
+<tt>errno</tt> to the appropriate value. If there is no error <tt>errno</tt>
+is set to zero.</p>
+
+<p>Note that <tt>udpsend()</tt> has no deadline. UDP transport is unreliable
+and the packet is either delivered or lost, but never blocked.</p>
+
+<p>To receive a packet from the socket use <tt>udprecv()</tt> function.
+If successful the function will return the size of the received packet,
+in bytes, and set <tt>udpaddr</tt> passed in the parameter to the source
+address of the packet:</p>
+
+<pre>
+char buf[256];
+udpaddr addr;
+size_t sz = udprecv(s, &addr, buf, sizeof(buf), -1);
+</pre>
+
+<p>In the case of failure <tt>errno</tt>is set to the appropriate error.
+In the case of success <tt>errno</tt> is set to zero.</p>
+
+<p>When done close the UDP socket:</p>
+
+<pre>
+udpclose(s);
 </pre>
 
 <h3 id="cls">Coroutine-local storage</h3>
