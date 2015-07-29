@@ -39,7 +39,11 @@
 
 #define MILL_TCP_LISTEN_BACKLOG 10
 
-#define MILL_TCP_BUFLEN 1500
+/* The buffer size is based on typical Ethernet MTU (1500 bytes). Making it
+   smaller would yield small suboptimal packets. Making it higher would bring
+   no substantial benefit. The value is made smaller to account for IP and
+   TCP headers. */
+#define MILL_TCP_BUFLEN (1500 - 48)
 
 enum mill_tcptype {
    MILL_TCPLISTENER,
