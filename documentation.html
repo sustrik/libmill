@@ -31,6 +31,7 @@
   <li><a href="#sleeping">Sleeping</a></li>
   <li><a href="#fds">Waiting for file descriptors</a></li>
   <li><a href="#tcp">TCP library</a></li>
+  <li><a href="#unix">UNIX library</a></li>
   <li><a href="#cls">Coroutine-local storage</a></li>
   <li><a href="#debug">Debugging</a></li>
 </ul>
@@ -433,6 +434,25 @@ function:</p>
 
 <pre>
 tcpclose(s);
+</pre>
+
+<h3 id="unix">UNIX library</h3>
+
+<p><b>This feature is unreleased yet and available only from the head of
+the sourc code repository.</b></p>
+
+<p>Unix sockets are used for communicating between processes on the same
+machine.</p>
+
+<p>The API is identical to the TCP API with all <tt>tcp</tt> prefixes changed to
+<tt>unix</tt> prefixes, e.g. <tt>unixsock</tt> or <tt>unixrecv()</tt>.</p>
+
+<p>Additionally, addresses passed to <tt>unixlisten()</tt> and
+<tt>unixconnect()</tt> represent a name of a local file rather than an IP
+address. Also, there are no ports:</tt>
+
+<pre>
+unixsock s = unixconnect("/tmp/test.unix", -1);
 </pre>
 
 <h3 id="cls">Coroutine-local storage</h3>
