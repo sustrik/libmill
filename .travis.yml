@@ -19,7 +19,6 @@ script:
   - make check
 
 after_failure:
-  - cat libmill/test-suite.log
   - for f in tests/*.log; do echo; echo "${f}:"; cat $f; done;
 
 notifications:
