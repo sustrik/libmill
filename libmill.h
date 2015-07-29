@@ -285,6 +285,24 @@ MILL_EXPORT size_t udprecv(udpsock s, udpaddr *addr,
 MILL_EXPORT void udpclose(udpsock s);
 
 /******************************************************************************/
+/*  UNIX library                                                               */
+/******************************************************************************/
+
+typedef struct mill_unixsock *unixsock;
+
+MILL_EXPORT unixsock unixlisten(const char *addr);
+MILL_EXPORT unixsock unixaccept(unixsock s, int64_t deadline);
+MILL_EXPORT unixsock unixconnect(const char *addr, int64_t deadline);
+MILL_EXPORT size_t unixsend(unixsock s, const void *buf, size_t len,
+    int64_t deadline);
+MILL_EXPORT void unixflush(unixsock s, int64_t deadline);
+MILL_EXPORT size_t unixrecv(unixsock s, void *buf, size_t len,
+    int64_t deadline);
+MILL_EXPORT size_t unixrecvuntil(unixsock s, void *buf, size_t len,
+    unsigned char until, int64_t deadline);
+MILL_EXPORT void unixclose(unixsock s);
+
+/******************************************************************************/
 /*  Debugging                                                                 */
 /******************************************************************************/
 

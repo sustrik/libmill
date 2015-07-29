@@ -52,6 +52,7 @@ libmill_la_SOURCES = \
     stack.c\
     tcp.c\
     udp.c\
+    unix.c\
     utils.h\
     utils.c\
     valbuf.h\
@@ -82,7 +83,8 @@ check_PROGRAMS = \
     tests/sleep\
     tests/fdwait\
     tests/tcp\
-    tests/udp
+    tests/udp\
+    tests/unix
 
 LDADD = libmill.la
 
