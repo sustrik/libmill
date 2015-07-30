@@ -387,7 +387,6 @@ size_t tcprecv(tcpsock s, void *buf, size_t len, int64_t deadline) {
             errno = ETIMEDOUT;
             return len - remaining;
         }
-        mill_assert(res & FDW_IN);
     }
 }
 
