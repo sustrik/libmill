@@ -171,8 +171,10 @@ unixsock unixconnect(const char *addr) {
     /* Connect to the remote endpoint. */
     rc = connect(s, (struct sockaddr*)&su, sizeof(struct sockaddr_un));
     if(rc != 0) {
+        int err = errno;
         mill_assert(rc == -1);
         close(s);
+        errno = err;
         return NULL;
     }
 
