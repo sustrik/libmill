@@ -44,9 +44,6 @@
    to deallocate it properly. */
 MILL_CT_ASSERT(MILL_MAX_CACHED_STACKS > 0);
 
-static volatile int mill_stack_unoptimisable1 = 1;
-static volatile void *mill_stack_unoptimisable2 = NULL;
-
 /* A stack of unused coroutine stacks. This allows for extra-fast allocation
    of a new stack. The FIFO nature of this structure minimises cache misses.
    When the stack is cached its mill_slist_item is placed on its top rather
