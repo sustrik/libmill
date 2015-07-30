@@ -89,6 +89,20 @@ int main() {
     unixclose(ls);
     unlink(sockname);
 
+    unixsock a, b;
+    unixpair(&a, &b);
+    assert(errno == 0);
+
+    sz = unixsend(a, "ABC", 3, -1);
+    assert(sz == 3 && errno == 0);
+    unixflush(a, -1);
+    assert(errno == 0);
+    sz = unixrecv(b, buf, 3, -1);
+    assert(sz == 3 && buf[0] == 'A' && buf[1] == 'B' && buf[2] == 'C' && errno == 0);
+
+    unixclose(a);
+    unixclose(b);
+
     return 0;
 }
 

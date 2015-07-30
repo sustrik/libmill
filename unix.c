@@ -183,6 +183,21 @@ unixsock unixconnect(const char *addr) {
     return &unixconn_create(s)->sock;
 }
 
+void unixpair(unixsock *a, unixsock *b) {
+    mill_assert(a);
+    mill_assert(b);
+    int fd[2];
+    int rc = socketpair(AF_UNIX, SOCK_STREAM, 0, fd);
+    if (rc != 0) {
+        return;
+    }
+    mill_unixtune(fd[0]);
+    mill_unixtune(fd[1]);
+    *a = &unixconn_create(fd[0])->sock;
+    *b = &unixconn_create(fd[1])->sock;
+    errno = 0;
+}
+
 size_t unixsend(unixsock s, const void *buf, size_t len, int64_t deadline) {
     if(s->type != MILL_UNIXCONN)
         mill_panic("trying to send to an unconnected socket");
