@@ -54,6 +54,18 @@ struct mill_pollset_item {
 };
 static struct mill_pollset_item *mill_pollset_items = NULL;
 
+/* Find pollset index by fd. If fd is not in pollset, return the index after
+   the last item.
+   TODO: This is O(n) operation! */
+static int mill_find_pollset(int fd) {
+    int i;
+    for(i = 0; i != mill_pollset_size; ++i) {
+        if(mill_pollset_fds[i].fd == fd)
+            break;
+    }
+    return i;
+}
+
 /* Wait for events from a file descriptor, with an optional timeout. */
 int mill_fdwait(int fd, int events, int64_t deadline, const char *current) {
     /* If required, start waiting for the timeout. */
@@ -74,12 +86,7 @@ int mill_fdwait(int fd, int events, int64_t deadline, const char *current) {
     }
     /* If required, start waiting for the file descriptor. */
     if(fd >= 0) {
-        /* Find the fd in the pollset. TODO: This is O(n) operation! */
-        int i;
-        for(i = 0; i != mill_pollset_size; ++i) {
-            if(mill_pollset_fds[i].fd == fd)
-                break;
-        }
+        int i = mill_find_pollset(fd);
         /* Grow the pollset as needed. */
         if(i == mill_pollset_size) {
             if(mill_pollset_size == mill_pollset_capacity) {
@@ -125,14 +132,9 @@ int mill_fdwait(int fd, int events, int64_t deadline, const char *current) {
     }
     /* Handle the timeout. Clean-up the pollset. */
     if(fd >= 0) {
-        /* Find the fd in the pollset. We have to do this again because the
-           pollset may have changed while the coroutine was suspended.
-           TODO: This is O(n) operation! */
-        int i;
-        for(i = 0; i != mill_pollset_size; ++i) {
-            if(mill_pollset_fds[i].fd == fd)
-                break;
-        }
+        /* We have to do this again because the pollset may have changed while
+           the coroutine was suspended. */
+        int i = mill_find_pollset(fd);
         if(mill_pollset_items[i].in == &mill_running->u_fdwait) {
             mill_pollset_items[i].in = NULL;
             mill_pollset_fds[i].events &= ~POLLIN;
