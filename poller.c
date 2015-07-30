@@ -135,6 +135,7 @@ int mill_fdwait(int fd, int events, int64_t deadline, const char *current) {
         /* We have to do this again because the pollset may have changed while
            the coroutine was suspended. */
         int i = mill_find_pollset(fd);
+        mill_assert(i < mill_pollset_size);
         if(mill_pollset_items[i].in == &mill_running->u_fdwait) {
             mill_pollset_items[i].in = NULL;
             mill_pollset_fds[i].events &= ~POLLIN;
