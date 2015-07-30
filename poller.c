@@ -243,9 +243,7 @@ void mill_wait(void) {
                 mill_pollset_fds[i] = mill_pollset_fds[mill_pollset_size];
                 mill_pollset_items[i] = mill_pollset_items[mill_pollset_size];
             }
-            else {
-                --i;
-            }
+            --i;
             --rc;
         }
     }
