@@ -292,7 +292,7 @@ typedef struct mill_unixsock *unixsock;
 
 MILL_EXPORT unixsock unixlisten(const char *addr);
 MILL_EXPORT unixsock unixaccept(unixsock s, int64_t deadline);
-MILL_EXPORT unixsock unixconnect(const char *addr, int64_t deadline);
+MILL_EXPORT unixsock unixconnect(const char *addr);
 MILL_EXPORT size_t unixsend(unixsock s, const void *buf, size_t len,
     int64_t deadline);
 MILL_EXPORT void unixflush(unixsock s, int64_t deadline);
