@@ -135,17 +135,17 @@ int mill_fdwait(int fd, int events, int64_t deadline, const char *current) {
         /* We have to do this again because the pollset may have changed while
            the coroutine was suspended. */
         int i = mill_find_pollset(fd);
-        if(mill_pollset_items[i].in == &mill_running->u_fdwait) {
-            mill_pollset_items[i].in = NULL;
-            mill_pollset_fds[i].events &= ~POLLIN;
-        }
-        if(mill_pollset_items[i].out == &mill_running->u_fdwait) {
-            mill_pollset_items[i].out = NULL;
-            mill_pollset_fds[i].events &= ~POLLOUT;
-        }
-        if(!mill_pollset_fds[i].events) {
-            --mill_pollset_size;
-            if(i < mill_pollset_size) {
+        if(i < mill_pollset_size) {
+            if(mill_pollset_items[i].in == &mill_running->u_fdwait) {
+                mill_pollset_items[i].in = NULL;
+                mill_pollset_fds[i].events &= ~POLLIN;
+            }
+            if(mill_pollset_items[i].out == &mill_running->u_fdwait) {
+                mill_pollset_items[i].out = NULL;
+                mill_pollset_fds[i].events &= ~POLLOUT;
+            }
+            if(!mill_pollset_fds[i].events) {
+                --mill_pollset_size;
                 mill_pollset_items[i] = mill_pollset_items[mill_pollset_size];
                 mill_pollset_fds[i] = mill_pollset_fds[mill_pollset_size];
             }
