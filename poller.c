@@ -238,9 +238,14 @@ void mill_wait(void) {
         if(!mill_pollset_fds[i].events) {
             mill_assert(!mill_pollset_items[i].in &&
                 !mill_pollset_items[i].out);
-            mill_pollset_fds[i] = mill_pollset_fds[mill_pollset_size - 1];
-            mill_pollset_items[i] = mill_pollset_items[mill_pollset_size - 1];
             --mill_pollset_size;
+            if(i != mill_pollset_size) {
+                mill_pollset_fds[i] = mill_pollset_fds[mill_pollset_size];
+                mill_pollset_items[i] = mill_pollset_items[mill_pollset_size];
+            }
+            else {
+                --i;
+            }
             --rc;
         }
     }
