@@ -30,7 +30,7 @@
 #include "../libmill.h"
 
 void client(const char *addr) {
-    unixsock cs = unixconnect(addr, -1);
+    unixsock cs = unixconnect(addr);
     assert(cs);
 
     msleep(now() + 100);

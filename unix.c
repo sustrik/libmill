@@ -155,7 +155,7 @@ unixsock unixaccept(unixsock s, int64_t deadline) {
     }
 }
 
-unixsock unixconnect(const char *addr, int64_t deadline) {
+unixsock unixconnect(const char *addr) {
     struct sockaddr_un su;
     int rc = mill_unixresolve(addr, &su);
     if (rc != 0) {
@@ -172,27 +172,8 @@ unixsock unixconnect(const char *addr, int64_t deadline) {
     rc = connect(s, (struct sockaddr*)&su, sizeof(struct sockaddr_un));
     if(rc != 0) {
         mill_assert(rc == -1);
-        if(errno != EINPROGRESS)
-            return NULL;
-        rc = fdwait(s, FDW_OUT, deadline);
-        if(rc == 0) {
-            errno = ETIMEDOUT;
-            return NULL;
-        }
-        int err;
-        socklen_t errsz = sizeof(err);
-        rc = getsockopt(s, SOL_SOCKET, SO_ERROR, (void*)&err, &errsz);
-        if(rc != 0) {
-            err = errno;
-            close(s);
-            errno = err;
-            return NULL;
-        }
-        if(err != 0) {
-            close(s);
-            errno = err;
-            return NULL;
-        }
+        close(s);
+        return NULL;
     }
 
     /* Create the object. */
