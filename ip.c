@@ -28,6 +28,7 @@
 
 #include <arpa/inet.h>
 #include <errno.h>
+#include <ifaddrs.h>
 #include <netinet/in.h>
 #include <string.h>
 #include <sys/types.h>
@@ -142,8 +143,76 @@ int mill_ipport(ipaddr addr) {
 ipaddr iplocal(const char *name, int port, int mode) {
     if(!name)
         return mill_ipany(port, mode);
-    return mill_ipliteral(name, port, mode);
-    /* TODO: Try to resolve the interface name here. */
+    ipaddr addr = mill_ipliteral(name, port, mode);
+    if(errno == 0)
+       return addr;
+    /* Address is not a literal. It must be an interface name then. */
+    struct ifaddrs *ifaces = NULL;
+    int rc = getifaddrs (&ifaces);
+    mill_assert (rc == 0);
+    mill_assert (ifaces);
+    /*  Find first IPv4 and first IPv6 address. */
+    struct ifaddrs *ipv4 = NULL;
+    struct ifaddrs *ipv6 = NULL;
+    struct ifaddrs *it;
+    for(it = ifaces; it != NULL; it = it->ifa_next) {
+        if(!it->ifa_addr)
+            continue;
+        if(strcmp(it->ifa_name, name) != 0)
+            continue;
+        switch(it->ifa_addr->sa_family) {
+        case AF_INET:
+            mill_assert(!ipv4);
+            ipv4 = it;
+            break;
+        case AF_INET6:
+            mill_assert(!ipv6);
+            ipv6 = it;
+            break;
+        }
+        if(ipv4 && ipv6)
+            break;
+    }
+    /* Choose the correct address family based on mode. */
+    switch(mode) {
+    case 0:
+    case IPADDR_IPV4:
+        ipv6 = NULL;
+        break;
+    case IPADDR_IPV6:
+        ipv4 = NULL;
+        break;
+    case IPADDR_PREF_IPV4:
+        if(ipv4)
+           ipv6 = NULL;
+        break;
+    case IPADDR_PREF_IPV6:
+        if(ipv6)
+           ipv4 = NULL;
+        break;
+    default:
+        mill_assert(0);
+    }
+    if(ipv4) {
+        struct sockaddr_in *inaddr = (struct sockaddr_in*)&addr;
+        memcpy(inaddr, ipv4->ifa_addr, sizeof (struct sockaddr_in));
+        inaddr->sin_port = htons(port);
+        freeifaddrs(ifaces);
+        errno = 0;
+        return addr;
+    }
+    if(ipv6) {
+        struct sockaddr_in6 *inaddr = (struct sockaddr_in6*)&addr;
+        memcpy(inaddr, ipv6->ifa_addr, sizeof (struct sockaddr_in6));
+        inaddr->sin6_port = htons(port);
+        freeifaddrs(ifaces);
+        errno = 0;
+        return addr;
+    }
+    freeifaddrs(ifaces);
+    ((struct sockaddr*)&addr)->sa_family = AF_UNSPEC;
+    errno = ENODEV;
+    return addr;
 }
 
 ipaddr ipremote(const char *name, int port, int mode, int64_t deadline) {
