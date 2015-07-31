@@ -44,7 +44,7 @@ static ipaddr mill_ipany(int port, int mode)
         errno = EINVAL;
         return addr;
     }
-    if (mode == IPADDR_IPV4 || mode == IPADDR_PREF_IPV4) {
+    if (mode == 0 || mode == IPADDR_IPV4 || mode == IPADDR_PREF_IPV4) {
         struct sockaddr_in *ipv4 = (struct sockaddr_in*)&addr;
         ipv4->sin_family = AF_INET;
         ipv4->sin_addr.s_addr = htonl(INADDR_ANY);
@@ -60,19 +60,10 @@ static ipaddr mill_ipany(int port, int mode)
     return addr;
 }
 
-/* Convert literal IPv4 or IPv6 address to a binary one.
-   TODO: Take mode into consideration. */
-static ipaddr mill_ipliteral(const char *addr, int port, int mode) {
+/* Convert literal IPv4 address to a binary one. */
+static ipaddr mill_ipv4_literal(const char *addr, int port) {
     ipaddr raddr;
-    struct sockaddr *sa = (struct sockaddr*)&raddr;
-
-    if(mill_slow(!addr || port < 0 || port > 0xffff)) {
-        sa->sa_family = AF_UNSPEC;
-        errno = EINVAL;
-        return raddr;
-    }
-    // Try to interpret the string is IPv4 address.
-    struct sockaddr_in *ipv4 = (struct sockaddr_in*)sa;
+    struct sockaddr_in *ipv4 = (struct sockaddr_in*)&raddr;
     int rc = inet_pton(AF_INET, addr, &ipv4->sin_addr);
     mill_assert(rc >= 0);
     if(rc == 1) {
@@ -81,9 +72,16 @@ static ipaddr mill_ipliteral(const char *addr, int port, int mode) {
         errno = 0;
         return raddr;
     }
-    // It's not an IPv4 address. Let's try to interpret it as IPv6 address.
-    struct sockaddr_in6 *ipv6 = (struct sockaddr_in6*)sa;
-    rc = inet_pton(AF_INET6, addr, &ipv6->sin6_addr);
+    ipv4->sin_family = AF_UNSPEC;
+    errno = EINVAL;
+    return raddr;
+}
+
+/* Convert literal IPv6 address to a binary one. */
+static ipaddr mill_ipv6_literal(const char *addr, int port) {
+    ipaddr raddr;
+    struct sockaddr_in6 *ipv6 = (struct sockaddr_in6*)&raddr;
+    int rc = inet_pton(AF_INET6, addr, &ipv6->sin6_addr);
     mill_assert(rc >= 0);
     if(rc == 1) {
         ipv6->sin6_family = AF_INET6;
@@ -91,10 +89,39 @@ static ipaddr mill_ipliteral(const char *addr, int port, int mode) {
         errno = 0;
         return raddr;
     }
-    // It's neither IPv4, nor IPv6 address.
-    sa->sa_family = AF_UNSPEC;
+    ipv6->sin6_family = AF_UNSPEC;
     errno = EINVAL;
     return raddr;
+}
+
+/* Convert literal IPv4 or IPv6 address to a binary one. */
+static ipaddr mill_ipliteral(const char *addr, int port, int mode) {
+    ipaddr raddr;
+    struct sockaddr *sa = (struct sockaddr*)&raddr;
+    if(mill_slow(!addr || port < 0 || port > 0xffff)) {
+        sa->sa_family = AF_UNSPEC;
+        errno = EINVAL;
+        return raddr;
+    }
+    switch(mode) {
+    case 0:
+    case IPADDR_IPV4:
+        return mill_ipv4_literal(addr, port);
+    case IPADDR_IPV6:
+        return mill_ipv6_literal(addr, port);
+    case IPADDR_PREF_IPV4:
+        raddr = mill_ipv4_literal(addr, port);
+        if(errno == 0)
+            return raddr;
+        return mill_ipv6_literal(addr, port);
+    case IPADDR_PREF_IPV6:
+        raddr = mill_ipv6_literal(addr, port);
+        if(errno == 0)
+            return raddr;
+        return mill_ipv4_literal(addr, port);
+    default:
+        mill_assert(0);
+    }
 }
 
 int mill_ipfamily(ipaddr addr) {
