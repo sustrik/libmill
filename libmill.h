@@ -281,7 +281,7 @@ MILL_EXPORT size_t tcpsend(tcpsock s, const void *buf, size_t len,
 MILL_EXPORT void tcpflush(tcpsock s, int64_t deadline);
 MILL_EXPORT size_t tcprecv(tcpsock s, void *buf, size_t len, int64_t deadline);
 MILL_EXPORT size_t tcprecvuntil(tcpsock s, void *buf, size_t len,
-    unsigned char until, int64_t deadline);
+    const char *delims, size_t delimcount, int64_t deadline);
 MILL_EXPORT void tcpclose(tcpsock s);
 
 /******************************************************************************/
@@ -313,7 +313,7 @@ MILL_EXPORT void unixflush(unixsock s, int64_t deadline);
 MILL_EXPORT size_t unixrecv(unixsock s, void *buf, size_t len,
     int64_t deadline);
 MILL_EXPORT size_t unixrecvuntil(unixsock s, void *buf, size_t len,
-    unsigned char until, int64_t deadline);
+    const char *delims, size_t delimcount, int64_t deadline);
 MILL_EXPORT void unixclose(unixsock s);
 
 /******************************************************************************/

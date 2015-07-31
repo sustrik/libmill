@@ -66,7 +66,7 @@ void dialogue(tcpsock as, chan ch) {
         goto cleanup;
 
     char inbuf[256];
-    size_t sz = tcprecvuntil(as, inbuf, sizeof(inbuf), '\r', deadline);
+    size_t sz = tcprecvuntil(as, inbuf, sizeof(inbuf), "\r", 1, deadline);
     if(errno != 0)
         goto cleanup;
 

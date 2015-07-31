@@ -75,13 +75,13 @@ int main() {
     unixflush(as, -1);
     assert(errno == 0);
 
-    sz = unixrecvuntil(as, buf, sizeof(buf), '\n', -1);
+    sz = unixrecvuntil(as, buf, sizeof(buf), "\n", 1, -1);
     assert(sz == 4);
     assert(buf[0] == '1' && buf[1] == '2' && buf[2] == '3' && buf[3] == '\n');
-    sz = unixrecvuntil(as, buf, sizeof(buf), '\n', -1);
+    sz = unixrecvuntil(as, buf, sizeof(buf), "\n", 1, -1);
     assert(sz == 3);
     assert(buf[0] == '4' && buf[1] == '5' && buf[2] == '\n');
-    sz = unixrecvuntil(as, buf, 3, '\n', -1);
+    sz = unixrecvuntil(as, buf, 3, "\n", 1, -1);
     assert(sz == 3);
     assert(buf[0] == '6' && buf[1] == '7' && buf[2] == '8');
 
