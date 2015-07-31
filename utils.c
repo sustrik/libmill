@@ -38,8 +38,7 @@ static mach_timebase_info_data_t mill_mtid = {0};
 
 void mill_panic(const char *text) {
     fprintf(stderr, "panic: %s\n", text);
-    fflush(stderr);
-    exit(1);
+    abort();
 }
 
 int64_t now(void) {
