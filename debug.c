@@ -226,8 +226,8 @@ void mill_trace_(const char *location, const char *format, ...) {
 }
 
 void mill_preserve_debug(void) {
-    /* Do nothing, but trick the copiler into thinking that the debug functions
-       are being used so that it does not optimise them away. */
+    /* Do nothing, but trick the compiler into thinking that the debug
+       functions are being used so that it does not optimise them away. */
     static volatile int unoptimisable = 1;
     if(unoptimisable)
         return;
