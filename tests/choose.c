@@ -306,7 +306,7 @@ int main() {
 
     /* Test transferring a large object. */
     chan ch17 = chmake(struct large, 1);
-    struct large large = {0};
+    struct large large = {{0}};
     chs(ch17, struct large, large);
     choose {
     in(ch17, struct large, v):
