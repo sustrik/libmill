@@ -28,11 +28,11 @@
 
 #include <arpa/inet.h>
 #include <errno.h>
-#include <ifaddrs.h>
 #include <netinet/in.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <ifaddrs.h>
 
 MILL_CT_ASSERT(sizeof(ipaddr) >= sizeof(struct sockaddr_in));
 MILL_CT_ASSERT(sizeof(ipaddr) >= sizeof(struct sockaddr_in6));
