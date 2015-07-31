@@ -196,6 +196,7 @@ MILL_EXPORT void mill_chclose(chan ch, const char *current);
                 mill_concat(mill_label, idx):\
                 if(mill_idx == idx) {\
                     name = *(type*)mill_choose_val();\
+                    goto mill_concat(mill_dummylabel, idx);\
                     mill_concat(mill_dummylabel, idx)
 
 #define in(chan, type, name) mill_in((chan), type, name, __COUNTER__)
@@ -216,6 +217,7 @@ MILL_EXPORT void mill_chclose(chan ch, const char *current);
             if(0) {\
                 mill_concat(mill_label, idx):\
                 if(mill_idx == idx) {\
+                    goto mill_concat(mill_dummylabel, idx);\
                     mill_concat(mill_dummylabel, idx)
 
 #define out(chan, type, val) mill_out((chan), type, (val), __COUNTER__)
@@ -229,6 +231,7 @@ MILL_EXPORT void mill_chclose(chan ch, const char *current);
             if(0) {\
                 mill_concat(mill_label, idx):\
                 if(mill_idx == -1) {\
+                    goto mill_concat(mill_dummylabel, idx);\
                     mill_concat(mill_dummylabel, idx)
 
 #define otherwise mill_otherwise(__COUNTER__)
