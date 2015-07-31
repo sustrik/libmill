@@ -28,6 +28,7 @@
 #include "poller.h"
 #include "utils.h"
 
+#include <errno.h>
 #include <poll.h>
 #include <stddef.h>
 #include <stdlib.h>
@@ -174,6 +175,8 @@ void mill_wait(void) {
 
         /* Wait for events. */
         rc = poll(mill_pollset_fds, mill_pollset_size, timeout);
+        if(rc < 0 && errno == EINTR)
+            continue;
         mill_assert(rc >= 0);
 
         /* Fire all expired timers. */
