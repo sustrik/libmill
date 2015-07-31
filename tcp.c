@@ -33,8 +33,8 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include "ip.h"
 #include "libmill.h"
-#include "net.h"
 #include "utils.h"
 
 #define MILL_TCP_LISTEN_BACKLOG 10
@@ -102,21 +102,15 @@ static struct mill_tcpconn *tcpconn_create(int fd) {
     return conn;
 }
 
-tcpsock tcplisten(const char *addr, int port) {
-    struct sockaddr_storage ss;
-    socklen_t len;
-    int rc = mill_resolve(addr, port, &ss, &len);
-    if (rc != 0)
-        return NULL;
-
+tcpsock tcplisten(ipaddr addr) {
     /* Open the listening socket. */
-    int s = socket(ss.ss_family, SOCK_STREAM, 0);
+    int s = socket(mill_ipfamily(addr), SOCK_STREAM, 0);
     if(s == -1)
         return NULL;
     mill_tcptune(s);
 
     /* Start listening. */
-    rc = bind(s, (struct sockaddr*)&ss, len);
+    int rc = bind(s, (struct sockaddr*)&addr, mill_iplen(addr));
     if(rc != 0)
         return NULL;
     rc = listen(s, MILL_TCP_LISTEN_BACKLOG);
@@ -125,21 +119,18 @@ tcpsock tcplisten(const char *addr, int port) {
 
     /* If the user requested an ephemeral port,
        retrieve the port number assigned by the OS now. */
-    if(!port) {
-        len = sizeof(ss);
-        rc = getsockname(s, (struct sockaddr*)&ss, &len);
+    int port = mill_ipport(addr);
+    if(!port == 0) {
+        ipaddr baddr;
+        socklen_t len = sizeof(ipaddr);
+        rc = getsockname(s, (struct sockaddr*)&baddr, &len);
         if(rc == -1) {
             int err = errno;
             close(s);
             errno = err;
             return NULL;
         }
-        if(ss.ss_family == AF_INET)
-            port = ((struct sockaddr_in*)&ss)->sin_port;
-        else if(ss.ss_family == AF_INET6)
-            port = ((struct sockaddr_in6*)&ss)->sin6_port;
-        else
-            mill_assert(0);
+        port = mill_ipport(baddr);
     }
 
     /* Create the object. */
@@ -184,21 +175,15 @@ tcpsock tcpaccept(tcpsock s, int64_t deadline) {
     }
 }
 
-tcpsock tcpconnect(const char *addr, int port, int64_t deadline) {
-    struct sockaddr_storage ss;
-    socklen_t len;
-    int rc = mill_resolve(addr, port, &ss, &len);
-    if (rc != 0)
-        return NULL;
-
+tcpsock tcpconnect(ipaddr addr, int64_t deadline) {
     /* Open a socket. */
-    int s = socket(ss.ss_family, SOCK_STREAM, 0);
+    int s = socket(mill_ipfamily(addr), SOCK_STREAM, 0);
     if(s == -1)
         return NULL;
     mill_tcptune(s);
 
     /* Connect to the remote endpoint. */
-    rc = connect(s, (struct sockaddr*)&ss, len);
+    int rc = connect(s, (struct sockaddr*)&addr, mill_iplen(addr));
     if(rc != 0) {
         mill_assert(rc == -1);
         if(errno != EINPROGRESS)

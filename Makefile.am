@@ -40,10 +40,10 @@ libmill_la_SOURCES = \
     cr.c\
     debug.h\
     debug.c\
+    ip.h\
+    ip.c\
     list.h\
     list.c\
-    net.h\
-    net.c\
     poller.h\
     poller.c\
     slist.h\

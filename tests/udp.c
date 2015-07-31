@@ -29,10 +29,10 @@
 #include <stdio.h>
 
 int main() {
-    udpsock s1 = udplisten(NULL, 5555);
-    udpsock s2 = udplisten(NULL, 5556);
+    udpsock s1 = udplisten(iplocal(NULL, 5555, 0));
+    udpsock s2 = udplisten(iplocal(NULL, 5556, 0));
 
-    udpaddr addr = udpresolve("127.0.0.1", 5556);
+    ipaddr addr = ipremote("127.0.0.1", 5556, 0, -1);
 
     while(1) {
         udpsend(s1, addr, "ABC", 3);

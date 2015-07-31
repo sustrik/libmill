@@ -249,21 +249,34 @@ MILL_EXPORT int mill_choose_wait(void);
 MILL_EXPORT void *mill_choose_val(void);
 
 /******************************************************************************/
+/*  IP address library                                                        */
+/******************************************************************************/
+
+#define IPADDR_IPV4 1
+#define IPADDR_IPV6 2
+#define IPADDR_PREF_IPV4 3
+#define IPADDR_PREF_IPV6 4
+
+typedef struct {char data[32];} ipaddr;
+
+MILL_EXPORT ipaddr iplocal(const char *name, int port, int mode);
+MILL_EXPORT ipaddr ipremote(const char *name, int port, int mode,
+    int64_t deadline);
+
+/******************************************************************************/
 /*  TCP library                                                               */
 /******************************************************************************/
 
 typedef struct mill_tcpsock *tcpsock;
 
-MILL_EXPORT tcpsock tcplisten(const char *addr, int port);
+MILL_EXPORT tcpsock tcplisten(ipaddr addr);
 MILL_EXPORT int tcpport(tcpsock s);
 MILL_EXPORT tcpsock tcpaccept(tcpsock s, int64_t deadline);
-MILL_EXPORT tcpsock tcpconnect(const char *addr, int port, int64_t deadline);
+MILL_EXPORT tcpsock tcpconnect(ipaddr addr, int64_t deadline);
 MILL_EXPORT size_t tcpsend(tcpsock s, const void *buf, size_t len,
     int64_t deadline);
-MILL_EXPORT void tcpflush(tcpsock s,
-    int64_t deadline);
-MILL_EXPORT size_t tcprecv(tcpsock s, void *buf, size_t len,
-    int64_t deadline);
+MILL_EXPORT void tcpflush(tcpsock s, int64_t deadline);
+MILL_EXPORT size_t tcprecv(tcpsock s, void *buf, size_t len, int64_t deadline);
 MILL_EXPORT size_t tcprecvuntil(tcpsock s, void *buf, size_t len,
     unsigned char until, int64_t deadline);
 MILL_EXPORT void tcpclose(tcpsock s);
@@ -274,18 +287,15 @@ MILL_EXPORT void tcpclose(tcpsock s);
 
 typedef struct mill_udpsock *udpsock;
 
-typedef struct {char data[32];} udpaddr;
-
-MILL_EXPORT udpaddr udpresolve(const char *addr, int port);
-MILL_EXPORT udpsock udplisten(const char *addr, int port);
+MILL_EXPORT udpsock udplisten(ipaddr addr);
 MILL_EXPORT int udpport(udpsock s);
-MILL_EXPORT void udpsend(udpsock s, udpaddr addr, const void *buf, size_t len);
-MILL_EXPORT size_t udprecv(udpsock s, udpaddr *addr,
+MILL_EXPORT void udpsend(udpsock s, ipaddr addr, const void *buf, size_t len);
+MILL_EXPORT size_t udprecv(udpsock s, ipaddr *addr,
     void *buf, size_t len, int64_t deadline);
 MILL_EXPORT void udpclose(udpsock s);
 
 /******************************************************************************/
-/*  UNIX library                                                               */
+/*  UNIX library                                                              */
 /******************************************************************************/
 
 typedef struct mill_unixsock *unixsock;

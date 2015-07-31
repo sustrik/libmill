@@ -28,7 +28,8 @@
 #include "../libmill.h"
 
 void client(int port) {
-    tcpsock cs = tcpconnect("127.0.0.1", port, -1);
+    ipaddr addr = ipremote("127.0.0.1", port, 0, -1);
+    tcpsock cs = tcpconnect(addr, -1);
     assert(cs);
 
     msleep(now() + 100);
@@ -48,7 +49,7 @@ void client(int port) {
 int main() {
     char buf[16];
 
-    tcpsock ls = tcplisten(NULL, 5555);
+    tcpsock ls = tcplisten(iplocal(NULL, 5555, 0));
     assert(ls);
 
     go(client(tcpport(ls)));

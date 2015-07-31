@@ -22,16 +22,14 @@
 
 */
 
-#ifndef MILL_NET_INCLUDED
-#define MILL_NET_INCLUDED
+#ifndef MILL_IP_INCLUDED
+#define MILL_IP_INCLUDED
 
-#include <netinet/in.h>
-#include <sys/types.h>
-#include <sys/socket.h>
+#include "libmill.h"
 
-/* Convert textual IPv4 or IPv6 address to a binary one. */
-int mill_resolve(const char *addr, int port,
-      struct sockaddr_storage *ss, socklen_t *len);
+int mill_ipfamily(ipaddr addr);
+int mill_iplen(ipaddr addr);
+int mill_ipport(ipaddr addr);
 
 #endif
 

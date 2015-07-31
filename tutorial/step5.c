@@ -64,7 +64,7 @@ int main(int argc, char *argv[]) {
     if(argc > 1)
         port = atoi(argv[1]);
 
-    tcpsock ls = tcplisten(NULL, port);
+    tcpsock ls = tcplisten(iplocal(NULL, port, 0));
     if(!ls) {
         perror("Can't open listening socket");
         return 1;
