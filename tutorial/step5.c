@@ -39,13 +39,13 @@ void dialogue(tcpsock as) {
         goto cleanup;
 
     char inbuf[256];
-    size_t sz = tcprecvuntil(as, inbuf, sizeof(inbuf), "\r", 1, deadline);
+    size_t sz = tcprecvuntil(as, inbuf, sizeof(inbuf), "\r\n", 2, deadline);
     if(errno != 0)
         goto cleanup;
 
     inbuf[sz - 1] = 0;
     char outbuf[256];
-    int rc = snprintf(outbuf, sizeof(outbuf), "Hello, %s!\n", inbuf);
+    int rc = snprintf(outbuf, sizeof(outbuf), "Hello, %s!\r\n", inbuf);
 
     sz = tcpsend(as, outbuf, rc, deadline);
     if(errno != 0)
