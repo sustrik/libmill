@@ -105,11 +105,11 @@ static ipaddr mill_ipliteral(const char *addr, int port, int mode) {
         return raddr;
     }
     switch(mode) {
-    case 0:
     case IPADDR_IPV4:
         return mill_ipv4_literal(addr, port);
     case IPADDR_IPV6:
         return mill_ipv6_literal(addr, port);
+    case 0:
     case IPADDR_PREF_IPV4:
         raddr = mill_ipv4_literal(addr, port);
         if(errno == 0)
@@ -175,13 +175,13 @@ ipaddr iplocal(const char *name, int port, int mode) {
     }
     /* Choose the correct address family based on mode. */
     switch(mode) {
-    case 0:
     case IPADDR_IPV4:
         ipv6 = NULL;
         break;
     case IPADDR_IPV6:
         ipv4 = NULL;
         break;
+    case 0:
     case IPADDR_PREF_IPV4:
         if(ipv4)
            ipv6 = NULL;
