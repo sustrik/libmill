@@ -28,7 +28,7 @@
 #include "../libmill.h"
 
 void client(int port) {
-    ipaddr addr = ipremote("::1", port, 0, -1);
+    ipaddr addr = ipremote("127.0.0.1", port, 0, -1);
     tcpsock cs = tcpconnect(addr, -1);
     assert(cs);
 
