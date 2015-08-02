@@ -84,7 +84,8 @@ check_PROGRAMS = \
     tests/fdwait\
     tests/tcp\
     tests/udp\
-    tests/unix
+    tests/unix\
+    tests/signals
 
 LDADD = libmill.la
 
