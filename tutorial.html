@@ -58,7 +58,7 @@ library.</p>
 
 <p>First, include libmill's header file. Later on you will want some
 functionality from the standard library, so include those headers as well:</p>
-
+    
 <pre>
 #include &lt;libmill.h&gt;
 #include &lt;errno.h&gt;
@@ -88,17 +88,20 @@ TCP socket. The socket will be used to accept new TCP connections from the
 clients:</p>
 
 <pre>
-tcpsock ls = tcplisten(NULL, port);
+ipaddr addr = iplocal(NULL, port, 0);
+tcpsock ls = tcplisten(addr);
 if(!ls) {
     perror("Can't open listening socket");
     return 1;
 }
 </pre>
 
-<p>First argument to the function can be used to specify local network interface
-to bind to. This is an advanced functionality and you likely won't need it.
-Conveniently, you can just ignore it and set the argument to <tt>NULL</tt>.
-The server will then bind to all available local network interfaces.</p>
+<p><tt>iplocal()</tt> function is used to convert textual representation of an
+IP address to the actual address. In this case, the first argument can be used
+to specify local network interface to bind to. This is an advanced functionality
+and you likely won't need it. Conveniently, you can just ignore it and set the
+argument to <tt>NULL</tt>. The server will then bind to all available local
+network interfaces.</p>
 
 <p>The second argument is, unsurprisingly, the port that the clients will
 connect to. When testing the program keep in mind that the range of valid port
@@ -197,7 +200,7 @@ call.</p>
 
 <pre>
 char inbuf[256];
-size_t sz = tcprecvuntil(as, inbuf, sizeof(inbuf), '\r', -1);
+size_t sz = tcprecvuntil(as, inbuf, sizeof(inbuf), "\r", 1, -1);
 </pre>
 
 <p>This piece of code simply reads the reply from the client until it
@@ -225,7 +228,7 @@ the reader:</p>
 <pre>
 inbuf[sz - 1] = 0;
 char outbuf[256];
-int rc = snprintf(outbuf, sizeof(outbuf), "Hello, %s!\n", inbuf);
+int rc = snprintf(outbuf, sizeof(outbuf), "Hello, %s!\r\n", inbuf);
 
 tcpsend(as, outbuf, rc, -1);
 tcpflush(as, -1);
@@ -330,7 +333,7 @@ int main(int argc, char *argv[]) {
 }
 </pre>
 
-<p>Let's compile it and try to initial experiment once again. As can be seen,
+<p>Let's compile it and try the initial experiment once again. As can be seen,
 one client now cannot block another one. Great. Let's move on.</p>
 
 <h3 id="step5">Step 5: Deadlines</h3>

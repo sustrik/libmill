@@ -30,9 +30,10 @@
   <li><a href="#deadlines">Deadlines</a></li>
   <li><a href="#sleeping">Sleeping</a></li>
   <li><a href="#fds">Waiting for file descriptors</a></li>
+  <li><a href="#ip">Resolving IP addresses</a></li>
   <li><a href="#tcp">TCP library</a></li>
-  <li><a href="#unix">UNIX library</a></li>
   <li><a href="#udp">UDP library</a></li>
+  <li><a href="#unix">UNIX library</a></li>
   <li><a href="#cls">Coroutine-local storage</a></li>
   <li><a href="#debug">Debugging</a></li>
 </ul>
@@ -306,22 +307,78 @@ socket combination of <tt>FDW_ERR</tt> and <tt>FDW_IN</tt> may be returned.
 <p>The third parameter to <tt>fdwait()</tt> is a deadline. If deadline is hit
 the function returns zero.</p>
 
-<h3 id="tcp">TCP library</h3>
+<h3 id="ip">Resolving IP addresses</h3>
 
-<p>TCP can be accessed via standard POSIX functions provided that you do it
-in a non-blocking way. To save you the trouble though, libmill provides a
-simple convenience wrapper for the functionality.</p>
+<p>Network functionality, such as TCP or UDP, can be accessed via standard POSIX
+functions provided that you do it in a non-blocking way. To save you the trouble
+though, libmill provides a simple convenience wrapper on top of it.</p>
+
+<p>To use TCP or UDP you need IP addresses first. The wrapper type for IP
+addresses (both IPv4 and IPv6) is called <tt>ipaddr</tt>. It also
+includes port number. Unlike address types in POSIX it can be used as a basic
+type. It can be assigned, returned from a function and so on.</p>
+
+<p>There are two functions to construct IP addresses: <tt>iplocal()</tt> that
+retrieves the IP address of a local network interface and <tt>ipremote()</tt>
+that gets IP address of a remote machine. In addition to that, certain other
+library functions, <tt>udprecv()</tt>, for one, return IP addresses.</p>
+
+<p><tt>iplocal()</tt> converts a textual form of IP address, or a name of a
+local network interface and a port number into <tt>ipaddr</tt>:</p>
+
+<pre>
+ipaddr addr1 = iplocal("127.0.0.1", 3333, 0);
+ipaddr addr2 = iplocal("::1", 4444, 0);
+ipaddr addr3 = iplocal("eth0", 5555, 0);
+</pre>
+
+<p>The last (<tt>mode</tt>) argument specifies which kind of addresses you are
+interested in. Possible values are:</p>
+
+<ul>
+  <li>IPADDR_IPV4: get IPv4 address or error if it's not available</li>
+  <li>IPADDR_IPV6: get IPv6 address or error if it's not available</li>
+  <li>IPADDR_PREF_IPV4: get IPv4 address if possible, IPv6 address otherwise;
+      error if none is available</li>
+  <li>IPADDR_PREF_IPV6: get IPv6 address if possible, IPv4 address otherwise;
+      error if none is available</li>
+</ul>
+
+<p>Setting the argument to zero means "default" behaviour, which, at the
+present, is IPADDR_PREF_IPV4. However, in the future when IPv6 becomes more
+common it may be switched to IPADDR_PREF_IPV6.</p>
+
+<p>If address parameter is set to NULL, INADDR_ANY or in6addr_any is returned.
+This value is useful when binding to all local network interfaces.</p>
+
+<p>In case of error <tt>errno</tt> is set to appropriate error code. Returned
+address has family type AF_UNSPEC which will cause any function you pass it to
+to fail.</tt>
+
+<p>The second function to produce IP addresses is <tt>ipremote()</tt>. It
+converts textual form of IP address to <tt>ipaddr</tt>. In the future it is
+also meant to resolve remote host names, but this functionality is not
+available yet. The function also requires port, mode (same as in
+<tt>iplocal()</tt>) and a deadline:</p>
+
+<pre>
+ipaddr addr = ipremote("192.168.0.111", 5555, 0, -1);
+</pre>
+
+<p>Behaviour in case of error is same as with <tt>iplocal()</tt>.
+
+<h3 id="tcp">TCP library</h3>
 
 <h4>Connecting to a remote endpoint</h4>
 
 <p>To connect to a remote server, use <tt>tcpconnect()</tt> function:
 
 <pre>
-tcpsock s = tcpconnect("192.168.0.111", 5555, -1);
+ipaddr addr = ipremote("192.168.0.111", 5555, 0, -1);
+tcpsock s = tcpconnect(addr, -1);
 </pre>
 
-<p>The arguments are IP address (either IPv4 or IPv6), port number and a
-deadline.</p>
+<p>The arguments are IP address, port number and a deadline.</p>
 
 <p>In case of error the function returns NULL and sets <tt>errno</tt> to one
 of the standard POSIX error values. If the deadline is reached, <tt>errno</tt>
@@ -333,21 +390,22 @@ is set to <tt>ETIMEDOUT</tt>.</p>
 function. To accept a new connection use <tt>tcpaccept()</tt> function:</p>
 
 <pre>
-tcpsock ls = tcplisten(NULL, 5555);
+ipaddr addr = iplocal("eth0", 5555, 0);
+tcpsock ls = tcplisten(addr);
 while(1) {
     tcpsock s = tcpaccept(ls, -1);
     ...
 }
 </pre>
 
-<p><tt>tcplisten()</tt> arguments are IP address (either IPv4 or IPv6) of the
-local network interface to bind to and a port number. If the address is NULL,
-all local interfaces will be used. If port number is zero an ephemeral port
-number will be chosen by the operating system. In such case you can retrieve the
-port number using <tt>tcppport()</tt> function:</p>
+<p><tt>tcplisten()</tt> argument is an IP address of the local network interface
+to bind to. If port number is zero an ephemeral port number will be chosen by
+the operating system. In such case you can retrieve the port number using
+<tt>tcppport()</tt> function:</p>
 
 <pre>
-tcpsock ls = tcplisten("192.168.0.111", 0);
+ipaddr addr = iplocal(NULL, 5555, 0);
+tcpsock ls = tcplisten(addr);
 int port = tcpport(ls);
 </pre>
 
@@ -413,20 +471,30 @@ set to <tt>ETIMEDOUT</tt>.</p>
 
 <p>To help with dealing with text-based protocols libmill provides
 <tt>tcprecvuntil()</tt> function. It acts the same as <tt>tcpread()</tt> except
-that the reading stops when a specific character is encountered:</p>
+that the reading stops when one of specified characters is encountered:</p>
 
 <pre>
-size_t nbytes = tcprecvuntil(conn, buf, 256, '\n', -1);
+size_t nbytes = tcprecvuntil(conn, buf, 256, "\n" , 1, -1);
 </pre>
 
 <p>The arguments are the socket to receive from, the buffer to receive to,
-size of the buffer, the delimiter character and a deadline. Number of bytes
-actually received, including the delimiter character, is returned.</p>
+size of the buffer, the delimiter characters, how many of them are there
+and a deadline. Number of bytes actually received, including the delimiter
+character, is returned.</p>
 
 <p>In the case of success, <tt>errno</tt> is set to zero. If the connection
 breaks it is set to <tt>ECONNRESET</tt>. If the deadline expires it is
 set to <tt>ETIMEDOUT</tt>. If the entire buffer was filled without encountering
 the delimiter character, <tt>errno</tt> is set to <tt>ENOBUFS</tt>.</p>
+
+<p>Keep in mind that mutliple delimiter characters means that receiving stops
+if any of them is received rather than when the entire string of them
+is received:</p>
+
+<pre>
+/* Read until comma or right brace is encountered. */
+size_t nbytes = tcprecvuntil(conn, buf, 256, ",}" , 2, -1);
+</pre>
 
 <h4>Cleaning up</h4>
 
@@ -437,9 +505,66 @@ function:</p>
 tcpclose(s);
 </pre>
 
-<h3 id="unix">UNIX library</h3>
+<h3 id="udp">UDP library</h3>
 
-<p><b>This feature is experimental only!</b></p>
+<p>To open an UDP socket use <tt>udplisten()</tt> function. IP address of the
+local network interface should be supplied.:</p>
+
+<pre>
+ipaddr addr = iplocal("192.168.0.111", 5555, 0);
+udpsock s = udplisten(addr);
+</pre>
+
+<p>If port is set to zero operating system selects an unused port. The number
+of the port can be retrieved using <tt>udpport()</tt> function:</tt>
+
+<pre>
+int port = udpport(s);
+</pre>
+
+<p>Once the socket is open it can be immediately used for both sending and
+receiving.</p>
+
+<p>Given that UDP transport is unconnected by its very nature the address of
+remote endpoint has to be specified in every <tt>udpsend()</tt> call.
+Similarly, the IP address of the remote endpoint is returned by each
+<tt>udprecv()</tt> call.</p>
+
+<p>To send a packet to the remote peer use <tt>udpsend()</tt> function:</p>
+
+<pre>
+ipaddr addr = ipremote("192.168.0.111", 5555, 0, -1);
+udpsend(s, addr, "Hello, world!", 13);
+</pre>
+
+<p>The function has no return value but in the case of failure it sets
+<tt>errno</tt> to the appropriate value. If there is no error <tt>errno</tt>
+is set to zero.</p>
+
+<p>Note that <tt>udpsend()</tt> has no deadline. UDP transport is unreliable
+and the packet is either delivered or lost, but never blocked.</p>
+
+<p>To receive a packet from the socket use <tt>udprecv()</tt> function.
+If successful the function will return the size of the received packet,
+in bytes, and set <tt>ipaddr</tt> passed in the parameter to the source
+address of the packet:</p>
+
+<pre>
+char buf[256];
+ipaddr addr;
+size_t sz = udprecv(s, &addr, buf, sizeof(buf), -1);
+</pre>
+
+<p>In the case of failure <tt>errno</tt>is set to the appropriate error.
+In the case of success <tt>errno</tt> is set to zero.</p>
+
+<p>When done close the UDP socket:</p>
+
+<pre>
+udpclose(s);
+</pre>
+
+<h3 id="unix">UNIX library</h3>
 
 <p>Unix sockets are used for communicating between processes on the same
 machine.</p>
@@ -455,72 +580,12 @@ IP addresses. Also, there are no ports:</tt>
 unixsock s = unixconnect("/tmp/test.unix");
 </pre>
 
-<h3 id="udp">UDP library</h3>
-
-<p><b>This feature is experimental only!</b></p>
-
-<p>To open an UDP socket use <tt>tcplisten()</tt> function. IP address of the
-local network interface and port should be supplied. If the address is NULL
-the socket will bind to all local network interfaces:</p>
+Function <tt>unixpair()</tt> creates a pair of connected sockets. It's a wrapper
+on top of standard <tt>socketpair()</tt> function:</p>
 
 <pre>
-udpsock s = udplisten("192.168.0.111", 5555);
-</pre>
-
-<p>If port is set to zero operating system selects an unused port. The number
-of the port can be retrieved using <tt>udpport()</tt> function:</tt>
-
-<pre>
-int port = udpport(s);
-</pre>
-
-<p>Once the socket is open it can be immediately used for both sending and
-receiving.</p>
-
-<p>Given that UDP transport is unconnected by its very nature and address of
-the remote endpoint has to be used in each <tt>udpsend()</tt> and
-<tt>udprecv()</tt> call, libmill's UDP library uses binary version of
-the address to avoid excessive string processing.</p>
-
-<tt>udpaddr</tt> type represents the binary address and <tt>udpresolve()</tt>
-function can be used to convert textual address to the binary one:</tt>
-
-<pre>
-udpaddr addr = udpresolve("192.168.0.121", 5555);
-</pre>
-
-<p>To send a packet to the remote peer with address <tt>addr</tt> use
-<tt>udpsend()</tt> function:</p>
-
-<pre>
-udpsend(s, addr, "Hello, world!", 13);
-</pre>
-
-<p>The function has no return value but in the case of failure it sets
-<tt>errno</tt> to the appropriate value. If there is no error <tt>errno</tt>
-is set to zero.</p>
-
-<p>Note that <tt>udpsend()</tt> has no deadline. UDP transport is unreliable
-and the packet is either delivered or lost, but never blocked.</p>
-
-<p>To receive a packet from the socket use <tt>udprecv()</tt> function.
-If successful the function will return the size of the received packet,
-in bytes, and set <tt>udpaddr</tt> passed in the parameter to the source
-address of the packet:</p>
-
-<pre>
-char buf[256];
-udpaddr addr;
-size_t sz = udprecv(s, &addr, buf, sizeof(buf), -1);
-</pre>
-
-<p>In the case of failure <tt>errno</tt>is set to the appropriate error.
-In the case of success <tt>errno</tt> is set to zero.</p>
-
-<p>When done close the UDP socket:</p>
-
-<pre>
-udpclose(s);
+unixsock s1, s2;
+unixpair(&s1, &s2);
 </pre>
 
 <h3 id="cls">Coroutine-local storage</h3>
