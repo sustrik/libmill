@@ -29,7 +29,9 @@
 
 /* Maximum size of an item in a channel that can be handled without
    extra memory allocation. */
+#ifndef MILL_VALBUF_SIZE
 #define MILL_VALBUF_SIZE 128
+#endif
 
 /* Arbitrarily large temporary buffer. */
 struct mill_valbuf {

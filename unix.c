@@ -35,8 +35,13 @@
 #include "libmill.h"
 #include "utils.h"
 
+#ifndef MILL_UNIX_LISTEN_BACKLOG
 #define MILL_UNIX_LISTEN_BACKLOG 10
+#endif
+
+#ifndef MILL_UNIX_BUFLEN
 #define MILL_UNIX_BUFLEN (4096)
+#endif
 
 enum mill_unixtype {
    MILL_UNIXLISTENER,
