@@ -95,15 +95,12 @@ static void mill_tcptune(int s) {
 #endif
 }
 
-static struct mill_tcpconn *tcpconn_create(int fd) {
-    struct mill_tcpconn *conn = malloc(sizeof(struct mill_tcpconn));
-    mill_assert(conn);
+static void tcpconn_init(struct mill_tcpconn *conn, int fd) {
     conn->sock.type = MILL_TCPCONN;
     conn->fd = fd;
     conn->ifirst = 0;
     conn->ilen = 0;
     conn->olen = 0;
-    return conn;
 }
 
 tcpsock tcplisten(ipaddr addr) {
@@ -139,7 +136,11 @@ tcpsock tcplisten(ipaddr addr) {
 
     /* Create the object. */
     struct mill_tcplistener *l = malloc(sizeof(struct mill_tcplistener));
-    mill_assert(l);
+    if(!l) {
+        close(s);
+        errno = ENOMEM;
+        return NULL;
+    }
     l->sock.type = MILL_TCPLISTENER;
     l->fd = s;
     l->port = port;
@@ -163,8 +164,15 @@ tcpsock tcpaccept(tcpsock s, int64_t deadline) {
         int as = accept(l->fd, NULL, NULL);
         if (as >= 0) {
             mill_tcptune(as);
+            struct mill_tcpconn *conn = malloc(sizeof(struct mill_tcpconn));
+            if(!conn) {
+                close(as);
+                errno = ENOMEM;
+                return NULL;
+            }
+            tcpconn_init(conn, as);
             errno = 0;
-            return &tcpconn_create(as)->sock;
+            return (tcpsock)conn;
         }
         mill_assert(as == -1);
         if(errno != EAGAIN && errno != EWOULDBLOCK)
@@ -214,8 +222,15 @@ tcpsock tcpconnect(ipaddr addr, int64_t deadline) {
     }
 
     /* Create the object. */
+    struct mill_tcpconn *conn = malloc(sizeof(struct mill_tcpconn));
+    if(!conn) {
+        close(s);
+        errno = ENOMEM;
+        return NULL;
+    }
+    tcpconn_init(conn, s);
     errno = 0;
-    return &tcpconn_create(s)->sock;
+    return (tcpsock)conn;
 }
 
 size_t tcpsend(tcpsock s, const void *buf, size_t len, int64_t deadline) {

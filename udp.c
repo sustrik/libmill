@@ -81,7 +81,11 @@ udpsock udplisten(ipaddr addr) {
 
     /* Create the object. */
     struct mill_udpsock *us = malloc(sizeof(struct mill_udpsock));
-    mill_assert(us);
+    if(!us) {
+        close(s);
+        errno = ENOMEM;
+        return NULL;
+    }
     us->fd = s;
     us->port = port;
     errno = 0;

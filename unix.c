@@ -95,15 +95,12 @@ static int mill_unixresolve(const char *addr, struct sockaddr_un *su) {
     return 0;
 }
 
-static struct mill_unixconn *unixconn_create(int fd) {
-    struct mill_unixconn *conn = malloc(sizeof(struct mill_unixconn));
-    mill_assert(conn);
+static void unixconn_init(struct mill_unixconn *conn, int fd) {
     conn->sock.type = MILL_UNIXCONN;
     conn->fd = fd;
     conn->ifirst = 0;
     conn->ilen = 0;
     conn->olen = 0;
-    return conn;
 }
 
 unixsock unixlisten(const char *addr) {
@@ -128,7 +125,11 @@ unixsock unixlisten(const char *addr) {
 
     /* Create the object. */
     struct mill_unixlistener *l = malloc(sizeof(struct mill_unixlistener));
-    mill_assert(l);
+    if(!l) {
+        close(s);
+        errno = ENOMEM;
+        return NULL;
+    }
     l->sock.type = MILL_UNIXLISTENER;
     l->fd = s;
     errno = 0;
@@ -144,8 +145,15 @@ unixsock unixaccept(unixsock s, int64_t deadline) {
         int as = accept(l->fd, NULL, NULL);
         if (as >= 0) {
             mill_unixtune(as);
+            struct mill_unixconn *conn = malloc(sizeof(struct mill_unixconn));
+            if(!conn) {
+                close(as);
+                errno = ENOMEM;
+                return NULL;
+            }
+            unixconn_init(conn, as);
             errno = 0;
-            return &unixconn_create(as)->sock;
+            return (unixsock)conn;
         }
         mill_assert(as == -1);
         if(errno != EAGAIN && errno != EWOULDBLOCK)
@@ -184,8 +192,15 @@ unixsock unixconnect(const char *addr) {
     }
 
     /* Create the object. */
+    struct mill_unixconn *conn = malloc(sizeof(struct mill_unixconn));
+    if(!conn) {
+        close(s);
+        errno = ENOMEM;
+        return NULL;
+    }
+    unixconn_init(conn, s);
     errno = 0;
-    return &unixconn_create(s)->sock;
+    return (unixsock)conn;
 }
 
 void unixpair(unixsock *a, unixsock *b) {
@@ -199,8 +214,25 @@ void unixpair(unixsock *a, unixsock *b) {
         return;
     mill_unixtune(fd[0]);
     mill_unixtune(fd[1]);
-    *a = &unixconn_create(fd[0])->sock;
-    *b = &unixconn_create(fd[1])->sock;
+    struct mill_unixconn *conn = malloc(sizeof(struct mill_unixconn));
+    if(!conn) {
+        close(fd[0]);
+        close(fd[1]);
+        errno = ENOMEM;
+        return;
+    }
+    unixconn_init(conn, fd[0]);
+    *a = (unixsock)conn;
+    conn = malloc(sizeof(struct mill_unixconn));
+    if(!conn) {
+        free(*a);
+        close(fd[0]);
+        close(fd[1]);
+        errno = ENOMEM;
+        return;
+    }
+    unixconn_init(conn, fd[1]);
+    *b = (unixsock)conn;
     errno = 0;
 }
 
