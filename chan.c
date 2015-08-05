@@ -58,7 +58,8 @@ chan mill_chmake(size_t sz, size_t bufsz, const char *created) {
        because that would mean chdone() would block when buffer is full. */
     struct mill_chan *ch = (struct mill_chan*)
         malloc(sizeof(struct mill_chan) + (sz * (bufsz + 1)));
-    assert(ch);
+    if(!ch)
+        return NULL;
     mill_register_chan(&ch->debug, created);
     ch->sz = sz;
     ch->sender.type = MILL_SENDER;
@@ -77,12 +78,16 @@ chan mill_chmake(size_t sz, size_t bufsz, const char *created) {
 }
 
 chan mill_chdup(chan ch, const char *current) {
+    if(mill_slow(!ch))
+        mill_panic("null channel used");
     mill_trace(current, "chdup(<%d>)", (int)ch->debug.id);
     ++ch->refcount;
     return ch;
 }
 
 void mill_chclose(chan ch, const char *current) {
+    if(mill_slow(!ch))
+        mill_panic("null channel used");
     mill_trace(current, "chclose(<%d>)", (int)ch->debug.id);
     assert(ch->refcount > 0);
     --ch->refcount;
@@ -125,6 +130,8 @@ void mill_choose_init(const char *current) {
 }
 
 void mill_choose_in(void *clause, chan ch, size_t sz, int idx) {
+    if(mill_slow(!ch))
+        mill_panic("null channel used");
     if(mill_slow(ch->sz != sz))
         mill_panic("receive of a type not matching the channel");
     /* Find out whether the clause is immediately available. */
@@ -154,6 +161,8 @@ void mill_choose_in(void *clause, chan ch, size_t sz, int idx) {
 }
 
 void mill_choose_out(void *clause, chan ch, void *val, size_t sz, int idx) {
+    if(mill_slow(!ch))
+        mill_panic("null channel used");
     if(mill_slow(ch->done))
         mill_panic("send to done-with channel");
     if(mill_slow(ch->sz != sz))
@@ -288,6 +297,8 @@ void *mill_choose_val(void) {
 }
 
 void mill_chs(chan ch, void *val, size_t sz, const char *current) {
+    if(mill_slow(!ch))
+        mill_panic("null channel used");
     mill_trace(current, "chs(<%d>)", (int)ch->debug.id);
     mill_choose_init_(current);
     mill_running->state = MILL_CHS;
@@ -297,6 +308,8 @@ void mill_chs(chan ch, void *val, size_t sz, const char *current) {
 }
 
 void *mill_chr(chan ch, size_t sz, const char *current) {
+    if(mill_slow(!ch))
+        mill_panic("null channel used");
     mill_trace(current, "chr(<%d>)", (int)ch->debug.id);
     mill_running->state = MILL_CHR;
     mill_choose_init_(current);
@@ -307,6 +320,8 @@ void *mill_chr(chan ch, size_t sz, const char *current) {
 }
 
 void mill_chdone(chan ch, void *val, size_t sz, const char *current) {
+    if(mill_slow(!ch))
+        mill_panic("null channel used");
     mill_trace(current, "chdone(<%d>)", (int)ch->debug.id);
     if(mill_slow(ch->done))
         mill_panic("chdone on already done-with channel");
