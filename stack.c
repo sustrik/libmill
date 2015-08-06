@@ -26,23 +26,18 @@
 #include "stack.h"
 #include "utils.h"
 
+#include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
 
 /* Size of stack for new coroutines. In bytes. Default size is slightly smaller
    than page size to account for malloc's chunk header. */
-#ifndef MILL_STACK_SIZE
-#define MILL_STACK_SIZE (256 * 1024 - 256)
-#endif
+size_t mill_stack_size = 256 * 1024 - 256;
 
-/* Maximum number of unused cached stacks. */
-#ifndef MILL_MAX_CACHED_STACKS
-#define MILL_MAX_CACHED_STACKS 64
-#endif
-
-/* We have to cache at least one stack, otherwise we would not be able
-   to deallocate it properly. */
-MILL_CT_ASSERT(MILL_MAX_CACHED_STACKS > 0);
+/* Maximum number of unused cached stacks. Keep in mind that we can't
+   deallocate the stack you are running on. Thus we need at least one cached
+   stack. */
+size_t mill_max_cached_stacks = 64;
 
 /* A stack of unused coroutine stacks. This allows for extra-fast allocation
    of a new stack. The FIFO nature of this structure minimises cache misses.
@@ -56,16 +51,16 @@ void *mill_allocstack(void) {
         --mill_num_cached_stacks;
         return (void*)(mill_slist_pop(&mill_cached_stacks) + 1);
     }
-    char *ptr = malloc(MILL_STACK_SIZE);
+    char *ptr = malloc(mill_stack_size);
     mill_assert(ptr);
-    return ptr + MILL_STACK_SIZE;
+    return ptr + mill_stack_size;
 }
 
 void mill_freestack(void *stack) {
     /* Put the stack to the list of cached stacks. */
     struct mill_slist_item *item = ((struct mill_slist_item*)stack) - 1;
     mill_slist_push_back(&mill_cached_stacks, item);
-    if(mill_num_cached_stacks < MILL_MAX_CACHED_STACKS) {
+    if(mill_num_cached_stacks < mill_max_cached_stacks) {
         ++mill_num_cached_stacks;
         return;
     }
@@ -74,6 +69,6 @@ void mill_freestack(void *stack) {
        own stack from underneath itself. Instead, we'll deallocate one of
        the unused cached stacks. */
     item = mill_slist_pop(&mill_cached_stacks);  
-    free(((char*)(item + 1)) - MILL_STACK_SIZE);
+    free(((char*)(item + 1)) - mill_stack_size);
 }
 
