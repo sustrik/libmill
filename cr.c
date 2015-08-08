@@ -33,6 +33,11 @@
 #include <stddef.h>
 #include <stdio.h>
 
+/* Size of the buffer for temporary storage of values received from channels.
+   It should be properly aligned and never change if there are any stacks
+   allocated at the moment. */
+size_t mill_valbuf_size = 128;
+
 volatile int mill_unoptimisable1 = 1;
 volatile void *mill_unoptimisable2 = NULL;
 
@@ -66,7 +71,8 @@ void mill_resume(struct mill_cr *cr, int result) {
     mill_slist_push_back(&mill_ready, &cr->u_ready.item);
 }
 
-/* The intial part of go(). Starts the new coroutine. */
+/* The intial part of go(). Starts the new coroutine.
+   Returns the pointer to the top of its stack. */
 void *mill_go_prologue(const char *created) {
     /* Ensure that debug functions are available whenever a single go()
        statement is present in the user's code. */
@@ -74,7 +80,8 @@ void *mill_go_prologue(const char *created) {
     /* Allocate and initialise new stack. */
     struct mill_cr *cr = ((struct mill_cr*)mill_allocstack()) - 1;
     mill_register_cr(&cr->debug, created);
-    mill_valbuf_init(&cr->valbuf);
+    cr->valbuf = NULL;
+    cr->valbuf_sz = 0;
     cr->cls = NULL;
     mill_trace(created, "{%d}=go()", (int)cr->debug.id);
     /* Suspend the parent coroutine and make the new one running. */
@@ -82,16 +89,17 @@ void *mill_go_prologue(const char *created) {
         return NULL;
     mill_resume(mill_running, 0);    
     mill_running = cr;
-    /* Return the location of the stack so that the caller can shift the
-       stack pointer as needed. */
-    return (void*)cr;
+    /* Return pointer to the top of the stack. There's valbuf interposed
+       between the mill_cr structure and the stack itself. */
+    return (void*)(((char*)cr) - mill_valbuf_size);
 }
 
 /* The final part of go(). Cleans up after the coroutine is finished. */
 void mill_go_epilogue(void) {
     mill_trace(NULL, "go() done");
     mill_unregister_cr(&mill_running->debug);
-    mill_valbuf_term(&mill_running->valbuf);
+    if(mill_running->valbuf)
+        free(mill_running->valbuf);
     mill_freestack(mill_running + 1);
     mill_running = NULL;
     /* Given that there's no running coroutine at this point
@@ -110,6 +118,17 @@ void mill_yield(const char *current) {
        suspending it. */
     mill_resume(mill_running, 0);
     mill_suspend();
+}
+
+void *mill_valbuf(struct mill_cr *cr, size_t size) {
+    if(mill_fast(size <= mill_valbuf_size))
+        return (void*)(((char*)cr) - mill_valbuf_size);
+    if(mill_fast(cr->valbuf && cr->valbuf_sz <= size))
+        return cr->valbuf;
+    cr->valbuf = realloc(cr->valbuf, size);
+    mill_assert(cr->valbuf);
+    cr->valbuf_sz = size;
+    return cr->valbuf;
 }
 
 void *cls(void) {

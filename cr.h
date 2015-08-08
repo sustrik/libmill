@@ -29,7 +29,6 @@
 #include "list.h"
 #include "slist.h"
 #include "utils.h"
-#include "valbuf.h"
 
 #include <stdint.h>
 
@@ -64,7 +63,17 @@ struct mill_choose {
     int available;
 };
 
-/* The coroutine. This structure is held on the top of the coroutine's stack. */
+/* The coroutine. The memory layout looks like this:
+
+   +----------------------------------------------------+--------+---------+
+   |                                              stack | valbuf | mill_cr |
+   +----------------------------------------------------+--------+---------+
+
+   - mill_cr contains generic book-keeping info about the coroutine
+   - valbuf is a buffer for temporary storing values received from channels
+   - stack is a standard C stack; it grows downwards
+
+*/
 struct mill_cr {
     /* Status of the coroutine. Used for debugging purposes. */
     enum mill_state state;
@@ -76,11 +85,14 @@ struct mill_cr {
     /* Stored coroutine context while it is not executing. */
     struct mill_ctx ctx;
 
-    /* Place to temporarily store the value received from a channel. */
-    struct mill_valbuf valbuf;
-
     /* Argument to resume() call being passed to the blocked suspend() call. */
     int result;
+
+    /* If size of the valbuf needs to be larger than mill_valbuf size it is
+       allocated dyncamically and the pointer, along with the size of the buffer
+       is stored here. */
+    void *valbuf;
+    size_t valbuf_sz;
 
     /* Coroutine-local storage. */
     void *cls;
@@ -104,5 +116,9 @@ int mill_suspend(void);
    it doesn't immediately run it, just puts it into the queue of ready
    coroutines. */
 void mill_resume(struct mill_cr *cr, int result);
+
+/* Returns pointer to the value buffer. The returned buffer is guaranteed
+   to be at least 'size' bytes long. */
+void *mill_valbuf(struct mill_cr *cr, size_t size);
 
 #endif

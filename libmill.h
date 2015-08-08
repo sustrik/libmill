@@ -82,6 +82,11 @@ MILL_EXPORT int64_t now(void);
 /*  Coroutines                                                                */
 /******************************************************************************/
 
+MILL_EXPORT int gotune(
+    int max_coroutine_count,
+    size_t max_stack_size,
+    size_t max_chan_item_size);
+
 MILL_EXPORT extern volatile int mill_unoptimisable1;
 MILL_EXPORT extern volatile void *mill_unoptimisable2;
 

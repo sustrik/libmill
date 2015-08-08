@@ -37,7 +37,7 @@ size_t mill_stack_size = 256 * 1024 - 256;
 /* Maximum number of unused cached stacks. Keep in mind that we can't
    deallocate the stack you are running on. Thus we need at least one cached
    stack. */
-size_t mill_max_cached_stacks = 64;
+int mill_max_cached_stacks = 64;
 
 /* A stack of unused coroutine stacks. This allows for extra-fast allocation
    of a new stack. The FIFO nature of this structure minimises cache misses.

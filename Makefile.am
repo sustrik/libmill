@@ -54,9 +54,7 @@ libmill_la_SOURCES = \
     udp.c\
     unix.c\
     utils.h\
-    utils.c\
-    valbuf.h\
-    valbuf.c
+    utils.c
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libmill.pc

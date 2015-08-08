@@ -205,7 +205,7 @@ static void mill_enqueue(chan ch, void *val) {
     if(!mill_list_empty(&ch->receiver.clauses)) {
         struct mill_clause *cl = mill_cont(
             mill_list_begin(&ch->receiver.clauses), struct mill_clause, epitem);
-        memcpy(mill_valbuf_alloc(&cl->cr->valbuf, ch->sz), val, ch->sz);
+        memcpy(mill_valbuf(cl->cr, ch->sz), val, ch->sz);
         mill_choose_unblock(cl);
         return;
     }
@@ -259,7 +259,7 @@ int mill_choose_wait(void) {
         if(cl->ep->type == MILL_SENDER)
             mill_enqueue(ch, cl->val);
         else
-            mill_dequeue(ch, mill_valbuf_alloc(&cl->cr->valbuf, ch->sz));
+            mill_dequeue(ch, mill_valbuf(cl->cr, ch->sz));
         mill_resume(mill_running, cl->idx);
         return mill_suspend();
     }
@@ -293,7 +293,9 @@ int mill_choose_wait(void) {
 }
 
 void *mill_choose_val(void) {
-    return mill_valbuf_get(&mill_running->valbuf);
+    /* We can ask for valbuf of size 0 here because we are sure it was
+       preallocated to the correct size beforehand. */
+    return mill_valbuf(mill_running, 0);
 }
 
 void mill_chs(chan ch, void *val, size_t sz, const char *current) {
@@ -338,7 +340,7 @@ void mill_chdone(chan ch, void *val, size_t sz, const char *current) {
     while(!mill_list_empty(&ch->receiver.clauses)) {
         struct mill_clause *cl = mill_cont(
             mill_list_begin(&ch->receiver.clauses), struct mill_clause, epitem);
-        memcpy(mill_valbuf_alloc(&cl->cr->valbuf, ch->sz), val, ch->sz);
+        memcpy(mill_valbuf(cl->cr, ch->sz), val, ch->sz);
         mill_choose_unblock(cl);
     }
 }
