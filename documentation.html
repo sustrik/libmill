@@ -35,6 +35,7 @@
   <li><a href="#udp">UDP library</a></li>
   <li><a href="#unix">UNIX library</a></li>
   <li><a href="#cls">Coroutine-local storage</a></li>
+  <li><a href="#memory">Dealing with memory</a></li>
   <li><a href="#debug">Debugging</a></li>
 </ul>
 
@@ -611,6 +612,38 @@ void *data = cls();
 
 <p>It can be safely assumed that before coroutine-local data are set,
 <tt>cls</tt> function will return <tt>NULL</tt>.</p>
+
+<h3 id="memory">Dealing with memory</h3>
+
+<p><b>This section refers to an unreleased version of libmill!</b></p>
+
+<p>Most libmill functions report out of memory condition in the common way.
+<tt>chmake()</tt> returns <tt>NULL</tt>, <tt>tcplisten()</tt> returns
+<tt>NULL</tt> and sets <tt>errno</tt> to <tt>ENOMEM</tt> and so on.</p>
+
+<p>There's one exception though. Namely, if there's not enough memory to
+allocate call stack for a new coroutine runtime panic happens and the process
+is terminated.</p>
+
+<p>If you wish to prevent that from happening you can allocate the coroutine
+stacks in advance, typically when the process is starting, using
+<tt>goprepare()</tt> function.</p>
+
+<p>Specify the number of coroutine stacks to preallocate, their size
+in bytes and, additionally, the size of the biggest element you are going to
+pass through libmill channels:</p>
+
+<pre>
+int count = goprepare(100, 100000, 128);
+</pre>
+
+<p>The function returns number of stacks that it actually managed
+to allocate.</p>
+
+<p>From that point on your program shouldn't fail when launching a coroutine.
+However, if you launch more parallelly running coroutines than allocated
+or pass a bigger element than specified through a channel, memory allocations
+will start happening again and all bets are off.</p>
 
 <h3 id="debug">Debugging</h3>
 
