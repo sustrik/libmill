@@ -51,11 +51,37 @@ struct mill_cr *mill_running = &mill_main;
 /* Queue of coroutines scheduled for execution. */
 static struct mill_slist mill_ready = {0};
 
+static void *mill_getvalbuf(struct mill_cr *cr, size_t size) {
+    /* Small valbufs don't require dynamic allocation. Also note that main
+       coroutine doesn't have a stack allocated on the heap like other
+       coroutines, so we have to handle valbuf in a special way. */
+    if(mill_fast(cr != &mill_main)) {
+        if(mill_fast(size <= mill_valbuf_size))
+            return (void*)(((char*)cr) - mill_valbuf_size);
+    }
+    else {
+        if(mill_fast(size <= sizeof(mill_main_valbuf)))
+            return (void*)mill_main_valbuf;
+    }
+    /* Large valbufs are simply allocated on heap. */
+    if(mill_fast(cr->valbuf && cr->valbuf_sz <= size))
+        return cr->valbuf;
+    void *ptr = realloc(cr->valbuf, size);
+    if(!ptr)
+        return NULL;
+    cr->valbuf = ptr;
+    cr->valbuf_sz = size;
+    return cr->valbuf;
+}
+
 int goprepare(int count, size_t stack_size, size_t val_size) {
     if(mill_slow(mill_hascrs()))
         mill_panic("goprepare called while coroutines are running");
     /* If needed, make val size slightly bigger to align properly. */
     mill_valbuf_size = (val_size + 15) & ~((size_t)0xf);
+    /* Preallocate the valbuf for the main coroutine. */
+    if(!mill_getvalbuf(&mill_main, mill_valbuf_size))
+        return 0;
     /* Allocate the stacks. */
     return mill_preparestacks(count, stack_size + mill_valbuf_size +
         sizeof(struct mill_cr));
@@ -135,25 +161,10 @@ void mill_yield(const char *current) {
 }
 
 void *mill_valbuf(struct mill_cr *cr, size_t size) {
-    /* Small valbufs don't require dynamic allocation. Also note that main
-       coroutine doesn't have a stack allocated on the heap like other
-       coroutines, so we have to handle valbuf in a special way. */
-    if(mill_fast(cr != &mill_main)) {
-        if(mill_fast(size <= mill_valbuf_size))
-            return (void*)(((char*)cr) - mill_valbuf_size);
-    }
-    else {
-        if(mill_fast(size <= sizeof(mill_main_valbuf)))
-            return (void*)mill_main_valbuf;
-    }
-    /* Large valbufs are simply allocated on heap. */
-    if(mill_fast(cr->valbuf && cr->valbuf_sz <= size))
-        return cr->valbuf;
-    cr->valbuf = realloc(cr->valbuf, size);
-    if(!cr->valbuf)
+    void *ptr = mill_getvalbuf(cr, size);
+    if(!ptr)
         mill_panic("not enough memory to receive from channel");
-    cr->valbuf_sz = size;
-    return cr->valbuf;
+    return ptr;
 }
 
 void *cls(void) {
