@@ -30,7 +30,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-/* Size of stack for new coroutines. In bytes. Default size is slightly smaller
+/* Size of stack for all coroutines. In bytes. Default size is slightly smaller
    than page size to account for malloc's chunk header. */
 size_t mill_stack_size = 256 * 1024 - 256;
 
@@ -46,13 +46,41 @@ int mill_max_cached_stacks = 64;
 static int mill_num_cached_stacks = 0;
 static struct mill_slist mill_cached_stacks = {0};
 
+int mill_preparestacks(int count, size_t stack_size) {
+    /* Purge the cached stacks. */
+    while(1) {
+        struct mill_slist_item *item = mill_slist_pop(&mill_cached_stacks);
+        if(!item)
+            break;
+        free(((char*)(item + 1)) - mill_stack_size);
+    }
+    /* Now that there are no stacks allocated, we can adjust the stack size. */
+    mill_stack_size = stack_size;
+    /* Make sure that the stacks won't get deallocated even if they aren't used
+       at the moment. */
+    if(count > mill_max_cached_stacks)
+        mill_max_cached_stacks = count;
+    /* Allocate the new stacks. */
+    int i;
+    for(i = 0; i != count; ++i) {
+        char *ptr = malloc(mill_stack_size);
+        if(!ptr)
+            break;
+        ptr += mill_stack_size;
+        struct mill_slist_item *item = ((struct mill_slist_item*)ptr) - 1;
+        mill_slist_push_back(&mill_cached_stacks, item);
+    }
+    return i;
+}
+
 void *mill_allocstack(void) {
     if(!mill_slist_empty(&mill_cached_stacks)) {
         --mill_num_cached_stacks;
         return (void*)(mill_slist_pop(&mill_cached_stacks) + 1);
     }
     char *ptr = malloc(mill_stack_size);
-    mill_assert(ptr);
+    if(!ptr)
+        mill_panic("not enough memory to allocate coroutine stack");
     return ptr + mill_stack_size;
 }
 

@@ -67,4 +67,7 @@ extern int mill_tracelevel;
 #define mill_trace if(mill_slow(mill_tracelevel)) mill_trace_
 void mill_trace_(const char *location, const char *format, ...);
 
+/* Returns 1 if there are any coroutines running, 0 otherwise. */
+int mill_hascrs(void);
+
 #endif

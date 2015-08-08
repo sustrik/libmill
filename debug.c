@@ -235,3 +235,8 @@ void mill_preserve_debug(void) {
     gotrace(0);
 }
 
+int mill_hascrs(void) {
+    return (mill_all_crs.first == &mill_main.debug.item &&
+        mill_all_crs.last == &mill_main.debug.item) ? 0 : 1;
+}
+

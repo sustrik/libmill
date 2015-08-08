@@ -292,10 +292,11 @@ int mill_choose_wait(void) {
     return mill_suspend();
 }
 
-void *mill_choose_val(void) {
-    /* We can ask for valbuf of size 0 here because we are sure it was
-       preallocated to the correct size beforehand. */
-    return mill_valbuf(mill_running, 0);
+void *mill_choose_val(size_t sz) {
+    /* The assumption here is that by supplying the same size as before
+       we are going to get the same buffer which already has the data
+       written into it. */
+    return mill_valbuf(mill_running, sz);
 }
 
 void mill_chs(chan ch, void *val, size_t sz, const char *current) {
@@ -318,7 +319,7 @@ void *mill_chr(chan ch, size_t sz, const char *current) {
     struct mill_clause cl;
     mill_choose_in(&cl, ch, sz, 0);
     mill_choose_wait();
-    return mill_choose_val();
+    return mill_choose_val(sz);
 }
 
 void mill_chdone(chan ch, void *val, size_t sz, const char *current) {

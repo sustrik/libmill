@@ -25,6 +25,12 @@
 #ifndef MILL_STACK_INCLUDED
 #define MILL_STACK_INCLUDED
 
+#include <stddef.h>
+
+/* Purges all the existing cached stacks and preallocated 'count' new stacks
+   of size 'stack_size'. Returns number of actually allocated stacks. */
+int mill_preparestacks(int count, size_t stack_size);
+
 /* Allocates new stack. Returns pointer to the *top* of the stack.
    For now we assume that the stack grows downwards. */
 void *mill_allocstack(void);

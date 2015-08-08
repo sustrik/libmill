@@ -82,10 +82,7 @@ MILL_EXPORT int64_t now(void);
 /*  Coroutines                                                                */
 /******************************************************************************/
 
-MILL_EXPORT int gotune(
-    int max_coroutine_count,
-    size_t max_stack_size,
-    size_t max_chan_item_size);
+MILL_EXPORT int goprepare(int count, size_t stack_size, size_t val_size);
 
 MILL_EXPORT extern volatile int mill_unoptimisable1;
 MILL_EXPORT extern volatile void *mill_unoptimisable2;
@@ -200,7 +197,7 @@ MILL_EXPORT void mill_chclose(chan ch, const char *current);
                 type name;\
                 mill_concat(mill_label, idx):\
                 if(mill_idx == idx) {\
-                    name = *(type*)mill_choose_val();\
+                    name = *(type*)mill_choose_val(sizeof(type));\
                     goto mill_concat(mill_dummylabel, idx);\
                     mill_concat(mill_dummylabel, idx)
 
@@ -254,7 +251,7 @@ MILL_EXPORT void mill_choose_out(void *clause, chan ch, void *val, size_t sz,
     int idx);
 MILL_EXPORT void mill_choose_otherwise(void);
 MILL_EXPORT int mill_choose_wait(void);
-MILL_EXPORT void *mill_choose_val(void);
+MILL_EXPORT void *mill_choose_val(size_t sz);
 
 /******************************************************************************/
 /*  IP address library                                                        */

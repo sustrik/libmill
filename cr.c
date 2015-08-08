@@ -38,14 +38,28 @@
    allocated at the moment. */
 size_t mill_valbuf_size = 128;
 
+/* Valbuf for tha main coroutine. */
+char mill_main_valbuf[128];
+
 volatile int mill_unoptimisable1 = 1;
 volatile void *mill_unoptimisable2 = NULL;
 
 struct mill_cr mill_main = {0};
+
 struct mill_cr *mill_running = &mill_main;
 
 /* Queue of coroutines scheduled for execution. */
 static struct mill_slist mill_ready = {0};
+
+int goprepare(int count, size_t stack_size, size_t val_size) {
+    if(mill_slow(mill_hascrs()))
+        mill_panic("goprepare called while coroutines are running");
+    /* If needed, make val size slightly bigger to align properly. */
+    mill_valbuf_size = (val_size + 15) & ~((size_t)0xf);
+    /* Allocate the stacks. */
+    return mill_preparestacks(count, stack_size + mill_valbuf_size +
+        sizeof(struct mill_cr));
+}
 
 int mill_suspend(void) {
     /* Store the context of the current coroutine, if any. */
@@ -121,12 +135,23 @@ void mill_yield(const char *current) {
 }
 
 void *mill_valbuf(struct mill_cr *cr, size_t size) {
-    if(mill_fast(size <= mill_valbuf_size))
-        return (void*)(((char*)cr) - mill_valbuf_size);
+    /* Small valbufs don't require dynamic allocation. Also note that main
+       coroutine doesn't have a stack allocated on the heap like other
+       coroutines, so we have to handle valbuf in a special way. */
+    if(mill_fast(cr != &mill_main)) {
+        if(mill_fast(size <= mill_valbuf_size))
+            return (void*)(((char*)cr) - mill_valbuf_size);
+    }
+    else {
+        if(mill_fast(size <= sizeof(mill_main_valbuf)))
+            return (void*)mill_main_valbuf;
+    }
+    /* Large valbufs are simply allocated on heap. */
     if(mill_fast(cr->valbuf && cr->valbuf_sz <= size))
         return cr->valbuf;
     cr->valbuf = realloc(cr->valbuf, size);
-    mill_assert(cr->valbuf);
+    if(!cr->valbuf)
+        mill_panic("not enough memory to receive from channel");
     cr->valbuf_sz = size;
     return cr->valbuf;
 }
