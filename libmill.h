@@ -39,7 +39,7 @@
 /*  www.gnu.org/software/libtool/manual/html_node/Updating-version-info.html  */
 
 /*  The current interface version. */
-#define MILL_VERSION_CURRENT  6
+#define MILL_VERSION_CURRENT 7
 
 /*  The latest revision of the current interface. */
 #define MILL_VERSION_REVISION 0
