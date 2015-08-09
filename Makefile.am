@@ -83,7 +83,8 @@ check_PROGRAMS = \
     tests/tcp\
     tests/udp\
     tests/unix\
-    tests/signals
+    tests/signals\
+    tests/sched
 
 LDADD = libmill.la
 
