@@ -56,8 +56,8 @@ any successes or failures on the project mailing list.</p>
 as follows:</p>
 
 <pre>
-$ tar -xzf libmill-0.14-beta.tar.gz
-$ cd libmill-0.14-beta
+$ tar -xzf libmill-0.15-beta.tar.gz
+$ cd libmill-0.15-beta
 $ ./configure
 $ make
 $ make check
@@ -392,21 +392,24 @@ function. To accept a new connection use <tt>tcpaccept()</tt> function:</p>
 
 <pre>
 ipaddr addr = iplocal("eth0", 5555, 0);
-tcpsock ls = tcplisten(addr);
+tcpsock ls = tcplisten(addr, 10);
 while(1) {
     tcpsock s = tcpaccept(ls, -1);
     ...
 }
 </pre>
 
-<p><tt>tcplisten()</tt> argument is an IP address of the local network interface
+<p>The second argument is unaccepted connection backlog, same as in POSIX
+<tt>listen()</tt> function.</p>
+
+<p>First argument is an IP address of the local network interface
 to bind to. If port number is zero an ephemeral port number will be chosen by
 the operating system. In such case you can retrieve the port number using
 <tt>tcppport()</tt> function:</p>
 
 <pre>
 ipaddr addr = iplocal(NULL, 5555, 0);
-tcpsock ls = tcplisten(addr);
+tcpsock ls = tcplisten(addr, 10);
 int port = tcpport(ls);
 </pre>
 
@@ -615,8 +618,6 @@ void *data = cls();
 
 <h3 id="memory">Dealing with memory</h3>
 
-<p><b>This section refers to an unreleased version of libmill!</b></p>
-
 <p>Most libmill functions report out of memory condition in the common way.
 <tt>chmake()</tt> returns <tt>NULL</tt>, <tt>tcplisten()</tt> returns
 <tt>NULL</tt> and sets <tt>errno</tt> to <tt>ENOMEM</tt> and so on.</p>
@@ -644,6 +645,12 @@ to allocate.</p>
 However, if you launch more parallelly running coroutines than allocated
 or pass a bigger element than specified through a channel, memory allocations
 will start happening again and all bets are off.</p>
+
+<p>NOTE: On some systems (e.g. Linux) memory overcommit is switched on by
+default. On such systems your application may be selected to be killed in low
+memory conditions without you having any say in it. If you can't guarantee that
+memory overcommit will be switched off when running the program don't even
+bother with the measures described above.</p>
 
 <h3 id="debug">Debugging</h3>
 
