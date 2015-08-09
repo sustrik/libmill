@@ -20,6 +20,7 @@ script:
 
 after_failure:
   - for f in tests/*.log; do echo; echo "${f}:"; cat $f; done;
+  - cat test-suite.log
 
 notifications:
   email: false
