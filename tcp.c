@@ -37,10 +37,6 @@
 #include "libmill.h"
 #include "utils.h"
 
-#ifndef MILL_TCP_LISTEN_BACKLOG
-#define MILL_TCP_LISTEN_BACKLOG 10
-#endif
-
 /* The buffer size is based on typical Ethernet MTU (1500 bytes). Making it
    smaller would yield small suboptimal packets. Making it higher would bring
    no substantial benefit. The value is made smaller to account for IPv4/IPv6
@@ -103,7 +99,7 @@ static void tcpconn_init(struct mill_tcpconn *conn, int fd) {
     conn->olen = 0;
 }
 
-tcpsock tcplisten(ipaddr addr) {
+tcpsock tcplisten(ipaddr addr, int backlog) {
     /* Open the listening socket. */
     int s = socket(mill_ipfamily(addr), SOCK_STREAM, 0);
     if(s == -1)
@@ -114,7 +110,7 @@ tcpsock tcplisten(ipaddr addr) {
     int rc = bind(s, (struct sockaddr*)&addr, mill_iplen(addr));
     if(rc != 0)
         return NULL;
-    rc = listen(s, MILL_TCP_LISTEN_BACKLOG);
+    rc = listen(s, backlog);
     if(rc != 0)
         return NULL;
 

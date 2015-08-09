@@ -35,10 +35,6 @@
 #include "libmill.h"
 #include "utils.h"
 
-#ifndef MILL_UNIX_LISTEN_BACKLOG
-#define MILL_UNIX_LISTEN_BACKLOG 10
-#endif
-
 #ifndef MILL_UNIX_BUFLEN
 #define MILL_UNIX_BUFLEN (4096)
 #endif
@@ -103,7 +99,7 @@ static void unixconn_init(struct mill_unixconn *conn, int fd) {
     conn->olen = 0;
 }
 
-unixsock unixlisten(const char *addr) {
+unixsock unixlisten(const char *addr, int backlog) {
     struct sockaddr_un su;
     int rc = mill_unixresolve(addr, &su);
     if (rc != 0) {
@@ -119,7 +115,7 @@ unixsock unixlisten(const char *addr) {
     rc = bind(s, (struct sockaddr*)&su, sizeof(struct sockaddr_un));
     if(rc != 0)
         return NULL;
-    rc = listen(s, MILL_UNIX_LISTEN_BACKLOG);
+    rc = listen(s, backlog);
     if(rc != 0)
         return NULL;
 

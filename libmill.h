@@ -274,7 +274,7 @@ MILL_EXPORT ipaddr ipremote(const char *name, int port, int mode,
 
 typedef struct mill_tcpsock *tcpsock;
 
-MILL_EXPORT tcpsock tcplisten(ipaddr addr);
+MILL_EXPORT tcpsock tcplisten(ipaddr addr, int backlog);
 MILL_EXPORT int tcpport(tcpsock s);
 MILL_EXPORT tcpsock tcpaccept(tcpsock s, int64_t deadline);
 MILL_EXPORT tcpsock tcpconnect(ipaddr addr, int64_t deadline);
@@ -305,7 +305,7 @@ MILL_EXPORT void udpclose(udpsock s);
 
 typedef struct mill_unixsock *unixsock;
 
-MILL_EXPORT unixsock unixlisten(const char *addr);
+MILL_EXPORT unixsock unixlisten(const char *addr, int backlog);
 MILL_EXPORT unixsock unixaccept(unixsock s, int64_t deadline);
 MILL_EXPORT unixsock unixconnect(const char *addr);
 MILL_EXPORT void unixpair(unixsock *a, unixsock *b);

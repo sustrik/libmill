@@ -56,7 +56,7 @@ int main() {
         assert(unlink(sockname) == 0);
     }
 
-    unixsock ls = unixlisten(sockname);
+    unixsock ls = unixlisten(sockname, 10);
     assert(ls);
 
     go(client(sockname));

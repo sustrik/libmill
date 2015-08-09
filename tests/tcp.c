@@ -49,7 +49,7 @@ void client(int port) {
 int main() {
     char buf[16];
 
-    tcpsock ls = tcplisten(iplocal(NULL, 5555, 0));
+    tcpsock ls = tcplisten(iplocal(NULL, 5555, 0), 10);
     assert(ls);
 
     go(client(tcpport(ls)));
