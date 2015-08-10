@@ -28,12 +28,28 @@
 #include <sys/time.h>
 #include "../libmill.h"
 
+static void delay(int n, chan ch) {
+    msleep(now() + n);
+    chs(ch, int, n);
+}
+
 int main() {
     /* Test 'msleep'. */
     int64_t deadline = now() + 100;
     msleep(deadline);
     int64_t diff = now () - deadline;
     assert(diff > -10 && diff < 10);
+
+    /* msleep-sort */
+    chan ch = chmake(int, 0);
+    go(delay(30, ch));
+    go(delay(40, ch));
+    go(delay(10, ch));
+    go(delay(20, ch));
+    assert(chr(ch, int) == 10);
+    assert(chr(ch, int) == 20);
+    assert(chr(ch, int) == 30);
+    assert(chr(ch, int) == 40);
 
     return 0;
 }
