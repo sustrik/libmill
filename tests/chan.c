@@ -23,7 +23,11 @@
 */
 
 #include <assert.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <signal.h>
 #include <stdio.h>
+#include <unistd.h>
 #include "../libmill.h"
 
 struct foo {
@@ -178,6 +182,32 @@ int main() {
     assert(val == 0);
     chclose(ch13);
     chclose(ch12);
+
+    pid_t pid;
+
+    /* Test panic when chs will deadlock. */
+    pid = fork();
+    assert(pid >= 0);
+    if (pid == 0) {
+        alarm(1);
+        chan ch = chmake(int, 0);
+        chs(ch, int, 42);
+        _exit(0);
+    }
+    assert(waitpid(pid, &val, 0) == pid);
+    assert(WIFSIGNALED(val) && WTERMSIG(val) == SIGABRT);
+
+    /* Test panic when chr will deadlock. */
+    pid = fork();
+    assert(pid >= 0);
+    if (pid == 0) {
+        alarm(1);
+        chan ch = chmake(int, 0);
+        chr(ch, int);
+        _exit(0);
+    }
+    assert(waitpid(pid, &val, 0) == pid);
+    assert(WIFSIGNALED(val) && WTERMSIG(val) == SIGABRT);
 
     return 0;
 }
