@@ -209,6 +209,32 @@ int main() {
     assert(waitpid(pid, &val, 0) == pid);
     assert(WIFSIGNALED(val) && WTERMSIG(val) == SIGABRT);
 
+    /* Test panic when sending to closed channel. */
+    pid = fork();
+    assert(pid >= 0);
+    if (pid == 0) {
+        alarm(1);
+        chan ch = chmake(int, 0);
+        chclose(ch);
+        chs(ch, int, 42);
+        _exit(0);
+    }
+    assert(waitpid(pid, &val, 0) == pid);
+    assert(WIFSIGNALED(val) && WTERMSIG(val) == SIGABRT);
+
+    /* Test panic when receiving from closed channel. */
+    pid = fork();
+    assert(pid >= 0);
+    if (pid == 0) {
+        alarm(1);
+        chan ch = chmake(int, 0);
+        chclose(ch);
+        chr(ch, int);
+        _exit(0);
+    }
+    assert(waitpid(pid, &val, 0) == pid);
+    assert(WIFSIGNALED(val) && WTERMSIG(val) == SIGABRT);
+
     return 0;
 }
 
