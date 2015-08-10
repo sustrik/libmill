@@ -41,6 +41,8 @@ tests/fdwait
 tests/tcp
 tests/udp
 tests/unix
+tests/signals
+tests/overload
 tests/*.trs
 tests/*.log
 perf/.dirstamp

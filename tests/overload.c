@@ -1,6 +1,6 @@
 /*
 
-  Copyright (c) 2015 Martin Sustrik
+  Copyright (c) 2015 Nir Soffer
 
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"),
@@ -22,13 +22,32 @@
 
 */
 
-#ifndef MILL_POLLER_INCLUDED
-#define MILL_POLLER_INCLUDED
+#include "../libmill.h"
 
-/* Wait till at least one coroutine is resumed. If block is set to 0 the
-   function will poll for events and return immediately. If it is set to 1
-   it will block until there's at least one event to process. */
-void mill_wait(int block);
+#include <assert.h>
+#include <unistd.h>
 
-#endif
+void relay(chan src, chan dst) {
+    while(1) {
+       int val = chr(src, int);
+       chs(dst, int, val);
+    }
+}
+
+int main() {
+    chan left = chmake(int, 0);
+    chan right = chmake(int, 0);
+
+    go(relay(left, right));
+    go(relay(right, left));
+
+    chs(left, int, 42);
+
+    /* Fail with exit code 128+SIGALRM if we deadlock */
+    alarm(1);
+
+    msleep(1);
+
+    return 0;
+}
 

@@ -156,21 +156,31 @@ int mill_fdwait(int fd, int events, int64_t deadline, const char *current) {
     return 0;
 }
 
-void mill_wait(void) {
+void mill_wait(int block) {
     /* The execution of the entire process would block. Let's panic. */
-    if(mill_slow(mill_list_empty(&mill_timers) && !mill_pollset_size))
+    if(block && mill_slow(mill_list_empty(&mill_timers) && !mill_pollset_size))
         mill_panic("global hang-up");
 
     int fired = 0;
     int rc;
     while(1) {
-        /* Compute the time till next expired sleeping coroutine. */
-        int timeout = -1;
-        if(!mill_list_empty(&mill_timers)) {
-            int64_t nw = now();
-            int64_t expiry = mill_cont(mill_list_begin(&mill_timers),
-                struct mill_fdwait, item)->expiry;
-            timeout = nw >= expiry ? 0 : expiry - nw;
+
+        /* Compute timeout for the subsequent poll. */
+        int timeout;
+        if(!block) {
+            timeout = 0;
+        }
+        else {
+            /* Compute the time till next expired sleeping coroutine. */
+            if(!mill_list_empty(&mill_timers)) {
+                int64_t nw = now();
+                int64_t expiry = mill_cont(mill_list_begin(&mill_timers),
+                    struct mill_fdwait, item)->expiry;
+                timeout = nw >= expiry ? 0 : expiry - nw;
+            }
+            else {
+                timeout = -1;
+            }
         }
 
         /* Wait for events. */
@@ -192,7 +202,9 @@ void mill_wait(void) {
                 fired = 1;
             }
         }
-
+        /* Never retry the poll in non-blocking mode. */
+        if(!block)
+            break;
         /* If timeout was hit but there were no expired timers do the poll
            again. This should not happen in theory but let's be ready for the
            case when the system timers are not precise. */

@@ -88,20 +88,30 @@ int goprepare(int count, size_t stack_size, size_t val_size) {
 }
 
 int mill_suspend(void) {
+    /* Even if process never gets idle, we have to process external events
+       once in a while. The external signal may very well be a deadline or
+       a user-issued command that cancels the CPU intensive operation. */
+    static int counter = 0;
+    if(counter >= 103) {
+        mill_wait(0);
+        counter = 0;
+    }
     /* Store the context of the current coroutine, if any. */
     if(mill_running && mill_setjmp(&mill_running->ctx))
         return mill_running->result;
     while(1) {
         /* If there's a coroutine ready to be executed go for it. */
         if(!mill_slist_empty(&mill_ready)) {
+            ++counter;
             struct mill_slist_item *it = mill_slist_pop(&mill_ready);
             mill_running = mill_cont(it, struct mill_cr, u_ready.item);
             mill_jmp(&mill_running->ctx);
         }
         /*  Otherwise, we are going to wait for sleeping coroutines
             and for external events. */
-        mill_wait();
+        mill_wait(1);
         assert(!mill_slist_empty(&mill_ready));
+        counter = 0;
     }
 }
 
