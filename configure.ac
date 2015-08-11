@@ -94,6 +94,8 @@ fi
 
 AC_CHECK_LIB([rt], [clock_gettime])
 AC_CHECK_FUNCS([clock_gettime])
+AC_CHECK_LIB([anl], [getaddrinfo_a])
+AC_CHECK_FUNCS([getaddrinfo_a])
 
 ################################################################################
 #  Libtool                                                                     #
