@@ -262,13 +262,18 @@ ipaddr ipremote(const char *name, int port, int mode, int64_t deadline) {
     int rc = getaddrinfo_a(GAI_NOWAIT, &pgcb, 1, &sev);
     if(mill_slow(rc != 0)) {
         if(rc == EAI_AGAIN || rc == EAI_MEMORY) {
+            close(efd);
             errno = ENOMEM;
             return addr;
         }
         mill_assert(0);
     }
     rc = fdwait(efd, FDW_IN, deadline);
-    mill_assert(rc == FDW_IN); /* TODO: Handle deadline! */
+    if(rc == 0) {
+        gai_cancel(&gcb);
+        rc = fdwait(efd, FDW_IN, -1);
+    }
+    mill_assert(rc == FDW_IN);
     close(efd);
     rc = gai_error(&gcb);
     if(rc != 0) {
