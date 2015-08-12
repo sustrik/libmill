@@ -28,24 +28,20 @@
 #include <sys/eventfd.h>
 #endif
 
-#include "ip.h"
-#include "libmill.h"
-#include "utils.h"
-
 #include <arpa/inet.h>
 #include <errno.h>
-#include <ifaddrs.h>
 #include <netinet/in.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
-<<<<<<< HEAD
 #if !defined __sun
 #include <ifaddrs.h>
 #endif
-=======
 #include <unistd.h>
->>>>>>> 45a2afc50c22e92c295291314869c3a8414ac0f7
+
+#include "ip.h"
+#include "libmill.h"
+#include "utils.h"
 
 MILL_CT_ASSERT(sizeof(ipaddr) >= sizeof(struct sockaddr_in));
 MILL_CT_ASSERT(sizeof(ipaddr) >= sizeof(struct sockaddr_in6));
