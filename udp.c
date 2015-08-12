@@ -22,10 +22,6 @@
 
 */
 
-#include "ip.h"
-#include "libmill.h"
-#include "utils.h"
-
 #include <arpa/inet.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -36,6 +32,10 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <unistd.h>
+
+#include "ip.h"
+#include "libmill.h"
+#include "utils.h"
 
 struct mill_udpsock {
     int fd;

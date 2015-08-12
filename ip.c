@@ -32,7 +32,9 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#if !defined __sun
 #include <ifaddrs.h>
+#endif
 
 MILL_CT_ASSERT(sizeof(ipaddr) >= sizeof(struct sockaddr_in));
 MILL_CT_ASSERT(sizeof(ipaddr) >= sizeof(struct sockaddr_in6));
@@ -144,6 +146,9 @@ ipaddr iplocal(const char *name, int port, int mode) {
     if(!name)
         return mill_ipany(port, mode);
     ipaddr addr = mill_ipliteral(name, port, mode);
+#if defined __sun
+    return addr;
+#else
     if(errno == 0)
        return addr;
     /* Address is not a literal. It must be an interface name then. */
@@ -213,6 +218,7 @@ ipaddr iplocal(const char *name, int port, int mode) {
     ((struct sockaddr*)&addr)->sa_family = AF_UNSPEC;
     errno = ENODEV;
     return addr;
+#endif
 }
 
 ipaddr ipremote(const char *name, int port, int mode, int64_t deadline) {

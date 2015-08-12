@@ -22,10 +22,10 @@
 
 */
 
-#include "../libmill.h"
-
 #include <assert.h>
 #include <unistd.h>
+
+#include "../libmill.h"
 
 void relay(chan src, chan dst) {
     while(1) {
