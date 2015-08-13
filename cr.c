@@ -22,16 +22,15 @@
 
 */
 
+#include <stddef.h>
+#include <stdio.h>
+
 #include "cr.h"
 #include "debug.h"
 #include "libmill.h"
 #include "poller.h"
 #include "stack.h"
 #include "utils.h"
-
-#include <assert.h>
-#include <stddef.h>
-#include <stdio.h>
 
 /* Size of the buffer for temporary storage of values received from channels.
    It should be properly aligned and never change if there are any stacks
@@ -110,7 +109,7 @@ int mill_suspend(void) {
         /*  Otherwise, we are going to wait for sleeping coroutines
             and for external events. */
         mill_wait(1);
-        assert(!mill_slist_empty(&mill_ready));
+        mill_assert(!mill_slist_empty(&mill_ready));
         counter = 0;
     }
 }

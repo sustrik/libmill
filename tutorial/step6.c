@@ -22,11 +22,11 @@
 
 */
 
-#include "../libmill.h"
-
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+#include "../libmill.h"
 
 #define CONN_ESTABLISHED 1
 #define CONN_SUCCEEDED 2

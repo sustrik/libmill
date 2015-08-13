@@ -22,11 +22,11 @@
 
 */
 
-#include "../libmill.h"
-
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+#include "../libmill.h"
 
 void dialogue(tcpsock as) {
     tcpsend(as, "What's your name?\r\n", 19, -1);

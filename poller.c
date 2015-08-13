@@ -22,16 +22,16 @@
 
 */
 
+#include <errno.h>
+#include <poll.h>
+#include <stddef.h>
+#include <stdlib.h>
+
 #include "cr.h"
 #include "libmill.h"
 #include "list.h"
 #include "poller.h"
 #include "utils.h"
-
-#include <errno.h>
-#include <poll.h>
-#include <stddef.h>
-#include <stdlib.h>
 
 /* Global linked list of all timers. The list is ordered.
    First timer to be resume comes first and so on. */

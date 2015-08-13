@@ -22,11 +22,11 @@
 
 */
 
-#include "../libmill.h"
-
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+#include "../libmill.h"
 
 void dialogue(tcpsock as) {
     int64_t deadline = now() + 10000;

@@ -22,14 +22,14 @@
 
 */
 
-#include "libmill.h"
-#include "utils.h"
-
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/time.h>
 #include <time.h>
+
+#include "libmill.h"
+#include "utils.h"
 
 #if defined __APPLE__
 #include <mach/mach_time.h>

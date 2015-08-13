@@ -25,11 +25,11 @@
 #ifndef MILL_CHAN_INCLUDED
 #define MILL_CHAN_INCLUDED
 
+#include <stddef.h>
+
 #include "debug.h"
 #include "list.h"
 #include "slist.h"
-
-#include <stddef.h>
 
 /* Channel endpoint. */
 struct mill_ep {

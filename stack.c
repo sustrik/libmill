@@ -22,13 +22,13 @@
 
 */
 
-#include "slist.h"
-#include "stack.h"
-#include "utils.h"
-
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
+
+#include "slist.h"
+#include "stack.h"
+#include "utils.h"
 
 /* Size of stack for all coroutines. In bytes. Default size is slightly smaller
    than page size to account for malloc's chunk header. */

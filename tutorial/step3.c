@@ -22,11 +22,11 @@
 
 */
 
-#include "../libmill.h"
-
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+#include "../libmill.h"
 
 int main(int argc, char *argv[]) {
 

@@ -22,17 +22,17 @@
 
 */
 
-#include "chan.h"
-#include "cr.h"
-#include "debug.h"
-#include "libmill.h"
-#include "utils.h"
-
 #include <assert.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "chan.h"
+#include "cr.h"
+#include "debug.h"
+#include "libmill.h"
+#include "utils.h"
 
 MILL_CT_ASSERT(MILL_CLAUSELEN == sizeof(struct mill_clause));
 

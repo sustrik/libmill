@@ -23,10 +23,9 @@
 */
 
 #include <assert.h>
+#include <stdio.h>
 
 #include "../libmill.h"
-
-#include <stdio.h>
 
 int main() {
     udpsock s1 = udplisten(iplocal(NULL, 5555, 0));

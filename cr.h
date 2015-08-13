@@ -25,12 +25,12 @@
 #ifndef MILL_CR_INCLUDED
 #define MILL_CR_INCLUDED
 
+#include <stdint.h>
+
 #include "debug.h"
 #include "list.h"
 #include "slist.h"
 #include "utils.h"
-
-#include <stdint.h>
 
 enum mill_state {
     MILL_READY,

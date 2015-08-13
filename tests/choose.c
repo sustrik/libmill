@@ -24,6 +24,7 @@
 
 #include <assert.h>
 #include <stdio.h>
+
 #include "../libmill.h"
 
 void sender1(chan ch, int val) {

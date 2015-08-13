@@ -22,18 +22,18 @@
 
 */
 
+#include <assert.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <sys/time.h>
+#include <time.h>
+
 #include "chan.h"
 #include "cr.h"
 #include "libmill.h"
 #include "list.h"
 #include "stack.h"
 #include "utils.h"
-
-#include <assert.h>
-#include <stdarg.h>
-#include <stdio.h>
-#include <sys/time.h>
-#include <time.h>
 
 /* ID to be assigned to next launched coroutine. */
 static int mill_next_cr_id = 1;
