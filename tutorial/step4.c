@@ -22,20 +22,58 @@
 
 */
 
-#ifndef MILL_STACK_INCLUDED
-#define MILL_STACK_INCLUDED
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-#include <stddef.h>
+#include "../libmill.h"
 
-/* Purges all the existing cached stacks and preallocated 'count' new stacks
-   of size 'stack_size'. Returns number of actually allocated stacks. */
-int mill_preparestacks(int count, size_t stack_size);
+void dialogue(tcpsock as) {
+    tcpsend(as, "What's your name?\r\n", 19, -1);
+    if(errno != 0)
+        goto cleanup;
+    tcpflush(as, -1);
+    if(errno != 0)
+        goto cleanup;
 
-/* Allocates new stack. Returns pointer to the *top* of the stack.
-   For now we assume that the stack grows downwards. */
-void *mill_allocstack(void);
+    char inbuf[256];
+    size_t sz = tcprecvuntil(as, inbuf, sizeof(inbuf), "\r", 1, -1);
+    if(errno != 0)
+        goto cleanup;
 
-/* Deallocates a stack. The argument is pointer to the top of the stack. */
-void mill_freestack(void *stack);
+    inbuf[sz - 1] = 0;
+    char outbuf[256];
+    int rc = snprintf(outbuf, sizeof(outbuf), "Hello, %s!\r\n", inbuf);
 
-#endif
+    sz = tcpsend(as, outbuf, rc, -1);
+    if(errno != 0)
+        goto cleanup;
+    tcpflush(as, -1);
+    if(errno != 0)
+        goto cleanup;
+
+    cleanup:
+    tcpclose(as);
+}
+
+int main(int argc, char *argv[]) {
+
+    int port = 5555;
+    if(argc > 1)
+        port = atoi(argv[1]);
+
+    ipaddr addr = iplocal(NULL, port, 0);
+    tcpsock ls = tcplisten(addr, 10);
+    if(!ls) {
+        perror("Can't open listening socket");
+        return 1;
+    }
+
+    while(1) {
+        tcpsock as = tcpaccept(ls, -1);
+        if(!as)
+            continue;
+        go(dialogue(as));
+    }
+}
+

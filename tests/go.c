@@ -24,6 +24,7 @@
 
 #include <assert.h>
 #include <stdio.h>
+
 #include "../libmill.h"
 
 int sum = 0;
@@ -37,6 +38,7 @@ void worker(int count, int n) {
 }
 
 int main() {
+    goprepare(10, 25000, 300);
     go(worker(3, 7));
     go(worker(1, 11));
     go(worker(2, 5));

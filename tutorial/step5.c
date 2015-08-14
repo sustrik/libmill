@@ -22,40 +22,60 @@
 
 */
 
-#include <assert.h>
-#include <stdint.h>
-#include <stdlib.h>
+#include <errno.h>
 #include <stdio.h>
-#include <sys/time.h>
+#include <stdlib.h>
 
 #include "../libmill.h"
 
-static void worker(void) {
+void dialogue(tcpsock as) {
+    int64_t deadline = now() + 10000;
+
+    tcpsend(as, "What's your name?\r\n", 19, deadline);
+    if(errno != 0)
+        goto cleanup;
+    tcpflush(as, deadline);
+    if(errno != 0)
+        goto cleanup;
+
+    char inbuf[256];
+    size_t sz = tcprecvuntil(as, inbuf, sizeof(inbuf), "\r", 1, deadline);
+    if(errno != 0)
+        goto cleanup;
+
+    inbuf[sz - 1] = 0;
+    char outbuf[256];
+    int rc = snprintf(outbuf, sizeof(outbuf), "Hello, %s!\r\n", inbuf);
+
+    sz = tcpsend(as, outbuf, rc, deadline);
+    if(errno != 0)
+        goto cleanup;
+    tcpflush(as, deadline);
+    if(errno != 0)
+        goto cleanup;
+
+    cleanup:
+    tcpclose(as);
 }
 
 int main(int argc, char *argv[]) {
-    if(argc != 2) {
-        printf("usage: go <millions-of-coroutines>\n");
+
+    int port = 5555;
+    if(argc > 1)
+        port = atoi(argv[1]);
+
+    ipaddr addr = iplocal(NULL, port, 0);
+    tcpsock ls = tcplisten(addr, 10);
+    if(!ls) {
+        perror("Can't open listening socket");
         return 1;
     }
-    long count = atol(argv[1]) * 1000000;
 
-    int64_t start = now();
-
-    long i;
-    for(i = 0; i != count; ++i)
-        go(worker());
-
-    int64_t stop = now();
-    long duration = (long)(stop - start);
-    long ns = (duration * 1000000) / count;
-
-    printf("executed %ldM coroutines in %f seconds\n",
-        (long)(count / 1000000), ((float)duration) / 1000);
-    printf("duration of one coroutine creation+termination: %ld ns\n", ns);
-    printf("coroutine creations+terminatios per second: %fM\n",
-        (float)(1000000000 / ns) / 1000000);
-
-    return 0;
+    while(1) {
+        tcpsock as = tcpaccept(ls, -1);
+        if(!as)
+            continue;
+        go(dialogue(as));
+    }
 }
 

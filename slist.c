@@ -22,9 +22,9 @@
 
 */
 
-#include "slist.h"
-
 #include <stddef.h>
+
+#include "slist.h"
 
 void mill_slist_init(struct mill_slist *self) {
     self->first = NULL;

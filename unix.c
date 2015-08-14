@@ -1,4 +1,4 @@
-    /*
+/*
 
   Copyright (c) 2015 Martin Sustrik
 
@@ -22,66 +22,54 @@
 
 */
 
-#include <arpa/inet.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <netinet/in.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <unistd.h>
 
-#include "ip.h"
 #include "libmill.h"
 #include "utils.h"
 
-/* The buffer size is based on typical Ethernet MTU (1500 bytes). Making it
-   smaller would yield small suboptimal packets. Making it higher would bring
-   no substantial benefit. The value is made smaller to account for IPv4/IPv6
-   and TCP headers. Few more bytes are subtracted to account for any possible
-   IP or TCP options */
-#ifndef MILL_TCP_BUFLEN
-#define MILL_TCP_BUFLEN (1500 - 68)
+#ifndef MILL_UNIX_BUFLEN
+#define MILL_UNIX_BUFLEN (4096)
 #endif
 
-enum mill_tcptype {
-   MILL_TCPLISTENER,
-   MILL_TCPCONN
+enum mill_unixtype {
+   MILL_UNIXLISTENER,
+   MILL_UNIXCONN
 };
 
-struct mill_tcpsock {
-    enum mill_tcptype type;
+struct mill_unixsock {
+    enum mill_unixtype type;
 };
 
-struct mill_tcplistener {
-    struct mill_tcpsock sock;
+struct mill_unixlistener {
+    struct mill_unixsock sock;
     int fd;
-    int port;
 };
 
-struct mill_tcpconn {
-    struct mill_tcpsock sock;
+struct mill_unixconn {
+    struct mill_unixsock sock;
     int fd;
     int ifirst;
     int ilen;
     int olen;
-    char ibuf[MILL_TCP_BUFLEN];
-    char obuf[MILL_TCP_BUFLEN];
+    char ibuf[MILL_UNIX_BUFLEN];
+    char obuf[MILL_UNIX_BUFLEN];
 };
 
-static void mill_tcptune(int s) {
+static void mill_unixtune(int s) {
     /* Make the socket non-blocking. */
     int opt = fcntl(s, F_GETFL, 0);
     if (opt == -1)
         opt = 0;
     int rc = fcntl(s, F_SETFL, opt | O_NONBLOCK);
     mill_assert(rc != -1);
-    /*  Allow re-using the same local address rapidly. */
-    opt = 1;
-    rc = setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof (opt));
-    mill_assert(rc == 0);
     /* If possible, prevent SIGPIPE signal when writing to the connection
         already closed by the peer. */
 #ifdef SO_NOSIGPIPE
@@ -91,84 +79,77 @@ static void mill_tcptune(int s) {
 #endif
 }
 
-static void tcpconn_init(struct mill_tcpconn *conn, int fd) {
-    conn->sock.type = MILL_TCPCONN;
+static int mill_unixresolve(const char *addr, struct sockaddr_un *su) {
+    mill_assert(su);
+    if (strlen(addr) >= sizeof(su->sun_path)) {
+        errno = EINVAL;
+        return -1;
+    }
+    su->sun_family = AF_UNIX;
+    strncpy(su->sun_path, addr, sizeof(su->sun_path));
+    errno = 0;
+    return 0;
+}
+
+static void unixconn_init(struct mill_unixconn *conn, int fd) {
+    conn->sock.type = MILL_UNIXCONN;
     conn->fd = fd;
     conn->ifirst = 0;
     conn->ilen = 0;
     conn->olen = 0;
 }
 
-tcpsock tcplisten(ipaddr addr, int backlog) {
+unixsock unixlisten(const char *addr, int backlog) {
+    struct sockaddr_un su;
+    int rc = mill_unixresolve(addr, &su);
+    if (rc != 0) {
+        return NULL;
+    }
     /* Open the listening socket. */
-    int s = socket(mill_ipfamily(addr), SOCK_STREAM, 0);
+    int s = socket(AF_UNIX, SOCK_STREAM, 0);
     if(s == -1)
         return NULL;
-    mill_tcptune(s);
+    mill_unixtune(s);
 
     /* Start listening. */
-    int rc = bind(s, (struct sockaddr*)&addr, mill_iplen(addr));
+    rc = bind(s, (struct sockaddr*)&su, sizeof(struct sockaddr_un));
     if(rc != 0)
         return NULL;
     rc = listen(s, backlog);
     if(rc != 0)
         return NULL;
 
-    /* If the user requested an ephemeral port,
-       retrieve the port number assigned by the OS now. */
-    int port = mill_ipport(addr);
-    if(!port == 0) {
-        ipaddr baddr;
-        socklen_t len = sizeof(ipaddr);
-        rc = getsockname(s, (struct sockaddr*)&baddr, &len);
-        if(rc == -1) {
-            int err = errno;
-            close(s);
-            errno = err;
-            return NULL;
-        }
-        port = mill_ipport(baddr);
-    }
-
     /* Create the object. */
-    struct mill_tcplistener *l = malloc(sizeof(struct mill_tcplistener));
+    struct mill_unixlistener *l = malloc(sizeof(struct mill_unixlistener));
     if(!l) {
         close(s);
         errno = ENOMEM;
         return NULL;
     }
-    l->sock.type = MILL_TCPLISTENER;
+    l->sock.type = MILL_UNIXLISTENER;
     l->fd = s;
-    l->port = port;
     errno = 0;
     return &l->sock;
 }
 
-int tcpport(tcpsock s) {
-    if(s->type != MILL_TCPLISTENER)
-        mill_panic("trying to get port from a socket that isn't listening");
-    struct mill_tcplistener *l = (struct mill_tcplistener*)s;
-    return l->port;
-}
-
-tcpsock tcpaccept(tcpsock s, int64_t deadline) {
-    if(s->type != MILL_TCPLISTENER)
+unixsock unixaccept(unixsock s, int64_t deadline) {
+    if(s->type != MILL_UNIXLISTENER)
         mill_panic("trying to accept on a socket that isn't listening");
-    struct mill_tcplistener *l = (struct mill_tcplistener*)s;
+    struct mill_unixlistener *l = (struct mill_unixlistener*)s;
     while(1) {
         /* Try to get new connection (non-blocking). */
         int as = accept(l->fd, NULL, NULL);
         if (as >= 0) {
-            mill_tcptune(as);
-            struct mill_tcpconn *conn = malloc(sizeof(struct mill_tcpconn));
+            mill_unixtune(as);
+            struct mill_unixconn *conn = malloc(sizeof(struct mill_unixconn));
             if(!conn) {
                 close(as);
                 errno = ENOMEM;
                 return NULL;
             }
-            tcpconn_init(conn, as);
+            unixconn_init(conn, as);
             errno = 0;
-            return (tcpsock)conn;
+            return (unixsock)conn;
         }
         mill_assert(as == -1);
         if(errno != EAGAIN && errno != EWOULDBLOCK)
@@ -183,59 +164,81 @@ tcpsock tcpaccept(tcpsock s, int64_t deadline) {
     }
 }
 
-tcpsock tcpconnect(ipaddr addr, int64_t deadline) {
+unixsock unixconnect(const char *addr) {
+    struct sockaddr_un su;
+    int rc = mill_unixresolve(addr, &su);
+    if (rc != 0) {
+        return NULL;
+    }
+
     /* Open a socket. */
-    int s = socket(mill_ipfamily(addr), SOCK_STREAM, 0);
+    int s = socket(AF_UNIX,  SOCK_STREAM, 0);
     if(s == -1)
         return NULL;
-    mill_tcptune(s);
+    mill_unixtune(s);
 
     /* Connect to the remote endpoint. */
-    int rc = connect(s, (struct sockaddr*)&addr, mill_iplen(addr));
+    rc = connect(s, (struct sockaddr*)&su, sizeof(struct sockaddr_un));
     if(rc != 0) {
+        int err = errno;
         mill_assert(rc == -1);
-        if(errno != EINPROGRESS)
-            return NULL;
-        rc = fdwait(s, FDW_OUT, deadline);
-        if(rc == 0) {
-            errno = ETIMEDOUT;
-            return NULL;
-        }
-        int err;
-        socklen_t errsz = sizeof(err);
-        rc = getsockopt(s, SOL_SOCKET, SO_ERROR, (void*)&err, &errsz);
-        if(rc != 0) {
-            err = errno;
-            close(s);
-            errno = err;
-            return NULL;
-        }
-        if(err != 0) {
-            close(s);
-            errno = err;
-            return NULL;
-        }
+        close(s);
+        errno = err;
+        return NULL;
     }
 
     /* Create the object. */
-    struct mill_tcpconn *conn = malloc(sizeof(struct mill_tcpconn));
+    struct mill_unixconn *conn = malloc(sizeof(struct mill_unixconn));
     if(!conn) {
         close(s);
         errno = ENOMEM;
         return NULL;
     }
-    tcpconn_init(conn, s);
+    unixconn_init(conn, s);
     errno = 0;
-    return (tcpsock)conn;
+    return (unixsock)conn;
 }
 
-size_t tcpsend(tcpsock s, const void *buf, size_t len, int64_t deadline) {
-    if(s->type != MILL_TCPCONN)
+void unixpair(unixsock *a, unixsock *b) {
+    if(!a || !b) {
+        errno = EINVAL;
+        return;
+    }
+    int fd[2];
+    int rc = socketpair(AF_UNIX, SOCK_STREAM, 0, fd);
+    if (rc != 0)
+        return;
+    mill_unixtune(fd[0]);
+    mill_unixtune(fd[1]);
+    struct mill_unixconn *conn = malloc(sizeof(struct mill_unixconn));
+    if(!conn) {
+        close(fd[0]);
+        close(fd[1]);
+        errno = ENOMEM;
+        return;
+    }
+    unixconn_init(conn, fd[0]);
+    *a = (unixsock)conn;
+    conn = malloc(sizeof(struct mill_unixconn));
+    if(!conn) {
+        free(*a);
+        close(fd[0]);
+        close(fd[1]);
+        errno = ENOMEM;
+        return;
+    }
+    unixconn_init(conn, fd[1]);
+    *b = (unixsock)conn;
+    errno = 0;
+}
+
+size_t unixsend(unixsock s, const void *buf, size_t len, int64_t deadline) {
+    if(s->type != MILL_UNIXCONN)
         mill_panic("trying to send to an unconnected socket");
-    struct mill_tcpconn *conn = (struct mill_tcpconn*)s;
+    struct mill_unixconn *conn = (struct mill_unixconn*)s;
 
     /* If it fits into the output buffer copy it there and be done. */
-    if(conn->olen + len <= MILL_TCP_BUFLEN) {
+    if(conn->olen + len <= MILL_UNIX_BUFLEN) {
         memcpy(&conn->obuf[conn->olen], buf, len);
         conn->olen += len;
         errno = 0;
@@ -243,12 +246,12 @@ size_t tcpsend(tcpsock s, const void *buf, size_t len, int64_t deadline) {
     }
 
     /* If it doesn't fit, flush the output buffer first. */
-    tcpflush(s, deadline);
+    unixflush(s, deadline);
     if(errno != 0)
         return 0;
 
     /* Try to fit it into the buffer once again. */
-    if(conn->olen + len <= MILL_TCP_BUFLEN) {
+    if(conn->olen + len <= MILL_UNIX_BUFLEN) {
         memcpy(&conn->obuf[conn->olen], buf, len);
         conn->olen += len;
         errno = 0;
@@ -278,10 +281,10 @@ size_t tcpsend(tcpsock s, const void *buf, size_t len, int64_t deadline) {
     return len;
 }
 
-void tcpflush(tcpsock s, int64_t deadline) {
-    if(s->type != MILL_TCPCONN)
+void unixflush(unixsock s, int64_t deadline) {
+    if(s->type != MILL_UNIXCONN)
         mill_panic("trying to send to an unconnected socket");
-    struct mill_tcpconn *conn = (struct mill_tcpconn*)s;
+    struct mill_unixconn *conn = (struct mill_unixconn*)s;
     if(!conn->olen) {
         errno = 0;
         return;
@@ -308,10 +311,10 @@ void tcpflush(tcpsock s, int64_t deadline) {
     errno = 0;
 }
 
-size_t tcprecv(tcpsock s, void *buf, size_t len, int64_t deadline) {
-    if(s->type != MILL_TCPCONN)
+size_t unixrecv(unixsock s, void *buf, size_t len, int64_t deadline) {
+    if(s->type != MILL_UNIXCONN)
         mill_panic("trying to receive from an unconnected socket");
-    struct mill_tcpconn *conn = (struct mill_tcpconn*)s;
+    struct mill_unixconn *conn = (struct mill_unixconn*)s;
     /* If there's enough data in the buffer it's easy. */
     if(conn->ilen >= len) {
         memcpy(buf, &conn->ibuf[conn->ifirst], len);
@@ -332,13 +335,13 @@ size_t tcprecv(tcpsock s, void *buf, size_t len, int64_t deadline) {
 
     mill_assert(remaining);
     while(1) {
-        if(remaining > MILL_TCP_BUFLEN) {
+        if(remaining > MILL_UNIX_BUFLEN) {
             /* If we still have a lot to read try to read it in one go directly
                into the destination buffer. */
             ssize_t sz = recv(conn->fd, pos, remaining, 0);
             if(!sz) {
-		        errno = ECONNRESET;
-		        return len - remaining;
+                errno = ECONNRESET;
+                return len - remaining;
             }
             if(sz == -1) {
                 if(errno != EAGAIN && errno != EWOULDBLOCK)
@@ -355,10 +358,10 @@ size_t tcprecv(tcpsock s, void *buf, size_t len, int64_t deadline) {
         else {
             /* If we have just a little to read try to read the full connection
                buffer to minimise the number of system calls. */
-            ssize_t sz = recv(conn->fd, conn->ibuf, MILL_TCP_BUFLEN, 0);
+            ssize_t sz = recv(conn->fd, conn->ibuf, MILL_UNIX_BUFLEN, 0);
             if(!sz) {
-		        errno = ECONNRESET;
-		        return len - remaining;
+                errno = ECONNRESET;
+                return len - remaining;
             }
             if(sz == -1) {
                 if(errno != EAGAIN && errno != EWOULDBLOCK)
@@ -390,14 +393,14 @@ size_t tcprecv(tcpsock s, void *buf, size_t len, int64_t deadline) {
     }
 }
 
-size_t tcprecvuntil(tcpsock s, void *buf, size_t len,
+size_t unixrecvuntil(unixsock s, void *buf, size_t len,
       const char *delims, size_t delimcount, int64_t deadline) {
-    if(s->type != MILL_TCPCONN)
+    if(s->type != MILL_UNIXCONN)
         mill_panic("trying to receive from an unconnected socket");
-    char *pos = (char*)buf;
+    unsigned char *pos = (unsigned char*)buf;
     size_t i;
     for(i = 0; i != len; ++i, ++pos) {
-        size_t res = tcprecv(s, pos, 1, deadline);
+        size_t res = unixrecv(s, pos, 1, deadline);
         if(res == 1) {
             size_t j;
             for(j = 0; j != delimcount; ++j)
@@ -411,16 +414,16 @@ size_t tcprecvuntil(tcpsock s, void *buf, size_t len,
     return len;
 }
 
-void tcpclose(tcpsock s) {
-    if(s->type == MILL_TCPLISTENER) {
-        struct mill_tcplistener *l = (struct mill_tcplistener*)s;
+void unixclose(unixsock s) {
+    if(s->type == MILL_UNIXLISTENER) {
+        struct mill_unixlistener *l = (struct mill_unixlistener*)s;
         int rc = close(l->fd);
         mill_assert(rc == 0);
         free(l);
         return;
     }
-    if(s->type == MILL_TCPCONN) {
-        struct mill_tcpconn *c = (struct mill_tcpconn*)s;
+    if(s->type == MILL_UNIXCONN) {
+        struct mill_unixconn *c = (struct mill_unixconn*)s;
         int rc = close(c->fd);
         mill_assert(rc == 0);
         free(c);

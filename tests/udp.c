@@ -22,20 +22,45 @@
 
 */
 
-#ifndef MILL_STACK_INCLUDED
-#define MILL_STACK_INCLUDED
+#include <assert.h>
+#include <stdio.h>
 
-#include <stddef.h>
+#include "../libmill.h"
 
-/* Purges all the existing cached stacks and preallocated 'count' new stacks
-   of size 'stack_size'. Returns number of actually allocated stacks. */
-int mill_preparestacks(int count, size_t stack_size);
+int main() {
+    udpsock s1 = udplisten(iplocal(NULL, 5555, 0));
+    udpsock s2 = udplisten(iplocal(NULL, 5556, 0));
 
-/* Allocates new stack. Returns pointer to the *top* of the stack.
-   For now we assume that the stack grows downwards. */
-void *mill_allocstack(void);
+    ipaddr addr = ipremote("127.0.0.1", 5556, 0, -1);
 
-/* Deallocates a stack. The argument is pointer to the top of the stack. */
-void mill_freestack(void *stack);
+    while(1) {
+        udpsend(s1, addr, "ABC", 3);
+        assert(errno == 0);
+        
+        char buf[3];
+        size_t sz = udprecv(s2, &addr, buf, sizeof(buf), now() + 100);
+        if(errno == ETIMEDOUT)
+            continue;
+        assert(errno == 0);
+        assert(sz == 3);
+        break;
+    }
 
-#endif
+    while(1) {
+        udpsend(s2, addr, "DEF", 3);
+        assert(errno == 0);
+
+        char buf[3];
+        size_t sz = udprecv(s1, &addr, buf, sizeof(buf), now() + 100);
+        if(errno == ETIMEDOUT)
+            continue;
+        assert(errno == 0);
+        assert(sz == 3);
+        break;
+    }
+
+    udpclose(s2);
+    udpclose(s1);
+    return 0;
+}
+

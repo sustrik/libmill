@@ -23,6 +23,7 @@
 */
 
 #include <stdio.h>
+
 #include "../libmill.h"
 
 void worker(int count, const char *text) {

@@ -22,13 +22,13 @@
 
 */
 
-#include "../libmill.h"
-
 #include <assert.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/time.h>
+
+#include "../libmill.h"
 
 int main(int argc, char *argv[]) {
     if(argc != 2) {

@@ -25,8 +25,10 @@
 #ifndef MILL_POLLER_INCLUDED
 #define MILL_POLLER_INCLUDED
 
-/* Wait till at least one coroutine is resumed. */
-void mill_wait(void);
+/* Wait till at least one coroutine is resumed. If block is set to 0 the
+   function will poll for events and return immediately. If it is set to 1
+   it will block until there's at least one event to process. */
+void mill_wait(int block);
 
 #endif
 

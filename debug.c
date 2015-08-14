@@ -22,18 +22,18 @@
 
 */
 
+#include <assert.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <sys/time.h>
+#include <time.h>
+
 #include "chan.h"
 #include "cr.h"
 #include "libmill.h"
 #include "list.h"
 #include "stack.h"
 #include "utils.h"
-
-#include <assert.h>
-#include <stdarg.h>
-#include <stdio.h>
-#include <sys/time.h>
-#include <time.h>
 
 /* ID to be assigned to next launched coroutine. */
 static int mill_next_cr_id = 1;
@@ -226,12 +226,17 @@ void mill_trace_(const char *location, const char *format, ...) {
 }
 
 void mill_preserve_debug(void) {
-    /* Do nothing, but trick the copiler into thinking that the debug functions
-       are being used so that it does not optimise them away. */
+    /* Do nothing, but trick the compiler into thinking that the debug
+       functions are being used so that it does not optimise them away. */
     static volatile int unoptimisable = 1;
     if(unoptimisable)
         return;
     goredump();
     gotrace(0);
+}
+
+int mill_hascrs(void) {
+    return (mill_all_crs.first == &mill_main.debug.item &&
+        mill_all_crs.last == &mill_main.debug.item) ? 0 : 1;
 }
 

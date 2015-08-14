@@ -1,6 +1,6 @@
 /*
 
-  Copyright (c) 2015 Martin Sustrik
+  Copyright (c) 2015 Nir Soffer
 
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"),
@@ -23,38 +23,58 @@
 */
 
 #include <assert.h>
-#include <stdint.h>
-#include <stdlib.h>
+#include <signal.h>
 #include <stdio.h>
-#include <sys/time.h>
+#include <unistd.h>
 
 #include "../libmill.h"
 
-static void worker(void) {
+#define SIGNAL SIGUSR1
+#define COUNT 1000
+
+static int signal_pipe[2];
+
+void signal_handler(int signo) {
+    assert(signo == SIGNAL);
+    char b = signo;
+    ssize_t sz = write(signal_pipe[1], &b, 1);
+    assert(sz == 1);
 }
 
-int main(int argc, char *argv[]) {
-    if(argc != 2) {
-        printf("usage: go <millions-of-coroutines>\n");
-        return 1;
+void sender(chan ch) {
+    char signo = chr(ch, char);
+    int err = kill(getpid(), signo);
+    assert(err == 0);
+}
+
+void receiver(chan ch) {
+    int events = fdwait(signal_pipe[0], FDW_IN, -1);
+    assert(events == FDW_IN);
+
+    char signo;
+    ssize_t sz = read(signal_pipe[0], &signo, 1);
+    assert(sz == 1);
+    assert(signo == SIGNAL);
+
+    chs(ch, char, signo);
+}
+
+int main() {
+    int err = pipe(signal_pipe);
+    assert(err == 0);
+
+    signal(SIGNAL, signal_handler);
+
+    chan sendch = chmake(char, 0);
+    chan recvch = chmake(char, 0);
+
+    for(int i = 0; i < COUNT; ++i) {
+        go(sender(sendch));
+        go(receiver(recvch));
+        chs(sendch, char, SIGNAL);
+        int signo = chr(recvch, char);
+        assert(signo == SIGNAL);
     }
-    long count = atol(argv[1]) * 1000000;
-
-    int64_t start = now();
-
-    long i;
-    for(i = 0; i != count; ++i)
-        go(worker());
-
-    int64_t stop = now();
-    long duration = (long)(stop - start);
-    long ns = (duration * 1000000) / count;
-
-    printf("executed %ldM coroutines in %f seconds\n",
-        (long)(count / 1000000), ((float)duration) / 1000);
-    printf("duration of one coroutine creation+termination: %ld ns\n", ns);
-    printf("coroutine creations+terminatios per second: %fM\n",
-        (float)(1000000000 / ns) / 1000000);
 
     return 0;
 }

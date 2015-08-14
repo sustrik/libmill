@@ -24,6 +24,7 @@
 
 #include <assert.h>
 #include <stddef.h>
+
 #include "../libmill.h"
 
 static int dummy1 = 0;

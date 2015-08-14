@@ -22,34 +22,14 @@
 
 */
 
-#include "valbuf.h"
+#ifndef MILL_IP_INCLUDED
+#define MILL_IP_INCLUDED
 
-#include <assert.h>
-#include <stdlib.h>
+#include "libmill.h"
 
-void mill_valbuf_init(struct mill_valbuf *self) {
-    self->ptr = NULL;
-    self->capacity = MILL_VALBUF_SIZE;
-}
+int mill_ipfamily(ipaddr addr);
+int mill_iplen(ipaddr addr);
+int mill_ipport(ipaddr addr);
 
-void mill_valbuf_term(struct mill_valbuf *self) {
-    if(self->ptr)
-        free(self->ptr);
-}
-
-void *mill_valbuf_alloc(struct mill_valbuf *self, size_t sz) {
-    /* If there's enough capacity for the type available, return either
-       dynamically allocated buffer, if present, or the static buffer. */
-    if(self->capacity >= sz)
-        return self->ptr ? self->ptr : self->buf;
-    /* Allocate or grow the dynamic buffer to accommodate the type. */
-    self->ptr = realloc(self->ptr, sz);
-    assert(self->ptr);
-    self->capacity = sz;
-    return self->ptr;
-}
-
-void *mill_valbuf_get(struct mill_valbuf *self) {
-    return self->ptr ? self->ptr : self->buf;
-}
+#endif
 

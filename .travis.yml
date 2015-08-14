@@ -1,17 +1,14 @@
 language: c
+
 sudo: false
+
 os:
-#  - osx
+  - osx
   - linux
-env:
-  - LIBMILL="git://github.com/sustrik/libmill.git"
+
 branches:
   only:
     - master
-
-before_install:
-  - git clone $LIBMILL
-  - cd libmill
 
 install:
   - ./autogen.sh
@@ -22,7 +19,8 @@ script:
   - make check
 
 after_failure:
-  - cat libmill/test-suite.log
+  - for f in tests/*.log; do echo; echo "${f}:"; cat $f; done;
+  - cat test-suite.log
 
 notifications:
   email: false

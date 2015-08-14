@@ -1,6 +1,6 @@
 /*
 
-  Copyright (c) 2015 Martin Sustrik
+  Copyright (c) 2015 Nir Soffer
 
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"),
@@ -22,31 +22,32 @@
 
 */
 
-#ifndef MILL_VALBUF_INCLUDED
-#define MILL_VALBUF_INCLUDED
+#include <assert.h>
+#include <unistd.h>
 
-#include <stddef.h>
+#include "../libmill.h"
 
-/* Maximum size of an item in a channel that can be handled without
-   extra memory allocation. */
-#define MILL_VALBUF_SIZE 128
+void relay(chan src, chan dst) {
+    while(1) {
+       int val = chr(src, int);
+       chs(dst, int, val);
+    }
+}
 
-/* Arbitrarily large temporary buffer. */
-struct mill_valbuf {
-    void *ptr;
-    size_t capacity;
-    char buf[MILL_VALBUF_SIZE];
-};
+int main() {
+    chan left = chmake(int, 0);
+    chan right = chmake(int, 0);
 
-void mill_valbuf_init(struct mill_valbuf *self);
-void mill_valbuf_term(struct mill_valbuf *self);
+    go(relay(left, right));
+    go(relay(right, left));
 
-/* Makes sure that the buffer is at least sz bytes long and returns pointer
-   to it. It may destroy previous content of the buffer. */
-void *mill_valbuf_alloc(struct mill_valbuf *self, size_t sz);
+    chs(left, int, 42);
 
-/* Returns pointer to the previously allocated buffer. It keeps contents of
-   the buffer intact. */
-void *mill_valbuf_get(struct mill_valbuf *self);
+    /* Fail with exit code 128+SIGALRM if we deadlock */
+    alarm(1);
 
-#endif
+    msleep(1);
+
+    return 0;
+}
+

@@ -22,16 +22,16 @@
 
 */
 
+#include <errno.h>
+#include <poll.h>
+#include <stddef.h>
+#include <stdlib.h>
+
 #include "cr.h"
 #include "libmill.h"
 #include "list.h"
 #include "poller.h"
 #include "utils.h"
-
-#include <assert.h>
-#include <poll.h>
-#include <stddef.h>
-#include <stdlib.h>
 
 /* Global linked list of all timers. The list is ordered.
    First timer to be resume comes first and so on. */
@@ -55,6 +55,18 @@ struct mill_pollset_item {
 };
 static struct mill_pollset_item *mill_pollset_items = NULL;
 
+/* Find pollset index by fd. If fd is not in pollset, return the index after
+   the last item.
+   TODO: This is O(n) operation! */
+static int mill_find_pollset(int fd) {
+    int i;
+    for(i = 0; i != mill_pollset_size; ++i) {
+        if(mill_pollset_fds[i].fd == fd)
+            break;
+    }
+    return i;
+}
+
 /* Wait for events from a file descriptor, with an optional timeout. */
 int mill_fdwait(int fd, int events, int64_t deadline, const char *current) {
     /* If required, start waiting for the timeout. */
@@ -74,13 +86,8 @@ int mill_fdwait(int fd, int events, int64_t deadline, const char *current) {
         mill_list_insert(&mill_timers, &mill_running->u_fdwait.item, it);
     }
     /* If required, start waiting for the file descriptor. */
-    int i;
     if(fd >= 0) {
-        /* Find the fd in the pollset. TODO: This is O(n) operation! */
-        for(i = 0; i != mill_pollset_size; ++i) {
-            if(mill_pollset_fds[i].fd == fd)
-                break;
-        }
+        int i = mill_find_pollset(fd);
         /* Grow the pollset as needed. */
         if(i == mill_pollset_size) {
             if(mill_pollset_size == mill_pollset_capacity) {
@@ -126,6 +133,10 @@ int mill_fdwait(int fd, int events, int64_t deadline, const char *current) {
     }
     /* Handle the timeout. Clean-up the pollset. */
     if(fd >= 0) {
+        /* We have to do this again because the pollset may have changed while
+           the coroutine was suspended. */
+        int i = mill_find_pollset(fd);
+        mill_assert(i < mill_pollset_size);
         if(mill_pollset_items[i].in == &mill_running->u_fdwait) {
             mill_pollset_items[i].in = NULL;
             mill_pollset_fds[i].events &= ~POLLIN;
@@ -145,26 +156,38 @@ int mill_fdwait(int fd, int events, int64_t deadline, const char *current) {
     return 0;
 }
 
-void mill_wait(void) {
+void mill_wait(int block) {
     /* The execution of the entire process would block. Let's panic. */
-    if(mill_slow(mill_list_empty(&mill_timers) && !mill_pollset_size))
+    if(block && mill_slow(mill_list_empty(&mill_timers) && !mill_pollset_size))
         mill_panic("global hang-up");
 
     int fired = 0;
     int rc;
     while(1) {
-        /* Compute the time till next expired sleeping coroutine. */
-        int timeout = -1;
-        if(!mill_list_empty(&mill_timers)) {
-            int64_t nw = now();
-            int64_t expiry = mill_cont(mill_list_begin(&mill_timers),
-                struct mill_fdwait, item)->expiry;
-            timeout = nw >= expiry ? 0 : expiry - nw;
+
+        /* Compute timeout for the subsequent poll. */
+        int timeout;
+        if(!block) {
+            timeout = 0;
+        }
+        else {
+            /* Compute the time till next expired sleeping coroutine. */
+            if(!mill_list_empty(&mill_timers)) {
+                int64_t nw = now();
+                int64_t expiry = mill_cont(mill_list_begin(&mill_timers),
+                    struct mill_fdwait, item)->expiry;
+                timeout = nw >= expiry ? 0 : expiry - nw;
+            }
+            else {
+                timeout = -1;
+            }
         }
 
         /* Wait for events. */
         rc = poll(mill_pollset_fds, mill_pollset_size, timeout);
-        assert(rc >= 0);
+        if(rc < 0 && errno == EINTR)
+            continue;
+        mill_assert(rc >= 0);
 
         /* Fire all expired timers. */
         if(!mill_list_empty(&mill_timers)) {
@@ -179,7 +202,9 @@ void mill_wait(void) {
                 fired = 1;
             }
         }
-
+        /* Never retry the poll in non-blocking mode. */
+        if(!block)
+            break;
         /* If timeout was hit but there were no expired timers do the poll
            again. This should not happen in theory but let's be ready for the
            case when the system timers are not precise. */
@@ -229,10 +254,14 @@ void mill_wait(void) {
         }
         /* If nobody is polling for the fd remove it from the pollset. */
         if(!mill_pollset_fds[i].events) {
-            assert(!mill_pollset_items[i].in && !mill_pollset_items[i].out);
-            mill_pollset_fds[i] = mill_pollset_fds[mill_pollset_size - 1];
-            mill_pollset_items[i] = mill_pollset_items[mill_pollset_size - 1];
+            mill_assert(!mill_pollset_items[i].in &&
+                !mill_pollset_items[i].out);
             --mill_pollset_size;
+            if(i != mill_pollset_size) {
+                mill_pollset_fds[i] = mill_pollset_fds[mill_pollset_size];
+                mill_pollset_items[i] = mill_pollset_items[mill_pollset_size];
+            }
+            --i;
             --rc;
         }
     }

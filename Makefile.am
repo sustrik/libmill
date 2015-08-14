@@ -40,6 +40,8 @@ libmill_la_SOURCES = \
     cr.c\
     debug.h\
     debug.c\
+    ip.h\
+    ip.c\
     list.h\
     list.c\
     poller.h\
@@ -49,10 +51,10 @@ libmill_la_SOURCES = \
     stack.h\
     stack.c\
     tcp.c\
+    udp.c\
+    unix.c\
     utils.h\
-    utils.c\
-    valbuf.h\
-    valbuf.c
+    utils.c
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libmill.pc
@@ -78,7 +80,11 @@ check_PROGRAMS = \
     tests/choose\
     tests/sleep\
     tests/fdwait\
-    tests/tcp
+    tests/tcp\
+    tests/udp\
+    tests/unix\
+    tests/signals\
+    tests/overload
 
 LDADD = libmill.la
 
@@ -95,6 +101,18 @@ noinst_PROGRAMS = \
     perf/chs\
     perf/chr\
     perf/whispers
+
+################################################################################
+#  tutorial                                                                    #
+################################################################################
+
+noinst_PROGRAMS += \
+    tutorial/step1 \
+    tutorial/step2 \
+    tutorial/step3 \
+    tutorial/step4 \
+    tutorial/step5 \
+    tutorial/step6
 
 ################################################################################
 #  additional packaging-related stuff                                          #
