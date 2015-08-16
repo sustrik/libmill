@@ -37,6 +37,10 @@
   <li><a href="#cls">Coroutine-local storage</a></li>
   <li><a href="#memory">Dealing with memory</a></li>
   <li><a href="#debug">Debugging</a></li>
+  <li><a href="#tools">External tools</a></li>
+  <ul id="toc">
+    <li><a href="#tcpmux">TCPMUX</a></li>
+  </ul>
 </ul>
 
 <h3 id="build">Build</h3>
@@ -818,6 +822,18 @@ or a specific channel:</p>
 $ grep "{9}" trace.log
 $ grep "&lt;33&gt;" trace.log
 </pre>
+
+<h3 id="tools">External tools</h3>
+
+<h4 id="tcpmux">TCPMUX</h4>
+
+<p>Implementation of TCP multiplexer as defined in RFC 1078.</p>
+
+<p>The mutliplexer is a stand-alone daemon process that distributes the
+connections accepted on a single TCP port to other processes on the same
+machine.</p>
+
+<p><a href="https://github.com/sustrik/tcpmux">https://github.com/sustrik/tcpmux</a></p>
 
 </body>
 </html>
