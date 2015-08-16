@@ -29,7 +29,14 @@
 
 int main() {
     udpsock s1 = udplisten(iplocal(NULL, 5555, 0));
+    assert(s1);
     udpsock s2 = udplisten(iplocal(NULL, 5556, 0));
+    assert(s2);
+
+    int fd = udpdetach(s2);
+    assert(fd != -1);
+    s2 = udpattach(fd);
+    assert(s2);
 
     ipaddr addr = ipremote("127.0.0.1", 5556, 0, -1);
 

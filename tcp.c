@@ -429,3 +429,22 @@ void tcpclose(tcpsock s) {
     mill_assert(0);
 }
 
+tcpsock tcpattach(int fd) {
+    struct mill_tcpconn *conn = malloc(sizeof(struct mill_tcpconn));
+    if(!conn) {
+        errno = ENOMEM;
+        return NULL;
+    }
+    tcpconn_init(conn, fd);
+    errno = 0;
+    return conn;
+}
+
+int tcpdetach(tcpsock s) {
+    if(s->type != MILL_TCPCONN)
+        return -1;
+    int fd = ((struct mill_tcpconn*)s)->fd;
+    free(s);
+    return fd;
+}
+

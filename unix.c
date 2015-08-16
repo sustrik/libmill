@@ -432,3 +432,22 @@ void unixclose(unixsock s) {
     mill_assert(0);
 }
 
+unixsock unixattach(int fd) {
+    struct mill_unixconn *conn = malloc(sizeof(struct mill_unixconn));
+    if(!conn) {
+        errno = ENOMEM;
+        return NULL;
+    }
+    unixconn_init(conn, fd);
+    errno = 0;
+    return conn;
+}
+
+int unixdetach(unixsock s) {
+    if(s->type != MILL_UNIXCONN)
+        return -1;
+    int fd = ((struct mill_unixconn*)s)->fd;
+    free(s);
+    return fd;
+}
+

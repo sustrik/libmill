@@ -33,6 +33,11 @@ void client(const char *addr) {
     unixsock cs = unixconnect(addr);
     assert(cs);
 
+    int fd = unixdetach(cs);
+    assert(fd != -1);
+    cs = unixattach(fd);
+    assert(cs);
+
     msleep(now() + 100);
 
     char buf[16];

@@ -285,6 +285,8 @@ MILL_EXPORT size_t tcprecv(tcpsock s, void *buf, size_t len, int64_t deadline);
 MILL_EXPORT size_t tcprecvuntil(tcpsock s, void *buf, size_t len,
     const char *delims, size_t delimcount, int64_t deadline);
 MILL_EXPORT void tcpclose(tcpsock s);
+MILL_EXPORT tcpsock tcpattach(int fd);
+MILL_EXPORT int tcpdetach(tcpsock s);
 
 /******************************************************************************/
 /*  UDP library                                                               */
@@ -298,6 +300,8 @@ MILL_EXPORT void udpsend(udpsock s, ipaddr addr, const void *buf, size_t len);
 MILL_EXPORT size_t udprecv(udpsock s, ipaddr *addr,
     void *buf, size_t len, int64_t deadline);
 MILL_EXPORT void udpclose(udpsock s);
+MILL_EXPORT udpsock udpattach(int fd);
+MILL_EXPORT int udpdetach(udpsock s);
 
 /******************************************************************************/
 /*  UNIX library                                                              */
@@ -317,6 +321,8 @@ MILL_EXPORT size_t unixrecv(unixsock s, void *buf, size_t len,
 MILL_EXPORT size_t unixrecvuntil(unixsock s, void *buf, size_t len,
     const char *delims, size_t delimcount, int64_t deadline);
 MILL_EXPORT void unixclose(unixsock s);
+MILL_EXPORT unixsock unixattach(int fd);
+MILL_EXPORT int unixdetach(unixsock s);
 
 /******************************************************************************/
 /*  Debugging                                                                 */

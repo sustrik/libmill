@@ -136,3 +136,21 @@ void udpclose(udpsock s) {
     free(s);
 }
 
+udpsock udpattach(int fd) {
+    struct mill_udpsock *us = malloc(sizeof(struct mill_udpsock));
+    if(!us) {
+        errno = ENOMEM;
+        return NULL;
+    }
+    us->fd = fd;
+    us->port = -1;
+    errno = 0;
+    return us;
+}
+
+int udpdetach(udpsock s) {
+    int fd = s->fd;
+    free(s);
+    return fd;
+}
+

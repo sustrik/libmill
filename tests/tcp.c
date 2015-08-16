@@ -32,6 +32,11 @@ void client(int port) {
     tcpsock cs = tcpconnect(addr, -1);
     assert(cs);
 
+    int fd = tcpdetach(cs);
+    assert(fd != -1);
+    cs = tcpattach(fd);
+    assert(cs);
+
     msleep(now() + 100);
 
     char buf[16];
