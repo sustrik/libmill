@@ -437,7 +437,7 @@ tcpsock tcpattach(int fd) {
     }
     tcpconn_init(conn, fd);
     errno = 0;
-    return conn;
+    return (tcpsock)conn;
 }
 
 int tcpdetach(tcpsock s) {

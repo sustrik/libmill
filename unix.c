@@ -440,7 +440,7 @@ unixsock unixattach(int fd) {
     }
     unixconn_init(conn, fd);
     errno = 0;
-    return conn;
+    return (unixsock)conn;
 }
 
 int unixdetach(unixsock s) {
