@@ -430,21 +430,51 @@ void tcpclose(tcpsock s) {
 }
 
 tcpsock tcpattach(int fd) {
-    struct mill_tcpconn *conn = malloc(sizeof(struct mill_tcpconn));
-    if(!conn) {
+    int val;
+    socklen_t sz = sizeof(val);
+    int rc = getsockopt(fd, SOL_SOCKET, SO_ACCEPTCONN, &val, &sz);
+    if(rc != 0)
+        return NULL;
+    if(val == 0) {
+        struct mill_tcpconn *conn = malloc(sizeof(struct mill_tcpconn));
+        if(!conn) {
+            errno = ENOMEM;
+            return NULL;
+        }
+        tcpconn_init(conn, fd);
+        errno = 0;
+        return (tcpsock)conn;
+    }
+    /* It's a listening socket. Find out the port it is listening on. */
+    ipaddr addr;
+    sz = sizeof(ipaddr);
+    rc = getsockname(fd, (struct sockaddr*)&addr, &sz);
+    if(rc == -1)
+        return NULL;
+    struct mill_tcplistener *l = malloc(sizeof(struct mill_tcplistener));
+    if(!l) {
         errno = ENOMEM;
         return NULL;
     }
-    tcpconn_init(conn, fd);
+    l->sock.type = MILL_TCPLISTENER;
+    l->fd = fd;
+    l->port = mill_ipport(addr);
     errno = 0;
-    return (tcpsock)conn;
+    return &l->sock;
 }
 
 int tcpdetach(tcpsock s) {
-    if(s->type != MILL_TCPCONN)
-        return -1;
-    int fd = ((struct mill_tcpconn*)s)->fd;
-    free(s);
-    return fd;
+    if(s->type == MILL_TCPLISTENER) {
+        struct mill_tcplistener *l = (struct mill_tcplistener*)s;
+        int fd = l->fd;
+        free(l);
+        return fd;
+    }
+    if(s->type == MILL_TCPCONN) {
+        int fd = ((struct mill_tcpconn*)s)->fd;
+        free(s);
+        return fd;
+    }
+    mill_assert(0);
 }
 

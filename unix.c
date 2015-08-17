@@ -433,21 +433,44 @@ void unixclose(unixsock s) {
 }
 
 unixsock unixattach(int fd) {
-    struct mill_unixconn *conn = malloc(sizeof(struct mill_unixconn));
-    if(!conn) {
+    int val;
+    socklen_t sz = sizeof(val);
+    int rc = getsockopt(fd, SOL_SOCKET, SO_ACCEPTCONN, &val, &sz);
+    if(rc != 0)
+        return NULL;
+    if(val == 0) {
+        struct mill_unixconn *conn = malloc(sizeof(struct mill_unixconn));
+        if(!conn) {
+            errno = ENOMEM;
+            return NULL;
+        }
+        unixconn_init(conn, fd);
+        errno = 0;
+        return (unixsock)conn;
+    }
+    struct mill_unixlistener *l = malloc(sizeof(struct mill_unixlistener));
+    if(!l) {
         errno = ENOMEM;
         return NULL;
     }
-    unixconn_init(conn, fd);
+    l->sock.type = MILL_UNIXLISTENER;
+    l->fd = fd;
     errno = 0;
-    return (unixsock)conn;
+    return &l->sock;
 }
 
 int unixdetach(unixsock s) {
-    if(s->type != MILL_UNIXCONN)
-        return -1;
-    int fd = ((struct mill_unixconn*)s)->fd;
-    free(s);
-    return fd;
+    if(s->type == MILL_UNIXLISTENER) {
+        struct mill_unixlistener *l = (struct mill_unixlistener*)s;
+        int fd = l->fd;
+        free(l);
+        return fd;
+    }
+    if(s->type == MILL_UNIXCONN) {
+        int fd = ((struct mill_unixconn*)s)->fd;
+        free(s);
+        return fd;
+    }
+    mill_assert(0);
 }
 

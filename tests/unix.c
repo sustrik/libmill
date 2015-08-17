@@ -64,6 +64,11 @@ int main() {
     unixsock ls = unixlisten(sockname, 10);
     assert(ls);
 
+    int fd = unixdetach(ls);
+    assert(fd != -1);
+    ls = unixattach(fd);
+    assert(ls);
+
     go(client(sockname));
 
     unixsock as = unixaccept(ls, -1);
