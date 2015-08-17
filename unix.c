@@ -436,8 +436,10 @@ unixsock unixattach(int fd) {
     int val;
     socklen_t sz = sizeof(val);
     int rc = getsockopt(fd, SOL_SOCKET, SO_ACCEPTCONN, &val, &sz);
-    if(rc != 0)
+    if(rc != 0) {
+        fprintf(stderr, "errno:%d\n", errno);
         return NULL;
+    }
     if(val == 0) {
         struct mill_unixconn *conn = malloc(sizeof(struct mill_unixconn));
         if(!conn) {
