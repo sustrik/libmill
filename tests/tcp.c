@@ -57,11 +57,13 @@ int main() {
     tcpsock ls = tcplisten(iplocal(NULL, 5555, 0), 10);
     assert(ls);
 
+#if !defined __APPLE__
     int fd = tcpdetach(ls);
     assert(fd != -1);
     ls = tcpattach(fd);
     assert(ls);
     assert(tcpport(ls) == 5555);
+#endif
 
     go(client(5555));
 

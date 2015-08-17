@@ -436,8 +436,10 @@ unixsock unixattach(int fd) {
     int val;
     socklen_t sz = sizeof(val);
     int rc = getsockopt(fd, SOL_SOCKET, SO_ACCEPTCONN, &val, &sz);
-    if(rc != 0) {
-        fprintf(stderr, "errno:%d\n", errno);
+    if(rc == -1 && errno == ENOPROTOOPT) {
+        val = 0;
+    }
+    else if(rc != 0) {
         return NULL;
     }
     if(val == 0) {

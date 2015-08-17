@@ -64,10 +64,12 @@ int main() {
     unixsock ls = unixlisten(sockname, 10);
     assert(ls);
 
+#if !defined __APPLE__
     int fd = unixdetach(ls);
     assert(fd != -1);
     ls = unixattach(fd);
     assert(ls);
+#endif
 
     go(client(sockname));
 
