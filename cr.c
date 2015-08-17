@@ -158,10 +158,6 @@ void mill_go_epilogue(void) {
 
 void mill_yield(const char *current) {
     mill_trace(current, "yield()");
-    /* If there no other coroutines available, no point in context switching
-       back and forth. */
-    if(mill_slist_empty(&mill_ready))
-        return;
     mill_set_current(&mill_running->debug, current);
     /* This looks fishy, but yes, we can resume the coroutine even before
        suspending it. */
