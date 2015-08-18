@@ -219,24 +219,35 @@ static void mill_enqueue(chan ch, void *val) {
 
 /* Pop one value from the channel. */
 static void mill_dequeue(chan ch, void *val) {
-    /* If there's a sender already waiting, let's resume it. */
+    /* Get a blocked sender, if any. */
     struct mill_clause *cl = mill_cont(
         mill_list_begin(&ch->sender.clauses), struct mill_clause, epitem);
-    if(cl) {
+    if(!ch->items) {
+        /* If chdone was already called we can return the value immediately.
+           There are no senders waiting to send. */
+        if(mill_slow(ch->done)) {
+            mill_assert(!cl);
+            memcpy(val, ((char*)(ch + 1)) + (ch->bufsz * ch->sz), ch->sz);
+            return;
+        }
+        /* Otherwise there must be a sender waiting to send. */
+        mill_assert(cl);
         memcpy(val, cl->val, ch->sz);
         mill_choose_unblock(cl);
         return;
     }
-    /* Get the value from the buffer. */
-    if(ch->items) {
-        memcpy(val, ((char*)(ch + 1)) + (ch->first * ch->sz), ch->sz);
-        ch->first = (ch->first + 1) % ch->bufsz;
-        --ch->items;
-        return;
+    /* If there's a value in the buffer start by retrieving it. */
+    memcpy(val, ((char*)(ch + 1)) + (ch->first * ch->sz), ch->sz);
+    ch->first = (ch->first + 1) % ch->bufsz;
+    --ch->items;
+    /* And if there was a sender waiting, unblock it. */
+    if(cl) {
+        assert(ch->items < ch->bufsz);
+        size_t pos = (ch->first + ch->items) % ch->bufsz;
+        memcpy(((char*)(ch + 1)) + (pos * ch->sz) , cl->val, ch->sz);
+        ++ch->items;
+        mill_choose_unblock(cl);
     }
-    /* If the buffer is empty, chdone() must have been already called. */
-    assert(ch->done);
-    memcpy(val, ((char*)(ch + 1)) + (ch->bufsz * ch->sz), ch->sz);
 }
 
 int mill_choose_wait(void) {

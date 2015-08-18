@@ -184,6 +184,16 @@ int main() {
     chclose(ch13);
     chclose(ch12);
 
+    /* Test a combination of blocked sender and an item in the channel. */
+    chan ch14 = chmake(int, 1);
+    chs(ch14, int, 1);
+    go(sender(chdup(ch14), 0, 2));
+    val = chr(ch14, int);
+    assert(val == 1);
+    val = chr(ch14, int);
+    assert(val == 2);
+    chclose(ch14);
+
     pid_t pid;
 
     /* Test panic when chs will deadlock. */
