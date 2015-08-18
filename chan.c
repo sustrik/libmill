@@ -203,6 +203,7 @@ void mill_choose_otherwise(void) {
 static void mill_enqueue(chan ch, void *val) {
     /* If there's a receiver already waiting, let's resume it. */
     if(!mill_list_empty(&ch->receiver.clauses)) {
+        mill_assert(ch->items == 0);
         struct mill_clause *cl = mill_cont(
             mill_list_begin(&ch->receiver.clauses), struct mill_clause, epitem);
         memcpy(mill_valbuf(cl->cr, ch->sz), val, ch->sz);
