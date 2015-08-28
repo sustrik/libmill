@@ -25,6 +25,9 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <errno.h>
+#include <unistd.h>
+#include <sys/mman.h>
 
 #include "slist.h"
 #include "stack.h"
@@ -46,6 +49,32 @@ int mill_max_cached_stacks = 64;
 static int mill_num_cached_stacks = 0;
 static struct mill_slist mill_cached_stacks = {0};
 
+static void *mill_allocstackmem(size_t stack_size) {
+#if MILL_ENABLE_STACK_GUARD
+    long pagesize = sysconf(_SC_PAGE_SIZE);
+    mill_assert(pagesize > 0);
+    mill_assert(stack_size > pagesize);
+
+    void *ptr;
+    int rc = posix_memalign(&ptr, pagesize, stack_size);
+    if(rc != 0) {
+        errno = rc;
+        return NULL;
+    }
+
+    rc = mprotect(ptr, pagesize, PROT_NONE);
+    if(rc != 0) {
+        int err = errno;
+        free(ptr);
+        errno = err;
+        return NULL;
+    }
+    return ptr;
+#else
+    return malloc(stack_size);
+#endif
+}
+
 int mill_preparestacks(int count, size_t stack_size) {
     /* Purge the cached stacks. */
     while(1) {
@@ -63,7 +92,7 @@ int mill_preparestacks(int count, size_t stack_size) {
     /* Allocate the new stacks. */
     int i;
     for(i = 0; i != count; ++i) {
-        char *ptr = malloc(mill_stack_size);
+        char *ptr = mill_allocstackmem(mill_stack_size);
         if(!ptr)
             break;
         ptr += mill_stack_size;
@@ -78,7 +107,7 @@ void *mill_allocstack(void) {
         --mill_num_cached_stacks;
         return (void*)(mill_slist_pop(&mill_cached_stacks) + 1);
     }
-    char *ptr = malloc(mill_stack_size);
+    char *ptr = mill_allocstackmem(mill_stack_size);
     if(!ptr)
         mill_panic("not enough memory to allocate coroutine stack");
     return ptr + mill_stack_size;
