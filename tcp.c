@@ -64,9 +64,9 @@ struct mill_tcplistener {
 struct mill_tcpconn {
     struct mill_tcpsock sock;
     int fd;
-    int ifirst;
-    int ilen;
-    int olen;
+    size_t ifirst;
+    size_t ilen;
+    size_t olen;
     char ibuf[MILL_TCP_BUFLEN];
     char obuf[MILL_TCP_BUFLEN];
 };
@@ -345,7 +345,7 @@ size_t tcprecv(tcpsock s, void *buf, size_t len, int64_t deadline) {
                     return len - remaining;
                 sz = 0;
             }
-            if(sz == remaining) {
+            if((size_t)sz == remaining) {
                 errno = 0;
                 return len;
             }
@@ -365,7 +365,7 @@ size_t tcprecv(tcpsock s, void *buf, size_t len, int64_t deadline) {
                     return len - remaining;
                 sz = 0;
             }
-            if(sz < remaining) {
+            if((size_t)sz < remaining) {
                 memcpy(pos, conn->ibuf, sz);
                 pos += sz;
                 remaining -= sz;
