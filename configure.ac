@@ -59,23 +59,6 @@ AC_MSG_NOTICE([Mill ABI version: $MILL_ABI_VERSION])
 AC_PROG_CC_C99
 AM_PROG_CC_C_O
 
-# TODO: Tests fail with clang and -O2. For now use -O1 with clang.
-#       When the bug is properly fixed, remove this section.
-AC_CACHE_CHECK([whether we are using clang compiler],
-    [ac_cv_clang_compiler],
-    [AC_COMPILE_IFELSE(
-        [AC_LANG_PROGRAM([], [[
-            #ifndef __clang__
-                #error
-            #endif
-            ]])],
-        [ac_clang_compiler=yes],
-        [ac_clang_compiler=no])
-    ac_cv_clang_compiler=$ac_clang_compiler])
-AS_IF([test x"$ac_cv_clang_compiler" = xyes],
-    CFLAGS="$CFLAGS -O1"
-)
-
 ################################################################################
 #  --enable-debug                                                              #
 ################################################################################

@@ -28,7 +28,7 @@
 
 #include "../libmill.h"
 
-void dialogue(tcpsock as) {
+coroutine void dialogue(tcpsock as) {
     int64_t deadline = now() + 10000;
 
     tcpsend(as, "What's your name?\r\n", 19, deadline);

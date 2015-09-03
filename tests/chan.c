@@ -36,20 +36,20 @@ struct foo {
     int second;
 };
 
-void sender(chan ch, int doyield, int val) {
+coroutine void sender(chan ch, int doyield, int val) {
     if(doyield)
         yield();
     chs(ch, int, val);
     chclose(ch);
 }
 
-void receiver(chan ch, int expected) {
+coroutine void receiver(chan ch, int expected) {
     int val = chr(ch, int);
     assert(val == expected);
     chclose(ch);
 }
 
-void receiver2(chan ch, int expected, chan back) {
+coroutine void receiver2(chan ch, int expected, chan back) {
     int val = chr(ch, int);
     assert(val == expected);
     chclose(ch);
@@ -57,12 +57,12 @@ void receiver2(chan ch, int expected, chan back) {
     chclose(back);
 }
 
-void charsender(chan ch, char val) {
+coroutine void charsender(chan ch, char val) {
     chs(ch, char, val);
     chclose(ch);
 }
 
-void structsender(chan ch, struct foo val) {
+coroutine void structsender(chan ch, struct foo val) {
     chs(ch, struct foo, val);
     chclose(ch);
 }

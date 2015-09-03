@@ -27,31 +27,31 @@
 
 #include "../libmill.h"
 
-void sender1(chan ch, int val) {
+coroutine void sender1(chan ch, int val) {
     chs(ch, int, val);
     chclose(ch);
 }
 
-void sender2(chan ch, int val) {
+coroutine void sender2(chan ch, int val) {
     yield();
     chs(ch, int, val);
     chclose(ch);
 }
 
-void receiver1(chan ch, int expected) {
+coroutine void receiver1(chan ch, int expected) {
     int val = chr(ch, int);
     assert(val == expected);
     chclose(ch);
 }
 
-void receiver2(chan ch, int expected) {
+coroutine void receiver2(chan ch, int expected) {
     yield();
     int val = chr(ch, int);
     assert(val == expected);
     chclose(ch);
 }
 
-void choosesender(chan ch, int val) {
+coroutine void choosesender(chan ch, int val) {
     choose {
     out(ch, int, val):
     end
@@ -59,14 +59,14 @@ void choosesender(chan ch, int val) {
     chclose(ch);
 }
 
-void feeder(chan ch, int val) {
+coroutine void feeder(chan ch, int val) {
     while(1) {
         chs(ch, int, val);
         yield();
     }
 }
 
-void feeder2(chan ch, int first, int second) {
+coroutine void feeder2(chan ch, int first, int second) {
     while(1) {
         choose {
         out(ch, int, first):
@@ -76,14 +76,14 @@ void feeder2(chan ch, int first, int second) {
     }
 }
 
-void feeder3(chan ch, int val) {
+coroutine void feeder3(chan ch, int val) {
     while(1) {
         msleep(10);
         chs(ch, int, val);
     }
 }
 
-void feeder4(chan ch) {
+coroutine void feeder4(chan ch) {
     while(1) {
         choose {
         out(ch, int, 1):
@@ -99,7 +99,7 @@ struct large {
 };
 
 /* Test whether choose with no clauses whatsoever compiles. */
-void unused(void) {
+coroutine void unused(void) {
     choose {
     end
     }

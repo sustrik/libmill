@@ -29,7 +29,7 @@
 
 #include "../libmill.h"
 
-void client(const char *addr) {
+coroutine void client(const char *addr) {
     unixsock cs = unixconnect(addr);
     assert(cs);
 

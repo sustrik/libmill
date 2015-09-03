@@ -30,7 +30,7 @@
 
 #include "../libmill.h"
 
-static void worker(void) {
+static coroutine void worker(void) {
 }
 
 int main(int argc, char *argv[]) {

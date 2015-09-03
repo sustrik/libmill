@@ -93,6 +93,12 @@ MILL_EXPORT void mill_go_epilogue(void);
 #define mill_string2(x) #x
 #define mill_string(x) mill_string2(x)
 
+#if defined __GNUC__ || defined __clang__
+#define coroutine __attribute__((noinline))
+#else
+#define coroutine
+#endif
+
 #define go(fn) \
     do {\
         void *mill_sp = mill_go_prologue(__FILE__ ":" mill_string(__LINE__));\

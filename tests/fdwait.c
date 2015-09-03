@@ -32,7 +32,7 @@
 
 #include "../libmill.h"
 
-void trigger(int fd, int64_t deadline) {
+coroutine void trigger(int fd, int64_t deadline) {
     msleep(deadline);
     ssize_t sz = send(fd, "A", 1, 0);
     assert(sz == 1);

@@ -29,7 +29,7 @@
 
 int sum = 0;
 
-void worker(int count, int n) {
+coroutine void worker(int count, int n) {
     int i;
     for(i = 0; i != count; ++i) {
         sum += n;

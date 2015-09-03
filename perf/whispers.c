@@ -30,7 +30,7 @@
 
 #include "../libmill.h"
 
-static void whisper(chan left, chan right) {
+static coroutine void whisper(chan left, chan right) {
     int val = chr(right, int);
     chs(left, int, val + 1);
 }

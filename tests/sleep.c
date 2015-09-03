@@ -29,7 +29,7 @@
 
 #include "../libmill.h"
 
-static void delay(int n, chan ch) {
+coroutine static void delay(int n, chan ch) {
     msleep(now() + n);
     chs(ch, int, n);
 }
