@@ -57,7 +57,7 @@ static void *mill_allocstackmem(void) {
     size_t pagesize = (size_t)pgsz;
     mill_assert(mill_stack_size > pagesize);
     /* Amount of memory allocated must be multiply of the page size otherwise
-       the behaviour of posx_memalign() is undefined. */
+       the behaviour of posix_memalign() is undefined. */
     size_t sz = (mill_stack_size + pagesize - 1) & ~(pagesize - 1);
     /* Allocate one additional guard page. */
     sz += pagesize;
