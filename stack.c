@@ -49,17 +49,27 @@ int mill_max_cached_stacks = 64;
 static int mill_num_cached_stacks = 0;
 static struct mill_slist mill_cached_stacks = {0};
 
-static void *mill_allocstackmem(size_t stack_size) {
+static void *mill_allocstackmem(void) {
 #if defined HAVE_POSIX_MEMALIGN && HAVE_MPROTECT
-    long pagesize = sysconf(_SC_PAGE_SIZE);
-    mill_assert(pagesize > 0);
-    mill_assert(stack_size > pagesize);
+    /* Find out what the memory page size is. */
+    long pgsz = sysconf(_SC_PAGE_SIZE);
+    mill_assert(pgsz > 0);
+    size_t pagesize = (size_t)pgsz;
+    mill_assert(mill_stack_size > pagesize);
+    /* Amount of memory allocated must be multiply of the page size otherwise
+       the behaviour of posx_memalign() is undefined. */
+    size_t sz = (mill_stack_size + pagesize - 1) & ~(pagesize - 1);
+    /* Allocate one additional guard page. */
+    sz += pagesize;
+    /* Allocate the stack so that it's memory-page-aligned. */
     void *ptr;
-    int rc = posix_memalign(&ptr, pagesize, stack_size);
+    int rc = posix_memalign(&ptr, pagesize, sz);
     if(rc != 0) {
         errno = rc;
         return NULL;
     }
+    /* The bottom page is used as a stack guard. This way stack overflow will
+       cause segfault rather than randomly overwrite the heap. */
     rc = mprotect(ptr, pagesize, PROT_NONE);
     if(rc != 0) {
         int err = errno;
@@ -67,9 +77,9 @@ static void *mill_allocstackmem(size_t stack_size) {
         errno = err;
         return NULL;
     }
-    return ptr;
+    return (void*)(((char*)ptr) + sz);
 #else
-    return malloc(stack_size);
+    return malloc(mill_stack_size);
 #endif
 }
 
@@ -90,10 +100,9 @@ int mill_preparestacks(int count, size_t stack_size) {
     /* Allocate the new stacks. */
     int i;
     for(i = 0; i != count; ++i) {
-        char *ptr = mill_allocstackmem(mill_stack_size);
+        void *ptr = mill_allocstackmem();
         if(!ptr)
             break;
-        ptr += mill_stack_size;
         struct mill_slist_item *item = ((struct mill_slist_item*)ptr) - 1;
         mill_slist_push_back(&mill_cached_stacks, item);
     }
@@ -105,10 +114,10 @@ void *mill_allocstack(void) {
         --mill_num_cached_stacks;
         return (void*)(mill_slist_pop(&mill_cached_stacks) + 1);
     }
-    char *ptr = mill_allocstackmem(mill_stack_size);
+    void *ptr = mill_allocstackmem();
     if(!ptr)
         mill_panic("not enough memory to allocate coroutine stack");
-    return ptr + mill_stack_size;
+    return ptr;
 }
 
 void mill_freestack(void *stack) {
