@@ -72,21 +72,11 @@ if test "x$enable_debug" = "xyes"; then
 fi
 
 ################################################################################
-#  --enable-stack-guard                                                        #
-################################################################################
-
-AC_ARG_ENABLE([stack-guard], [AS_HELP_STRING([--enable-stack-guard],
-    [Enable guard page in goroutine stacks [default=yes]])])
-
-if test "x$enable_stack_guard" = "xyes"; then
-	AC_CHECK_FUNC([posix_memalign], [], [AC_MSG_ERROR(posix_memalign is required for stack guard.)])
-	AC_DEFINE([MILL_ENABLE_STACK_GUARD], [1], [])
-fi
-
-################################################################################
 #  Feature checks.                                                             #
 ################################################################################
 
+AC_CHECK_FUNC([posix_memalign], [AC_DEFINE([HAVE_POSIX_MEMALIGN])])
+AC_CHECK_FUNC([mprotect], [AC_DEFINE([HAVE_MPROTECT])])
 AC_CHECK_LIB([rt], [clock_gettime])
 AC_CHECK_FUNCS([clock_gettime])
 AC_CHECK_LIB([socket], [socket])

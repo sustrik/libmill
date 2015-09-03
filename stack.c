@@ -50,18 +50,16 @@ static int mill_num_cached_stacks = 0;
 static struct mill_slist mill_cached_stacks = {0};
 
 static void *mill_allocstackmem(size_t stack_size) {
-#if MILL_ENABLE_STACK_GUARD
+#if defined HAVE_POSIX_MEMALIGN && HAVE_MPROTECT
     long pagesize = sysconf(_SC_PAGE_SIZE);
     mill_assert(pagesize > 0);
     mill_assert(stack_size > pagesize);
-
     void *ptr;
     int rc = posix_memalign(&ptr, pagesize, stack_size);
     if(rc != 0) {
         errno = rc;
         return NULL;
     }
-
     rc = mprotect(ptr, pagesize, PROT_NONE);
     if(rc != 0) {
         int err = errno;
