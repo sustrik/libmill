@@ -27,7 +27,7 @@
 
 #include <stddef.h>
 
-/* Purges all the existing cached stacks and preallocated 'count' new stacks
+/* Purges all the existing cached stacks and preallocates 'count' new stacks
    of size 'stack_size'. Returns number of actually allocated stacks. */
 int mill_preparestacks(int count, size_t stack_size);
 
