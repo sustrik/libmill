@@ -306,13 +306,14 @@ And that is where coroutines kick in.</p>
 Measuring on a modern hardware you can run up to something like twenty million
 libmill coroutines per second.</p>
 
-<p>Coroutines are launched using <tt>go()</tt> construct.</p>
+<p>Coroutines are defined using <tt>coroutine</tt> keyword and launched using
+<tt>go()</tt> construct.</p>
 
 <p> In our case we can move the code performing the dialogue with the client
 into a separate function and launch it as a coroutine:</p>
 
 <pre>
-void dialogue(tcpsock as) {
+coroutine void dialogue(tcpsock as) {
     tcpsend(as, "What's your name?\r\n", 19, -1);
 
     ...
@@ -404,7 +405,7 @@ with it:</p>
 </p>
 
 <pre>
-void dialogue(tcpsock as, chan ch) {
+coroutine void dialogue(tcpsock as, chan ch) {
     ...
 }
 
@@ -440,7 +441,7 @@ will run forever in a busy loop and collect the statistics from all the
 them to <tt>stdout</tt>:</p>
 
 <pre>
-void statistics(chan ch) {
+coroutine void statistics(chan ch) {
     int connections = 0;
     int active = 0;
     int failed = 0;
@@ -481,7 +482,7 @@ channel, so the coroutine will simply block forever.</p>
 messages to the channel. <tt>chs()</tt> function will be used to do that:</p>
 
 <pre>
-void dialogue(tcpsock as, chan ch) {
+coroutine void dialogue(tcpsock as, chan ch) {
     chs(ch, int, CONN_ESTABLISHED);
 
     ...
