@@ -78,7 +78,7 @@ as well as dynamic library <tt>libmill.so</tt> and static library
 #include &lt;stdio.h&gt;
 #include "libmill.h"
 
-void worker(int count, const char *text) {
+coroutine void worker(int count, const char *text) {
     int i;
     for(i = 0; i != count; ++i) {
         printf("%s\n", text);
@@ -103,10 +103,11 @@ gcc -o example example.c -lmill
 
 <h3 id="coroutines">Coroutines</h3>
 
-<p>Any function can be executed as a coroutine using <tt>go</tt> keyword:</p>
+<p>Coroutine is defined using <tt>coroutine</tt> keyword and launched using
+<tt>go</tt> construct:</p>
 
 <pre>
-void foo(int i, int j) {
+coroutine void foo(int i, int j) {
     ...
 }
 
@@ -116,8 +117,8 @@ int main() {
 }
 </pre>
 
-<p>However, keep in mind that coroutines are executed asynchronously and thus,
-even if the function returns a value, there is now way to retrieve it.</p>
+<p>Although coroutine can return a value keep in mind that it is executed
+asynchronously and thus there is now way to retrieve the result.</p>
 
 <p>Also bear in mind that coroutines are scheduled in a cooperative fashion.
 If one coroutine blocks, for example by calling <tt>sleep()</tt>, it blocks
@@ -181,7 +182,7 @@ the channel handle. Channel is deallocated only after all its handles
 are closed. For example:</p>
 
 <pre>
-void sender(chan ch) {
+coroutine void sender(chan ch) {
     chs(ch, int, 42);
     chclose(ch);
 }
