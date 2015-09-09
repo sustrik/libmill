@@ -6,17 +6,29 @@ os:
   - osx
   - linux
 
+env:
+  matrix:
+   - CMAKE="false"
+   - CMAKE="true"
+
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+    packages:
+      - gcc-4.8
+
 branches:
   only:
     - master
 
 install:
-  - ./autogen.sh
-  - ./configure
-  - make
+  - if [[ $TRAVIS_OS_NAME == "linux" ]]; then export CC=gcc-4.8; fi
+  - if [[ $CMAKE == "false" ]]; then ./autogen.sh && ./configure && make; fi
+  - if [[ $CMAKE == "true"  ]]; then cmake . && make; fi
 
 script:
-  - make check
+  - if [[ $CMAKE == "false" ]]; then make check; else make test; fi
 
 after_failure:
   - for f in tests/*.log; do echo; echo "${f}:"; cat $f; done;
