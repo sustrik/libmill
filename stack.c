@@ -97,7 +97,7 @@ static void *mill_allocstackmem(void) {
         return NULL;
     }
 #else
-    void *ptr = malloc(mill_get_stack_size());
+    ptr = malloc(mill_get_stack_size());
     if(mill_slow(!ptr)) {
         errno = ENOMEM;
         return NULL;
