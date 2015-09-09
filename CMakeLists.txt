@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.0)
 project(libmill C)
 
+include(CheckSymbolExists)
+include(CheckFunctionExists)
+
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wpedantic -Wextra")
 
 # static and shared libs
@@ -8,6 +11,26 @@ file(GLOB sources *.c)
 add_library(mill STATIC ${sources})
 add_library(mill_s SHARED ${sources})
 set_target_properties(mill_s PROPERTIES OUTPUT_NAME mill)
+
+# check and enable stack guard and dns if available
+list(APPEND CMAKE_REQUIRED_DEFINITIONS -D_GNU_SOURCE)
+list(APPEND CMAKE_REQUIRED_LIBRARIES anl)
+check_symbol_exists(getaddrinfo_a netdb.h HAVE_GETADDRINFO_A)
+if(HAVE_GETADDRINFO_A)
+  add_definitions(-DHAVE_LIBANL)
+  target_link_libraries(mill anl)
+  target_link_libraries(mill_s anl)
+endif()
+
+check_function_exists(mprotect HAVE_MPROTECT)
+if(HAVE_MPROTECT)
+  add_definitions(-DHAVE_MPROTECT)
+endif()
+
+check_function_exists(posix_memalign HAVE_POSIX_MEMALIGN)
+if(HAVE_POSIX_MEMALIGN)
+  add_definitions(-DHAVE_POSIX_MEMALIGN)
+endif()
 
 # tests
 enable_testing()
