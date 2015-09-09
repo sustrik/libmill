@@ -21,6 +21,9 @@ if(HAVE_CLOCK_GETTIME)
   target_link_libraries(mill_s rt)
 endif()
 
+set(CMAKE_REQUIRED_LIBRARIES )
+set(CMAKE_REQUIRED_DEFINITIONS )
+
 # check and enable stack guard and dns if available
 list(APPEND CMAKE_REQUIRED_DEFINITIONS -D_GNU_SOURCE)
 list(APPEND CMAKE_REQUIRED_LIBRARIES anl)
