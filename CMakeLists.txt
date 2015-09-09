@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.0)
 project(libmill C)
 
 include(CheckSymbolExists)
+include(CheckFunctionExists)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wpedantic -Wextra")
 
@@ -17,10 +18,18 @@ list(APPEND CMAKE_REQUIRED_LIBRARIES anl)
 check_symbol_exists(getaddrinfo_a netdb.h HAVE_GETADDRINFO_A)
 if(HAVE_GETADDRINFO_A)
   add_definitions(-DHAVE_LIBANL)
-  add_definitions(-DHAVE_MPROTECT)
-  add_definitions(-DHAVE_POSIX_MEMALIGN)
   target_link_libraries(mill anl)
   target_link_libraries(mill_s anl)
+endif()
+
+check_function_exists(mprotect HAVE_MPROTECT)
+if(HAVE_MPROTECT)
+  add_definitions(-DHAVE_MPROTECT)
+endif()
+
+check_function_exists(posix_memalign HAVE_POSIX_MEMALIGN)
+if(HAVE_POSIX_MEMALIGN)
+  add_definitions(-DHAVE_POSIX_MEMALIGN)
 endif()
 
 # tests
