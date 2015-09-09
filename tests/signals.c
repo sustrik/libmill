@@ -68,7 +68,8 @@ int main() {
     chan sendch = chmake(char, 0);
     chan recvch = chmake(char, 0);
 
-    for(int i = 0; i < COUNT; ++i) {
+    int i;
+    for(i = 0; i < COUNT; ++i) {
         go(sender(sendch));
         go(receiver(recvch));
         chs(sendch, char, SIGNAL);
