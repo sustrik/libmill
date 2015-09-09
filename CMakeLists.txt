@@ -21,6 +21,8 @@ if(HAVE_GETADDRINFO_A)
   target_link_libraries(mill anl)
   target_link_libraries(mill_s anl)
 endif()
+set(CMAKE_REQUIRED_LIBRARIES )
+set(CMAKE_REQUIRED_DEFINITIONS )
 
 check_function_exists(mprotect HAVE_MPROTECT)
 if(HAVE_MPROTECT)
