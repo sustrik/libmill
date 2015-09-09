@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 2.8.7)
 project(libmill C)
 
 include(CheckSymbolExists)
@@ -12,6 +12,15 @@ add_library(mill STATIC ${sources})
 add_library(mill_s SHARED ${sources})
 set_target_properties(mill_s PROPERTIES OUTPUT_NAME mill)
 
+# check and enable rt if available
+list(APPEND CMAKE_REQUIRED_LIBRARIES rt)
+check_symbol_exists(clock_gettime time.h HAVE_CLOCK_GETTIME)
+if(HAVE_CLOCK_GETTIME)
+  add_definitions(-DHAVE_LIBRT)
+  target_link_libraries(mill rt)
+  target_link_libraries(mill_s rt)
+endif()
+
 # check and enable stack guard and dns if available
 list(APPEND CMAKE_REQUIRED_DEFINITIONS -D_GNU_SOURCE)
 list(APPEND CMAKE_REQUIRED_LIBRARIES anl)
@@ -21,6 +30,7 @@ if(HAVE_GETADDRINFO_A)
   target_link_libraries(mill anl)
   target_link_libraries(mill_s anl)
 endif()
+
 set(CMAKE_REQUIRED_LIBRARIES )
 set(CMAKE_REQUIRED_DEFINITIONS )
 
@@ -59,4 +69,3 @@ foreach(perf_file IN LISTS perf_files)
     OUTPUT_NAME ${perf_name})
   target_link_libraries(perf_${perf_name} mill)
 endforeach()
-
