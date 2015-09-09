@@ -16,13 +16,11 @@ set_target_properties(mill_s PROPERTIES OUTPUT_NAME mill)
 list(APPEND CMAKE_REQUIRED_LIBRARIES rt)
 check_symbol_exists(clock_gettime time.h HAVE_CLOCK_GETTIME)
 if(HAVE_CLOCK_GETTIME)
-  add_definitions(-DHAVE_LIBRT)
   target_link_libraries(mill rt)
   target_link_libraries(mill_s rt)
 endif()
 
 set(CMAKE_REQUIRED_LIBRARIES )
-set(CMAKE_REQUIRED_DEFINITIONS )
 
 # check and enable stack guard and dns if available
 list(APPEND CMAKE_REQUIRED_DEFINITIONS -D_GNU_SOURCE)
