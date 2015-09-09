@@ -57,7 +57,7 @@ int main() {
     tcpsock ls = tcplisten(iplocal(NULL, 5555, 0), 10);
     assert(ls);
 
-#if !defined __APPLE__
+#if !defined __APPLE__ && !defined __OpenBSD__
     int fd = tcpdetach(ls);
     assert(fd != -1);
     ls = tcpattach(fd);

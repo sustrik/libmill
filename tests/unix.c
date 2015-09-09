@@ -64,7 +64,7 @@ int main() {
     unixsock ls = unixlisten(sockname, 10);
     assert(ls);
 
-#if !defined __APPLE__
+#if !defined __APPLE__ && !defined __OpenBSD__
     int fd = unixdetach(ls);
     assert(fd != -1);
     ls = unixattach(fd);
