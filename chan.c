@@ -288,8 +288,7 @@ int mill_choose_wait(void) {
         cl = mill_cont(it, struct mill_clause, chitem);
         if(mill_slow(cl->ep->refs > 1)) {
             if(cl->ep->tmp == -1)
-                cl->ep->tmp = cl->ep->refs == 1 ? 0 :
-                    (int)(random() % cl->ep->refs);
+                cl->ep->tmp = cl->ep->refs == 1 ? 0 : (int)(random() % cl->ep->refs);
             if(cl->ep->tmp) {
                 --cl->ep->tmp;
                 cl->used = 0;
