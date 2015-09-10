@@ -29,8 +29,13 @@
 
 #include "../libmill.h"
 
-void client(const char *addr) {
+coroutine void client(const char *addr) {
     unixsock cs = unixconnect(addr);
+    assert(cs);
+
+    int fd = unixdetach(cs);
+    assert(fd != -1);
+    cs = unixattach(fd);
     assert(cs);
 
     msleep(now() + 100);
@@ -59,6 +64,13 @@ int main() {
     unixsock ls = unixlisten(sockname, 10);
     assert(ls);
 
+#if !defined __APPLE__ && !defined __OpenBSD__
+    int fd = unixdetach(ls);
+    assert(fd != -1);
+    ls = unixattach(fd);
+    assert(ls);
+#endif
+
     go(client(sockname));
 
     unixsock as = unixaccept(ls, -1);
@@ -68,7 +80,7 @@ int main() {
     size_t sz = unixrecv(as, buf, sizeof(buf), deadline);
     assert(sz == 0 && errno == ETIMEDOUT);
     int64_t diff = now() - deadline;
-    assert(diff > -10 && diff < 10);
+    assert(diff > -20 && diff < 20);
 
     sz = unixsend(as, "ABC", 3, -1);
     assert(sz == 3 && errno == 0);

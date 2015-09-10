@@ -32,7 +32,7 @@
 #define CONN_SUCCEEDED 2
 #define CONN_FAILED 3
 
-void statistics(chan ch) {
+coroutine void statistics(chan ch) {
     int connections = 0;
     int active = 0;
     int failed = 0;
@@ -53,7 +53,7 @@ void statistics(chan ch) {
     }
 }
 
-void dialogue(tcpsock as, chan ch) {
+coroutine void dialogue(tcpsock as, chan ch) {
     chs(ch, int, CONN_ESTABLISHED);
 
     int64_t deadline = now() + 10000;

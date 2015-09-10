@@ -39,13 +39,13 @@
 /*  www.gnu.org/software/libtool/manual/html_node/Updating-version-info.html  */
 
 /*  The current interface version. */
-#define MILL_VERSION_CURRENT 7
+#define MILL_VERSION_CURRENT 9
 
 /*  The latest revision of the current interface. */
 #define MILL_VERSION_REVISION 0
 
 /*  How many past interface versions are still supported. */
-#define MILL_VERSION_AGE 0
+#define MILL_VERSION_AGE 2
 
 /******************************************************************************/
 /*  Symbol visibility                                                         */
@@ -92,6 +92,12 @@ MILL_EXPORT void mill_go_epilogue(void);
 
 #define mill_string2(x) #x
 #define mill_string(x) mill_string2(x)
+
+#if defined __GNUC__ || defined __clang__
+#define coroutine __attribute__((noinline))
+#else
+#define coroutine
+#endif
 
 #define go(fn) \
     do {\
@@ -285,6 +291,8 @@ MILL_EXPORT size_t tcprecv(tcpsock s, void *buf, size_t len, int64_t deadline);
 MILL_EXPORT size_t tcprecvuntil(tcpsock s, void *buf, size_t len,
     const char *delims, size_t delimcount, int64_t deadline);
 MILL_EXPORT void tcpclose(tcpsock s);
+MILL_EXPORT tcpsock tcpattach(int fd);
+MILL_EXPORT int tcpdetach(tcpsock s);
 
 /******************************************************************************/
 /*  UDP library                                                               */
@@ -298,6 +306,8 @@ MILL_EXPORT void udpsend(udpsock s, ipaddr addr, const void *buf, size_t len);
 MILL_EXPORT size_t udprecv(udpsock s, ipaddr *addr,
     void *buf, size_t len, int64_t deadline);
 MILL_EXPORT void udpclose(udpsock s);
+MILL_EXPORT udpsock udpattach(int fd);
+MILL_EXPORT int udpdetach(udpsock s);
 
 /******************************************************************************/
 /*  UNIX library                                                              */
@@ -317,6 +327,8 @@ MILL_EXPORT size_t unixrecv(unixsock s, void *buf, size_t len,
 MILL_EXPORT size_t unixrecvuntil(unixsock s, void *buf, size_t len,
     const char *delims, size_t delimcount, int64_t deadline);
 MILL_EXPORT void unixclose(unixsock s);
+MILL_EXPORT unixsock unixattach(int fd);
+MILL_EXPORT int unixdetach(unixsock s);
 
 /******************************************************************************/
 /*  Debugging                                                                 */

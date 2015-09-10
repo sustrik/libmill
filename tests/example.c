@@ -26,7 +26,7 @@
 
 #include "../libmill.h"
 
-void worker(int count, const char *text) {
+coroutine void worker(int count, const char *text) {
     int i;
     for(i = 0; i != count; ++i) {
         printf("%s\n", text);

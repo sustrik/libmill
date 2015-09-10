@@ -30,7 +30,7 @@
 
 #include "../libmill.h"
 
-static void worker(chan in, chan out) {
+static coroutine void worker(chan in, chan out) {
     int val;
     while(1) {
         val = chr(in, int);

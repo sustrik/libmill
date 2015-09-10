@@ -228,7 +228,7 @@ ipaddr iplocal(const char *name, int port, int mode) {
 #endif
 }
 
-#if defined __linux__
+#if defined HAVE_LIBANL
 static void mill_getaddrinfo_a_done(union sigval sval) {
     uint64_t i = 1;
     ssize_t sz = write(sval.sival_int, &i, sizeof(i));
@@ -238,7 +238,7 @@ static void mill_getaddrinfo_a_done(union sigval sval) {
 
 ipaddr ipremote(const char *name, int port, int mode, int64_t deadline) {
     ipaddr addr = mill_ipliteral(name, port, mode);
-#if !defined __linux__
+#if !defined HAVE_LIBANL
     return addr;
 #else
     if(errno == 0)

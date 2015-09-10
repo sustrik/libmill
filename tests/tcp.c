@@ -27,9 +27,14 @@
 
 #include "../libmill.h"
 
-void client(int port) {
+coroutine void client(int port) {
     ipaddr addr = ipremote("127.0.0.1", port, 0, -1);
     tcpsock cs = tcpconnect(addr, -1);
+    assert(cs);
+
+    int fd = tcpdetach(cs);
+    assert(fd != -1);
+    cs = tcpattach(fd);
     assert(cs);
 
     msleep(now() + 100);
@@ -52,7 +57,15 @@ int main() {
     tcpsock ls = tcplisten(iplocal(NULL, 5555, 0), 10);
     assert(ls);
 
-    go(client(tcpport(ls)));
+#if !defined __APPLE__ && !defined __OpenBSD__
+    int fd = tcpdetach(ls);
+    assert(fd != -1);
+    ls = tcpattach(fd);
+    assert(ls);
+    assert(tcpport(ls) == 5555);
+#endif
+
+    go(client(5555));
 
     tcpsock as = tcpaccept(ls, -1);
 
@@ -61,7 +74,7 @@ int main() {
     size_t sz = tcprecv(as, buf, sizeof(buf), deadline);
     assert(sz == 0 && errno == ETIMEDOUT);
     int64_t diff = now() - deadline;
-    assert(diff > -10 && diff < 10); 
+    assert(diff > -20 && diff < 20); 
 
     sz = tcpsend(as, "ABC", 3, -1);
     assert(sz == 3 && errno == 0);

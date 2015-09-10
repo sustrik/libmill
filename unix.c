@@ -56,9 +56,9 @@ struct mill_unixlistener {
 struct mill_unixconn {
     struct mill_unixsock sock;
     int fd;
-    int ifirst;
-    int ilen;
-    int olen;
+    size_t ifirst;
+    size_t ilen;
+    size_t olen;
     char ibuf[MILL_UNIX_BUFLEN];
     char obuf[MILL_UNIX_BUFLEN];
 };
@@ -348,7 +348,7 @@ size_t unixrecv(unixsock s, void *buf, size_t len, int64_t deadline) {
                     return len - remaining;
                 sz = 0;
             }
-            if(sz == remaining) {
+            if((size_t)sz == remaining) {
                 errno = 0;
                 return len;
             }
@@ -368,7 +368,7 @@ size_t unixrecv(unixsock s, void *buf, size_t len, int64_t deadline) {
                     return len - remaining;
                 sz = 0;
             }
-            if(sz < remaining) {
+            if((size_t)sz < remaining) {
                 memcpy(pos, conn->ibuf, sz);
                 pos += sz;
                 remaining -= sz;
@@ -428,6 +428,52 @@ void unixclose(unixsock s) {
         mill_assert(rc == 0);
         free(c);
         return;
+    }
+    mill_assert(0);
+}
+
+unixsock unixattach(int fd) {
+    int val;
+    socklen_t sz = sizeof(val);
+    int rc = getsockopt(fd, SOL_SOCKET, SO_ACCEPTCONN, &val, &sz);
+    if(rc == -1 && errno == ENOPROTOOPT) {
+        val = 0;
+    }
+    else if(rc != 0) {
+        return NULL;
+    }
+    if(val == 0) {
+        struct mill_unixconn *conn = malloc(sizeof(struct mill_unixconn));
+        if(!conn) {
+            errno = ENOMEM;
+            return NULL;
+        }
+        unixconn_init(conn, fd);
+        errno = 0;
+        return (unixsock)conn;
+    }
+    struct mill_unixlistener *l = malloc(sizeof(struct mill_unixlistener));
+    if(!l) {
+        errno = ENOMEM;
+        return NULL;
+    }
+    l->sock.type = MILL_UNIXLISTENER;
+    l->fd = fd;
+    errno = 0;
+    return &l->sock;
+}
+
+int unixdetach(unixsock s) {
+    if(s->type == MILL_UNIXLISTENER) {
+        struct mill_unixlistener *l = (struct mill_unixlistener*)s;
+        int fd = l->fd;
+        free(l);
+        return fd;
+    }
+    if(s->type == MILL_UNIXCONN) {
+        int fd = ((struct mill_unixconn*)s)->fd;
+        free(s);
+        return fd;
     }
     mill_assert(0);
 }

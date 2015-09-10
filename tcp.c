@@ -64,9 +64,9 @@ struct mill_tcplistener {
 struct mill_tcpconn {
     struct mill_tcpsock sock;
     int fd;
-    int ifirst;
-    int ilen;
-    int olen;
+    size_t ifirst;
+    size_t ilen;
+    size_t olen;
     char ibuf[MILL_TCP_BUFLEN];
     char obuf[MILL_TCP_BUFLEN];
 };
@@ -345,7 +345,7 @@ size_t tcprecv(tcpsock s, void *buf, size_t len, int64_t deadline) {
                     return len - remaining;
                 sz = 0;
             }
-            if(sz == remaining) {
+            if((size_t)sz == remaining) {
                 errno = 0;
                 return len;
             }
@@ -365,7 +365,7 @@ size_t tcprecv(tcpsock s, void *buf, size_t len, int64_t deadline) {
                     return len - remaining;
                 sz = 0;
             }
-            if(sz < remaining) {
+            if((size_t)sz < remaining) {
                 memcpy(pos, conn->ibuf, sz);
                 pos += sz;
                 remaining -= sz;
@@ -425,6 +425,59 @@ void tcpclose(tcpsock s) {
         mill_assert(rc == 0);
         free(c);
         return;
+    }
+    mill_assert(0);
+}
+
+tcpsock tcpattach(int fd) {
+    int val;
+    socklen_t sz = sizeof(val);
+    int rc = getsockopt(fd, SOL_SOCKET, SO_ACCEPTCONN, &val, &sz);
+    if(rc == -1 && errno == ENOPROTOOPT) {
+        val = 0;
+    }
+    else if(rc != 0) {
+        return NULL;
+    }
+    if(val == 0) {
+        struct mill_tcpconn *conn = malloc(sizeof(struct mill_tcpconn));
+        if(!conn) {
+            errno = ENOMEM;
+            return NULL;
+        }
+        tcpconn_init(conn, fd);
+        errno = 0;
+        return (tcpsock)conn;
+    }
+    /* It's a listening socket. Find out the port it is listening on. */
+    ipaddr addr;
+    sz = sizeof(ipaddr);
+    rc = getsockname(fd, (struct sockaddr*)&addr, &sz);
+    if(rc == -1)
+        return NULL;
+    struct mill_tcplistener *l = malloc(sizeof(struct mill_tcplistener));
+    if(!l) {
+        errno = ENOMEM;
+        return NULL;
+    }
+    l->sock.type = MILL_TCPLISTENER;
+    l->fd = fd;
+    l->port = mill_ipport(addr);
+    errno = 0;
+    return &l->sock;
+}
+
+int tcpdetach(tcpsock s) {
+    if(s->type == MILL_TCPLISTENER) {
+        struct mill_tcplistener *l = (struct mill_tcplistener*)s;
+        int fd = l->fd;
+        free(l);
+        return fd;
+    }
+    if(s->type == MILL_TCPCONN) {
+        int fd = ((struct mill_tcpconn*)s)->fd;
+        free(s);
+        return fd;
     }
     mill_assert(0);
 }

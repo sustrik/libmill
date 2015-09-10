@@ -1,9 +1,11 @@
 Alex Cornejo <acornejo@gmail.com>
-Bent Cardan <bent@nothingsatisfies.com>
+Bent Cardan <bent@nothingsatisfies.com> *
+Constantine Tarasenkov <constantine@protonmail.com> *
 Jim Jagielski <jimjag@gmail.com>
 Luca Barbato <luca.barbato@gmail.com>
 Martin Lucina <martin@lucina.net>
 Martin Sustrik <sustrik@250bpm.com>
-Michael Gehring <mg@ebfe.org>
+Michael Gehring <mg@ebfe.org> *
 Nick Desaulniers <nick@mozilla.com>
-
+ 
+* Future patches by this author are submitted under MIT/X11 license

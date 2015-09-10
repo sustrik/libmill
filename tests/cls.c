@@ -30,7 +30,7 @@
 static int dummy1 = 0;
 static int dummy2 = 0;
 
-void worker(void) {
+coroutine void worker(void) {
     /* Test whether newly created coroutine has CLS set to NULL. */
     assert(cls() == NULL);
 

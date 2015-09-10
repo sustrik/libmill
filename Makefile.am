@@ -139,7 +139,8 @@ dist-hook:
 
 EXTRA_DIST = \
     ./abi_version.sh \
-    ./package_version.sh
+    ./package_version.sh \
+    ./CMakeLists.txt
 
 distclean-local:
 	-rm -f config.h

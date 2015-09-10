@@ -27,7 +27,7 @@
 
 #include "../libmill.h"
 
-void relay(chan src, chan dst) {
+coroutine void relay(chan src, chan dst) {
     while(1) {
        int val = chr(src, int);
        chs(dst, int, val);

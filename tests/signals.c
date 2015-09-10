@@ -41,13 +41,13 @@ void signal_handler(int signo) {
     assert(sz == 1);
 }
 
-void sender(chan ch) {
+coroutine void sender(chan ch) {
     char signo = chr(ch, char);
     int err = kill(getpid(), signo);
     assert(err == 0);
 }
 
-void receiver(chan ch) {
+coroutine void receiver(chan ch) {
     int events = fdwait(signal_pipe[0], FDW_IN, -1);
     assert(events == FDW_IN);
 
@@ -68,7 +68,8 @@ int main() {
     chan sendch = chmake(char, 0);
     chan recvch = chmake(char, 0);
 
-    for(int i = 0; i < COUNT; ++i) {
+    int i;
+    for(i = 0; i < COUNT; ++i) {
         go(sender(sendch));
         go(receiver(recvch));
         chs(sendch, char, SIGNAL);

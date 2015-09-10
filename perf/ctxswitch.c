@@ -30,7 +30,7 @@
 
 #include "../libmill.h"
 
-static void worker(long count) {
+static coroutine void worker(long count) {
     long i;
     for(i = 0; i != count; ++i)
         yield();

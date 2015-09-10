@@ -32,7 +32,7 @@
 
 #include "../libmill.h"
 
-void trigger(int fd, int64_t deadline) {
+coroutine void trigger(int fd, int64_t deadline) {
     msleep(deadline);
     ssize_t sz = send(fd, "A", 1, 0);
     assert(sz == 1);
@@ -60,7 +60,7 @@ int main() {
     rc = fdwait(fds[0], FDW_IN, deadline);
     assert(rc == 0);
     int64_t diff = now() - deadline;
-    assert(diff > -10 && diff < 10);
+    assert(diff > -20 && diff < 20);
 
     /* Check for in. */
     ssize_t sz = send(fds[1], "A", 1, 0);
@@ -84,7 +84,7 @@ int main() {
     rc = fdwait(fds[1], FDW_IN, start + 90);
     assert(rc == FDW_IN);
     diff = now() - start;
-    assert(diff > 40 && diff < 60);
+    assert(diff > 30 && diff < 70);
 
     close(fds[0]);
     close(fds[1]);

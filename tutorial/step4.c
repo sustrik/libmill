@@ -28,7 +28,7 @@
 
 #include "../libmill.h"
 
-void dialogue(tcpsock as) {
+coroutine void dialogue(tcpsock as) {
     tcpsend(as, "What's your name?\r\n", 19, -1);
     if(errno != 0)
         goto cleanup;
