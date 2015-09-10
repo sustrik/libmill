@@ -39,7 +39,7 @@ int main() {
     int64_t deadline = now() + 100;
     msleep(deadline);
     int64_t diff = now () - deadline;
-    assert(diff > -10 && diff < 10);
+    assert(diff > -20 && diff < 20);
 
     /* msleep-sort */
     chan ch = chmake(int, 0);

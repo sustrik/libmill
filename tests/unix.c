@@ -80,7 +80,7 @@ int main() {
     size_t sz = unixrecv(as, buf, sizeof(buf), deadline);
     assert(sz == 0 && errno == ETIMEDOUT);
     int64_t diff = now() - deadline;
-    assert(diff > -10 && diff < 10);
+    assert(diff > -20 && diff < 20);
 
     sz = unixsend(as, "ABC", 3, -1);
     assert(sz == 3 && errno == 0);
