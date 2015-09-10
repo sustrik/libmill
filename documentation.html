@@ -76,13 +76,13 @@ as well as dynamic library <tt>libmill.so</tt> and static library
 
 <pre>
 #include &lt;stdio.h&gt;
-#include "libmill.h"
+#include &lt;libmill.h&gt;
 
 coroutine void worker(int count, const char *text) {
     int i;
     for(i = 0; i != count; ++i) {
         printf("%s\n", text);
-        msleep(10);
+        msleep(now() + 10);
     }
 }
 
@@ -90,7 +90,7 @@ int main() {
     go(worker(4, "a"));
     go(worker(2, "b"));
     go(worker(3, "c"));
-    msleep(100);
+    msleep(now() + 100);
     return 0;
 }
 </pre>
@@ -123,7 +123,7 @@ asynchronously and thus there is now way to retrieve the result.</p>
 <p>Note that your program may work perfectly well even if you ommit the
 <tt>coroutine</tt> keyword. However, such program may break randomly when
 compiled by a different compiler or with a different optimisation level
-(a know example is clang with -O2 optimisation level).</p>
+(a know problem is with clang and -O2 optimisation level).</p>
 
 <p>Also bear in mind that coroutines are scheduled in a cooperative fashion.
 If one coroutine blocks, for example by calling <tt>sleep()</tt>, it blocks
