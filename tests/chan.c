@@ -36,6 +36,15 @@ struct foo {
     int second;
 };
 
+static void expected_abort(int signo) {
+    _exit(0);
+}
+
+static void fail() {
+    signal(SIGABRT, SIG_DFL);
+    assert(0);
+}
+
 coroutine void sender(chan ch, int doyield, int val) {
     if(doyield)
         yield();
@@ -202,11 +211,12 @@ int main() {
     if (pid == 0) {
         alarm(1);
         chan ch = chmake(int, 0);
+        signal(SIGABRT, expected_abort);
         chs(ch, int, 42);
-        _exit(0);
+        fail();
     }
     assert(waitpid(pid, &val, 0) == pid);
-    assert(WIFSIGNALED(val) && WTERMSIG(val) == SIGABRT);
+    assert(val == 0);
 
     /* Test panic when chr will deadlock. */
     pid = fork();
@@ -214,11 +224,12 @@ int main() {
     if (pid == 0) {
         alarm(1);
         chan ch = chmake(int, 0);
+        signal(SIGABRT, expected_abort);
         chr(ch, int);
-        _exit(0);
+        fail();
     }
     assert(waitpid(pid, &val, 0) == pid);
-    assert(WIFSIGNALED(val) && WTERMSIG(val) == SIGABRT);
+    assert(val == 0);
 
     /* Test panic when sending to closed channel. */
     pid = fork();
@@ -227,11 +238,12 @@ int main() {
         alarm(1);
         chan ch = chmake(int, 0);
         chclose(ch);
+        signal(SIGABRT, expected_abort);
         chs(ch, int, 42);
-        _exit(0);
+        fail();
     }
     assert(waitpid(pid, &val, 0) == pid);
-    assert(WIFSIGNALED(val) && WTERMSIG(val) == SIGABRT);
+    assert(val == 0);
 
     /* Test panic when receiving from closed channel. */
     pid = fork();
@@ -240,11 +252,12 @@ int main() {
         alarm(1);
         chan ch = chmake(int, 0);
         chclose(ch);
+        signal(SIGABRT, expected_abort);
         chr(ch, int);
-        _exit(0);
+        fail();
     }
     assert(waitpid(pid, &val, 0) == pid);
-    assert(WIFSIGNALED(val) && WTERMSIG(val) == SIGABRT);
+    assert(val == 0);
 
     return 0;
 }
