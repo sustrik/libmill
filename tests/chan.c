@@ -23,6 +23,7 @@
 */
 
 #include <assert.h>
+#include <sys/resource.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <signal.h>
@@ -65,6 +66,17 @@ coroutine void charsender(chan ch, char val) {
 coroutine void structsender(chan ch, struct foo val) {
     chs(ch, struct foo, val);
     chclose(ch);
+}
+
+void disable_coredumps(void) {
+    struct rlimit rl;
+    if (getrlimit(RLIMIT_CORE, &rl) == -1) {
+        return;
+    }
+    if (rl.rlim_cur > 0) {
+        rl.rlim_cur = 0;
+        setrlimit(RLIMIT_CORE, &rl);
+    }
 }
 
 int main() {
@@ -200,6 +212,7 @@ int main() {
     pid = fork();
     assert(pid >= 0);
     if (pid == 0) {
+        disable_coredumps();
         alarm(1);
         chan ch = chmake(int, 0);
         chs(ch, int, 42);
@@ -212,6 +225,7 @@ int main() {
     pid = fork();
     assert(pid >= 0);
     if (pid == 0) {
+        disable_coredumps();
         alarm(1);
         chan ch = chmake(int, 0);
         chr(ch, int);
@@ -224,6 +238,7 @@ int main() {
     pid = fork();
     assert(pid >= 0);
     if (pid == 0) {
+        disable_coredumps();
         alarm(1);
         chan ch = chmake(int, 0);
         chclose(ch);
@@ -237,6 +252,7 @@ int main() {
     pid = fork();
     assert(pid >= 0);
     if (pid == 0) {
+        disable_coredumps();
         alarm(1);
         chan ch = chmake(int, 0);
         chclose(ch);
