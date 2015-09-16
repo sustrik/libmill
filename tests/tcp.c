@@ -34,7 +34,7 @@ coroutine void client(int port) {
 
     int fd = tcpdetach(cs);
     assert(fd != -1);
-    cs = tcpattach(fd);
+    cs = tcpattach(fd, 0);
     assert(cs);
 
     msleep(now() + 100);
@@ -57,13 +57,11 @@ int main() {
     tcpsock ls = tcplisten(iplocal(NULL, 5555, 0), 10);
     assert(ls);
 
-#if !defined __APPLE__ && !defined __OpenBSD__
     int fd = tcpdetach(ls);
     assert(fd != -1);
-    ls = tcpattach(fd);
+    ls = tcpattach(fd, 1);
     assert(ls);
     assert(tcpport(ls) == 5555);
-#endif
 
     go(client(5555));
 

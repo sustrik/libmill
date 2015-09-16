@@ -432,17 +432,8 @@ void unixclose(unixsock s) {
     mill_assert(0);
 }
 
-unixsock unixattach(int fd) {
-    int val;
-    socklen_t sz = sizeof(val);
-    int rc = getsockopt(fd, SOL_SOCKET, SO_ACCEPTCONN, &val, &sz);
-    if(rc == -1 && errno == ENOPROTOOPT) {
-        val = 0;
-    }
-    else if(rc != 0) {
-        return NULL;
-    }
-    if(val == 0) {
+unixsock unixattach(int fd, int listening) {
+    if(listening == 0) {
         struct mill_unixconn *conn = malloc(sizeof(struct mill_unixconn));
         if(!conn) {
             errno = ENOMEM;

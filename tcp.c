@@ -429,17 +429,8 @@ void tcpclose(tcpsock s) {
     mill_assert(0);
 }
 
-tcpsock tcpattach(int fd) {
-    int val;
-    socklen_t sz = sizeof(val);
-    int rc = getsockopt(fd, SOL_SOCKET, SO_ACCEPTCONN, &val, &sz);
-    if(rc == -1 && errno == ENOPROTOOPT) {
-        val = 0;
-    }
-    else if(rc != 0) {
-        return NULL;
-    }
-    if(val == 0) {
+tcpsock tcpattach(int fd, int listening) {
+    if(listening == 0) {
         struct mill_tcpconn *conn = malloc(sizeof(struct mill_tcpconn));
         if(!conn) {
             errno = ENOMEM;
@@ -451,8 +442,8 @@ tcpsock tcpattach(int fd) {
     }
     /* It's a listening socket. Find out the port it is listening on. */
     ipaddr addr;
-    sz = sizeof(ipaddr);
-    rc = getsockname(fd, (struct sockaddr*)&addr, &sz);
+    socklen_t sz = sizeof(ipaddr);
+    int rc = getsockname(fd, (struct sockaddr*)&addr, &sz);
     if(rc == -1)
         return NULL;
     struct mill_tcplistener *l = malloc(sizeof(struct mill_tcplistener));
