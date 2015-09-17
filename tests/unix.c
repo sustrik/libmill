@@ -35,7 +35,7 @@ coroutine void client(const char *addr) {
 
     int fd = unixdetach(cs);
     assert(fd != -1);
-    cs = unixattach(fd);
+    cs = unixattach(fd, 0);
     assert(cs);
 
     msleep(now() + 100);
@@ -64,12 +64,10 @@ int main() {
     unixsock ls = unixlisten(sockname, 10);
     assert(ls);
 
-#if !defined __APPLE__ && !defined __OpenBSD__
     int fd = unixdetach(ls);
     assert(fd != -1);
-    ls = unixattach(fd);
+    ls = unixattach(fd, 1);
     assert(ls);
-#endif
 
     go(client(sockname));
 
