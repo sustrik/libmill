@@ -398,11 +398,9 @@ size_t tcprecvuntil(tcpsock s, void *buf, size_t len,
     size_t i;
     for(i = 0; i != len; ++i, ++pos) {
         size_t res = tcprecv(s, pos, 1, deadline);
-        if(res == 1) {
-            size_t j;
-            for(j = 0; j != delimcount; ++j)
-                if(*pos == delims[j])
-                    return i + 1;
+        if(res == 1 && (i + 1) >= delimcount) {
+            if(memcmp(pos - delimcount + 1, delims, delimcount) == 0)
+                return i;
         }
         if (errno != 0)
             return i + res;
