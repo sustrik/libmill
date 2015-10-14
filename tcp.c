@@ -400,7 +400,7 @@ size_t tcprecvuntil(tcpsock s, void *buf, size_t len,
         size_t res = tcprecv(s, pos, 1, deadline);
         if(res == 1 && (i + 1) >= delimcount) {
             if(memcmp(pos - delimcount + 1, delims, delimcount) == 0)
-                return i;
+                return i + 1;
         }
         if (errno != 0)
             return i + res;
