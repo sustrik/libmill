@@ -149,6 +149,18 @@ int mill_ipport(ipaddr addr) {
         ((struct sockaddr_in6*)&addr)->sin6_port);
 }
 
+/* Convert IP address from network format to ASCII dot notation. */
+const char *ipaddrstr(ipaddr addr, char *ipstr) {
+    if (mill_ipfamily(addr) == AF_INET) {
+        return inet_ntop(AF_INET, &(((struct sockaddr_in*)&addr)->sin_addr),
+            ipstr, INET_ADDRSTRLEN);
+    }
+    else {
+        return inet_ntop(AF_INET6, &(((struct sockaddr_in6*)&addr)->sin6_addr),
+            ipstr, INET6_ADDRSTRLEN);
+    }
+}
+
 ipaddr iplocal(const char *name, int port, int mode) {
     if(!name)
         return mill_ipany(port, mode);

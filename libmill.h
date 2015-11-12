@@ -267,12 +267,14 @@ MILL_EXPORT void *mill_choose_val(size_t sz);
 #define IPADDR_IPV6 2
 #define IPADDR_PREF_IPV4 3
 #define IPADDR_PREF_IPV6 4
+#define IPADDR_MAXSTRLEN 46
 
 typedef struct {char data[32];} ipaddr;
 
 MILL_EXPORT ipaddr iplocal(const char *name, int port, int mode);
 MILL_EXPORT ipaddr ipremote(const char *name, int port, int mode,
     int64_t deadline);
+MILL_EXPORT const char *ipaddrstr(ipaddr addr, char *ipstr);
 
 /******************************************************************************/
 /*  TCP library                                                               */

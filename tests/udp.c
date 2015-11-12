@@ -24,6 +24,8 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "../libmill.h"
 
@@ -38,18 +40,27 @@ int main() {
     s2 = udpattach(fd);
     assert(s2);
 
+    char ipstr[IPADDR_MAXSTRLEN] = {0};
+    ipaddrstr(ipremote("216.58.217.46", 5556, 0, -1), ipstr);
+    assert(errno == 0);
+    assert(strcmp(ipstr, "216.58.217.46") == 0);
+
     ipaddr addr = ipremote("127.0.0.1", 5556, 0, -1);
 
     while(1) {
         udpsend(s1, addr, "ABC", 3);
         assert(errno == 0);
-        
+
         char buf[3];
         size_t sz = udprecv(s2, &addr, buf, sizeof(buf), now() + 100);
         if(errno == ETIMEDOUT)
             continue;
         assert(errno == 0);
         assert(sz == 3);
+
+        ipaddrstr(addr, ipstr);
+        assert(errno == 0);
+        assert(strcmp(ipstr, "127.0.0.1") == 0);
         break;
     }
 
@@ -63,6 +74,10 @@ int main() {
             continue;
         assert(errno == 0);
         assert(sz == 3);
+
+        ipaddrstr(addr, ipstr);
+        assert(errno == 0);
+        assert(strcmp("127.0.0.1", ipstr) == 0);
         break;
     }
 
