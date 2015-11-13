@@ -36,6 +36,7 @@
   <li><a href="#unix">UNIX library</a></li>
   <li><a href="#cls">Coroutine-local storage</a></li>
   <li><a href="#memory">Dealing with memory</a></li>
+  <li><a href="#multiprocessing">Multiprocessing</a></li>
   <li><a href="#debug">Debugging</a></li>
   <li><a href="#tools">External tools</a></li>
   <ul id="toc">
@@ -664,6 +665,14 @@ default. On such systems your application may be selected to be killed in low
 memory conditions without you having any say in it. If you can't guarantee that
 memory overcommit will be switched off when running the program don't even
 bother with the measures described above.</p>
+
+<h3 id="multiprocessing">Multiprocessing</h3>
+
+<p>Libmill is intended for writing single-threaded applications. If you want
+to take advantage of multi-core machines follow the UNIX way and use
+multiprocessing.</p>
+
+<p>An example can be found <a href="tutorial.html#step7">here</a>.</p>
 
 <h3 id="debug">Debugging</h3>
 

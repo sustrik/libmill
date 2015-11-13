@@ -534,6 +534,11 @@ CPU core and distribute the incoming connections among the processes. That way,
 each process can run on one CPU core, fully utilising resources of the machine.
 </p>
 
+<p>It is important to note that spawning more processes than there are CPU
+cores is not desirable. It results in unnecessary context switching among
+processes located on a single core and ultimately to the performance
+degradation.</p>
+
 <p>First, let's do some preparatory work. We want statistics to print out
 the process ID so that we can distinguish between outputs from different
 instances of the server. (And yes, it would be better to aggregate the
