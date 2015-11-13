@@ -30,6 +30,7 @@
   <li><a href="#step4">Step 4: Making it parallel</a></li>
   <li><a href="#step5">Step 5: Deadlines</a></li>
   <li><a href="#step6">Step 6: Communicating among coroutines</a></li>
+  <li><a href="#step7">Step 7: Multi-process server</a></li>
 </ul>
 
 <h3 id="introduction">Introduction</h3>
@@ -65,6 +66,7 @@ functionality from the standard library, so include those headers as well:</p>
 #include &lt;stdio.h&gt;
 #include &lt;stdlib.h&gt;
 #include &lt;string.h&gt;
+#include &lt;unistd.h&gt;
 </pre>
 
 <p>Add the <tt>main</tt> function. We'll assume, that the first argument,
@@ -516,6 +518,124 @@ There have been 1 connection ever and 1 is active at the moment.</p>
 <p>Second block shows up when the connection times out: There have been 1
 connection overall, there are no active connection any longer and one connection
 have failed in the past.</p>
+
+<h3 id="step7">Step 7: Multi-process server</h3>
+
+<p>Our new server does what it is supposed to do. With no context switching
+it has performance that can never be matched by a multithreaded server. But it
+has one major drawback. It runs only on one CPU core. Even if the machine has
+64 cores it runs on one of them and leaves 63 cores unutilised.</p>
+
+<p>If the server is IO-bound, as it happens to be in this tutorial, it doesn't
+really matter. However, if it was CPU-bound we would face a serious problem.</p>
+
+<p>What we are going to do in this step is to create one server process per
+CPU core and distribute the incoming connections among the processes. That way,
+each process can run on one CPU core, fully utilising resources of the machine.
+</p>
+
+<p>First, let's do some preparatory work. We want statistics to print out
+the process ID so that we can distinguish between outputs from different
+instances of the server. (And yes, it would be better to aggregate the
+statistics from all instances, but that's out of scope of this tutorial and
+left as an exercise to the reader.)</p>
+
+<pre>
+coroutine void statistics(chan ch) {
+
+    ...
+
+    printf("Process ID: %d\n", (int)getpid());
+    printf("Total number of connections: %d\n", connections);
+    printf("Active connections: %d\n", active);
+    printf("Failed connections: %d\n\n", failed);
+
+    ...
+
+}
+</pre>
+
+<p>Second, we won't try to estimate the number of CPU cores on the machine
+and rather let the user specify it:</p>
+
+<pre>
+int main(int argc, char *argv[]) {
+    int port = 5555;
+    int nproc = 1;
+    if(argc > 1)
+        port = atoi(argv[1]);
+    if(argc > 2)
+        nproc = atoi(argv[2]);
+    ...
+}
+</pre>
+
+<p>Now we can do the actual magic. The idea is to open the listening socket
+in the first process, then to fork all the remaining processes, each inheriting
+the socket. Each process can then <tt>tcpaccept()</tt> connections from
+the listening socket making OS work as a simple load balancer, dispatching
+connections evenly among processes.</p>
+
+<pre>
+int main(int argc, char *argv[]) {
+
+    ...
+
+    int i;
+    for (i = 0; i < nproc - 1; ++i) {
+        pid_t pid = fork();
+        if(pid < 0) {
+           perror("Can't create new process");
+           return 1;
+        }
+        if(pid > 0)
+            break;
+    }
+
+    ...
+
+}
+</pre>
+
+<p>The code above should be inserted right after the <tt>tcplisten()</tt> call.
+</p>
+
+<p>One thing to note is that we fork number of processes requested by the user
+short by one. The reason is that the parent process itself is going to act as
+one instance of the server after if finishes the fork loop.</p>
+
+<p>Now we can check it in practice. Let's run it on 4 CPU cores:<p>
+
+<pre>
+./greetserver 5555 4
+</pre>
+
+<p>Check the processes using <tt>ps</tt>:</p>
+
+<pre>
+$ ps -a
+  PID TTY          TIME CMD
+16406 pts/14   00:00:00 lt-greetserver
+16420 pts/14   00:00:00 lt-greetserver
+16421 pts/14   00:00:00 lt-greetserver
+16422 pts/14   00:00:00 lt-greetserver
+16424 pts/7    00:00:00 ps
+</pre>
+
+<p>Telnet to the server twice to see whether the connections are dispatched
+to different instances:</p>
+
+<pre>
+Process ID: 16420
+Total number of connections: 1
+Active connections: 1
+Failed connections: 0
+
+Process ID: 16422
+Total number of connections: 1
+Active connections: 1
+Failed connections: 0
+</pre>
 
 <p>Yay! Everything works as expected.</p>
 
