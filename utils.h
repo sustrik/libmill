@@ -36,8 +36,8 @@ struct mill_ctx {
     jmp_buf jbuf;
 };
 
-#define mill_setjmp(ctx) setjmp((ctx)->jbuf)
-#define mill_jmp(ctx) longjmp((ctx)->jbuf, 1)
+#define mill_setjmp(ctx) sigsetjmp((ctx)->jbuf, 0)
+#define mill_jmp(ctx) siglongjmp((ctx)->jbuf, 1)
 
 /* Cause panic. */
 void mill_panic(const char *text);
