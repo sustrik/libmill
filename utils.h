@@ -33,7 +33,7 @@
 
 /* For now use longjmp. Replace by a different mechanism as needed. */
 struct mill_ctx {
-    jmp_buf jbuf;
+    sigjmp_buf jbuf;
 };
 
 #define mill_setjmp(ctx) sigsetjmp((ctx)->jbuf, 0)
