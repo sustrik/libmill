@@ -382,6 +382,15 @@ ipaddr addr = ipremote("192.168.0.111", 5555, 0, -1);
 
 <p>Behaviour in case of error is same as with <tt>iplocal()</tt>.
 
+<p>You can also convert <tt>ipaddr</tt> into a human readable string. To do so
+you have to supply a buffer at least IPADDR_MAXSTRLEN long:</p>
+
+<pre>
+ipaddr addr = ...;
+char buf[IPADDR_MAXSTRLEN];
+printf("Connecting to %s!\n", ipaddrstr(addr, buf));
+</pre>
+
 <h3 id="tcp">TCP library</h3>
 
 <h4>Connecting to a remote endpoint</h4>
