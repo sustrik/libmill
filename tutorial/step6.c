@@ -79,8 +79,6 @@ coroutine void dialogue(tcpsock as, chan ch) {
     if(errno != 0)
         goto cleanup;
     tcpflush(as, deadline);
-    if(errno != 0)
-        goto cleanup;
 
     cleanup:
     if(errno == 0)

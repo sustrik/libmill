@@ -67,8 +67,6 @@ int main(int argc, char *argv[]) {
         if(errno != 0)
             goto cleanup;
         tcpflush(as, -1);
-        if(errno != 0)
-            goto cleanup;
 
         cleanup:
         tcpclose(as);
