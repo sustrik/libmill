@@ -42,6 +42,56 @@
   <ul id="toc">
     <li><a href="#tcpmux">TCPMUX</a></li>
   </ul>
+  <li><a href="#reference">Reference</a></li>
+  <ul id="toc">
+    <li><a href="#chclose">chclose</a></li>
+    <li><a href="#chdone">chdone</a></li>
+    <li><a href="#chdup">chdup</a></li>
+    <li><a href="#chmake">chmake</a></li>
+    <li><a href="#chr">chr</a></li>
+    <li><a href="#chs">chs</a></li>
+    <li><a href="#cls">cls</a></li>
+    <li><a href="#fdwait">fdwait</a></li>
+    <li><a href="#go">go</a></li>
+    <li><a href="#goprepare">goprepare</a></li>
+    <li><a href="#goredump">goredump</a></li>
+    <li><a href="#gotrace">gotrace</a></li>
+    <li><a href="#ipaddrstr">ipaddrstr</a></li>
+    <li><a href="#iplocal">iplocal</a></li>
+    <li><a href="#ipremote">ipremote</a></li>
+    <li><a href="#msleep">msleep</a></li>
+    <li><a href="#setcls">setcls</a></li>
+    <li><a href="#tcpaccept">tcpaccept</a></li>
+    <li><a href="#tcpattach">tcpattach</a></li>
+    <li><a href="#tcpclose">tcpclose</a></li>
+    <li><a href="#tcpconnect">tcpconnect</a></li>
+    <li><a href="#tcpdetach">tcpdetach</a></li>
+    <li><a href="#tcpflush">tcpflush</a></li>
+    <li><a href="#tcplisten">tcplisten</a></li>
+    <li><a href="#tcpport">tcpport</a></li>
+    <li><a href="#tcprecv">tcprecv</a></li>
+    <li><a href="#tcprecvuntil">tcprecvuntil</a></li>
+    <li><a href="#tcpsend">tcpsend</a></li>
+    <li><a href="#udpattach">udpattach</a></li>
+    <li><a href="#udpclose">udpclose</a></li>
+    <li><a href="#udpdetach">udpdetach</a></li> 
+    <li><a href="#udplisten">udplisten</a></li>
+    <li><a href="#udpport">udpport</a></li>
+    <li><a href="#udprecv">udprecv</a></li>
+    <li><a href="#udpsend">udpsend</a></li>
+    <li><a href="#unixaccept">unixaccept</a></li>
+    <li><a href="#unixattach">unixattach</a></li>
+    <li><a href="#unixclose">unixclose</a></li>
+    <li><a href="#unixconnect">unixconnect</a></li>
+    <li><a href="#unixdetach">unixdetach</a></li>
+    <li><a href="#unixflush">unixflush</a></li>
+    <li><a href="#unixlisten">unixlisten</a></li>
+    <li><a href="#unixpair">unixpair</a></li>
+    <li><a href="#unixrecv">unixrecv</a></li>
+    <li><a href="#unixrecvuntil">unixrecvuntil</a></li>
+    <li><a href="#unixsend">unixsend</a></li>
+    <li><a href="#yield">yield</a></li>
+  </ul>
 </ul>
 
 <h3 id="build">Build</h3>
@@ -863,6 +913,56 @@ machine.</p>
 <p>The project also contains libmill-based client library.</p>
 
 <p><a href="https://github.com/sustrik/tcpmux">https://github.com/sustrik/tcpmux</a></p>
+
+<h3 id="reference">Reference</h3>
+
+<p id="chclose"><b>void chclose(chan ch);</p></b>
+<p id="chdone"><b>void chdone(chan ch, type, type value);</p></b>
+<p id="chdup"><b>chan chdup(chan ch);</p></b>
+<p id="chmake"><b>chan chmake(type, size);</p></b>
+<p id="chr"><b>type chr(chan ch, type);</p></b>
+<p id="chs"><b>void chs(chan ch, type, type value);</p></b>
+<p id="cls"><b>void *cls(void);</p></b>
+<p id="fdwait"><b>int fdwait(int fd, int events, int64_t deadline);</p></b>
+<p id="go"><b>void go(expression);</p></b>
+<p id="goprepare"><b>int goprepare(int count, size_t stack_size, size_t val_size);</p></b>
+<p id="goredump"><b>void goredump(void);</p></b>
+<p id="gotrace"><b>void gotrace(int level);</p></b>
+<p id="ipaddrstr"><b>const char *ipaddrstr(ipaddr addr, char *ipstr);</p></b>
+<p id="iplocal"><b>ipaddr iplocal(const char *name, int port, int mode);</p></b>
+<p id="ipremote"><b>ipaddr ipremote(const char *name, int port, int mode, int64_t deadline);</p></b>
+<p id="msleep"><b>void msleep(int64_t deadline);</p>
+<p id="setcls"><b>void setcls(void *val);</p></b>
+<p id="tcpaccept"><b>tcpsock tcpaccept(tcpsock s, int64_t deadline);</p></b>
+<p id="tcpattach"><b>tcpsock tcpattach(int fd, int listening);</p></b>
+<p id="tcpclose"><b>void tcpclose(tcpsock s);</p></b>
+<p id="tcpconnect"><b>tcpsock tcpconnect(ipaddr addr, int64_t deadline);</p></b>
+<p id="tcpdetach"><b>int tcpdetach(tcpsock s);</p></b>
+<p id="tcpflush"><b>void tcpflush(tcpsock s, int64_t deadline);</p></b>
+<p id="tcplisten"><b>tcpsock tcplisten(ipaddr addr, int backlog);</p></b>
+<p id="tcpport"><b>int tcpport(tcpsock s);</p></b>
+<p id="tcprecv"><b>size_t tcprecv(tcpsock s, void *buf, size_t len, int64_t deadline);</p></b>
+<p id="tcprecvuntil"><b>size_t tcprecvuntil(tcpsock s, void *buf, size_t len, const char *delims, size_t delimcount, int64_t deadline);</p></b>
+<p id="tcpsend"><b>size_t tcpsend(tcpsock s, const void *buf, size_t len, int64_t deadline);</p></b>
+<p id="udpattach"><b>udpsock udpattach(int fd);</p></b>
+<p id="udpclose"><b>void udpclose(udpsock s);</p></b>
+<p id="udpdetach"><b>int udpdetach(udpsock s);</p></b> 
+<p id="udplisten"><b>udpsock udplisten(ipaddr addr);</p></b>
+<p id="udpport"><b>int udpport(udpsock s);</p></b>
+<p id="udprecv"><b>size_t udprecv(udpsock s, ipaddr *addr, void *buf, size_t len, int64_t deadline);</p></b>
+<p id="udpsend"><b>void udpsend(udpsock s, ipaddr addr, const void *buf, size_t len);</p></b>
+<p id="unixaccept"><b>unixsock unixaccept(unixsock s, int64_t deadline);</p></b>
+<p id="unixattach"><b>unixsock unixattach(int fd, int listening);</p></b>
+<p id="unixclose"><b>void unixclose(unixsock s);</p></b>
+<p id="unixconnect"><b>unixsock unixconnect(const char *addr);</p></b>
+<p id="unixdetach"><b>int unixdetach(unixsock s);</p></b>
+<p id="unixflush"><b>void unixflush(unixsock s, int64_t deadline);</p></b>
+<p id="unixlisten"><b>unixsock unixlisten(const char *addr, int backlog);</p></b>
+<p id="unixpair"><b>void unixpair(unixsock *a, unixsock *b);</p></b>
+<p id="unixrecv"><b>size_t unixrecv(unixsock s, void *buf, size_t len, int64_t deadline);</p></b>
+<p id="unixrecvuntil"><b>size_t unixrecvuntil(unixsock s, void *buf, size_t len, const char *delims, size_t delimcount, int64_t deadline);</p></b>
+<p id="unixsend"><b>size_t unixsend(unixsock s, const void *buf, size_t len, int64_t deadline);</p></b>
+<p id="yield"><b>void yield();</p></b>
 
 </body>
 </html>
