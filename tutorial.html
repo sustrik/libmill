@@ -285,6 +285,11 @@ if(!as)
     continue;
 </pre>
 
+<p>Note that the error checking after last <tt>tcpflush()</tt> is not
+stricly necessary -- the code would go to cleanup phase regardless. However,
+it's left in the sample code as a reminder that <tt>tcpflush()</tt> returns
+errors via <tt>errno</tt> which shouldn't be left unhandled.<p>
+
 <h3 id="step4">Step 4: Making it parallel</h3>
 
 <p>At this point the client can't crash the server, but it can block it.
