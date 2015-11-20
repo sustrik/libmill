@@ -997,8 +997,29 @@ channel. Setting this argument to zero creates an unbuffered channel.</p>
 memory to allocate the channel.</p>
 
 <h6 id="choose">choose {}</h6>
+
 <h6 id="chr">type chr(chan ch, type);</h6>
+
+<p>Retrieves a message from the channel. First parameter is the channel handle,
+second one is the type of the message. The type specified must match the type of
+the channel otherwise the program will panic and abort.</p>
+
+<p>If there's no message in the channel the function waits until one becomes
+available.</p>
+
+<p>Retrieved message is returned from the function. It cannot fail.</p>
+
 <h6 id="chs">void chs(chan ch, type, type value);</h6>
+
+<p>Send a message to the channle. First parameter is the channel handle, second
+one is the type of the message and third one is the message itself. If the type
+of the message doesn't match the type of the channel the program will panic and
+abort.</p>
+
+<p>If there's no space in the channel for the message the function waits until
+it becomes available.</p>
+
+<p>The function cannot fail.</p>
 
 <h6 id="cls">void *cls(void);</h6>
 
