@@ -23,21 +23,24 @@
 <h2>Documentation</h2>
 
 <ul id="toc">
-  <li><a href="#build">Build</a></li>
-  <li><a href="#coroutines">Coroutines</a></li>
-  <li><a href="#channels">Channels</a></li>
-  <li><a href="#choosestatement">Choose statement</a></li>
-  <li><a href="#deadlines">Deadlines</a></li>
-  <li><a href="#sleeping">Sleeping</a></li>
-  <li><a href="#fds">Waiting for file descriptors</a></li>
-  <li><a href="#ip">Resolving IP addresses</a></li>
-  <li><a href="#tcp">TCP library</a></li>
-  <li><a href="#udp">UDP library</a></li>
-  <li><a href="#unix">UNIX library</a></li>
-  <li><a href="#cls">Coroutine-local storage</a></li>
-  <li><a href="#memory">Dealing with memory</a></li>
-  <li><a href="#multiprocessing">Multiprocessing</a></li>
-  <li><a href="#debug">Debugging</a></li>
+  <li><a href="#intro">Introduction</a></li>
+  <li><a href="#tour">A tour of the library</a></li>
+  <ul id="toc">
+    <li><a href="#coroutines">Coroutines</a></li>
+    <li><a href="#channels">Channels</a></li>
+    <li><a href="#choosestatement">Choose statement</a></li>
+    <li><a href="#deadlines">Deadlines</a></li>
+    <li><a href="#sleeping">Sleeping</a></li>
+    <li><a href="#fds">Waiting for file descriptors</a></li>
+    <li><a href="#ip">Resolving IP addresses</a></li>
+    <li><a href="#tcp">TCP library</a></li>
+    <li><a href="#udp">UDP library</a></li>
+    <li><a href="#unix">UNIX library</a></li>
+    <li><a href="#cls">Coroutine-local storage</a></li>
+    <li><a href="#memory">Dealing with memory</a></li>
+    <li><a href="#multiprocessing">Multiprocessing</a></li>
+    <li><a href="#debug">Debugging</a></li>
+  </ul>
   <li><a href="#tools">External tools</a></li>
   <ul id="toc">
     <li><a href="#tcpmux">tcpmux</a></li>
@@ -98,7 +101,7 @@
   </ul>
 </ul>
 
-<h3 id="build">Build</h3>
+<h3 id="intro">Introduction</h3>
 
 <p>Libmill runs in following environments:</p>
 
@@ -159,7 +162,9 @@ gcc -o example example.c -lmill
 <p>Note that there's also an alternative CMake-based build system included in
 the package.</p>
 
-<h3 id="coroutines">Coroutines</h3>
+<h3 id="tour">A tour of the library</h3>
+
+<h4 id="coroutines">Coroutines</h4>
 
 <p>Coroutine is defined using <tt><a href="#coroutine">coroutine</a></tt>
 keyword and launched using <tt><a href="#go">go</a></tt> construct:</p>
@@ -197,7 +202,7 @@ explicitly:</p>
 yield();
 </pre>
 
-<h3 id="channels">Channels</h3>
+<h4 id="channels">Channels</h4>
 
 <p>Channels are typed pipes used for communication between coroutines. To create
 a channel using <tt><a href="#chmake">chmake</a></tt> function you have to
@@ -267,7 +272,7 @@ int main() {
 }
 </pre>
 
-<h3 id="choosestatement">Choose statement</h3>
+<h4 id="choosestatement">Choose statement</h4>
 
 <p>Choose statement is equivalent to Go's <tt>select</tt>
 statement. It can be used to wait for multiple channels.</p>
@@ -321,7 +326,7 @@ at random.</p>
 
 <p>There's no fall-through among the clauses.</p>
 
-<h3 id="deadlines">Deadlines</h3>
+<h4 id="deadlines">Deadlines</h4>
 
 <p>Unlike standard POSIX functions, libmill uses dealines rather than
 timeouts.</p>
@@ -343,7 +348,7 @@ was created.</p>
 <p>Value of -1 is used to specify that there is no deadline or, if you will,
 that the deadline is infinite.</p>
 
-<h3 id="sleeping">Sleeping</h3>
+<h4 id="sleeping">Sleeping</h4>
 
 <p>It was already mentioned that a single call to <tt>sleep()</tt> can block
 the entire process. To avoid the problem use
@@ -354,7 +359,7 @@ deadline, not a timeout:</p>
 msleep(now() + 1000);
 </pre>
 
-<h3 id="fds">Waiting for file descriptors</h3>
+<h4 id="fds">Waiting for file descriptors</h4>
 
 <p>To wait for an event from a file descriptor use
 <tt><a href="#fdwait">fdwait</a></tt> function:</p>
@@ -388,7 +393,7 @@ socket combination of <tt>FDW_ERR</tt> and <tt>FDW_IN</tt> may be returned.
 <p>The third parameter to <tt><a href="#fdwait">fdwait()</a></tt> is a deadline.
 If deadline is hit the function returns zero.</p>
 
-b<h3 id="ip">Resolving IP addresses</h3>
+<h4 id="ip">Resolving IP addresses</h4>
 
 <p>Network functionality, such as TCP or UDP, can be accessed via standard POSIX
 functions provided that you do it in a non-blocking way. To save you the trouble
@@ -461,9 +466,9 @@ char buf[IPADDR_MAXSTRLEN];
 printf("Connecting to %s!\n", ipaddrstr(addr, buf));
 </pre>
 
-<h3 id="tcp">TCP library</h3>
+<h4 id="tcp">TCP library</h4>
 
-<h4>Connecting to a remote endpoint</h4>
+<h5>Connecting to a remote endpoint</h5>
 
 <p>To connect to a remote server, use
 <tt><a href="#tcpconnect">tcpconnect()</a></tt> function:
@@ -479,7 +484,7 @@ tcpsock s = tcpconnect(addr, -1);
 of the standard POSIX error values. If the deadline is reached, <tt>errno</tt>
 is set to <tt>ETIMEDOUT</tt>.</p>
 
-<h4>Listening for incoming connections</h4>
+<h5>Listening for incoming connections</h5>
 
 <p>To start listening for incoming TCP connections use
 <tt><a href="#tcplisten">tcplisten()</a></tt> function. To accept a new
@@ -523,7 +528,7 @@ tcpsock s = tcpaccept(ls, now() + 1000);
 standard POSIX error values. If the deadline is reached, <tt>errno</tt>
 is set to <tt>ETIMEDOUT</tt>.</p>
 
-<h4>Sending data</h4>
+<h5>Sending data</h5>
 
 <p>To send data to the connection use <tt><a href="#tcpsend">tcpsend()</a></tt>
 function:</p>
@@ -555,7 +560,7 @@ tcpflush(s, -1);
 is broken it is set to <tt>ECONNRESET</tt>. If the deadline expires it is
 set to <tt>ETIMEDOUT</tt>.</p>
 
-<h4>Receiving data</h4>
+<h5>Receiving data</h5>
 
 <p>To read data from a connection use <tt><a href="#tcprecv">tcprecv()</a></tt>
 function:</p>
@@ -600,7 +605,7 @@ is received:</p>
 size_t nbytes = tcprecvuntil(conn, buf, 256, ",}" , 2, -1);
 </pre>
 
-<h4>Cleaning up</h4>
+<h5>Cleaning up</h5>
 
 <p>To close sockets (both listening and connected ones) use
 <tt><a href="#tcpclose">tcpclose()</a></tt> function:</p>
@@ -609,7 +614,7 @@ size_t nbytes = tcprecvuntil(conn, buf, 256, ",}" , 2, -1);
 tcpclose(s);
 </pre>
 
-<h3 id="udp">UDP library</h3>
+<h4 id="udp">UDP library</h4>
 
 <p>To open an UDP socket use <tt><a href="#udplisten">udplisten()</a></tt>
 function. IP address of the local network interface should be supplied:</p>
@@ -672,7 +677,7 @@ In the case of success <tt>errno</tt> is set to zero.</p>
 udpclose(s);
 </pre>
 
-<h3 id="unix">UNIX library</h3>
+<h4 id="unix">UNIX library</h4>
 
 <p>Unix sockets are used for communicating between processes on the same
 machine.</p>
@@ -698,7 +703,7 @@ unixsock s1, s2;
 unixpair(&s1, &s2);
 </pre>
 
-<h3 id="cls">Coroutine-local storage</h3>
+<h4 id="cls">Coroutine-local storage</h4>
 
 <p>Coroutine-local storage is an advanced mechanism meant to be used in
 special cases. Avoid using it if possible. In general, use it where you would
@@ -723,7 +728,7 @@ void *data = cls();
 <p>It can be safely assumed that before coroutine-local data are set,
 <tt><a href="#cls">cls</a></tt> function will return <tt>NULL</tt>.</p>
 
-<h3 id="memory">Dealing with memory</h3>
+<h4 id="memory">Dealing with memory</h4>
 
 <p>Most libmill functions report out of memory condition in the common way.
 <tt><a href="#chmake">chmake()</a></tt> returns <tt>NULL</tt>,
@@ -760,7 +765,7 @@ memory conditions without you having any say in it. If you can't guarantee that
 memory overcommit will be switched off when running the program don't even
 bother with the measures described above.</p>
 
-<h3 id="multiprocessing">Multiprocessing</h3>
+<h4 id="multiprocessing">Multiprocessing</h4>
 
 <p>Libmill is intended for writing single-threaded applications. If you want
 to take advantage of multi-core machines follow the UNIX way and use
@@ -768,7 +773,7 @@ multiprocessing.</p>
 
 <p>An example can be found <a href="tutorial.html#step7">here</a>.</p>
 
-<h3 id="debug">Debugging</h3>
+<h4 id="debug">Debugging</h4>
 
 <p>Libmill provides a couple of functions to help with the debugging. They can
 be invoked either directly from the program or manually from the debugger.</p>
@@ -783,7 +788,7 @@ be invoked either directly from the program or manually from the debugger.</p>
   <li>Channel IDs are printed in pointy braces, e.g. <tt>&lt;24&gt;</tt>.</li>
 </ol>
 
-<h4>goredump</h4>
+<h5>goredump</h5>
 
 <p>When debugging a program you may want to inspect the coroutines being
 run and the channels being used. Use <tt><a href="#goredump">goredump()</a></tt>
@@ -878,7 +883,7 @@ CHANNEL  msgs/max    senders/receivers     refs  done  created
 <p>If there are no coroutines waiting to send or receive messages from the
 channel the field is kept empty.</p>
 
-<h4>gotrace</h4>
+<h5>gotrace</h5>
 
 <p>It is possible to switch on tracing via
 <tt><a href="#gotrace">gotrace()</a></tt> function. You can do so either
