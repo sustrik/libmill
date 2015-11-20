@@ -967,56 +967,64 @@ machine.</p>
 
 <h3 id="reference">Reference</h3>
 
-<p id="chclose"><b>void chclose(chan ch);</p></b>
-<p id="chdone"><b>void chdone(chan ch, type, type value);</p></b>
-<p id="chdup"><b>chan chdup(chan ch);</p></b>
-<p id="chmake"><b>chan chmake(type, size);</p></b>
-<p id="choose"><b>choose {}</p></b>
-<p id="chr"><b>type chr(chan ch, type);</p></b>
-<p id="chs"><b>void chs(chan ch, type, type value);</p></b>
-<p id="cls"><b>void *cls(void);</p></b>
-<p id="coroutine"><b>coroutine function-declaration;</p></b>
-<p id="fdwait"><b>int fdwait(int fd, int events, int64_t deadline);</p></b>
-<p id="go"><b>void go(expression);</p></b>
-<p id="goprepare"><b>int goprepare(int count, size_t stack_size, size_t val_size);</p></b>
-<p id="goredump"><b>void goredump(void);</p></b>
-<p id="gotrace"><b>void gotrace(int level);</p></b>
-<p id="ipaddrstr"><b>const char *ipaddrstr(ipaddr addr, char *ipstr);</p></b>
-<p id="iplocal"><b>ipaddr iplocal(const char *name, int port, int mode);</p></b>
-<p id="ipremote"><b>ipaddr ipremote(const char *name, int port, int mode, int64_t deadline);</p></b>
-<p id="msleep"><b>void msleep(int64_t deadline);</p>
-<p id="now"><b>int64_t now(void);</p></b>
-<p id="setcls"><b>void setcls(void *val);</p></b>
-<p id="tcpaccept"><b>tcpsock tcpaccept(tcpsock s, int64_t deadline);</p></b>
-<p id="tcpattach"><b>tcpsock tcpattach(int fd, int listening);</p></b>
-<p id="tcpclose"><b>void tcpclose(tcpsock s);</p></b>
-<p id="tcpconnect"><b>tcpsock tcpconnect(ipaddr addr, int64_t deadline);</p></b>
-<p id="tcpdetach"><b>int tcpdetach(tcpsock s);</p></b>
-<p id="tcpflush"><b>void tcpflush(tcpsock s, int64_t deadline);</p></b>
-<p id="tcplisten"><b>tcpsock tcplisten(ipaddr addr, int backlog);</p></b>
-<p id="tcpport"><b>int tcpport(tcpsock s);</p></b>
-<p id="tcprecv"><b>size_t tcprecv(tcpsock s, void *buf, size_t len, int64_t deadline);</p></b>
-<p id="tcprecvuntil"><b>size_t tcprecvuntil(tcpsock s, void *buf, size_t len, const char *delims, size_t delimcount, int64_t deadline);</p></b>
-<p id="tcpsend"><b>size_t tcpsend(tcpsock s, const void *buf, size_t len, int64_t deadline);</p></b>
-<p id="udpattach"><b>udpsock udpattach(int fd);</p></b>
-<p id="udpclose"><b>void udpclose(udpsock s);</p></b>
-<p id="udpdetach"><b>int udpdetach(udpsock s);</p></b> 
-<p id="udplisten"><b>udpsock udplisten(ipaddr addr);</p></b>
-<p id="udpport"><b>int udpport(udpsock s);</p></b>
-<p id="udprecv"><b>size_t udprecv(udpsock s, ipaddr *addr, void *buf, size_t len, int64_t deadline);</p></b>
-<p id="udpsend"><b>void udpsend(udpsock s, ipaddr addr, const void *buf, size_t len);</p></b>
-<p id="unixaccept"><b>unixsock unixaccept(unixsock s, int64_t deadline);</p></b>
-<p id="unixattach"><b>unixsock unixattach(int fd, int listening);</p></b>
-<p id="unixclose"><b>void unixclose(unixsock s);</p></b>
-<p id="unixconnect"><b>unixsock unixconnect(const char *addr);</p></b>
-<p id="unixdetach"><b>int unixdetach(unixsock s);</p></b>
-<p id="unixflush"><b>void unixflush(unixsock s, int64_t deadline);</p></b>
-<p id="unixlisten"><b>unixsock unixlisten(const char *addr, int backlog);</p></b>
-<p id="unixpair"><b>void unixpair(unixsock *a, unixsock *b);</p></b>
-<p id="unixrecv"><b>size_t unixrecv(unixsock s, void *buf, size_t len, int64_t deadline);</p></b>
-<p id="unixrecvuntil"><b>size_t unixrecvuntil(unixsock s, void *buf, size_t len, const char *delims, size_t delimcount, int64_t deadline);</p></b>
-<p id="unixsend"><b>size_t unixsend(unixsock s, const void *buf, size_t len, int64_t deadline);</p></b>
-<p id="yield"><b>void yield(void);</p></b>
+<h6 id="chclose">void chclose(chan ch);</h6>
+<h6 id="chdone">void chdone(chan ch, type, type value);</h6>
+<h6 id="chdup">chan chdup(chan ch);</h6>
+<h6 id="chmake">chan chmake(type, size);</h6>
+<h6 id="choose">choose {}</h6>
+<h6 id="chr">type chr(chan ch, type);</h6>
+<h6 id="chs">void chs(chan ch, type, type value);</h6>
+<h6 id="cls">void *cls(void);</h6>
+<h6 id="coroutine">coroutine function-declaration;</h6>
+<h6 id="fdwait">int fdwait(int fd, int events, int64_t deadline);</h6>
+<h6 id="go">void go(expression);</h6>
+<h6 id="goprepare">int goprepare(int count, size_t stack_size, size_t val_size);</h6>
+<h6 id="goredump">void goredump(void);</h6>
+<h6 id="gotrace">void gotrace(int level);</h6>
+<h6 id="ipaddrstr">const char *ipaddrstr(ipaddr addr, char *ipstr);</h6>
+<h6 id="iplocal">ipaddr iplocal(const char *name, int port, int mode);</h6>
+<h6 id="ipremote">ipaddr ipremote(const char *name, int port, int mode, int64_t deadline);</h6>
+<h6 id="msleep">void msleep(int64_t deadline);</h6>
+<h6 id="now">int64_t now(void);</h6>
+<h6 id="setcls">void setcls(void *val);</h6>
+<h6 id="tcpaccept">tcpsock tcpaccept(tcpsock s, int64_t deadline);</h6>
+<h6 id="tcpattach">tcpsock tcpattach(int fd, int listening);</h6>
+<h6 id="tcpclose">void tcpclose(tcpsock s);</h6>
+<h6 id="tcpconnect">tcpsock tcpconnect(ipaddr addr, int64_t deadline);</h6>
+<h6 id="tcpdetach">int tcpdetach(tcpsock s);</h6>
+<h6 id="tcpflush">void tcpflush(tcpsock s, int64_t deadline);</h6>
+<h6 id="tcplisten">tcpsock tcplisten(ipaddr addr, int backlog);</h6>
+<h6 id="tcpport">int tcpport(tcpsock s);</h6>
+<h6 id="tcprecv">size_t tcprecv(tcpsock s, void *buf, size_t len, int64_t deadline);</h6>
+<h6 id="tcprecvuntil">size_t tcprecvuntil(tcpsock s, void *buf, size_t len, const char *delims, size_t delimcount, int64_t deadline);</h6>
+<h6 id="tcpsend">size_t tcpsend(tcpsock s, const void *buf, size_t len, int64_t deadline);</h6>
+<h6 id="udpattach">udpsock udpattach(int fd);</h6>
+<h6 id="udpclose">void udpclose(udpsock s);</h6>
+<h6 id="udpdetach">int udpdetach(udpsock s);</h6> 
+<h6 id="udplisten">udpsock udplisten(ipaddr addr);</h6>
+<h6 id="udpport">int udpport(udpsock s);</h6>
+<h6 id="udprecv">size_t udprecv(udpsock s, ipaddr *addr, void *buf, size_t len, int64_t deadline);</h6>
+<h6 id="udpsend">void udpsend(udpsock s, ipaddr addr, const void *buf, size_t len);</h6>
+<h6 id="unixaccept">unixsock unixaccept(unixsock s, int64_t deadline);</h6>
+<h6 id="unixattach">unixsock unixattach(int fd, int listening);</h6>
+<h6 id="unixclose">void unixclose(unixsock s);</h6>
+<h6 id="unixconnect">unixsock unixconnect(const char *addr);</h6>
+<h6 id="unixdetach">int unixdetach(unixsock s);</h6>
+<h6 id="unixflush">void unixflush(unixsock s, int64_t deadline);</h6>
+<h6 id="unixlisten">unixsock unixlisten(const char *addr, int backlog);</h6>
+<h6 id="unixpair">void unixpair(unixsock *a, unixsock *b);</h6>
+<h6 id="unixrecv">size_t unixrecv(unixsock s, void *buf, size_t len, int64_t deadline);</h6>
+<h6 id="unixrecvuntil">size_t unixrecvuntil(unixsock s, void *buf, size_t len, const char *delims, size_t delimcount, int64_t deadline);</h6>
+<h6 id="unixsend">size_t unixsend(unixsock s, const void *buf, size_t len, int64_t deadline);</h6>
+<h6 id="yield">void yield(void);</h6>
+
+<p>By calling this function you give other coroutines a chance to run.</p>
+
+<p>You should consider using <tt>yield()</tt> when doing lengthy computations
+which don't involve natural coroutine switching points such as network
+operations.</p>
+
+<p>The function has no return value, nor can it return an error.</p>
 
 </body>
 </html>
