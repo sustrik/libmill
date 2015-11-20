@@ -968,12 +968,38 @@ machine.</p>
 <h3 id="reference">Reference</h3>
 
 <h6 id="chclose">void chclose(chan ch);</h6>
+
+<p>Closes a channel handle. After last copy of the handle (see
+<tt><a href="#chdup">chdup()</a></tt>) is closed, channel is deallocated.</p>
+
+<p>Keep in mind that deallocation of a channel works very much like deallocation
+of local variables when function returns. The memory holding the variable itself
+won't leak, however, if the variable contains a pointer to a different object
+that one doesn't get deallocated.</p>
+
+<p>The function cannot fail.</p>
+
 <h6 id="chdone">void chdone(chan ch, type, type value);</h6>
 <h6 id="chdup">chan chdup(chan ch);</h6>
+
+<p>Duplicates channel handle. Channel gets deallocated only after all its
+handles are closed using <tt><a href="#chclose">chclose()</a></tt> function.</p>
+
+<p>The function returns duplicated channel handle and cannot fail.</p>
+
 <h6 id="chmake">chan chmake(type, size);</h6>
+
+<p>Creates a channel. First parameter is the type of the items to be sent
+through the channel. Second parameter is number of items that will fit into the
+channel. Setting this argument to zero creates an unbuffered channel.</p>
+
+<p>The function returns channel handle or NULL in case there's not enough
+memory to allocate the channel.</p>
+
 <h6 id="choose">choose {}</h6>
 <h6 id="chr">type chr(chan ch, type);</h6>
 <h6 id="chs">void chs(chan ch, type, type value);</h6>
+
 <h6 id="cls">void *cls(void);</h6>
 
 <p>Returns coroutine-local storage, a single pointer that is accessible
