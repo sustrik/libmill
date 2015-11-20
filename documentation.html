@@ -26,7 +26,7 @@
   <li><a href="#build">Build</a></li>
   <li><a href="#coroutines">Coroutines</a></li>
   <li><a href="#channels">Channels</a></li>
-  <li><a href="#choose">Choose statement</a></li>
+  <li><a href="#choosestatement">Choose statement</a></li>
   <li><a href="#deadlines">Deadlines</a></li>
   <li><a href="#sleeping">Sleeping</a></li>
   <li><a href="#fds">Waiting for file descriptors</a></li>
@@ -48,9 +48,11 @@
     <li><a href="#chdone">chdone</a></li>
     <li><a href="#chdup">chdup</a></li>
     <li><a href="#chmake">chmake</a></li>
+    <li><a href="#choose">choose</a></li>
     <li><a href="#chr">chr</a></li>
     <li><a href="#chs">chs</a></li>
     <li><a href="#cls">cls</a></li>
+    <li><a href="#coroutine">coroutine</a></li>
     <li><a href="#fdwait">fdwait</a></li>
     <li><a href="#go">go</a></li>
     <li><a href="#goprepare">goprepare</a></li>
@@ -60,6 +62,7 @@
     <li><a href="#iplocal">iplocal</a></li>
     <li><a href="#ipremote">ipremote</a></li>
     <li><a href="#msleep">msleep</a></li>
+    <li><a href="#now">now</a></li>
     <li><a href="#setcls">setcls</a></li>
     <li><a href="#tcpaccept">tcpaccept</a></li>
     <li><a href="#tcpattach">tcpattach</a></li>
@@ -157,8 +160,8 @@ the package.</p>
 
 <h3 id="coroutines">Coroutines</h3>
 
-<p>Coroutine is defined using <tt>coroutine</tt> keyword and launched using
-<tt>go</tt> construct:</p>
+<p>Coroutine is defined using <tt><a href="#coroutine">coroutine</a></tt>
+keyword and launched using <tt><a href="#go">go</a></tt> construct:</p>
 
 <pre>
 coroutine void foo(int i, int j) {
@@ -175,16 +178,19 @@ int main() {
 asynchronously and thus there is now way to retrieve the result.</p>
 
 <p>Note that your program may work perfectly well even if you ommit the
-<tt>coroutine</tt> keyword. However, such program may break randomly when
-compiled by a different compiler or with a different optimisation level
-(a know problem is with clang and -O2 optimisation level).</p>
+<tt><a href="#coroutine">coroutine</a></tt> keyword. However, such program may
+break randomly when compiled by a different compiler or with a different
+optimisation level (a know problem is with clang and -O2 optimisation level).
+</p>
 
 <p>Also bear in mind that coroutines are scheduled in a cooperative fashion.
 If one coroutine blocks, for example by calling <tt>sleep()</tt>, it blocks
 the entire process. Therefore, coroutine-friendly versions of blocking functions
-(such as <tt>msleep()</tt> or <tt>fdwait()</tt>, see below) should be used.</p>
+(such as <tt><a href="#msleep">msleep()</a></tt> or
+<tt><a href="#fdwait">fdwait()</a></tt>, see below) should be used.</p>
 
-<p>In case of need, you can yield CPU to other coroutines explicitly:</p>
+<p>In case of need, you can <a href="#yield">yield</a> CPU to other coroutines
+explicitly:</p>
 
 <pre>
 yield();
@@ -193,47 +199,51 @@ yield();
 <h3 id="channels">Channels</h3>
 
 <p>Channels are typed pipes used for communication between coroutines. To create
-a channel you have to specify what kind of values are meant to be passed
-through it. The second parameter is buffer size. Setting this argument
-to zero creates an unbuffered channel:</p>
+a channel using <tt><a href="#chmake">chmake</a></tt> function you have to
+specify what kind of values are meant to be passed through it. The second
+parameter is buffer size. Setting this argument to zero creates an unbuffered
+channel:</p>
 
 <pre>
 chan ch = chmake(int, 0);
 </pre>
 
-<p>To send a value to the channel use <tt>chs()</tt> function. The type
-specified as the second parameter must match the type of the channel otherwise
-you'll get runtime exception:</p>
+<p>To send a value to the channel use <tt><a href="#chs">chs()</a></tt>
+function. The type specified as the second parameter must match the type of the
+channel otherwise you'll get runtime exception:</p>
 
 <pre>
 chs(ch, int, 42);
 </pre>
 
-<p>To receive a value from the channel use <tt>chr()</tt> function. The type
-specified as the second parameter must match the type of the channel otherwise
-the program will abort with runtime exception:</p>
+<p>To receive a value from the channel use <tt><a href="#chr">chr()</a></tt>
+function. The type specified as the second parameter must match the type of the
+channel otherwise the program will abort with runtime exception:</p>
 
 <pre>
 int i = chr(ch, int);
 </pre>
 
 <p>When sender is done with sending it can announce the fact using
-<tt>chdone()</tt> function. It will cause all the receivers on the channel to
-receive the value specified in the third parameter indefinitely:</p>
+<tt><a href="#chdone">chdone()</a></tt> function. It will cause all the receivers
+on the channel to receive the value specified in the third parameter
+indefinitely:</p>
 
 <pre>
 chdone(ch, int, -1);
 </pre>
 
-<p>To deallocate the channel use <tt>chclose()</tt> function:</p>
+<p>To deallocate the channel use <tt><a href="#chclose">chclose()</a></tt>
+function:</p>
 
 <pre>
 chclose(ch);
 </pre>
 
-<p>Note that <tt>chclose()</tt> deallocates any elements remaining the channel,
-however, if the element itself has a pointer to a different object, that object
-won't be deallocated. In this respect <tt>chclose()</tt> is similar to the
+<p>Note that <tt><a href="#chclose">chclose()</a></tt> deallocates any elements
+remaining the channel, however, if the element itself has a pointer to a
+different object, that object won't be deallocated. In this respect
+<tt><a href="#chclose">chclose()</a></tt> is similar to the
 standard <tt>free()</tt> function.</p>
 
 <p>When sharing a channel between two or more coroutines you can duplicate
@@ -256,16 +266,16 @@ int main() {
 }
 </pre>
 
-<h3 id="choose">Choose statement</h3>
+<h3 id="choosestatement">Choose statement</h3>
 
-<p>Choose statement is equivalent to Go's <tt>select</tt> statement. It can be
-used to wait for multiple channels.</p>
+<p>Choose statement is equivalent to Go's <tt>select</tt>
+statement. It can be used to wait for multiple channels.</p>
 
-<p>Within <tt>choose</tt> there's a list of clauses. Each clause is either an
-<tt>in</tt> clause (waiting for incoming messages) or an <tt>out</tt> clause
-(waiting till a message can be sent to the channel). Last cause can optionally
-be an <tt>otherwise</tt> clause. Don't forget to add <tt>end</tt> keyword before
-the closing parenthesis:</p>
+<p>Within <tt><a href="#choose">choose</a></tt> there's a list of clauses. Each
+clause is either an <tt>in</tt> clause (waiting for incoming messages) or an
+<tt>out</tt> clause (waiting till a message can be sent to the channel). Last
+cause can optionally be an <tt>otherwise</tt> clause. Don't forget to add
+<tt>end</tt> keyword before the closing parenthesis:</p>
 
 <pre>
 choose {
@@ -279,31 +289,34 @@ end
 }
 </pre>
 
-<p>Clause <tt>in</tt> causes <tt>choose</tt> to wait for a message coming
-from channel <tt>ch</tt>. The clause declares variable <tt>var</tt> of type
-<tt>type</tt> and stores the incoming message into it. If <tt>type</tt> doesn't
-match the actual type of the channel you'll get a runtime exception:</p>
+<p>Clause <tt>in</tt> causes <tt><a href="#choose">choose</a></tt> to wait for a
+message coming from channel <tt>ch</tt>. The clause declares variable
+<tt>var</tt> of type <tt>type</tt> and stores the incoming message into it. If
+<tt>type</tt> doesn't match the actual type of the channel you'll get a runtime
+exception:</p>
 
 <pre>
 in(ch, type, var):
 </pre>
 
-<p>Clause <tt>out</tt> causes <tt>choose</tt> to wait while value <tt>val</tt>
-of type <tt>type</tt> can be sent to channel <tt>ch</tt>. Same way as with
-</tt>in</tt>, if <tt>type</tt> doesn't match the actual type of channel
-<tt>ch</tt> runtime exception is generated:</p>
+<p>Clause <tt>out</tt> causes <tt><a href="#choose">choose</a></tt> to wait
+while value <tt>val</tt> of type <tt>type</tt> can be sent to channel
+<tt>ch</tt>. Same way as with </tt>in</tt>, if <tt>type</tt> doesn't match the
+actual type of channel <tt>ch</tt> runtime exception is generated:</p>
 
 <pre>
 out(ch, type, val):
 </pre>
 
 <p>Clause <tt>otherwise</tt> is optional. It is executed only if no other
-clauses can be matched immediately. Therefore, <tt>choose</tt> statement
-with <tt>otherwise</tt> clause will never block.</p>
+clauses can be matched immediately. Therefore,
+<tt><a href="#choose">choose</a></tt> statement with <tt>otherwise</tt> clause
+will never block.</p>
 
-<p><tt>choose</tt> statement waits for the first clause that can be executed,
-executes it and then jumps to the code following the clause. If there are
-multiple clauses that can be executed one of them is chosen at random.</p>
+<p><tt><a href="#choose">choose</a></tt> statement waits for the first clause
+that can be executed, executes it and then jumps to the code following the
+clause. If there are multiple clauses that can be executed one of them is chosen
+at random.</p>
 
 <p>There's no fall-through among the clauses.</p>
 
@@ -313,9 +326,9 @@ multiple clauses that can be executed one of them is chosen at random.</p>
 timeouts.</p>
 
 <p>Deadline is a point in time when a function should finish. Function
-<tt>now()</tt> returns the current point in time. You can add milliseconds to
-it to get a point in time in the future. Following example defines a deadline
-that expires one second from now:</p>
+<tt><a href="#now">now()</a></tt> returns the current point in time. You can
+add milliseconds to it to get a point in time in the future. Following example
+defines a deadline that expires one second from now:</p>
 
 <pre>
 int64_t deadline = now() + 1000;
@@ -332,8 +345,9 @@ that the deadline is infinite.</p>
 <h3 id="sleeping">Sleeping</h3>
 
 <p>It was already mentioned that a single call to <tt>sleep()</tt> can block
-the entire process. To avoid the problem use <tt>msleep()</tt> instead.
-Note that the argument is a deadline, not a timeout:</p>
+the entire process. To avoid the problem use
+<tt><a href="#msleep">msleep()</a></tt> instead. Note that the argument is a
+deadline, not a timeout:</p>
 
 <pre>
 msleep(now() + 1000);
@@ -341,7 +355,8 @@ msleep(now() + 1000);
 
 <h3 id="fds">Waiting for file descriptors</h3>
 
-<p>To wait for an event from a file descriptor use <tt>fdwait</tt> function:</p>
+<p>To wait for an event from a file descriptor use
+<tt><a href="#fdwait">fdwait</a></tt> function:</p>
 
 <pre>
 int events = fdwait(fd, FDW_IN | FDW_OUT, -1);
@@ -362,17 +377,17 @@ read from the file descriptor.</p>
 <p><tt>FDW_OUT</tt> waits until at least one byte can be written to the file
 descriptor.</p>
 
-<p><tt>FDW_ERR</tt> cannot be used as an argument to <tt>fdwait()</tt>, but it
-can be returned from the function irrespective of whether you want it or
-not.</p>
+<p><tt>FDW_ERR</tt> cannot be used as an argument to
+<tt><a href="#fdwait">fdwait()</a></tt>, but it can be returned from the
+function irrespective of whether you want it or not.</p>
 
 <p>If an error happens while there are still bytes to be received from the
 socket combination of <tt>FDW_ERR</tt> and <tt>FDW_IN</tt> may be returned.
 
-<p>The third parameter to <tt>fdwait()</tt> is a deadline. If deadline is hit
-the function returns zero.</p>
+<p>The third parameter to <tt><a href="#fdwait">fdwait()</a></tt> is a deadline.
+If deadline is hit the function returns zero.</p>
 
-<h3 id="ip">Resolving IP addresses</h3>
+b<h3 id="ip">Resolving IP addresses</h3>
 
 <p>Network functionality, such as TCP or UDP, can be accessed via standard POSIX
 functions provided that you do it in a non-blocking way. To save you the trouble
@@ -383,13 +398,15 @@ addresses (both IPv4 and IPv6) is called <tt>ipaddr</tt>. It also
 includes port number. Unlike address types in POSIX it can be used as a basic
 type. It can be assigned, returned from a function and so on.</p>
 
-<p>There are two functions to construct IP addresses: <tt>iplocal()</tt> that
-retrieves the IP address of a local network interface and <tt>ipremote()</tt>
-that gets IP address of a remote machine. In addition to that, certain other
-library functions, <tt>udprecv()</tt>, for one, return IP addresses.</p>
+<p>There are two functions to construct IP addresses:
+<tt><a href="#iplocal">iplocal()</a></tt> that retrieves the IP address of a
+local network interface and <tt>ipremote()</tt> that gets IP address of a remote
+machine. In addition to that, certain other library functions,
+<tt><a href="#udprecv">udprecv()</a></tt>, for one, return IP addresses.</p>
 
-<p><tt>iplocal()</tt> converts a textual form of IP address, or a name of a
-local network interface and a port number into <tt>ipaddr</tt>:</p>
+<p><tt><a href="#iplocal">iplocal()</a></tt> converts a textual form of IP
+address, or a name of a local network interface and a port number into
+<tt>ipaddr</tt>:</p>
 
 <pre>
 ipaddr addr1 = iplocal("127.0.0.1", 3333, 0);
@@ -420,17 +437,19 @@ This value is useful when binding to all local network interfaces.</p>
 address has family type AF_UNSPEC which will cause any function you pass it to
 to fail.</tt>
 
-<p>The second function to produce IP addresses is <tt>ipremote()</tt>. It
-converts textual form of IP address to <tt>ipaddr</tt>. In the future it is
-also meant to resolve remote host names, but this functionality is not
-available yet. The function also requires port, mode (same as in
-<tt>iplocal()</tt>) and a deadline:</p>
+<p>The second function to produce IP addresses is
+<tt><a href="#ipremote">ipremote()</a></tt>. It converts textual form of IP
+address to <tt>ipaddr</tt>. In the future it is also meant to resolve remote
+host names, but this functionality is not available yet. The function also
+requires port, mode (same as in <tt><a href="#iplocal">iplocal()</a></tt>) and
+a deadline:</p>
 
 <pre>
 ipaddr addr = ipremote("192.168.0.111", 5555, 0, -1);
 </pre>
 
-<p>Behaviour in case of error is same as with <tt>iplocal()</tt>.
+<p>Behaviour in case of error is same as with
+<tt><a href="#iplocal">iplocal()</a></tt>.
 
 <p>You can also convert <tt>ipaddr</tt> into a human readable string. To do so
 you have to supply a buffer at least IPADDR_MAXSTRLEN long:</p>
@@ -445,7 +464,8 @@ printf("Connecting to %s!\n", ipaddrstr(addr, buf));
 
 <h4>Connecting to a remote endpoint</h4>
 
-<p>To connect to a remote server, use <tt>tcpconnect()</tt> function:
+<p>To connect to a remote server, use
+<tt><a href="#tcpconnect">tcpconnect()</a></tt> function:
 
 <pre>
 ipaddr addr = ipremote("192.168.0.111", 5555, 0, -1);
@@ -460,8 +480,9 @@ is set to <tt>ETIMEDOUT</tt>.</p>
 
 <h4>Listening for incoming connections</h4>
 
-<p>To start listening for incoming TCP connections use <tt>tcplisten()</tt>
-function. To accept a new connection use <tt>tcpaccept()</tt> function:</p>
+<p>To start listening for incoming TCP connections use
+<tt><a href="#tcplisten">tcplisten()</a></tt> function. To accept a new
+connection use <tt><a href="#tcpaccept">tcpaccept()</a></tt> function:</p>
 
 <pre>
 ipaddr addr = iplocal("eth0", 5555, 0);
@@ -478,7 +499,7 @@ while(1) {
 <p>First argument is an IP address of the local network interface
 to bind to. If port number is zero an ephemeral port number will be chosen by
 the operating system. In such case you can retrieve the port number using
-<tt>tcppport()</tt> function:</p>
+<tt><a href="#tcpport">tcppport()</a></tt> function:</p>
 
 <pre>
 ipaddr addr = iplocal(NULL, 5555, 0);
@@ -486,11 +507,12 @@ tcpsock ls = tcplisten(addr, 10);
 int port = tcpport(ls);
 </pre>
 
-<p>In case of error <tt>tcplisten()</tt> function returns NULL and sets
-<tt>errno</tt> to one of the standard POSIX error values.</p>
+<p>In case of error <tt><a href="#tcplisten">tcplisten()</a></tt> function
+returns NULL and sets <tt>errno</tt> to one of the standard POSIX error
+values.</p>
 
-<p><tt>tcpaccept()</tt> function takes the listening socket and a deadline
-as arguments and returns the newly accepted socket:</p>
+<p><tt><a href="#tcpaccept">tcpaccept()</a></tt> function takes the listening
+socket and a deadline as arguments and returns the newly accepted socket:</p>
 
 <pre>
 tcpsock s = tcpaccept(ls, now() + 1000);
@@ -502,7 +524,8 @@ is set to <tt>ETIMEDOUT</tt>.</p>
 
 <h4>Sending data</h4>
 
-<p>To send data to the connection use <tt>tcpsend()</tt> function:</p>
+<p>To send data to the connection use <tt><a href="#tcpsend">tcpsend()</a></tt>
+function:</p>
 
 <pre>
 size_t nbytes = tcpsend(s, "ABC", 3, -1);
@@ -516,9 +539,10 @@ is returned.</p>
 is broken it is set to <tt>ECONNRESET</tt>. If the deadline expires it is
 set to <tt>ETIMEDOUT</tt>.</p>
 
-<p>To optimise the throughput <tt>tcpwrite()</tt> may store the data into output
-buffer and not flush it into the network immediately. To force actual sending
-of the data use <tt>tcpflush</tt> function.</p>
+<p>To optimise the throughput <tt><a href="#tcpsend">tcpsend()</a></tt> may
+store the data into output buffer and not flush it into the network immediately.
+To force actual sending of the data use
+<tt><a href="#tcpflush">tcpflush()</a></tt> function.</p>
 
 <pre>
 tcpflush(s, -1);
@@ -532,7 +556,8 @@ set to <tt>ETIMEDOUT</tt>.</p>
 
 <h4>Receiving data</h4>
 
-<p>To read data from a connection use <tt>tcprecv()</tt> function:</p>
+<p>To read data from a connection use <tt><a href="#tcprecv">tcprecv()</a></tt>
+function:</p>
 
 <pre>
 size_t nbytes = tcprecv(s, buf, 256, -1);
@@ -547,8 +572,9 @@ breaks it is set to <tt>ECONNRESET</tt>. If the deadline expires it is
 set to <tt>ETIMEDOUT</tt>.</p>
 
 <p>To help with dealing with text-based protocols libmill provides
-<tt>tcprecvuntil()</tt> function. It acts the same as <tt>tcpread()</tt> except
-that the reading stops when one of specified characters is encountered:</p>
+<tt><a href="#tcprecvuntil">tcprecvuntil()</a></tt> function. It acts the same
+as <tt><a href="#tcpread">tcpread()</a></tt> except that the reading stops when
+one of specified characters is encountered:</p>
 
 <pre>
 size_t nbytes = tcprecvuntil(conn, buf, 256, "\n" , 1, -1);
@@ -575,8 +601,8 @@ size_t nbytes = tcprecvuntil(conn, buf, 256, ",}" , 2, -1);
 
 <h4>Cleaning up</h4>
 
-<p>To close sockets (both listening and connected ones) use <tt>tcpclose()</tt>
-function:</p>
+<p>To close sockets (both listening and connected ones) use
+<tt><a href="#tcpclose">tcpclose()</a></tt> function:</p>
 
 <pre>
 tcpclose(s);
@@ -584,8 +610,8 @@ tcpclose(s);
 
 <h3 id="udp">UDP library</h3>
 
-<p>To open an UDP socket use <tt>udplisten()</tt> function. IP address of the
-local network interface should be supplied.:</p>
+<p>To open an UDP socket use <tt><a href="#udplisten">udplisten()</a></tt>
+function. IP address of the local network interface should be supplied:</p>
 
 <pre>
 ipaddr addr = iplocal("192.168.0.111", 5555, 0);
@@ -593,7 +619,8 @@ udpsock s = udplisten(addr);
 </pre>
 
 <p>If port is set to zero operating system selects an unused port. The number
-of the port can be retrieved using <tt>udpport()</tt> function:</tt>
+of the port can be retrieved using <tt><a href="#udpport">udpport()</a></tt>
+function:</p>
 
 <pre>
 int port = udpport(s);
@@ -603,11 +630,13 @@ int port = udpport(s);
 receiving.</p>
 
 <p>Given that UDP transport is unconnected by its very nature the address of
-remote endpoint has to be specified in every <tt>udpsend()</tt> call.
-Similarly, the IP address of the remote endpoint is returned by each
-<tt>udprecv()</tt> call.</p>
+remote endpoint has to be specified in every
+<tt><a href="#udpsend">udpsend()</a></tt> call. Similarly, the IP address of the
+remote endpoint is returned by each <tt><a href="#udprecv">udprecv()</a></tt>
+call.</p>
 
-<p>To send a packet to the remote peer use <tt>udpsend()</tt> function:</p>
+<p>To send a packet to the remote peer use
+<tt><a href="#udpsend">udpsend()</a></tt> function:</p>
 
 <pre>
 ipaddr addr = ipremote("192.168.0.111", 5555, 0, -1);
@@ -618,13 +647,14 @@ udpsend(s, addr, "Hello, world!", 13);
 <tt>errno</tt> to the appropriate value. If there is no error <tt>errno</tt>
 is set to zero.</p>
 
-<p>Note that <tt>udpsend()</tt> has no deadline. UDP transport is unreliable
-and the packet is either delivered or lost, but never blocked.</p>
+<p>Note that <tt><a href="#udpsend">udpsend()</a></tt> has no deadline. UDP
+transport is unreliable and the packet is either delivered or lost, but never
+blocked.</p>
 
-<p>To receive a packet from the socket use <tt>udprecv()</tt> function.
-If successful the function will return the size of the received packet,
-in bytes, and set <tt>ipaddr</tt> passed in the parameter to the source
-address of the packet:</p>
+<p>To receive a packet from the socket use
+<tt><a href="#udprecv">udprecv()</a></tt> function. If successful the function
+will return the size of the received packet, in bytes, and set <tt>ipaddr</tt>
+passed in the parameter to the source address of the packet:</p>
 
 <pre>
 char buf[256];
@@ -635,7 +665,7 @@ size_t sz = udprecv(s, &addr, buf, sizeof(buf), -1);
 <p>In the case of failure <tt>errno</tt>is set to the appropriate error.
 In the case of success <tt>errno</tt> is set to zero.</p>
 
-<p>When done close the UDP socket:</p>
+<p>When done <a href="#udpclose">close</a> the UDP socket:</p>
 
 <pre>
 udpclose(s);
@@ -647,18 +677,20 @@ udpclose(s);
 machine.</p>
 
 <p>The API is identical to the TCP API with all <tt>tcp</tt> prefixes replaced
-by <tt>unix</tt> prefixes, e.g. <tt>unixsock</tt> or <tt>unixrecv()</tt>.</p>
+by <tt>unix</tt> prefixes, e.g. <tt>unixsock</tt> or
+<tt><a href="#unixrecv">unixrecv()</a></tt>.</p>
 
-<p>Additionally, addresses passed to <tt>unixlisten()</tt> and
-<tt>unixconnect()</tt> represent are names of a local files rather than
-IP addresses. Also, there are no ports:</tt>
+<p>Additionally, addresses passed to
+<tt><a href="#unixlisten">unixlisten()</a></tt> and
+<tt><a href="#unixconnect">unixconnect()</a></tt> represent are names of a local
+files rather than IP addresses. Also, there are no ports:</tt>
 
 <pre>
 unixsock s = unixconnect("/tmp/test.unix");
 </pre>
 
-Function <tt>unixpair()</tt> creates a pair of connected sockets. It's a wrapper
-on top of standard <tt>socketpair()</tt> function:</p>
+Function <tt><a href="#unixpair">unixpair()</a></tt> creates a pair of connected
+sockets. It's a wrapper on top of standard <tt>socketpair()</tt> function:</p>
 
 <pre>
 unixsock s1, s2;
@@ -672,7 +704,8 @@ special cases. Avoid using it if possible. In general, use it where you would
 use thread-local storage in a threaded program. TLS itself cannot be used with
 libmill as multiple coroutines can share the same OS thread.</p>
 
-<p>Coroutine local data are a single pointer which can be set like this:</p>
+<p>Coroutine local data are a single pointer which can be
+<a href="#setcls">set</a> like this:</p>
 
 <pre>
 void *data = ...;
@@ -680,20 +713,21 @@ setcls(data);
 </pre>
 
 <p>Later on the pointer can be accessed anywhere within the coroutine or any
-function invoked from it using <tt>cls</tt> function:</p>
+function invoked from it using <tt><a href="#cls">cls</a></tt> function:</p>
 
 <pre>
 void *data = cls();
 </pre>
 
 <p>It can be safely assumed that before coroutine-local data are set,
-<tt>cls</tt> function will return <tt>NULL</tt>.</p>
+<tt><a href="#cls">cls</a></tt> function will return <tt>NULL</tt>.</p>
 
 <h3 id="memory">Dealing with memory</h3>
 
 <p>Most libmill functions report out of memory condition in the common way.
-<tt>chmake()</tt> returns <tt>NULL</tt>, <tt>tcplisten()</tt> returns
-<tt>NULL</tt> and sets <tt>errno</tt> to <tt>ENOMEM</tt> and so on.</p>
+<tt><a href="#chmake">chmake()</a></tt> returns <tt>NULL</tt>,
+<tt><a href="#tcplisten">tcplisten()</a></tt> returns <tt>NULL</tt> and sets
+<tt>errno</tt> to <tt>ENOMEM</tt> and so on.</p>
 
 <p>There's one exception though. Namely, if there's not enough memory to
 allocate call stack for a new coroutine runtime panic happens and the process
@@ -701,7 +735,7 @@ is terminated.</p>
 
 <p>If you wish to prevent that from happening you can allocate the coroutine
 stacks in advance, typically when the process is starting, using
-<tt>goprepare()</tt> function.</p>
+<tt><a href="#goprepare">goprepare()</a></tt> function.</p>
 
 <p>Specify the number of coroutine stacks to preallocate, their size
 in bytes and, additionally, the size of the biggest element you are going to
@@ -751,11 +785,11 @@ be invoked either directly from the program or manually from the debugger.</p>
 <h4>goredump</h4>
 
 <p>When debugging a program you may want to inspect the coroutines being
-run and the channels being used. Use <tt>goredump</tt> function to do
-exactly that.</p>
+run and the channels being used. Use <tt><a href="#goredump">goredump()</a></tt>
+function to do exactly that.</p>
 
 <p>Here's an example of how to use it directly from a <tt>gdb</tt>
-   session:</p>
+session:</p>
 
 <pre>
 Breakpoint 1, main () at foo.c:57
@@ -790,8 +824,9 @@ the actual coroutine in the code, check the line referenced by 'created'
 field.</p>
 
 <p>The 'state' field gives you more information about the operation being
-performed. When a coroutine is blocked in <tt>chr</tt> call, for example,
-you'll also see the ID of the channel it is trying to receive from:</p>
+performed. When a coroutine is blocked in <tt><a href="#chr">chr()</a></tt>
+call, for example, you'll also see the ID of the channel it is trying to receive
+from:</p>
 
 <pre>
 COROUTINE  state                  current           created
@@ -799,9 +834,9 @@ COROUTINE  state                  current           created
 {8}        chr(&lt;8&gt;)               foo.c:63          foo.c:158
 </pre>
 
-<p>When <tt>choose</tt> statement is being executed a list of channel IDs
-is provided, corresponding to the list of clauses in the <tt>choose</tt>
-statement:</p>
+<p>When <tt><a href="#choose">choose</a></tt> statement is being executed a list
+of channel IDs is provided, corresponding to the list of clauses in the
+<tt><a href="#choose">choose</a></tt> statement:</p>
 
 <pre>
 COROUTINE  state                  current           created
@@ -812,12 +847,12 @@ COROUTINE  state                  current           created
 <p>If there are any channels created by the user coroutine dump will be followed
 by a channel dump. Each record in the dump corresponds to one channel instance
 and contains its ID, number of messages buffered in the channel, channel
-capacity, its reference count, whether <tt>chdone()</tt> was already called
-and a the line of code that created the channel.</p> 
+capacity, its reference count, whether <tt><a href="#chdone">chdone()</a></tt>
+was already called and a the line of code that created the channel.</p> 
 
 <p>Additionally, if there are any coroutines waiting for messages from the
-channel -- whether via <tt>chr</tt> or <tt>choose</tt> -- they are reported
-like this:</p>
+channel -- whether via <tt><a href="#chr">chr</a></tt> or
+<tt><a href="#choose">choose</a></tt> -- they are reported like this:</p>
 
 <pre>
 CHANNEL  msgs/max    senders/receivers     refs  done  created
@@ -844,8 +879,9 @@ channel the field is kept empty.</p>
 
 <h4>gotrace</h4>
 
-<p>It is possible to switch on tracing via <tt>gotrace()</tt> function. You can
-do so either programmatically or from the debugger:</p>
+<p>It is possible to switch on tracing via
+<tt><a href="#gotrace">gotrace()</a></tt> function. You can do so either
+programmatically or from the debugger:</p>
 
 <pre>
 gotrace(1);
@@ -920,9 +956,11 @@ machine.</p>
 <p id="chdone"><b>void chdone(chan ch, type, type value);</p></b>
 <p id="chdup"><b>chan chdup(chan ch);</p></b>
 <p id="chmake"><b>chan chmake(type, size);</p></b>
+<p id="choose"><b>choose {}</p></b>
 <p id="chr"><b>type chr(chan ch, type);</p></b>
 <p id="chs"><b>void chs(chan ch, type, type value);</p></b>
 <p id="cls"><b>void *cls(void);</p></b>
+<p id="coroutine"><b>coroutine function-declaration;</p></b>
 <p id="fdwait"><b>int fdwait(int fd, int events, int64_t deadline);</p></b>
 <p id="go"><b>void go(expression);</p></b>
 <p id="goprepare"><b>int goprepare(int count, size_t stack_size, size_t val_size);</p></b>
@@ -932,6 +970,7 @@ machine.</p>
 <p id="iplocal"><b>ipaddr iplocal(const char *name, int port, int mode);</p></b>
 <p id="ipremote"><b>ipaddr ipremote(const char *name, int port, int mode, int64_t deadline);</p></b>
 <p id="msleep"><b>void msleep(int64_t deadline);</p>
+<p id="now"><b>int64_t now(void);</p></b>
 <p id="setcls"><b>void setcls(void *val);</p></b>
 <p id="tcpaccept"><b>tcpsock tcpaccept(tcpsock s, int64_t deadline);</p></b>
 <p id="tcpattach"><b>tcpsock tcpattach(int fd, int listening);</p></b>
@@ -962,7 +1001,7 @@ machine.</p>
 <p id="unixrecv"><b>size_t unixrecv(unixsock s, void *buf, size_t len, int64_t deadline);</p></b>
 <p id="unixrecvuntil"><b>size_t unixrecvuntil(unixsock s, void *buf, size_t len, const char *delims, size_t delimcount, int64_t deadline);</p></b>
 <p id="unixsend"><b>size_t unixsend(unixsock s, const void *buf, size_t len, int64_t deadline);</p></b>
-<p id="yield"><b>void yield();</p></b>
+<p id="yield"><b>void yield(void);</p></b>
 
 </body>
 </html>
