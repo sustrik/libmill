@@ -980,6 +980,20 @@ that one doesn't get deallocated.</p>
 <p>The function cannot fail.</p>
 
 <h6 id="chdone">void chdone(chan ch, type, type value);</h6>
+
+<p>This function is used to announce that the sender will send no more messages
+to the channel.</p>
+
+<p>First argument is the handle to the channel. Second one is type of the
+termination message and last one is the termination message itself. The type
+of the message must match the type of the channel otherwise the program will
+panic and abort.</p>
+
+<p>When all messages are retrieved from the channel, all the receivers will
+receive the termination message over and over again.</p>
+
+<p>The function cannot fail.</p>
+
 <h6 id="chdup">chan chdup(chan ch);</h6>
 
 <p>Duplicates channel handle. Channel gets deallocated only after all its
@@ -1018,6 +1032,9 @@ abort.</p>
 
 <p>If there's no space in the channel for the message the function waits until
 it becomes available.</p>
+
+<p>Sending to a channel that was previously terminated using
+<tt><a href="#chdone">chdone()</a></tt> function results in runtime panic.</p>
 
 <p>The function cannot fail.</p>
 
