@@ -985,24 +985,86 @@ set <tt>cls()</tt> will return <tt>NULL</tt>.</p>
 
 <p>The function cannot fail.</p>
 
-<h6 id="coroutine">coroutine function-declaration;</h6>
+<h6 id="coroutine">coroutine</h6>
+
+<p>A specifier that must be added to all functions that are executed using
+<a href="#go"><tt>go()</tt></a>, for example:
+
+<pre>
+coroutine void foo(int i);
+</pre>
+
+<p>Be aware that programs typically work even without <tt>coroutine</tt>
+specifier, however, they may fail in random fashion, depending on a particular
+combination of compiler, optimisation level and code in question.</p>
+
 <h6 id="fdwait">int fdwait(int fd, int events, int64_t deadline);</h6>
 <h6 id="go">void go(expression);</h6>
+
+<p>Launches a coroutine that executes the function passed in
+the <tt>expression</tt> argument, for example:
+
+<pre>
+go(foo(42));
+</pre>
+
+<p>Coroutine is executed in concurrent manner and its lifetime may
+exceed the lifetime of the caller. Therefore, the return value of the function
+is discarded and cannot be retrieved by the caller.</p>
+
+<p>Any function to be invoked unsing <tt>go()</tt> must be declared with
+<tt><a href="#coroutine">coroutine</a></tt> specifier.</p>
+
+<p>Be aware that programs typically work even without <tt>coroutine</tt>
+specifier, however, they may fail in random fashion, depending on a particular
+combination of compiler, optimisation level and code in question.</p>
+
+<p>If there is not enough memory to allocate new stack for the coroutine,
+<tt>go()</tt> aborts the process. To avoid that happening you can pre-allocate
+the stacks on process startup using
+<tt><a href="#goprepare">goprepare()</a></tt>.</p>
+
 <h6 id="goprepare">int goprepare(int count, size_t stack_size, size_t val_size);</h6>
 <h6 id="goredump">void goredump(void);</h6>
+
+<p>Dumps current state of all coroutines and all channels to
+<tt>stderr</tt>.</p>
+
+<p>The function can be launched either from the program of from the debugger.
+</p>
+
+<p>For more information look <a href="#debug">here</a>.</p>
+
 <h6 id="gotrace">void gotrace(int level);</h6>
+
+<p>Sets the tracing level.</p>
+
+<p>The function can be launched either from the program of from the debugger.
+</p>
+
+<p>For more information look <a href="#debug">here</a>.</p>
+
 <h6 id="ipaddrstr">const char *ipaddrstr(ipaddr addr, char *ipstr);</h6>
 <h6 id="iplocal">ipaddr iplocal(const char *name, int port, int mode);</h6>
 <h6 id="ipremote">ipaddr ipremote(const char *name, int port, int mode, int64_t deadline);</h6>
 <h6 id="msleep">void msleep(int64_t deadline);</h6>
 <h6 id="now">int64_t now(void);</h6>
+
+<p>Returns current time, in milliseconds.</p>
+
+<p>The function is meant to be used for creating deadlines. For example,
+a point of time one second on from now can be expressed as
+<tt>now() + 1000</tt>.</p>
+
+<p>The function cannot fail.</p>
+
 <h6 id="setcls">void setcls(void *val);</h6>
 
 <p>Set coroutine-local storage, a single pointer that will be accessible
 from anywhere within the same coroutine using <a href="#cls"><tt>cls()</tt></a>
 function.</p>
 
-The function cannot fail.</p>
+<p>The function cannot fail.</p>
 
 <h6 id="tcpaccept">tcpsock tcpaccept(tcpsock s, int64_t deadline);</h6>
 <h6 id="tcpattach">tcpsock tcpattach(int fd, int listening);</h6>
