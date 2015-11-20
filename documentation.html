@@ -975,6 +975,16 @@ machine.</p>
 <h6 id="chr">type chr(chan ch, type);</h6>
 <h6 id="chs">void chs(chan ch, type, type value);</h6>
 <h6 id="cls">void *cls(void);</h6>
+
+<p>Returns coroutine-local storage, a single pointer that is accessible
+from anywhere within the same coroutine.</p>
+
+<p>You can set the coroutine-local storage using
+<a href="#setcls"><tt>setcls()</tt></a> function. If it was not previously
+set <tt>cls()</tt> will return <tt>NULL</tt>.</p>
+
+<p>The function cannot fail.</p>
+
 <h6 id="coroutine">coroutine function-declaration;</h6>
 <h6 id="fdwait">int fdwait(int fd, int events, int64_t deadline);</h6>
 <h6 id="go">void go(expression);</h6>
@@ -987,6 +997,13 @@ machine.</p>
 <h6 id="msleep">void msleep(int64_t deadline);</h6>
 <h6 id="now">int64_t now(void);</h6>
 <h6 id="setcls">void setcls(void *val);</h6>
+
+<p>Set coroutine-local storage, a single pointer that will be accessible
+from anywhere within the same coroutine using <a href="#cls"><tt>cls()</tt></a>
+function.</p>
+
+The function cannot fail.</p>
+
 <h6 id="tcpaccept">tcpsock tcpaccept(tcpsock s, int64_t deadline);</h6>
 <h6 id="tcpattach">tcpsock tcpattach(int fd, int listening);</h6>
 <h6 id="tcpclose">void tcpclose(tcpsock s);</h6>
