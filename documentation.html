@@ -407,9 +407,10 @@ type. It can be assigned, returned from a function and so on.</p>
 
 <p>There are two functions to construct IP addresses:
 <tt><a href="#iplocal">iplocal()</a></tt> that retrieves the IP address of a
-local network interface and <tt>ipremote()</tt> that gets IP address of a remote
-machine. In addition to that, certain other library functions,
-<tt><a href="#udprecv">udprecv()</a></tt>, for one, return IP addresses.</p>
+local network interface and <tt><a href="#ipremote">ipremote()</a></tt> that
+gets IP address of a remote machine. In addition to that, certain other library
+functions, <tt><a href="#udprecv">udprecv()</a></tt>, for one, return IP
+addresses.</p>
 
 <p><tt><a href="#iplocal">iplocal()</a></tt> converts a textual form of IP
 address, or a name of a local network interface and a port number into
@@ -442,7 +443,7 @@ This value is useful when binding to all local network interfaces.</p>
 
 <p>In case of error <tt>errno</tt> is set to appropriate error code. Returned
 address has family type AF_UNSPEC which will cause any function you pass it to
-to fail.</tt>
+to fail.</tt></p>
 
 <p>The second function to produce IP addresses is
 <tt><a href="#ipremote">ipremote()</a></tt>. It converts textual form of IP
@@ -1235,7 +1236,89 @@ long.</p>
 <p>The function returns pointer to the formatted string.</p>
 
 <h6 id="iplocal">ipaddr iplocal(const char *name, int port, int mode);</h6>
+
+<p>Converts an IP address in human-readable format, or a name of a local network
+interface, into an <tt>ipaddr</tt> object:</p>
+
+<pre>
+ipaddr a1 = iplocal("127.0.0.1", 3333, 0);
+ipaddr a2 = iplocal("::1", 4444, 0);
+ipaddr a3 = iplocal("eth0", 5555, 0);
+</pre>
+
+<p>First argument is the string to convert. Second argument is the port number.
+Third argument specifies which kind of addresses should be returned. Possible
+values are:</p>
+
+<ul>
+  <li><pp>IPADDR_IPV4</pp>: get IPv4 address or error if it's not available</li>
+  <li><pp>IPADDR_IPV6</pp>: get IPv6 address or error if it's not available</li>
+  <li><pp>IPADDR_PREF_IPV4</pp>: get IPv4 address if possible, IPv6 address
+          otherwise; error if none is available</li>
+  <li><pp>IPADDR_PREF_IPV6</pp>: get IPv6 address if possible, IPv4 address
+          otherwise; error if none is available</li>
+</ul>
+
+<p>Setting the argument to zero invokes default behaviour, which, at the
+present, is <pp>IPADDR_PREF_IPV4</pp>. However, in the future when IPv6 becomes
+more common it may be switched to <pp>IPADDR_PREF_IPV6</pp>.</p>
+
+<p>If address parameter is set to NULL, INADDR_ANY or in6addr_any is returned.
+This value is useful when binding to all local network interfaces.</p>
+
+<p>In case of error <tt>errno</tt> is set to appropriate error code, as
+indicated below. Returned address will then have family type of AF_UNSPEC which
+in turn will cause any function you pass it to fail with <tt>EAFNOSUPPORT</tt>
+error.</p>
+
+<p>As the functionality is not covered by POSIX and rather implemented by
+OS-specific means there's no definitive list of possible error codes the
+function can return. You have to make the error handling as generic as
+possible.</p>
+
 <h6 id="ipremote">ipaddr ipremote(const char *name, int port, int mode, int64_t deadline);</h6>
+
+<p>Converts an IP address in human-readable format, or a name of a remote host
+into an <tt>ipaddr</tt> object:</p>
+
+<pre>
+ipaddr addr = ipremote("192.168.0.111", 5555, 0, -1);
+</pre>
+
+<p>NOTE: Remote host name resolving may not be implemented for all operating
+systems. As a matter of fact, it only works on Linux at the moment.</p>
+
+<p>First argument is the string to convert. Second argument is the port number.
+Third argument specifies which kind of addresses should be returned. Possible
+values are:</p>
+
+<ul>
+  <li><pp>IPADDR_IPV4</pp>: get IPv4 address or error if it's not available</li>
+  <li><pp>IPADDR_IPV6</pp>: get IPv6 address or error if it's not available</li>
+  <li><pp>IPADDR_PREF_IPV4</pp>: get IPv4 address if possible, IPv6 address
+          otherwise; error if none is available</li>
+  <li><pp>IPADDR_PREF_IPV6</pp>: get IPv6 address if possible, IPv4 address
+          otherwise; error if none is available</li>
+</ul>
+
+<p>Setting the argument to zero invokes default behaviour, which, at the
+present, is <pp>IPADDR_PREF_IPV4</pp>. However, in the future when IPv6 becomes
+more common it may be switched to <pp>IPADDR_PREF_IPV6</pp>.</p>
+
+<p>Finally, the fourth argument is the <a href="#now">deadline</a>. It allows
+to deal with situations where resolving a remote host name requires a DNS
+query and the query is taking substantial amount of time to complete.</p>
+
+<p>In case of error <tt>errno</tt> is set to appropriate error code, as
+indicated below. Returned address will then have family type of AF_UNSPEC which
+in turn will cause any function you pass it to fail with <tt>EAFNOSUPPORT</tt>
+error.</p>
+
+<p>As the functionality is not covered by POSIX and rather implemented by
+OS-specific means there's no definitive list of possible error codes the
+function can return. You have to make the error handling as generic as
+possible.</p>
+
 <h6 id="msleep">void msleep(int64_t deadline);</h6>
 
 <p>Waits until the <tt><a href="#now">deadline<a></tt>. Following statement,
