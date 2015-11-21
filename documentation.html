@@ -1116,6 +1116,40 @@ specifier, however, they may fail in random fashion, depending on a particular
 combination of compiler, optimisation level and code in question.</p>
 
 <h6 id="fdwait">int fdwait(int fd, int events, int64_t deadline);</h6>
+
+<p>Waits for an event from a file descriptor.</p>
+
+<p>The arguments are the file descriptor, the events to wait for and the
+<a href="#now">deadline</a>.</p>
+
+<pre>
+int events = fdwait(fd, FDW_IN | FDW_OUT, -1);
+</pre>
+
+<ul>
+<li>FDW_IN: Wait until data can be received from the file descriptor.</li>
+<li>FDW_OUT: Wait until data can de sent to the file descriptor.</li>
+</ul>
+
+<tt>fdwait</tt> returns combination of following flags:</p>
+
+<ul>
+<li>FDW_IN: Data can be received from the file descriptor.</li>
+<li>FDW_OUT: Data can be sent to the file descriptor.</li>
+<li>FDW_ERR: Error occured.</li>
+</ul>
+
+<p>Note that <tt>FDW_ERR</tt> cannot be used as an argument to
+the function, but it can be returned irrespective of whether the caller asked
+for it or not.</p>
+
+<p>If an error happens while there are still data to be received from the
+file descriptor combination of <tt>FDW_ERR</tt> and <tt>FDW_IN</tt> may be
+returned.</p>
+
+<p>If deadline is reached while waiting for the file descriptor,
+zero is returned.</p>
+
 <h6 id="go">void go(expression);</h6>
 
 <p>Launches a coroutine that executes the function passed in
@@ -1183,6 +1217,9 @@ msleep(now() + 1000);
 a point of time one second on from now can be expressed as
 <tt>now() + 1000</tt>.</p>
 
+<p>Value of -1 cannot be returned from the function and is therefore used to
+mean 'infinite'.</p>
+
 <p>The function cannot fail.</p>
 
 <h6 id="setcls">void setcls(void *val);</h6>
@@ -1216,6 +1253,7 @@ function.</p>
 <h6 id="unixrecv">size_t unixrecv(unixsock s, void *buf, size_t len, int64_t deadline);</h6>
 <h6 id="unixrecvuntil">size_t unixrecvuntil(unixsock s, void *buf, size_t len, const char *delims, size_t delimcount, int64_t deadline);</h6>
 <h6 id="unixsend">size_t unixsend(unixsock s, const void *buf, size_t len, int64_t deadline);</h6>
+
 <h6 id="yield">void yield(void);</h6>
 
 <p>By calling this function you give other coroutines a chance to run.</p>
