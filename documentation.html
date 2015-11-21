@@ -1176,6 +1176,35 @@ the stacks on process startup using
 <tt><a href="#goprepare">goprepare()</a></tt>.</p>
 
 <h6 id="goprepare">int goprepare(int count, size_t stack_size, size_t val_size);</h6>
+
+<p>Preallocate coroutine stacks. This function is useful to guarantee that
+coroutine invocation won't fail when there's insufficient memory to allocate
+the stack.</p>
+
+<p>NOTE: On some systems (e.g. Linux) memory overcommit is switched on by
+default. On such systems your application may be selected to be killed in low
+memory conditions without program having any say in it. If you can't guarantee
+that memory overcommit will be switched off then using <tt>goprepare()</tt> has
+basically zero effect.</p>
+
+<p>The arguments are number of coroutine stacks to preallocate, their size
+in bytes and, additionally, the size of the biggest element you are going to
+pass through libmill channels:</p>
+
+<pre>
+int count = goprepare(100, 100000, 128);
+</pre>
+
+<p>The function returns number of stacks that it actually managed
+to allocate. It may be less than the number of stacks asked for.</p>
+
+<p>Program can use up to the specified number of coroutines in parallel without
+the need for memory allocation. However, if the limit is reached -- or if
+message larger than <tt>val_size</tt> is sent through a channel -- memory
+allocation may occur, fail and cause panic and termination of the process.</p>
+
+<p>The function returns no errors.</p>
+
 <h6 id="goredump">void goredump(void);</h6>
 
 <p>Dumps current state of all coroutines and all channels to
