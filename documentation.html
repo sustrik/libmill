@@ -1012,6 +1012,59 @@ memory to allocate the channel.</p>
 
 <h6 id="choose">choose {}</h6>
 
+<p>Waits for activity on multiple channels.</p>
+
+<p>The statement consists of zero or more <tt>in</tt> clauses to wait for
+incoming messages, zero or more <tt>out</tt> clauses to wait until outgoing
+message can be written to a channel and zero or one <tt>otherwise</tt> clause.
+Last clause must always be <tt>end</tt>:</p>
+</p>
+
+<pre>
+choose {
+in(ch1, int, i):
+    foo(i);
+in(ch2, int, i):
+    bar(i);
+out(ch3, int, 42):
+    baz();
+otherwise:
+    quux();
+end
+}
+</pre>
+
+<p><tt>in</tt> clause waits for a message coming from a channel. It accepts
+three arguments. The channel to receive the message from, the type of the
+message and the variable to assign the message to.</p>
+
+<p>The variable is declared by the clause, you don't have to declare it
+beforehand yourself.</p>
+
+<p>If message type doesn't match the channel type program will panic and
+abort.</p>
+
+<p><tt>out</tt> clause waits until a message can be sent to a channel. It may
+not be immediately possible as the channel may be full. The clause accepts
+three arguments. The channel to send the message to, the type of the message
+and the message itself.</p>
+
+<p>If message type doesn't match the channel type program will panic and
+abort.</p>
+
+<p><tt>otherwise</tt> clause is run if no other clause can be executed
+immediately. A <tt>choose</tt> statement with <tt>otherwise</tt> clause
+therefore never blocks.</p>
+
+<p>If multiple clauses can be executed immediately, one of them is chosen
+at random.</p>
+
+<p>There's no fall-through among the clauses. In other words, there's no need
+to put <tt>break</tt> at the end of each clause as is the case with standard
+C <tt>switch</tt> statement.</p>
+
+<p>The constrect returns no errors.</p>
+
 <h6 id="chr">type chr(chan ch, type);</h6>
 
 <p>Retrieves a message from the channel. First parameter is the channel handle,
@@ -1112,6 +1165,16 @@ the stacks on process startup using
 <h6 id="iplocal">ipaddr iplocal(const char *name, int port, int mode);</h6>
 <h6 id="ipremote">ipaddr ipremote(const char *name, int port, int mode, int64_t deadline);</h6>
 <h6 id="msleep">void msleep(int64_t deadline);</h6>
+
+<p>Waits until the <tt><a href="#now">deadline<a></tt>. Following statement,
+for example, waits for one second:</p>
+
+<pre>
+msleep(now() + 1000);
+</pre>
+
+<p>The function returns no errors.</p>
+
 <h6 id="now">int64_t now(void);</h6>
 
 <p>Returns current time, in milliseconds.</p>
