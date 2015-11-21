@@ -1224,7 +1224,16 @@ allocation may occur, fail and cause panic and termination of the process.</p>
 
 <p>For more information look <a href="#debug">here</a>.</p>
 
-<h6 id="ipaddrstr">const char *ipaddrstr(ipaddr addr, char *ipstr);</h6>
+<h6 id="ipaddrstr">const char *ipaddrstr(ipaddr addr, char *buffer);</h6>
+
+<p>Formats <tt>ipaddr</tt> as human-readable string.</p>
+
+<p>First argument is the IP address to format, second is the buffer to store
+the result it. The buffer must be at least <tt>IPADDR_MAXSTRLEN</tt> bytes
+long.</p>
+
+<p>The function returns pointer to the formatted string.</p>
+
 <h6 id="iplocal">ipaddr iplocal(const char *name, int port, int mode);</h6>
 <h6 id="ipremote">ipaddr ipremote(const char *name, int port, int mode, int64_t deadline);</h6>
 <h6 id="msleep">void msleep(int64_t deadline);</h6>
