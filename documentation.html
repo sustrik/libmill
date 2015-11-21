@@ -1282,7 +1282,8 @@ possible.</p>
 into an <tt>ipaddr</tt> object:</p>
 
 <pre>
-ipaddr addr = ipremote("192.168.0.111", 5555, 0, -1);
+ipaddr a1 = ipremote("192.168.0.111", 5555, 0, -1);
+ipaddr s2 = ipremote("www.expamle.org", 80, 0, -1); 
 </pre>
 
 <p>NOTE: Remote host name resolving may not be implemented for all operating
@@ -1360,11 +1361,13 @@ function.</p>
 <h6 id="tcprecv">size_t tcprecv(tcpsock s, void *buf, size_t len, int64_t deadline);</h6>
 <h6 id="tcprecvuntil">size_t tcprecvuntil(tcpsock s, void *buf, size_t len, const char *delims, size_t delimcount, int64_t deadline);</h6>
 <h6 id="tcpsend">size_t tcpsend(tcpsock s, const void *buf, size_t len, int64_t deadline);</h6>
+
 <h6 id="udpclose">void udpclose(udpsock s);</h6>
 <h6 id="udplisten">udpsock udplisten(ipaddr addr);</h6>
 <h6 id="udpport">int udpport(udpsock s);</h6>
 <h6 id="udprecv">size_t udprecv(udpsock s, ipaddr *addr, void *buf, size_t len, int64_t deadline);</h6>
 <h6 id="udpsend">void udpsend(udpsock s, ipaddr addr, const void *buf, size_t len);</h6>
+
 <h6 id="unixaccept">unixsock unixaccept(unixsock s, int64_t deadline);</h6>
 <h6 id="unixclose">void unixclose(unixsock s);</h6>
 <h6 id="unixconnect">unixsock unixconnect(const char *addr);</h6>
