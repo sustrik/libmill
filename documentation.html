@@ -1384,6 +1384,11 @@ one of the following values:</p>
 </ul>
 
 <h6 id="tcpclose">void tcpclose(tcpsock s);</h6>
+
+<p>Closes the socket.</p>
+
+<p>The function always succeeds.</p>
+
 <h6 id="tcpconnect">tcpsock tcpconnect(ipaddr addr, int64_t deadline);</h6>
 <h6 id="tcpflush">void tcpflush(tcpsock s, int64_t deadline);</h6>
 <h6 id="tcplisten">tcpsock tcplisten(ipaddr addr, int backlog);</h6>
@@ -1393,6 +1398,11 @@ one of the following values:</p>
 <h6 id="tcpsend">size_t tcpsend(tcpsock s, const void *buf, size_t len, int64_t deadline);</h6>
 
 <h6 id="udpclose">void udpclose(udpsock s);</h6>
+
+<p>Closes the socket.</p>
+
+<p>The function always succeeds.</p>
+
 <h6 id="udplisten">udpsock udplisten(ipaddr addr);</h6>
 <h6 id="udpport">int udpport(udpsock s);</h6>
 <h6 id="udprecv">size_t udprecv(udpsock s, ipaddr *addr, void *buf, size_t len, int64_t deadline);</h6>
@@ -1429,6 +1439,11 @@ one of the following values:</p>
 </ul>
 
 <h6 id="unixclose">void unixclose(unixsock s);</h6>
+
+<p>Closes the socket.</p>
+
+<p>The function always succeeds.</p>
+
 <h6 id="unixconnect">unixsock unixconnect(const char *addr);</h6>
 <h6 id="unixflush">void unixflush(unixsock s, int64_t deadline);</h6>
 <h6 id="unixlisten">unixsock unixlisten(const char *addr, int backlog);</h6>
