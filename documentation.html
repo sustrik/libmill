@@ -1121,7 +1121,7 @@ combination of compiler, optimisation level and code in question.</p>
 <p>Waits for an event from a file descriptor.</p>
 
 <p>The arguments are the file descriptor, the events to wait for and the
-<a href="#now">deadline</a>.</p>
+<a href="#deadlines">deadline</a>.</p>
 
 <pre>
 int events = fdwait(fd, FDW_IN | FDW_OUT, -1);
@@ -1306,8 +1306,8 @@ values are:</p>
 present, is <pp>IPADDR_PREF_IPV4</pp>. However, in the future when IPv6 becomes
 more common it may be switched to <pp>IPADDR_PREF_IPV6</pp>.</p>
 
-<p>Finally, the fourth argument is the <a href="#now">deadline</a>. It allows
-to deal with situations where resolving a remote host name requires a DNS
+<p>Finally, the fourth argument is the <a href="#deadlines">deadline</a>. It
+allows to deal with situations where resolving a remote host name requires a DNS
 query and the query is taking substantial amount of time to complete.</p>
 
 <p>In case of error <tt>errno</tt> is set to appropriate error code, as
@@ -1322,8 +1322,8 @@ possible.</p>
 
 <h6 id="msleep">void msleep(int64_t deadline);</h6>
 
-<p>Waits until the <tt><a href="#now">deadline<a></tt>. Following statement,
-for example, waits for one second:</p>
+<p>Waits until the <tt><a href="#deadlines">deadline<a></tt>. Following
+statement, for example, waits for one second:</p>
 
 <pre>
 msleep(now() + 1000);
@@ -1353,6 +1353,36 @@ function.</p>
 <p>The function cannot fail.</p>
 
 <h6 id="tcpaccept">tcpsock tcpaccept(tcpsock s, int64_t deadline);</h6>
+
+<p>Accepts new incoming TCP connection from
+<tt><a href="#tcplisten">listening</a></tt> socket <tt>s</tt>. Second argument
+is the <tt><a href="#deadlines">deadline</a></tt> for the operation.</p>
+
+<pre>
+ipaddr addr = iplocal("127.0.0.1", 5555, 0);
+tcpsock listener = tcplisten(addr, 10);
+tcpsock connection = tcpaccept(listener, -1);
+</pre>
+
+<p>If the function succeeds it returns handle of the newly created connection
+and sets <tt>errno</tt> to zero.</p>
+
+<p>If the function fails it returns <tt>NULL</tt> and sets <tt>errno</tt> to
+one of the following values:</p>
+
+<ul style="list-style: none;">
+  <li><tt>ECONNABORTED</tt>: A connection has been aborted.</li>
+  <li><tt>EINTR</tt>: The function was interrupted by a signal.</li>
+  <li><tt>EMFILE</tt>: The maximum number of file descriptors in the process are
+      already open.</li>
+  <li><tt>ENFILE</tt>: The maximum number of file descriptors in the system are
+      already open.</li>
+  <li><tt>ENOBUFS</tt>: No buffer space is available.</li>
+  <li><tt>ENOMEM</tt>: There was insufficient memory available to complete the
+      operation.</li>
+  <li><tt>ETIMEDOUT</tt>: Deadline was reached.</li>
+</ul>
+
 <h6 id="tcpclose">void tcpclose(tcpsock s);</h6>
 <h6 id="tcpconnect">tcpsock tcpconnect(ipaddr addr, int64_t deadline);</h6>
 <h6 id="tcpflush">void tcpflush(tcpsock s, int64_t deadline);</h6>
@@ -1369,6 +1399,35 @@ function.</p>
 <h6 id="udpsend">void udpsend(udpsock s, ipaddr addr, const void *buf, size_t len);</h6>
 
 <h6 id="unixaccept">unixsock unixaccept(unixsock s, int64_t deadline);</h6>
+
+<p>Accepts new incoming UNIX domain connection from
+<tt><a href="#unixlisten">listening</a></tt> socket <tt>s</tt>. Second argument
+is the <tt><a href="#deadlines">deadline</a></tt> for the operation.</p>
+
+<pre>
+unixsock listener = unixlisten("/tmp/test.unix", 10);
+unixsock connection = unixaccept(listener, -1);
+</pre>
+
+<p>If the function succeeds it returns handle of the newly created connection
+and sets <tt>errno</tt> to zero.</p>
+
+<p>If the function fails it returns <tt>NULL</tt> and sets <tt>errno</tt> to
+one of the following values:</p>
+
+<ul style="list-style: none;">
+  <li><tt>ECONNABORTED</tt>: A connection has been aborted.</li>
+  <li><tt>EINTR</tt>: The function was interrupted by a signal.</li>
+  <li><tt>EMFILE</tt>: The maximum number of file descriptors in the process are
+      already open.</li>
+  <li><tt>ENFILE</tt>: The maximum number of file descriptors in the system are
+      already open.</li>
+  <li><tt>ENOBUFS</tt>: No buffer space is available.</li>
+  <li><tt>ENOMEM</tt>: There was insufficient memory available to complete the
+      operation.</li>
+  <li><tt>ETIMEDOUT</tt>: Deadline was reached.</li>
+</ul>
+
 <h6 id="unixclose">void unixclose(unixsock s);</h6>
 <h6 id="unixconnect">unixsock unixconnect(const char *addr);</h6>
 <h6 id="unixflush">void unixflush(unixsock s, int64_t deadline);</h6>
