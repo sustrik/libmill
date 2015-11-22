@@ -1687,6 +1687,28 @@ of the following error codes:</p>
 </ul>
 
 <h6 id="unixpair">void unixpair(unixsock *a, unixsock *b);</h6>
+
+<p>Creates a pair of mutually connected UNIX domain sockets.</p>
+
+<p>The arguments are pointers to two uninitialised <tt>unixsock</tt>
+handles.</p>
+
+<p>If the function succeeds it sets <tt>errno</tt> to zero.</p>
+
+<p>If it fails it sets it to one of the following error codes:</p>
+
+<ul style="list-style: none;">
+  <li><tt>EINVAL</tt>: One or both arguments are <tt>NULL</tt>.</li>
+<li><tt>EMFILE</tt>: The maximum number of file descriptors in the process are
+      already open.</li>
+  <li><tt>ENFILE</tt>: The maximum number of file descriptors in the system are
+      already open.</li>
+  <li><tt>EACCES</tt>: The process does not have appropriate privileges.</li>
+  <li><tt>ENOBUFS</tt>: No buffer space is available.</li>
+  <li><tt>ENOMEM</tt>: There was insufficient memory available to complete the
+      operation.</li>
+</ul>
+
 <h6 id="unixrecv">size_t unixrecv(unixsock s, void *buf, size_t len, int64_t deadline);</h6>
 <h6 id="unixrecvuntil">size_t unixrecvuntil(unixsock s, void *buf, size_t len, const char *delims, size_t delimcount, int64_t deadline);</h6>
 <h6 id="unixsend">size_t unixsend(unixsock s, const void *buf, size_t len, int64_t deadline);</h6>
