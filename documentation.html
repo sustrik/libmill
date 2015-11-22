@@ -69,28 +69,22 @@
     <li><a href="#now">now</a></li>
     <li><a href="#setcls">setcls</a></li>
     <li><a href="#tcpaccept">tcpaccept</a></li>
-    <li><a href="#tcpattach">tcpattach</a></li>
     <li><a href="#tcpclose">tcpclose</a></li>
     <li><a href="#tcpconnect">tcpconnect</a></li>
-    <li><a href="#tcpdetach">tcpdetach</a></li>
     <li><a href="#tcpflush">tcpflush</a></li>
     <li><a href="#tcplisten">tcplisten</a></li>
     <li><a href="#tcpport">tcpport</a></li>
     <li><a href="#tcprecv">tcprecv</a></li>
     <li><a href="#tcprecvuntil">tcprecvuntil</a></li>
     <li><a href="#tcpsend">tcpsend</a></li>
-    <li><a href="#udpattach">udpattach</a></li>
     <li><a href="#udpclose">udpclose</a></li>
-    <li><a href="#udpdetach">udpdetach</a></li> 
     <li><a href="#udplisten">udplisten</a></li>
     <li><a href="#udpport">udpport</a></li>
     <li><a href="#udprecv">udprecv</a></li>
     <li><a href="#udpsend">udpsend</a></li>
     <li><a href="#unixaccept">unixaccept</a></li>
-    <li><a href="#unixattach">unixattach</a></li>
     <li><a href="#unixclose">unixclose</a></li>
     <li><a href="#unixconnect">unixconnect</a></li>
-    <li><a href="#unixdetach">unixdetach</a></li>
     <li><a href="#unixflush">unixflush</a></li>
     <li><a href="#unixlisten">unixlisten</a></li>
     <li><a href="#unixpair">unixpair</a></li>
@@ -130,7 +124,7 @@ $ sudo make install
 as well as dynamic library <tt>libmill.so</tt> and static library
 <tt>libmill.a</tt>.</p>
 
-<p>A program using the library can look like this:</p>
+<p>A program using the library can look, for example, like this:</p>
 
 <pre>
 #include &lt;stdio.h&gt;
@@ -159,9 +153,6 @@ int main() {
 $ gcc -o example example.c -lmill
 $ ./example
 </pre>
-
-<p>Note that there's also an alternative CMake-based build system included in
-the package.</p>
 
 <h3 id="tour">A tour of the library</h3>
 
@@ -1452,6 +1443,45 @@ sets it to one of the following values:</p>
 </ul>
 
 <h6 id="tcplisten">tcpsock tcplisten(ipaddr addr, int backlog);</h6>
+
+<p>Starts listening for incoming TCP connections.</p>
+
+<p>First argument is the IP address to listen on (see
+<tt><a href="#iplocal">iplocal()</a></tt>), second one is the connection
+backlog size, i.e. maximum number of connections that weren't refused but
+are not yet accepted.</p>
+
+<pre>
+ipaddr addr = iplocal("eth0", 5555, 0);
+tcpsock listener = tcplisten(addr, 10);
+</pre>
+
+<p>If the IP address passed to the function has port number set to zero,
+operating system will choose an ephemeral port to bind to. The number of the
+chosen port can be later retrieved using
+<tt><a href="#tcpport">tcpport()</a></tt> function.</p>
+
+<p>In case of success <tt>tcplisten()</tt> returns handle to the listening
+socket and sets <tt>errno</tt> to zero.</p>
+
+<p>In case of failure it returns <tt>NULL</tt> and sets <tt>errno</tt> to one
+of the following error codes:</p>
+
+<ul style="list-style: none;">
+  <li><tt>EADDRINUSE</tt>: The specified address is already in use.</li>
+  <li><tt>EADDRNOTAVAIL</tt>: The specified address is not available from the
+      local machine.</li>
+  <li><tt>EMFILE</tt>: No more file descriptors are available for this
+      process.</li>
+  <li><tt>ENFILE</tt>: No more file descriptors are available for the
+      system.</li>
+  <li><tt>EACCES</tt>: The process does not have appropriate privileges.</li>
+  <li><tt>ENOBUFS</tt>: Insufficient resources were available in the system to
+      perform the operation.</li>
+  <li><tt>ENOMEM</tt>: Insufficient memory was available to fulfill the
+      request.</li>
+</ul>
+
 <h6 id="tcpport">int tcpport(tcpsock s);</h6>
 
 <p>Returns TCP port used by the socket.</p>
@@ -1613,6 +1643,49 @@ sets it to one of the following values:</p>
 </ul>
 
 <h6 id="unixlisten">unixsock unixlisten(const char *addr, int backlog);</h6>
+
+<p>Starts listening for incoming UNIX domain connections.</p>
+
+<p>First argument is the file to listen on second one is the connection
+backlog size, i.e. maximum number of connections that weren't refused but
+are not yet accepted.</p>
+
+<pre>
+unixsock listener = unixlisten("/tmp/test.unix", 10);
+</pre>
+
+<p>In case of success <tt>unixlisten()</tt> returns handle to the listening
+socket and sets <tt>errno</tt> to zero.</p>
+
+<p>In case of failure it returns <tt>NULL</tt> and sets <tt>errno</tt> to one
+of the following error codes:</p>
+
+<ul style="list-style: none;">
+  <li><tt>EDESTADDRREQ or EISDIR</tt>: The address argument is a null
+      pointer.</li>
+  <li><tt>EIO</tt>: An I/O error occurred.</li>
+  <li><tt>ELOOP</tt>: A loop exists in symbolic links encountered during
+      resolution of the pathname in address.</li>
+  <li><tt>ENAMETOOLONG</tt>: A component of a pathname exceeded
+      <tt>NAME_MAX</tt> characters, or an entire pathname exceeded
+      <tt>PATH_MAX</tt> characters.</li>
+  <li><tt>ENOENT</tt>: A component of the pathname does not name an existing
+      file or the pathname is an empty string.</li>
+  <li><tt>ENOTDIR</tt>: A component of the path prefix of the pathname in
+      address is not a directory.</li>
+  <li><tt>EROFS</tt>: The name would reside on a read-only file system.</li>
+  <li><tt>EADDRINUSE</tt>: The specified address is already in use.</li>
+  <li><tt>EMFILE</tt>: No more file descriptors are available for this
+      process.</li>
+  <li><tt>ENFILE</tt>: No more file descriptors are available for the
+      system.</li>
+  <li><tt>EACCES</tt>: The process does not have appropriate privileges.</li>
+  <li><tt>ENOBUFS</tt>: Insufficient resources were available in the system to
+      perform the operation.</li>
+  <li><tt>ENOMEM</tt>: Insufficient memory was available to fulfill the
+      request.</li>
+</ul>
+
 <h6 id="unixpair">void unixpair(unixsock *a, unixsock *b);</h6>
 <h6 id="unixrecv">size_t unixrecv(unixsock s, void *buf, size_t len, int64_t deadline);</h6>
 <h6 id="unixrecvuntil">size_t unixrecvuntil(unixsock s, void *buf, size_t len, const char *delims, size_t delimcount, int64_t deadline);</h6>
