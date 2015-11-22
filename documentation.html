@@ -1428,6 +1428,29 @@ one of the following values:</p>
 </ul>
 
 <h6 id="tcpflush">void tcpflush(tcpsock s, int64_t deadline);</h6>
+
+<p>When using <tt><a href="#tcpsend">tcpsend()</a></tt> the library may choose
+not to send the data for the moment. <tt>tcpflush()</tt> can be used to flush
+any yet unsent data to the network.</p>
+
+<p>First argument is the socket to flush, second one is the
+<a href="#deadlines">deadline</a>.</p>
+
+<p>In case of success, the function sets errno to zero. In case of failure it
+sets it to one of the following values:</p>
+
+<ul style="list-style: none;">
+  <li><tt>ECONNRESET</tt>: A connection was forcibly closed by a peer.</li>
+  <li><tt>EINTR</tt>: The function was interrupted by a signal.</li>
+  <li><tt>EPIPE</tt>: The socket is shut down for writing.</li>
+  <li><tt>EACCES</tt>: The process does not have appropriate privileges.</li>
+  <li><tt>ENETDOWN</tt>: The local network interface used to reach the
+      destination is down.</li>
+  <li><tt>ENETUNREACH</tt>: No route to the network is present.</li>
+  <li><tt>ENOBUFS</tt>: No buffer space is available.</li>
+  <li><tt>ETIMEDOUT</tt>: Deadline was reached.</li>
+</ul>
+
 <h6 id="tcplisten">tcpsock tcplisten(ipaddr addr, int backlog);</h6>
 <h6 id="tcpport">int tcpport(tcpsock s);</h6>
 <h6 id="tcprecv">size_t tcprecv(tcpsock s, void *buf, size_t len, int64_t deadline);</h6>
@@ -1519,12 +1542,34 @@ one of the following values:</p>
       already open.</li>
   <li><tt>EACCES</tt>: The process does not have appropriate privileges.</li>
   <li><tt>ENOBUFS</tt>: No buffer space is available.</li>
-  <li><tt>ENOMEM</tt>: There was insufficient memory available to complete the
+  <li>< tt>ENOMEM</tt>: There was insufficient memory available to complete the
       operation.</li>
   <li><tt>ETIMEDOUT</tt>: Deadline was reached.</li>
 </ul>
 
 <h6 id="unixflush">void unixflush(unixsock s, int64_t deadline);</h6>
+
+<p>When using <tt><a href="#unixsend">unixsend()</a></tt> the library may choose
+not to send the data for the moment. <tt>unixflush()</tt> can be used to flush
+any yet unsent data.</p>
+
+<p>First argument is the socket to flush, second one is the
+<a href="#deadlines">deadline</a>.</p>
+
+<p>In case of success, the function sets errno to zero. In case of failure it
+sets it to one of the following values:</p>
+
+<ul style="list-style: none;">
+  <li><tt>ECONNRESET</tt>: A connection was forcibly closed by a peer.</li>
+  <li><tt>EINTR</tt>: The function was interrupted by a signal.</li>
+  <li><tt>EPIPE</tt>: The socket is shut down for writing.</li>
+  <li><tt>EACCES</tt>: The process does not have appropriate privileges.</li>
+  <li><tt>EIO</tt>: An I/O error occurred while reading from or writing to the
+      file system.</li>
+  <li><tt>ENOBUFS</tt>: No buffer space is available.</li>
+  <li><tt>ETIMEDOUT</tt>: Deadline was reached.</li>
+</ul>
+
 <h6 id="unixlisten">unixsock unixlisten(const char *addr, int backlog);</h6>
 <h6 id="unixpair">void unixpair(unixsock *a, unixsock *b);</h6>
 <h6 id="unixrecv">size_t unixrecv(unixsock s, void *buf, size_t len, int64_t deadline);</h6>
