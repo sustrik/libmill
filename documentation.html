@@ -1453,6 +1453,15 @@ sets it to one of the following values:</p>
 
 <h6 id="tcplisten">tcpsock tcplisten(ipaddr addr, int backlog);</h6>
 <h6 id="tcpport">int tcpport(tcpsock s);</h6>
+
+<p>Returns TCP port used by the socket.</p>
+
+<p>If <tt><a href="#tcplisten">tcplisten()</a></tt> was called with port number
+set to zero, operating system chooses an ephemeral port for the connection.
+This function can be used to retrieve the port number in that scenario.</p>
+
+<p>The function cannot return error.</p>
+
 <h6 id="tcprecv">size_t tcprecv(tcpsock s, void *buf, size_t len, int64_t deadline);</h6>
 <h6 id="tcprecvuntil">size_t tcprecvuntil(tcpsock s, void *buf, size_t len, const char *delims, size_t delimcount, int64_t deadline);</h6>
 <h6 id="tcpsend">size_t tcpsend(tcpsock s, const void *buf, size_t len, int64_t deadline);</h6>
