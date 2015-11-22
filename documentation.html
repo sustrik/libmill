@@ -1457,6 +1457,39 @@ sets it to one of the following values:</p>
 <h6 id="tcprecvuntil">size_t tcprecvuntil(tcpsock s, void *buf, size_t len, const char *delims, size_t delimcount, int64_t deadline);</h6>
 <h6 id="tcpsend">size_t tcpsend(tcpsock s, const void *buf, size_t len, int64_t deadline);</h6>
 
+<p>Sends data to TCP connection.</p>
+
+<p>First argument is the socket handle to send the data to. Second argument is
+pointer to the buffer to send. Third argument is the size of the buffer,
+in bytes. Finally, fourth argument is the
+<tt><a href="#deadlines">deadline</a></tt>.</p>
+
+<pre>
+size_t nbytes = tcpsend(s, "ABC", 3, -1);
+</pre>
+
+<p>In the case of success, <tt>errno</tt> is set to zero. In the case of
+failure it is set to one of the following error codes:</p>
+
+<ul style="list-style: none;">
+  <li><tt>ECONNRESET</tt>: A connection was forcibly closed by a peer.</li>
+  <li><tt>EINTR</tt>: The function was interrupted by a signal.</li>
+  <li><tt>EPIPE</tt>: The socket is shut down for writing.</li>
+  <li><tt>EACCES</tt>: The process does not have appropriate privileges.</li>
+  <li><tt>ENETDOWN</tt>: The local network interface used to reach the
+      destination is down.</li>
+  <li><tt>ENETUNREACH</tt>: No route to the network is present.</li>
+  <li><tt>ENOBUFS</tt>: No buffer space is available.</li>
+  <li><tt>ETIMEDOUT</tt>: Deadline was reached.</li>
+</ul>
+
+<p>Whether successful or not, the function returns number of bytes actually
+written to the socket.</p>
+
+<p>To optimise the throughput <tt>tcpsend()</tt> may store the data into output
+buffer and not flush it into the network immediately. To force sending of the
+data use <tt><a href="#tcpflush">tcpflush()</a></tt> function.</p>
+
 <h6 id="udpclose">void udpclose(udpsock s);</h6>
 
 <p>Closes the socket.</p>
@@ -1575,6 +1608,38 @@ sets it to one of the following values:</p>
 <h6 id="unixrecv">size_t unixrecv(unixsock s, void *buf, size_t len, int64_t deadline);</h6>
 <h6 id="unixrecvuntil">size_t unixrecvuntil(unixsock s, void *buf, size_t len, const char *delims, size_t delimcount, int64_t deadline);</h6>
 <h6 id="unixsend">size_t unixsend(unixsock s, const void *buf, size_t len, int64_t deadline);</h6>
+
+<p>Sends data to UNIX domain connection.</p>
+
+<p>First argument is the socket handle to send the data to. Second argument is
+pointer to the buffer to send. Third argument is the size of the buffer,
+in bytes. Finally, fourth argument is the
+<tt><a href="#deadlines">deadline</a></tt>.</p>
+
+<pre>
+size_t nbytes = unixsend(s, "ABC", 3, -1);
+</pre>
+
+<p>In the case of success, <tt>errno</tt> is set to zero. In the case of
+failure it is set to one of the following error codes:</p>
+
+<ul style="list-style: none;">
+  <li><tt>ECONNRESET</tt>: A connection was forcibly closed by a peer.</li>
+  <li><tt>EINTR</tt>: The function was interrupted by a signal.</li>
+  <li><tt>EPIPE</tt>: The socket is shut down for writing.</li>
+  <li><tt>EACCES</tt>: The process does not have appropriate privileges.</li>
+  <li><tt>EIO</tt>: An I/O error occurred while reading from or writing to the
+      file system.</li>
+  <li><tt>ENOBUFS</tt>: No buffer space is available.</li>
+  <li><tt>ETIMEDOUT</tt>: Deadline was reached.</li>
+</ul>
+
+<p>Whether successful or not, the function returns number of bytes actually
+written to the socket.</p>
+
+<p>To optimise the throughput <tt>unixsend()</tt> may store the data into output
+buffer and not flush it to the peer immediately. To force sending of the
+data use <tt><a href="#unixflush">unixflush()</a></tt> function.</p>
 
 <h6 id="yield">void yield(void);</h6>
 
