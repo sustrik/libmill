@@ -1390,6 +1390,43 @@ one of the following values:</p>
 <p>The function always succeeds.</p>
 
 <h6 id="tcpconnect">tcpsock tcpconnect(ipaddr addr, int64_t deadline);</h6>
+
+<p>Creates a TCP connection to a remote endpoint.</p>
+
+<p>First parameter is the IP address to connect to. Second one is the
+<tt><a href="#deadlines">deadline</a></tt> for the operation.<p>
+
+<pre>
+ipaddr addr = ipremote("www.example.org", 80, 0, -1);
+tcpsock connection = tcpconnect(addr, -1);
+</pre>
+
+<p>If the function succeeds it returns handle of the newly created connection
+and sets <tt>errno</tt> to zero.</p>
+
+<p>If the function fails it returns <tt>NULL</tt> and sets <tt>errno</tt> to
+one of the following values:</p>
+
+<ul style="list-style: none;">
+  <li><tt>ECONNREFUSED:</tt>The target address was not listening for connections
+       or refused the connection request.</li>
+  <li><tt>ECONNRESET</tt>: Remote host reset the connection request.</li>
+  <li><tt>EHOSTUNREACH</tt>: The destination host cannot be reached.</li>
+  <li><tt>ENETDOWN</tt>: The local network interface used to reach the
+      destination is down.</li>
+  <li><tt>ENETUNREACH</tt>: No route to the network is present.</li>
+  <li><tt>EINTR</tt>: The function was interrupted by a signal.</li>
+  <li><tt>EMFILE</tt>: The maximum number of file descriptors in the process are
+      already open.</li>
+  <li><tt>ENFILE</tt>: The maximum number of file descriptors in the system are
+      already open.</li>
+  <li><tt>EACCES</tt>: The process does not have appropriate privileges.</li>
+  <li><tt>ENOBUFS</tt>: No buffer space is available.</li>
+  <li><tt>ENOMEM</tt>: There was insufficient memory available to complete the
+      operation.</li>
+  <li><tt>ETIMEDOUT</tt>: Deadline was reached.</li>
+</ul>
+
 <h6 id="tcpflush">void tcpflush(tcpsock s, int64_t deadline);</h6>
 <h6 id="tcplisten">tcpsock tcplisten(ipaddr addr, int backlog);</h6>
 <h6 id="tcpport">int tcpport(tcpsock s);</h6>
@@ -1445,6 +1482,48 @@ one of the following values:</p>
 <p>The function always succeeds.</p>
 
 <h6 id="unixconnect">unixsock unixconnect(const char *addr);</h6>
+
+<p>Creates a UNIX domain connection to a remote endpoint.</p>
+
+<p>The parameter is the file to connect to.<p>
+
+<pre>
+unixsock connection = unixconnect("/tmp/test.unix");
+</pre>
+
+<p>If the function succeeds it returns handle of the newly created connection
+and sets <tt>errno</tt> to zero.</p>
+
+<p>If the function fails it returns <tt>NULL</tt> and sets <tt>errno</tt> to
+one of the following values:</p>
+
+<ul style="list-style: none;">
+  <li><tt>ECONNREFUSED:</tt>The target address was not listening for connections
+       or refused the connection request.</li>
+  <li><tt>ECONNRESET</tt>: Remote host reset the connection request.</li>
+  <li><tt>EIO</tt>: An I/O error occurred while reading from or writing to the
+      file system.</li>
+  <li><tt>ELOOP</tt>: A loop exists in symbolic links encountered during
+      resolution of the pathname in address.</li>
+  <li><tt>ENAMETOOLONG</tt>: A component of a pathname exceeded
+      <tt>NAME_MAX</tt> characters, or an entire pathname exceeded
+      <tt>PATH_MAX</tt> characters.</li>
+  <li><tt>ENOENT</tt>: A component of the pathname does not name an existing
+      file or the pathname is an empty string.</li>
+  <li><tt>ENOTDIR</tt>: A component of the path prefix of the pathname in
+      address is not a directory.</li>
+  <li><tt>EINTR</tt>: The function was interrupted by a signal.</li>
+  <li><tt>EMFILE</tt>: The maximum number of file descriptors in the process are
+      already open.</li>
+  <li><tt>ENFILE</tt>: The maximum number of file descriptors in the system are
+      already open.</li>
+  <li><tt>EACCES</tt>: The process does not have appropriate privileges.</li>
+  <li><tt>ENOBUFS</tt>: No buffer space is available.</li>
+  <li><tt>ENOMEM</tt>: There was insufficient memory available to complete the
+      operation.</li>
+  <li><tt>ETIMEDOUT</tt>: Deadline was reached.</li>
+</ul>
+
 <h6 id="unixflush">void unixflush(unixsock s, int64_t deadline);</h6>
 <h6 id="unixlisten">unixsock unixlisten(const char *addr, int backlog);</h6>
 <h6 id="unixpair">void unixpair(unixsock *a, unixsock *b);</h6>
