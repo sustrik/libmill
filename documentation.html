@@ -1493,6 +1493,34 @@ This function can be used to retrieve the port number in that scenario.</p>
 <p>The function cannot return error.</p>
 
 <h6 id="tcprecv">size_t tcprecv(tcpsock s, void *buf, size_t len, int64_t deadline);</h6>
+
+<p>Reads data from TCP connection.</p>
+
+<p>First argument is the socket to read from. Second parameter is pointer to
+the buffer to read the data to. Third argument is the size of the buffer.
+Finally, fourth parameter is <a href="#deadlines">deadline</a> for the
+operation.</p>
+
+<pre>
+char buf[256];
+size_t nbytes = tcprecv(s, buf, sizeof(buf), -1);
+</pre>
+
+<p>In the case of success, <tt>errno</tt> is set to zero. In the case of failure
+it is set to one of the following values:</p>
+
+<ul style="list-style: none;">
+  <li><tt>ECONNRESET</tt>: A connection was forcibly closed by a peer.</li>
+  <li><tt>EINTR</tt>: The function was interrupted by a signal.</li>
+  <li><tt>ENOBUFS</tt>: Insufficient resources were available in the system to
+      perform the operation.</li>
+  <li><tt>ENOMEM</tt>: Insufficient memory was available to fulfill the
+      request.</li>
+  <li><tt>ETIMEDOUT</tt>: Deadline exceeded.</li>
+</ul>
+
+<p>The function returns number of bytes received.</p>
+
 <h6 id="tcprecvuntil">size_t tcprecvuntil(tcpsock s, void *buf, size_t len, const char *delims, size_t delimcount, int64_t deadline);</h6>
 <h6 id="tcpsend">size_t tcpsend(tcpsock s, const void *buf, size_t len, int64_t deadline);</h6>
 
@@ -1710,7 +1738,7 @@ handles.</p>
 
 <ul style="list-style: none;">
   <li><tt>EINVAL</tt>: One or both arguments are <tt>NULL</tt>.</li>
-<li><tt>EMFILE</tt>: The maximum number of file descriptors in the process are
+  <li><tt>EMFILE</tt>: The maximum number of file descriptors in the process are
       already open.</li>
   <li><tt>ENFILE</tt>: The maximum number of file descriptors in the system are
       already open.</li>
@@ -1721,6 +1749,35 @@ handles.</p>
 </ul>
 
 <h6 id="unixrecv">size_t unixrecv(unixsock s, void *buf, size_t len, int64_t deadline);</h6>
+
+<p>Reads data from UNIX domain connection.</p>
+
+<p>First argument is the socket to read from. Second parameter is pointer to
+the buffer to read the data to. Third argument is the size of the buffer.
+Finally, fourth parameter is <a href="#deadlines">deadline</a> for the
+operation.</p>
+
+<pre>
+char buf[256];
+size_t nbytes = unixrecv(s, buf, sizeof(buf), -1);
+</pre>
+
+<p>In the case of success, <tt>errno</tt> is set to zero. In the case of failure
+it is set to one of the following values:</p>
+
+<ul style="list-style: none;">
+  <li><tt>ECONNRESET</tt>: A connection was forcibly closed by a peer.</li>
+  <li><tt>EIO</tt>: An I/O error occurred.</li>
+  <li><tt>EINTR</tt>: The function was interrupted by a signal.</li>
+  <li><tt>ENOBUFS</tt>: Insufficient resources were available in the system to
+      perform the operation.</li>
+  <li><tt>ENOMEM</tt>: Insufficient memory was available to fulfill the
+      request.</li>
+  <li><tt>ETIMEDOUT</tt>: Deadline exceeded.</li>
+</ul>
+
+<p>The function returns number of bytes received.</p>
+
 <h6 id="unixrecvuntil">size_t unixrecvuntil(unixsock s, void *buf, size_t len, const char *delims, size_t delimcount, int64_t deadline);</h6>
 <h6 id="unixsend">size_t unixsend(unixsock s, const void *buf, size_t len, int64_t deadline);</h6>
 
