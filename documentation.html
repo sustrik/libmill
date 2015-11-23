@@ -1522,6 +1522,45 @@ it is set to one of the following values:</p>
 <p>The function returns number of bytes received.</p>
 
 <h6 id="tcprecvuntil">size_t tcprecvuntil(tcpsock s, void *buf, size_t len, const char *delims, size_t delimcount, int64_t deadline);</h6>
+
+<p>Reads data from TCP connection until either buffer is full or a delimiter
+character is reached.</p>
+
+<p>First argument is the socket to read from. Second parameter is pointer to
+the buffer to read the data to. Third argument is the size of the buffer.</p>
+
+<p><tt>delims</tt> parameter is a sequence of bytes any of which, if encountered
+in the incoming data, will cause <tt>tcprecvuntil()</tt> to exit. Size of the
+sequence, in bytes, is passed to the function in <tt>delimcount</tt> parameter.
+</p>
+
+<p>Finally, last parameter is <a href="#deadlines">deadline</a> for the
+operation.</p>
+
+<p>For example, following example reads data until either comma or newline
+character is encountered:</p>
+
+<pre>
+char buf[256];
+size_t nbytes = tcprecvuntil(s, buf, sizeof(buf), ",\n", 2, -1);
+</pre>
+
+<p>In the case of success, <tt>errno</tt> is set to zero. In the case of failure
+it is set to one of the following values:</p>
+
+<ul style="list-style: none;">
+  <li><tt>ECONNRESET</tt>: A connection was forcibly closed by a peer.</li>
+  <li><tt>EINTR</tt>: The function was interrupted by a signal.</li>
+  <li><tt>ENOBUFS</tt>: Insufficient resources were available in the system to
+      perform the operation.</li>
+  <li><tt>ENOMEM</tt>: Insufficient memory was available to fulfill the
+      request.</li>
+  <li><tt>ETIMEDOUT</tt>: Deadline exceeded.</li>
+</ul>
+
+<p>The function returns number of bytes received including the delimiter
+character.</p>
+
 <h6 id="tcpsend">size_t tcpsend(tcpsock s, const void *buf, size_t len, int64_t deadline);</h6>
 
 <p>Sends data to TCP connection.</p>
@@ -1779,6 +1818,46 @@ it is set to one of the following values:</p>
 <p>The function returns number of bytes received.</p>
 
 <h6 id="unixrecvuntil">size_t unixrecvuntil(unixsock s, void *buf, size_t len, const char *delims, size_t delimcount, int64_t deadline);</h6>
+
+<p>Reads data from UNIX domain connection until either buffer is full or
+a delimiter character is reached.</p>
+
+<p>First argument is the socket to read from. Second parameter is pointer to
+the buffer to read the data to. Third argument is the size of the buffer.</p>
+
+<p><tt>delims</tt> parameter is a sequence of bytes any of which, if encountered
+in the incoming data, will cause <tt>tcprecvuntil()</tt> to exit. Size of the
+sequence, in bytes, is passed to the function in <tt>delimcount</tt> parameter.
+</p>
+
+<p>Finally, last parameter is <a href="#deadlines">deadline</a> for the
+operation.</p>
+
+<p>For example, following example reads data until either comma or newline
+character is encountered:</p>
+
+<pre>
+char buf[256];
+size_t nbytes = unixrecvuntil(s, buf, sizeof(buf), ",\n", 2, -1);
+</pre>
+
+<p>In the case of success, <tt>errno</tt> is set to zero. In the case of failure
+it is set to one of the following values:</p>
+
+<ul style="list-style: none;">
+  <li><tt>ECONNRESET</tt>: A connection was forcibly closed by a peer.</li>
+  <li><tt>EIO</tt>: An I/O error occurred.</li>
+  <li><tt>EINTR</tt>: The function was interrupted by a signal.</li>
+  <li><tt>ENOBUFS</tt>: Insufficient resources were available in the system to
+      perform the operation.</li>
+  <li><tt>ENOMEM</tt>: Insufficient memory was available to fulfill the
+      request.</li>
+  <li><tt>ETIMEDOUT</tt>: Deadline exceeded.</li>
+</ul>
+
+<p>The function returns number of bytes received including the delimiter
+character.</p>
+
 <h6 id="unixsend">size_t unixsend(unixsock s, const void *buf, size_t len, int64_t deadline);</h6>
 
 <p>Sends data to UNIX domain connection.</p>
