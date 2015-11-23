@@ -1604,6 +1604,42 @@ data use <tt><a href="#tcpflush">tcpflush()</a></tt> function.</p>
 
 <h6 id="udplisten">udpsock udplisten(ipaddr addr);</h6>
 
+<p>Creates an UDP socket and starts listening for incoming packets.</p>
+
+<p>The argument is the IP address to listen on (see
+<tt><a href="#iplocal">iplocal()</a></tt>).</p>
+
+<pre>
+ipaddr addr = iplocal("eth0", 5555, 0);
+udpsock s = udplisten(addr);
+</pre>
+
+<p>If the IP address passed to the function has port number set to zero,
+operating system will choose an ephemeral port to bind to. The number of the
+chosen port can be later retrieved using
+<tt><a href="#udpport">udpport()</a></tt> function.</p>
+
+<p>In case of success <tt>udplisten()</tt> returns handle to the listening
+socket and sets <tt>errno</tt> to zero.</p>
+
+<p>In case of failure it returns <tt>NULL</tt> and sets <tt>errno</tt> to one
+of the following error codes:</p>
+
+<ul style="list-style: none;">
+  <li><tt>EADDRINUSE</tt>: The specified address is already in use.</li>
+  <li><tt>EADDRNOTAVAIL</tt>: The specified address is not available from the
+      local machine.</li>
+  <li><tt>EMFILE</tt>: No more file descriptors are available for this
+      process.</li>
+  <li><tt>ENFILE</tt>: No more file descriptors are available for the
+      system.</li>
+  <li><tt>EACCES</tt>: The process does not have appropriate privileges.</li>
+  <li><tt>ENOBUFS</tt>: Insufficient resources were available in the system to
+      perform the operation.</li>
+  <li><tt>ENOMEM</tt>: Insufficient memory was available to fulfill the
+      request.</li>
+</ul>
+
 <h6 id="udpport">int udpport(udpsock s);</h6>
 
 <p>Returns UDP port used by the socket.</p>
