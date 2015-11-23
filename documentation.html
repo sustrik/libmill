@@ -1654,6 +1654,31 @@ scenario.</p>
 <h6 id="udprecv">size_t udprecv(udpsock s, ipaddr *addr, void *buf, size_t len, int64_t deadline);</h6>
 <h6 id="udpsend">void udpsend(udpsock s, ipaddr addr, const void *buf, size_t len);</h6>
 
+<p>Sends an UDP datagram.</p>
+
+<p>First argument is the socket handle to send the data to. Second argument is
+the IP address to the datagram to. Third argument points to the data to send.
+Fourth argument is the size of the buffer, in bytes.</p>
+
+<pre>
+ipaddr addr = ipremote("192.168.0.111", 5555, 0, -1);
+udpsend(s, addr, "Hello, world!", 13);
+</pre>
+
+<p>In the case of success, <tt>errno</tt> is set to zero. In the case of
+failure it is set to one of the following error codes:</p>
+
+<ul style="list-style: none;">
+  <li><tt>EMSGSIZE</tt>: The message is too large to be sent all at once.</li>
+  <li><tt>EINTR</tt>: The function was interrupted by a signal.</li>
+  <li><tt>EACCES</tt>: The process does not have appropriate privileges.</li>
+  <li><tt>ENETDOWN</tt>: The local network interface used to reach the
+      destination is down.</li>
+  <li><tt>ENETUNREACH</tt>: No route to the network is present.</li>
+  <li><tt>ENOBUFS</tt>: No buffer space is available.</li>
+  <li><tt>ETIMEDOUT</tt>: Deadline was reached.</li>
+</ul>
+
 <h6 id="unixaccept">unixsock unixaccept(unixsock s, int64_t deadline);</h6>
 
 <p>Accepts new incoming UNIX domain connection from
