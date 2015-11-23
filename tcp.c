@@ -98,7 +98,6 @@ static void tcpconn_init(struct mill_tcpconn *conn, int fd) {
     conn->ifirst = 0;
     conn->ilen = 0;
     conn->olen = 0;
-	memset(&conn->addr,0,sizeof(ipaddr));
 }
 
 tcpsock tcplisten(ipaddr addr, int backlog) {
@@ -479,7 +478,6 @@ int tcpdetach(tcpsock s) {
     mill_assert(0);
 }
 
-
 ipaddr tcpconnip(tcpsock s)
 {
     if(s->type != MILL_TCPCONN)
@@ -487,5 +485,4 @@ ipaddr tcpconnip(tcpsock s)
     struct mill_tcpconn *l = (struct mill_tcpconn *)s;
     return l->addr;
 }
-
 
