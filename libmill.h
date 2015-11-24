@@ -285,6 +285,7 @@ typedef struct mill_tcpsock *tcpsock;
 MILL_EXPORT tcpsock tcplisten(ipaddr addr, int backlog);
 MILL_EXPORT int tcpport(tcpsock s);
 MILL_EXPORT tcpsock tcpaccept(tcpsock s, int64_t deadline);
+MILL_EXPORT ipaddr tcpaddr(tcpsock s);
 MILL_EXPORT tcpsock tcpconnect(ipaddr addr, int64_t deadline);
 MILL_EXPORT size_t tcpsend(tcpsock s, const void *buf, size_t len,
     int64_t deadline);
@@ -295,7 +296,6 @@ MILL_EXPORT size_t tcprecvuntil(tcpsock s, void *buf, size_t len,
 MILL_EXPORT void tcpclose(tcpsock s);
 MILL_EXPORT tcpsock tcpattach(int fd, int listening);
 MILL_EXPORT int tcpdetach(tcpsock s);
-MILL_EXPORT ipaddr tcpconnip(tcpsock s);
 
 
 /******************************************************************************/

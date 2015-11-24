@@ -72,11 +72,11 @@ int main() {
     go(client(5555));
 
     tcpsock as = tcpaccept(ls, -1);
-    /* Test client ipaddr */
-    ipaddr addr = tcpconnip(as);
+
+    /* Test retrieving address and port. */
+    ipaddr addr = tcpaddr(as);
     char ipstr[IPADDR_MAXSTRLEN];
-    ipaddrstr(addr,ipstr);
-    assert(strcmp(ipstr, "127.0.0.1") == 0);
+    assert(strcmp(ipaddrstr(addr, ipstr), "127.0.0.1") == 0);
     assert(tcpport(as) != 5555);
 
     /* Test deadline. */

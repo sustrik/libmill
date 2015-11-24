@@ -483,9 +483,9 @@ int tcpdetach(tcpsock s) {
     mill_assert(0);
 }
 
-ipaddr tcpconnip(tcpsock s) {
+ipaddr tcpaddr(tcpsock s) {
     if(s->type != MILL_TCPCONN)
-        mill_panic("trying to get ipaddr from a socket that isn't connected");
+        mill_panic("trying to get address from a socket that isn't connected");
     struct mill_tcpconn *l = (struct mill_tcpconn *)s;
     return l->addr;
 }
