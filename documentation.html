@@ -289,11 +289,12 @@ int main() {
 <p>Choose statement is equivalent to Go's <tt>select</tt>
 statement. It can be used to wait for multiple channels.</p>
 
-<p>Within <tt><a href="#choose">choose</a></tt> there's a list of clauses. Each
-clause is either an <tt>in</tt> clause (waiting for incoming messages) or an
+<p>Within <tt><a href="#choose">choose</a></tt> there is a list of clauses. Each
+clause is either an <tt>in</tt> clause (waiting for an incoming message) or an
 <tt>out</tt> clause (waiting till a message can be sent to the channel). Last
-cause can optionally be an <tt>otherwise</tt> clause. Don't forget to add
-<tt>end</tt> keyword before the closing parenthesis:</p>
+clause can optionally be an <tt>otherwise</tt> clause that gets executed if none
+of the other clauses apply. Don't forget to add <tt>end</tt> keyword before the
+closing parenthesis:</p>
 
 <pre>
 choose {
@@ -308,10 +309,8 @@ end
 </pre>
 
 <p>Clause <tt>in</tt> causes <tt><a href="#choose">choose</a></tt> to wait for a
-message coming from channel <tt>ch</tt>. The clause declares variable
-<tt>var</tt> of type <tt>type</tt> and stores the incoming message into it. If
-<tt>type</tt> doesn't match the actual type of the channel you'll get a runtime
-exception:</p>
+message coming from the channel. The clause declares variable <tt>var</tt> of
+type <tt>type</tt> and sets it to the value of the incoming message.</p>
 
 <pre>
 in(ch, type, var):
