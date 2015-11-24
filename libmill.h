@@ -295,6 +295,8 @@ MILL_EXPORT size_t tcprecvuntil(tcpsock s, void *buf, size_t len,
 MILL_EXPORT void tcpclose(tcpsock s);
 MILL_EXPORT tcpsock tcpattach(int fd, int listening);
 MILL_EXPORT int tcpdetach(tcpsock s);
+MILL_EXPORT ipaddr tcpconnip(tcpsock s);
+
 
 /******************************************************************************/
 /*  UDP library                                                               */
