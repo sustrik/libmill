@@ -22,10 +22,9 @@
 
 */
 
-#if defined MILL_EPOLL
-#include "epoll.inc"
-#elif defined MILL_KQUEUE
-#include "kqueue.inc"
-#else
-#include "poll.inc"
-#endif
+#include "libmill.h"
+#include "poller.h"
+
+void mill_msleep(int64_t deadline, const char *current);
+int mill_fdwait(int fd, int events, int64_t deadline, const char *current);
+void mill_wait(int block);
