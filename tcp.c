@@ -146,10 +146,15 @@ tcpsock tcplisten(ipaddr addr, int backlog) {
 }
 
 int tcpport(tcpsock s) {
-    if(s->type != MILL_TCPLISTENER)
-        mill_panic("trying to get port from a socket that isn't listening");
-    struct mill_tcplistener *l = (struct mill_tcplistener*)s;
-    return l->port;
+    if(s->type == MILL_TCPCONN) {
+        struct mill_tcpconn *c = (struct mill_tcpconn*)s;
+        return mill_ipport(c->addr);
+    }
+    else if(s->type == MILL_TCPLISTENER) {
+        struct mill_tcplistener *l = (struct mill_tcplistener*)s;
+        return l->port;
+    }
+    mill_assert(0);
 }
 
 tcpsock tcpaccept(tcpsock s, int64_t deadline) {
@@ -478,10 +483,9 @@ int tcpdetach(tcpsock s) {
     mill_assert(0);
 }
 
-ipaddr tcpconnip(tcpsock s)
-{
+ipaddr tcpconnip(tcpsock s) {
     if(s->type != MILL_TCPCONN)
-		mill_panic("trying to get ipaddr from a socket that isn't connected");
+        mill_panic("trying to get ipaddr from a socket that isn't connected");
     struct mill_tcpconn *l = (struct mill_tcpconn *)s;
     return l->addr;
 }
