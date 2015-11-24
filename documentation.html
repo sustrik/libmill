@@ -196,39 +196,59 @@ yield();
 
 <h4 id="channels">Channels</h4>
 
-<p>Channels are typed pipes used for communication between coroutines. To create
-a channel using <tt><a href="#chmake">chmake</a></tt> function you have to
-specify what kind of values are meant to be passed through it. The second
-parameter is buffer size. Setting this argument to zero creates an unbuffered
-channel:</p>
+<p>Channels are typed uni-directional pipes used for communication between
+coroutines. To create a channel use <tt><a href="#chmake">chmake()</a></tt>
+function like this:</p>
 
 <pre>
 chan ch = chmake(int, 0);
 </pre>
 
-<p>To send a value to the channel use <tt><a href="#chs">chs()</a></tt>
-function. The type specified as the second parameter must match the type of the
-channel otherwise you'll get runtime exception:</p>
+<p>This channel can be used to pass integer values. However, you can declare
+channel of any type you want.</p>
+
+<p>The second parameter is the size of the channel's buffer. If it is set to
+zero, it means that the channel is unbuffered. Sender will block until there's a
+receiver available and vice versa.</p>
+
+<p>If the channel has buffer size set to 100 the sender can send 100 messages
+without anyone receiving them. When trying to send 101st message it will block.
+</p>
+
+<p>To send a message to the channel use <tt><a href="#chs">chs()</a></tt>
+function:</p>
 
 <pre>
 chs(ch, int, 42);
 </pre>
 
-<p>To receive a value from the channel use <tt><a href="#chr">chr()</a></tt>
-function. The type specified as the second parameter must match the type of the
-channel otherwise the program will abort with runtime exception:</p>
+<p>To receive a message from the channel use <tt><a href="#chr">chr()</a></tt>
+function:</p>
 
 <pre>
 int i = chr(ch, int);
 </pre>
 
 <p>When sender is done with sending it can announce the fact using
-<tt><a href="#chdone">chdone()</a></tt> function. It will cause all the receivers
-on the channel to receive the value specified in the third parameter
-indefinitely:</p>
+<tt><a href="#chdone">chdone()</a></tt> function:</p>
 
 <pre>
 chdone(ch, int, -1);
+</pre>
+
+<p>The value passed to the function is used to signal to the receivers that
+sender is done. Once all the actual messages are read from the channel
+any subsequent calls to <tt><a href="#chr">chr()</a></tt> won't block and will
+return the specified message instead. The code on the receiver side typically
+looks like this:</p>
+
+<pre>
+while(1) {
+    int i = chr(ch, int);
+    if(i == -1)
+        break;
+    ...
+}
 </pre>
 
 <p>To deallocate the channel use <tt><a href="#chclose">chclose()</a></tt>
@@ -240,12 +260,12 @@ chclose(ch);
 
 <p>Note that <tt><a href="#chclose">chclose()</a></tt> deallocates any elements
 remaining the channel, however, if the element itself has a pointer to a
-different object, that object won't be deallocated. In this respect
+different object, that object won't get deallocated. In this respect
 <tt><a href="#chclose">chclose()</a></tt> is similar to the
 standard <tt>free()</tt> function.</p>
 
 <p>When sharing a channel between two or more coroutines you can duplicate
-the channel handle. Channel is deallocated only after all its handles
+the channel handle. Channel gets deallocated only after all its handles
 are closed. For example:</p>
 
 <pre>
