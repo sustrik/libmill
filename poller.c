@@ -22,10 +22,32 @@
 
 */
 
+#include <stdint.h>
+
+#include "libmill.h"
+#include "list.h"
+
+/* Global linked list of all timers. The list is ordered.
+   First timer to be resume comes first and so on. */
+static struct mill_list mill_timers = {0};
+
+/* Pause current coroutine for a specified time interval. */
+void mill_msleep(int64_t deadline, const char *current) {
+    mill_fdwait(-1, 0, deadline, current);
+}
+
+/* Include the poll-mechanism-specific stuff. */
+
+/* User overloads. */
 #if defined MILL_EPOLL
 #include "epoll.inc"
 #elif defined MILL_KQUEUE
 #include "kqueue.inc"
+#elif defined MILL_POLL
+#include "poll.inc"
+/* Defaults. */
+#elif 0 && defined __linux__
+#include "epoll.inc"
 #else
 #include "poll.inc"
 #endif

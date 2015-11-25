@@ -33,15 +33,6 @@
 #include "poller.h"
 #include "utils.h"
 
-/* Global linked list of all timers. The list is ordered.
-   First timer to be resume comes first and so on. */
-static struct mill_list mill_timers = {0};
-
-/* Pause current coroutine for a specified time interval. */
-void mill_msleep(int64_t deadline, const char *current) {
-    mill_fdwait(-1, 0, deadline, current);
-}
-
 /* Pollset used for waiting for file descriptors. */
 static int mill_pollset_size = 0;
 static int mill_pollset_capacity = 0;
@@ -226,7 +217,7 @@ void mill_wait(int block) {
             inevents |= FDW_ERR;
             outevents |= FDW_ERR;
         }
-        /* Fire the callbacks. */
+        /* Resume the blocked coroutines. */
         if(mill_pollset_items[i].in &&
               mill_pollset_items[i].in == mill_pollset_items[i].out) {
             struct mill_cr *cr = mill_cont(mill_pollset_items[i].in,
