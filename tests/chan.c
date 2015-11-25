@@ -25,7 +25,6 @@
 #include <assert.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <signal.h>
 #include <stdio.h>
 #include <unistd.h>
 
@@ -35,15 +34,6 @@ struct foo {
     int first;
     int second;
 };
-
-static void expected_abort(int signo) {
-    _exit(0);
-}
-
-static void fail() {
-    signal(SIGABRT, SIG_DFL);
-    assert(0);
-}
 
 coroutine void sender(chan ch, int doyield, int val) {
     if(doyield)
@@ -202,62 +192,6 @@ int main() {
     val = chr(ch14, int);
     assert(val == 2);
     chclose(ch14);
-
-    pid_t pid;
-
-    /* Test panic when chs will deadlock. */
-    pid = fork();
-    assert(pid >= 0);
-    if (pid == 0) {
-        alarm(1);
-        chan ch = chmake(int, 0);
-        signal(SIGABRT, expected_abort);
-        chs(ch, int, 42);
-        fail();
-    }
-    assert(waitpid(pid, &val, 0) == pid);
-    assert(val == 0);
-
-    /* Test panic when chr will deadlock. */
-    pid = fork();
-    assert(pid >= 0);
-    if (pid == 0) {
-        alarm(1);
-        chan ch = chmake(int, 0);
-        signal(SIGABRT, expected_abort);
-        chr(ch, int);
-        fail();
-    }
-    assert(waitpid(pid, &val, 0) == pid);
-    assert(val == 0);
-
-    /* Test panic when sending to closed channel. */
-    pid = fork();
-    assert(pid >= 0);
-    if (pid == 0) {
-        alarm(1);
-        chan ch = chmake(int, 0);
-        chclose(ch);
-        signal(SIGABRT, expected_abort);
-        chs(ch, int, 42);
-        fail();
-    }
-    assert(waitpid(pid, &val, 0) == pid);
-    assert(val == 0);
-
-    /* Test panic when receiving from closed channel. */
-    pid = fork();
-    assert(pid >= 0);
-    if (pid == 0) {
-        alarm(1);
-        chan ch = chmake(int, 0);
-        chclose(ch);
-        signal(SIGABRT, expected_abort);
-        chr(ch, int);
-        fail();
-    }
-    assert(waitpid(pid, &val, 0) == pid);
-    assert(val == 0);
 
     return 0;
 }
