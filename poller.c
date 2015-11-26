@@ -48,6 +48,10 @@ void mill_msleep(int64_t deadline, const char *current) {
 }
 
 int mill_fdwait(int fd, int events, int64_t deadline, const char *current) {
+    if(mill_slow(!mill_poller_initialised)) {
+        mill_poller_init();
+        mill_poller_initialised = 1;
+    }
     /* If required, start waiting for the timeout. */
     if(deadline >= 0) {
         mill_running->u_fdwait.expiry = deadline;
@@ -65,13 +69,8 @@ int mill_fdwait(int fd, int events, int64_t deadline, const char *current) {
         mill_list_insert(&mill_timers, &mill_running->u_fdwait.item, it);
     }
     /* If required, start waiting for the file descriptor. */
-    if(fd >= 0) {
-        if(mill_slow(!mill_poller_initialised)) {
-            mill_poller_init();
-            mill_poller_initialised = 1;
-        }
+    if(fd >= 0)
         mill_poller_add(fd, events);
-    }
     /* Do actual waiting. */
     mill_running->state = fd < 0 ? MILL_MSLEEP : MILL_FDWAIT;
     mill_set_current(&mill_running->debug, current);
@@ -83,11 +82,8 @@ int mill_fdwait(int fd, int events, int64_t deadline, const char *current) {
         return rc;
     }
     /* Handle the timeout. Clean-up the pollset. */
-    if(fd >= 0) {
-        /* No need to initialise the poller here. It must have been already
-           initialised above. */
+    if(fd >= 0)
         mill_poller_rm(fd, events);
-    }
     return 0;
 }
 
