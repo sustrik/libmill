@@ -109,62 +109,20 @@ static void mill_poller_rm(int fd, int events) {
     }
 }
 
-static void mill_poller_wait(int block) {
-    int fired = 0;
-    int rc;
+static int mill_poller_wait(int timeout) {
+    /* Wait for events. */
+    int numevs;
     struct epoll_event evs[MILL_EPOLLSETSIZE];
     while(1) {
-
-        /* Compute timeout for the subsequent poll. */
-        int timeout;
-        if(!block) {
-            timeout = 0;
-        }
-        else {
-            /* Compute the time till next expired sleeping coroutine. */
-            if(!mill_list_empty(&mill_timers)) {
-                int64_t nw = now();
-                int64_t expiry = mill_cont(mill_list_begin(&mill_timers),
-                    struct mill_fdwait, item)->expiry;
-                timeout = nw >= expiry ? 0 : expiry - nw;
-            }
-            else {
-                timeout = -1;
-            }
-        }
-
-        /* Wait for events. */
-        rc = epoll_wait(mill_efd, evs, MILL_EPOLLSETSIZE, timeout);
-        if(rc < 0 && errno == EINTR)
+        numevs = epoll_wait(mill_efd, evs, MILL_EPOLLSETSIZE, timeout);
+        if(numevs < 0 && errno == EINTR)
             continue;
-        mill_assert(rc >= 0);
-
-        /* Fire all expired timers. */
-        if(!mill_list_empty(&mill_timers)) {
-            int64_t nw = now();
-            while(!mill_list_empty(&mill_timers)) {
-                struct mill_fdwait *timer = mill_cont(
-                    mill_list_begin(&mill_timers), struct mill_fdwait, item);
-                if(timer->expiry > nw)
-                    break;
-                mill_list_erase(&mill_timers, mill_list_begin(&mill_timers));
-                mill_resume(mill_cont(timer, struct mill_cr, u_fdwait), -1);
-                fired = 1;
-            }
-        }
-        /* Never retry the poll in non-blocking mode. */
-        if(!block)
-            break;
-        /* If timeout was hit but there were no expired timers do the poll
-           again. This should not happen in theory but let's be ready for the
-           case when the system timers are not precise. */
-        if(!(rc == 0 && !fired))
-            break;
+        mill_assert(numevs >= 0);
+        break;
     }
-
     /* Fire file descriptor events. */
     int i;
-    for(i = 0; i != rc; ++i) {
+    for(i = 0; i != numevs; ++i) {
         struct mill_crpair *crp = &mill_crpairs[evs[i].data.fd];
         struct epoll_event ev;
         ev.events = 0;
@@ -210,5 +168,7 @@ static void mill_poller_wait(int block) {
             }
         }
     }
+    /* Return 0 in case of time out. 1 if at least one coroutine was resumed. */
+    return numevs > 0 ? 1 : 0;
 }
 

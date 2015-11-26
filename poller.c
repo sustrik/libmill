@@ -33,7 +33,7 @@
 static void mill_poller_init(void);
 static void mill_poller_add(int fd, int events);
 static void mill_poller_rm(int fd, int events);
-static void mill_poller_wait(int block);
+static int mill_poller_wait(int timeout);
 
 /* If 1, mill_poller_init was already called. */
 static int mill_poller_initialised = 0;
@@ -92,7 +92,46 @@ void mill_wait(int block) {
         mill_poller_init();
         mill_poller_initialised = 1;
     }
-    mill_poller_wait(block);
+    while(1) {
+        /* Compute timeout for the subsequent poll. */
+        int timeout;
+        if(!block) {
+            timeout = 0;
+        }
+        else {
+            /* Compute the time till next expired sleeping coroutine. */
+            if(!mill_list_empty(&mill_timers)) {
+                int64_t nw = now();
+                int64_t expiry = mill_cont(mill_list_begin(&mill_timers),
+                    struct mill_fdwait, item)->expiry;
+                timeout = nw >= expiry ? 0 : expiry - nw;
+            }
+            else {
+                timeout = -1;
+            }
+        }
+        /* Wait for events. */
+        int fired = mill_poller_wait(timeout);
+        /* Fire all expired timers. */
+        if(!mill_list_empty(&mill_timers)) {
+            int64_t nw = now();
+            while(!mill_list_empty(&mill_timers)) {
+                struct mill_fdwait *timer = mill_cont(
+                    mill_list_begin(&mill_timers), struct mill_fdwait, item);
+                if(timer->expiry > nw)
+                    break;
+                mill_list_erase(&mill_timers, mill_list_begin(&mill_timers));
+                mill_resume(mill_cont(timer, struct mill_cr, u_fdwait), -1);
+                fired = 1;
+            }
+        }
+        /* Never retry the poll in non-blocking mode. */
+        if(!block || fired)
+            break;
+        /* If timeout was hit but there were no expired timers do the poll
+           again. This should not happen in theory but let's be ready for the
+           case when the system timers are not precise. */
+    }
 }
 
 /* Include the poll-mechanism-specific stuff. */
@@ -105,7 +144,7 @@ void mill_wait(int block) {
 #elif defined MILL_POLL
 #include "poll.inc"
 /* Defaults. */
-#elif defined __linux__
+#elif 0 && defined __linux__
 #include "epoll.inc"
 #else
 #include "poll.inc"
