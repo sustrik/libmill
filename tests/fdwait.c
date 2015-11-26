@@ -49,7 +49,6 @@ int main() {
     assert(rc & FDW_OUT);
     assert(!(rc & ~FDW_OUT));
 
-#if 0
     /* Check with the timeout that doesn't expire. */
     rc = fdwait(fds[0], FDW_OUT, now() + 100);
     assert(rc);
@@ -86,7 +85,6 @@ int main() {
     assert(rc == FDW_IN);
     diff = now() - start;
     assert(diff > 30 && diff < 70);
-#endif
 
     close(fds[0]);
     close(fds[1]);

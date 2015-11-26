@@ -28,9 +28,7 @@
 #include <stdlib.h>
 
 #include "cr.h"
-#include "libmill.h"
 #include "list.h"
-#include "poller.h"
 #include "utils.h"
 
 /* Pollset used for waiting for file descriptors. */

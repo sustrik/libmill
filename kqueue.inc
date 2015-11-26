@@ -22,9 +22,9 @@
 
 */
 
-#include "libmill.h"
-#include "poller.h"
+#include "utils.h"
 
-void mill_msleep(int64_t deadline, const char *current);
-int mill_fdwait(int fd, int events, int64_t deadline, const char *current);
-void mill_wait(int block);
+static void mill_poller_init(void);
+static void mill_poller_add(int fd, int events);
+static void mill_poller_rm(int fd, int events);
+static int mill_poller_wait(int timeout);

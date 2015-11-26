@@ -27,7 +27,6 @@
 #include <sys/resource.h>
 
 #include "cr.h"
-#include "poller.h"
 #include "utils.h"
 
 #define MILL_EPOLLSETSIZE 128

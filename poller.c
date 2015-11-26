@@ -27,6 +27,7 @@
 #include "cr.h"
 #include "libmill.h"
 #include "list.h"
+#include "poller.h"
 
 /* Forward declarations for the functions implemented by specific poller
    mechanisms (poll, epoll, kqueue). */
