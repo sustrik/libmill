@@ -22,9 +22,19 @@
 
 */
 
+#include <sys/types.h>
+#include <sys/event.h>
+#include <sys/time.h>
+
 #include "utils.h"
 
-static void mill_poller_init(void);
+static int mill_kfd = -1;
+
+static void mill_poller_init(void) {
+    kfd = kqueue();
+    mill_assert(mill_kfd >= 0);
+}
+
 static void mill_poller_add(int fd, int events);
 static void mill_poller_rm(int fd, int events);
 static int mill_poller_wait(int timeout);
