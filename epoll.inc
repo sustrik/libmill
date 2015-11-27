@@ -151,8 +151,6 @@ static int mill_poller_wait(int timeout) {
         if(crp->in == crp->out) {
             struct mill_cr *cr = mill_cont(crp->in, struct mill_cr, u_fdwait);
             mill_resume(cr, inevents | outevents);
-            crp->in = NULL;
-            crp->out = NULL;
             mill_poller_rm(evs[i].data.fd, FDW_IN | FDW_OUT);
         }
         else {

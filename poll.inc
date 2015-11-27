@@ -95,8 +95,6 @@ static void mill_poller_add(int fd, int events) {
 }
 
 static void mill_poller_rm(int fd, int events) {
-    /* We have to do this again because the pollset may have changed while
-       the coroutine was suspended. */
     int i = mill_find_pollset(fd);
     mill_assert(i < mill_pollset_size);
     if(mill_pollset_items[i].in == &mill_running->u_fdwait) {
