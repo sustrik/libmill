@@ -145,7 +145,7 @@ void mill_wait(int block) {
 #elif defined MILL_POLL
 #include "poll.inc"
 /* Defaults. */
-#elif 0 && defined __linux__
+#elif defined __linux__
 #include "epoll.inc"
 #else
 #include "poll.inc"

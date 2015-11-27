@@ -22,6 +22,7 @@
 
 */
 
+#include <stdint.h>
 #include <string.h>
 #include <sys/epoll.h>
 #include <sys/resource.h>
@@ -42,9 +43,12 @@ static int mill_efd = -1;
 struct mill_crpair {
     struct mill_fdwait *in;
     struct mill_fdwait *out;
+    uint32_t currevs;
+    uint32_t next; /* 1-based index, 0 stands for nil. */
 };
 
 static struct mill_crpair *mill_crpairs = NULL;
+static int32_t mill_changelist = 0;
 
 static void mill_poller_init(void) {
     mill_efd = epoll_create(1);
@@ -54,64 +58,73 @@ static void mill_poller_init(void) {
     int maxfds = rlim.rlim_max;
     mill_assert(rc == 0);
     mill_crpairs = (struct mill_crpair*)
-        malloc(sizeof(struct mill_crpair) * maxfds);
+        calloc(maxfds, sizeof(struct mill_crpair));
     mill_assert(mill_crpairs);
-    memset(mill_crpairs, 0, sizeof(struct mill_crpair) * maxfds);
 }
 
 static void mill_poller_add(int fd, int events) {
     struct mill_crpair *crp = &mill_crpairs[fd];
-    int exists = crp->in || crp->out;
-    struct epoll_event ev;
-    ev.events = 0;
-    ev.data.fd = fd;
     if(events & FDW_IN) {
         if(crp->in)
             mill_panic(
                 "multiple coroutines waiting for a single file descriptor");
         crp->in = &mill_running->u_fdwait;
-        ev.events |= EPOLLIN;
     }
     if(events & FDW_OUT) {
         if(crp->out)
             mill_panic(
                 "multiple coroutines waiting for a single file descriptor");
         crp->out = &mill_running->u_fdwait;
-        ev.events |= EPOLLOUT;
     }
-    int rc = epoll_ctl(mill_efd, exists ? EPOLL_CTL_MOD : EPOLL_CTL_ADD,
-        fd, &ev);
-    if(rc != 0) {
-        /* TODO: Rollback the changes here. */
-        mill_assert(0);
+    if(!crp->next) {
+        crp->next = mill_changelist;
+        mill_changelist = fd + 1;
     }
 }
 
 static void mill_poller_rm(int fd, int events) {
     struct mill_crpair *crp = &mill_crpairs[fd];
-    struct epoll_event ev;
-    ev.events = 0;
-    ev.data.fd = fd;
-    if(crp->in && crp->in != &mill_running->u_fdwait)
-        ev.events |= EPOLLIN;
-    else
+    if(events & FDW_IN)
         crp->in = NULL;
-    if(crp->out && crp->out != &mill_running->u_fdwait)
-        ev.events |= EPOLLIN;
-    else
+    if(events & FDW_OUT)
         crp->out = NULL;
-    int rc = epoll_ctl(mill_efd, ev.events ? EPOLL_CTL_MOD : EPOLL_CTL_DEL,
-        fd, &ev);
-    if(rc != 0) {
-        /* TODO: What to do here? */
-        mill_assert(0);
+    if(!crp->next) {
+        crp->next = mill_changelist;
+        mill_changelist = fd + 1;
     }
 }
 
 static int mill_poller_wait(int timeout) {
+    /* Apply any changes to the pollset.
+       TODO: Use epoll_ctl_batch once available. */
+    while(mill_changelist) {
+        int fd = mill_changelist - 1;
+        struct mill_crpair *crp = &mill_crpairs[fd];
+        struct epoll_event ev;
+        ev.data.fd = fd;
+        ev.events = 0;
+        if(crp->in)
+            ev.events |= EPOLLIN;
+        if(crp->out)
+            ev.events |= EPOLLOUT;
+        if(crp->currevs != ev.events) {
+            int op;
+            if(!ev.events)
+                 op = EPOLL_CTL_DEL;
+            else if(!crp->currevs)
+                 op = EPOLL_CTL_ADD;
+            else
+                 op = EPOLL_CTL_MOD;
+            crp->currevs = ev.events;
+            int rc = epoll_ctl(mill_efd, op, fd, &ev);
+            mill_assert(rc == 0);
+        }
+        mill_changelist = crp->next;
+        crp->next = 0;
+    }
     /* Wait for events. */
-    int numevs;
     struct epoll_event evs[MILL_EPOLLSETSIZE];
+    int numevs;
     while(1) {
         numevs = epoll_wait(mill_efd, evs, MILL_EPOLLSETSIZE, timeout);
         if(numevs < 0 && errno == EINTR)
@@ -123,47 +136,37 @@ static int mill_poller_wait(int timeout) {
     int i;
     for(i = 0; i != numevs; ++i) {
         struct mill_crpair *crp = &mill_crpairs[evs[i].data.fd];
-        struct epoll_event ev;
-        ev.events = 0;
-        ev.data.fd = evs[i].data.fd;
         int inevents = 0;
         int outevents = 0;
         /* Set the result values. */
         if(evs[i].events & EPOLLIN)
             inevents |= FDW_IN;
-        else if(crp->in)
-            ev.events |= EPOLLIN;
         if(evs[i].events & EPOLLOUT)
             outevents |= FDW_OUT;
-        else if(crp->out)
-            ev.events |= EPOLLOUT;
         if(evs[i].events & (EPOLLERR | EPOLLHUP)) {
             inevents |= FDW_ERR;
             outevents |= FDW_ERR;
-            ev.events = 0;
         }
         /* Resume the blocked coroutines. */  
-        int rc = epoll_ctl(mill_efd, ev.events ? EPOLL_CTL_MOD : EPOLL_CTL_DEL,
-            evs[i].data.fd, &ev);
-        mill_assert(rc == 0);
         if(crp->in == crp->out) {
             struct mill_cr *cr = mill_cont(crp->in, struct mill_cr, u_fdwait);
             mill_resume(cr, inevents | outevents);
             crp->in = NULL;
             crp->out = NULL;
+            mill_poller_rm(evs[i].data.fd, FDW_IN | FDW_OUT);
         }
         else {
             if(crp->in && inevents) {
                 struct mill_cr *cr = mill_cont(crp->in, struct mill_cr,
                     u_fdwait);
                 mill_resume(cr, inevents);
-                crp->in = NULL;
+                mill_poller_rm(evs[i].data.fd, FDW_IN);
             }
             if(crp->out && outevents) {
                 struct mill_cr *cr = mill_cont(crp->out, struct mill_cr,
                     u_fdwait);
                 mill_resume(cr, outevents);
-                crp->out = NULL;
+                mill_poller_rm(evs[i].data.fd, FDW_OUT);
             }
         }
     }
