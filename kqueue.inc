@@ -59,6 +59,7 @@ static void mill_poller_init(void) {
     int rc = getrlimit(RLIMIT_NOFILE, &rlim);
     int maxfds = rlim.rlim_max;
     mill_assert(rc == 0);
+    fprintf(stderr, "maxfds=%d\n", maxfds);
     mill_crpairs = (struct mill_crpair*)
         calloc(maxfds, sizeof(struct mill_crpair));
     mill_assert(mill_crpairs);
