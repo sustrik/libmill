@@ -32,6 +32,8 @@
 
 #define MILL_ENDLIST 0xffffffff
 
+#define FDW_CLOSED FDW_RESERVED
+
 #define MILL_EPOLLSETSIZE 128
 
 /* Global pollset. */
@@ -98,6 +100,17 @@ static void mill_poller_rm(int fd, int events) {
     }
 }
 
+static void mill_poller_clean(int fd) {
+    struct mill_crpair *crp = &mill_crpairs[fd];
+    mill_assert(!crp->in);
+    mill_assert(!crp->out);
+    crp->currevs |= FDW_CLOSED;
+    if(!crp->next) {
+        crp->next = mill_changelist;
+        mill_changelist = fd + 1;
+    }
+}
+
 static int mill_poller_wait(int timeout) {
     /* Apply any changes to the pollset.
        TODO: Use epoll_ctl_batch once available. */
@@ -111,7 +124,14 @@ static int mill_poller_wait(int timeout) {
             ev.events |= EPOLLIN;
         if(crp->out)
             ev.events |= EPOLLOUT;
-        if(crp->currevs != ev.events) {
+        if(crp->currevs & FDW_CLOSED) {
+            if(ev.events) {
+                crp->currevs = ev.events;
+                int rc = epoll_ctl(mill_efd, EPOLL_CTL_ADD, fd, &ev);
+                mill_assert(rc == 0);
+            }
+        }
+        else if(crp->currevs != ev.events) {
             int op;
             if(!ev.events)
                  op = EPOLL_CTL_DEL;

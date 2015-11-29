@@ -35,6 +35,7 @@
 static void mill_poller_init(void);
 static void mill_poller_add(int fd, int events);
 static void mill_poller_rm(int fd, int events);
+static void mill_poller_clean(int fd);
 static int mill_poller_wait(int timeout);
 
 /* If 1, mill_poller_init was already called. */
@@ -87,6 +88,10 @@ int mill_fdwait(int fd, int events, int64_t deadline, const char *current) {
     if(fd >= 0)
         mill_poller_rm(fd, events);
     return 0;
+}
+
+void fdclean(int fd) {
+    mill_poller_clean(fd);
 }
 
 void mill_wait(int block) {

@@ -124,6 +124,7 @@ tcpsock tcplisten(ipaddr addr, int backlog) {
         rc = getsockname(s, (struct sockaddr*)&baddr, &len);
         if(rc == -1) {
             int err = errno;
+            fdclean(s);
             close(s);
             errno = err;
             return NULL;
@@ -134,6 +135,7 @@ tcpsock tcplisten(ipaddr addr, int backlog) {
     /* Create the object. */
     struct mill_tcplistener *l = malloc(sizeof(struct mill_tcplistener));
     if(!l) {
+        fdclean(s);
         close(s);
         errno = ENOMEM;
         return NULL;
@@ -171,6 +173,7 @@ tcpsock tcpaccept(tcpsock s, int64_t deadline) {
             mill_tcptune(as);
             struct mill_tcpconn *conn = malloc(sizeof(struct mill_tcpconn));
             if(!conn) {
+                fdclean(as);
                 close(as);
                 errno = ENOMEM;
                 return NULL;
@@ -216,11 +219,13 @@ tcpsock tcpconnect(ipaddr addr, int64_t deadline) {
         rc = getsockopt(s, SOL_SOCKET, SO_ERROR, (void*)&err, &errsz);
         if(rc != 0) {
             err = errno;
+            fdclean(s);
             close(s);
             errno = err;
             return NULL;
         }
         if(err != 0) {
+            fdclean(s);
             close(s);
             errno = err;
             return NULL;
@@ -230,6 +235,7 @@ tcpsock tcpconnect(ipaddr addr, int64_t deadline) {
     /* Create the object. */
     struct mill_tcpconn *conn = malloc(sizeof(struct mill_tcpconn));
     if(!conn) {
+        fdclean(s);
         close(s);
         errno = ENOMEM;
         return NULL;
@@ -424,6 +430,7 @@ size_t tcprecvuntil(tcpsock s, void *buf, size_t len,
 void tcpclose(tcpsock s) {
     if(s->type == MILL_TCPLISTENER) {
         struct mill_tcplistener *l = (struct mill_tcplistener*)s;
+        fdclean(l->fd);
         int rc = close(l->fd);
         mill_assert(rc == 0);
         free(l);
@@ -431,6 +438,7 @@ void tcpclose(tcpsock s) {
     }
     if(s->type == MILL_TCPCONN) {
         struct mill_tcpconn *c = (struct mill_tcpconn*)s;
+        fdclean(c->fd);
         int rc = close(c->fd);
         mill_assert(rc == 0);
         free(c);

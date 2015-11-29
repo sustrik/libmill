@@ -124,9 +124,12 @@ MILL_EXPORT void mill_msleep(int64_t deadline, const char *current);
 #define fdwait(fd, events, deadline) mill_fdwait((fd), (events), (deadline),\
     __FILE__ ":" mill_string(__LINE__))
 
+MILL_EXPORT void fdclean(int fd);
+
 #define FDW_IN 1
 #define FDW_OUT 2
 #define FDW_ERR 4
+#define FDW_RESERVED 8
 
 MILL_EXPORT int mill_fdwait(int fd, int events, int64_t deadline,
     const char *current);

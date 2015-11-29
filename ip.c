@@ -280,6 +280,7 @@ ipaddr ipremote(const char *name, int port, int mode, int64_t deadline) {
     int rc = getaddrinfo_a(GAI_NOWAIT, &pgcb, 1, &sev);
     if(mill_slow(rc != 0)) {
         if(rc == EAI_AGAIN || rc == EAI_MEMORY) {
+            fdclean(efd);
             close(efd);
             errno = ENOMEM;
             return addr;
@@ -292,6 +293,7 @@ ipaddr ipremote(const char *name, int port, int mode, int64_t deadline) {
         rc = fdwait(efd, FDW_IN, -1);
     }
     mill_assert(rc == FDW_IN);
+    fdclean(efd);
     close(efd);
     rc = gai_error(&gcb);
     if(rc != 0) {
