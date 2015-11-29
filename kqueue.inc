@@ -96,6 +96,17 @@ static void mill_poller_rm(int fd, int events) {
     }
 }
 
+static void mill_poller_clean(int fd) {
+    struct mill_crpair *crp = &mill_crpairs[fd];
+    mill_assert(!crp->in);
+    mill_assert(!crp->out);
+    crp->currevs = 0;
+    if(!crp->next) {
+        crp->next = mill_changelist;
+        mill_changelist = fd + 1;
+    }
+}
+
 static int mill_poller_wait(int timeout) {
     /* Apply any changes to the pollset. */
     struct kevent chngs[MILL_CHNGSSIZE];
