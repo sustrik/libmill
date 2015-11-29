@@ -44,7 +44,9 @@ struct mill_crpair {
     struct mill_fdwait *out;
     uint16_t currevs;
     uint16_t firing;
-    uint32_t next; /* 1-based index, 0 stands for nil. */
+    /* 1-based index, 0 stands for "not part of the list", MILL_ENDLIST
+       stads for "no more elements in the list. */
+    uint32_t next;
 };
 
 static struct mill_crpair *mill_crpairs = NULL;

@@ -30,6 +30,8 @@
 #include "cr.h"
 #include "utils.h"
 
+#define MILL_ENDLIST 0xffffffff
+
 #define MILL_EPOLLSETSIZE 128
 
 /* Global pollset. */
@@ -44,11 +46,13 @@ struct mill_crpair {
     struct mill_fdwait *in;
     struct mill_fdwait *out;
     uint32_t currevs;
-    uint32_t next; /* 1-based index, 0 stands for nil. */
+    /* 1-based index, 0 stands for "not part of the list", MILL_ENDLIST
+       stads for "no more elements in the list. */
+    uint32_t next;
 };
 
 static struct mill_crpair *mill_crpairs = NULL;
-static int32_t mill_changelist = 0;
+static uint32_t mill_changelist = MILL_ENDLIST;
 
 static void mill_poller_init(void) {
     mill_efd = epoll_create(1);
@@ -97,7 +101,7 @@ static void mill_poller_rm(int fd, int events) {
 static int mill_poller_wait(int timeout) {
     /* Apply any changes to the pollset.
        TODO: Use epoll_ctl_batch once available. */
-    while(mill_changelist) {
+    while(mill_changelist != MILL_ENDLIST) {
         int fd = mill_changelist - 1;
         struct mill_crpair *crp = &mill_crpairs[fd];
         struct epoll_event ev;
