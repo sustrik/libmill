@@ -63,7 +63,7 @@ static void mill_poller_init(void) {
     /* The above behaves weirdly on newer versions of OSX, ruturning limit
        of -1. Fix it by using OPEN_MAX instead. */
     if(maxfds < 0)
-        mafds = OPEN_MAX;
+        maxfds = OPEN_MAX;
     mill_crpairs = (struct mill_crpair*)
         calloc(maxfds, sizeof(struct mill_crpair));
     mill_assert(mill_crpairs);
