@@ -104,7 +104,7 @@ static void mill_poller_clean(int fd) {
     struct mill_crpair *crp = &mill_crpairs[fd];
     mill_assert(!crp->in);
     mill_assert(!crp->out);
-    crp->currevs |= FDW_CLOSED;
+    crp->currevs = FDW_CLOSED;
     if(!crp->next) {
         crp->next = mill_changelist;
         mill_changelist = fd + 1;
