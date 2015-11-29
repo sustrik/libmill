@@ -22,19 +22,192 @@
 
 */
 
+#include <stdint.h>
+#include <stdlib.h>
 #include <sys/types.h>
 #include <sys/event.h>
+#include <sys/resource.h>
 #include <sys/time.h>
 
+#include "cr.h"
 #include "utils.h"
+
+#define MILL_ENDLIST 0xffffffff
+
+#define MILL_CHNGSSIZE 128
+#define MILL_EVSSIZE 128
 
 static int mill_kfd = -1;
 
+struct mill_crpair {
+    struct mill_fdwait *in;
+    struct mill_fdwait *out;
+    uint16_t currevs;
+    uint16_t firing;
+    uint32_t next; /* 1-based index, 0 stands for nil. */
+};
+
+static struct mill_crpair *mill_crpairs = NULL;
+static uint32_t mill_changelist = MILL_ENDLIST;
+
 static void mill_poller_init(void) {
-    kfd = kqueue();
+    mill_kfd = kqueue();
     mill_assert(mill_kfd >= 0);
+    struct rlimit rlim;
+    int rc = getrlimit(RLIMIT_NOFILE, &rlim);
+    int maxfds = rlim.rlim_max;
+    mill_assert(rc == 0);
+    mill_crpairs = (struct mill_crpair*)
+        calloc(maxfds, sizeof(struct mill_crpair));
+    mill_assert(mill_crpairs);
 }
 
-static void mill_poller_add(int fd, int events);
-static void mill_poller_rm(int fd, int events);
-static int mill_poller_wait(int timeout);
+static void mill_poller_add(int fd, int events) {
+    struct mill_crpair *crp = &mill_crpairs[fd];
+    if(events & FDW_IN) {
+        if(crp->in)
+            mill_panic(
+                "multiple coroutines waiting for a single file descriptor");
+        crp->in = &mill_running->u_fdwait;
+    }
+    if(events & FDW_OUT) {
+        if(crp->out)
+            mill_panic(
+                "multiple coroutines waiting for a single file descriptor");
+        crp->out = &mill_running->u_fdwait;
+    }
+    if(!crp->next) {
+        crp->next = mill_changelist;
+        mill_changelist = fd + 1;
+    }
+}
+
+static void mill_poller_rm(int fd, int events) {
+    struct mill_crpair *crp = &mill_crpairs[fd];
+    if(events & FDW_IN)
+        crp->in = NULL;
+    if(events & FDW_OUT)
+        crp->out = NULL;
+    if(!crp->next) {
+        crp->next = mill_changelist;
+        mill_changelist = fd + 1;
+    }
+}
+
+static int mill_poller_wait(int timeout) {
+    /* Apply any changes to the pollset. */
+    struct kevent chngs[MILL_CHNGSSIZE];
+    int nchngs = 0;
+    while(mill_changelist != MILL_ENDLIST) {
+        /* Flush the changes to the pollset even if there is one emtpy entry
+           left in the changeset. That way we make sure that both in & out
+           associated with the next file descriptor can be filled in if we
+           choose not to flush the changes yet. */
+        if(nchngs >= MILL_CHNGSSIZE - 1) {
+            int rc = kevent(mill_kfd, chngs, nchngs, NULL, 0, NULL);
+            mill_assert(rc != -1);
+            nchngs = 0;
+        }
+        int fd = mill_changelist - 1;
+        struct mill_crpair *crp = &mill_crpairs[fd];
+        if(crp->in) {
+            if(!(crp->currevs & FDW_IN)) {
+                EV_SET(&chngs[nchngs], fd, EVFILT_READ, EV_ADD, 0, 0, 0);
+                crp->currevs |= FDW_IN;
+                ++nchngs;
+            }
+        }
+        else {
+            if(crp->currevs & FDW_IN) {
+                EV_SET(&chngs[nchngs], fd, EVFILT_READ, EV_DELETE, 0, 0, 0);
+                crp->currevs &= !FDW_IN;
+                ++nchngs;
+            }
+        }
+        if(crp->out) {
+            if(!(crp->currevs & FDW_OUT)) {
+                EV_SET(&chngs[nchngs], fd, EVFILT_WRITE, EV_ADD, 0, 0, 0);
+                crp->currevs |= FDW_OUT;
+                ++nchngs;
+           }
+        }
+        else {
+            if(crp->currevs & FDW_OUT) {
+                EV_SET(&chngs[nchngs], fd, EVFILT_WRITE, EV_DELETE, 0, 0, 0);
+                crp->currevs &= !FDW_OUT;
+                ++nchngs;
+            }
+        }
+        crp->firing = 0;
+        mill_changelist = crp->next;
+        crp->next = 0;
+    }
+    /* Wait for events. */
+    struct kevent evs[MILL_EVSSIZE];
+    int nevs;
+    while(1) {
+        struct timespec ts;
+        if(timeout >= 0) {
+            ts.tv_sec = timeout / 1000;
+            ts.tv_nsec = (((long)timeout) % 1000) * 1000000;
+        }
+        nevs = kevent(mill_kfd, chngs, nchngs, evs, MILL_EVSSIZE,
+            timeout < 0 ? NULL : &ts);
+        if(nevs < 0 && errno == EINTR)
+            continue;
+        mill_assert(nevs >= 0);
+        break;
+    }
+    /* Join events on file descriptor basis. */
+    int i;
+    for(i = 0; i != nevs; ++i) {
+        mill_assert(evs[i].flags != EV_ERROR);
+        int fd = (int)evs[i].ident;
+        struct mill_crpair *crp = &mill_crpairs[fd];
+        /* Add firing event to the result list. */
+        if(evs[i].flags == EV_EOF)
+            crp->firing |= FDW_ERR;
+        else {
+            if(evs[i].filter == EVFILT_READ)
+                crp->firing |= FDW_IN;
+            if(evs[i].filter == EVFILT_WRITE)
+                crp->firing |= FDW_OUT;
+        }
+        if(!crp->next) {
+            crp->next = mill_changelist;
+            mill_changelist = fd + 1;
+        }
+    }
+    /* Resume the blocked coroutines. */
+    uint32_t chl = mill_changelist;
+    while(chl != MILL_ENDLIST) {
+        int fd = chl - 1;
+        struct mill_crpair *crp = &mill_crpairs[fd];
+        if(crp->in == crp->out) {
+            mill_assert(crp->in);
+            struct mill_cr *cr = mill_cont(crp->in, struct mill_cr, u_fdwait);
+            mill_resume(cr, crp->firing);
+            crp->in = NULL;
+            crp->out = NULL;
+        }
+        else {
+            if(crp->in) {
+                struct mill_cr *cr = mill_cont(crp->in, struct mill_cr,
+                    u_fdwait);
+                mill_resume(cr, crp->firing & (FDW_IN | FDW_ERR));
+                crp->in = NULL;
+            }
+            if(crp->out) {
+                struct mill_cr *cr = mill_cont(crp->out, struct mill_cr,
+                    u_fdwait);
+                mill_resume(cr, crp->firing & (FDW_OUT | FDW_ERR));
+                crp->out = NULL;
+            }
+        }
+        crp->firing = 0;
+        chl = crp->next;
+    }    
+    /* Return 0 in case of time out. 1 if at least one coroutine was resumed. */
+    return nevs > 0 ? 1 : 0;
+}
+

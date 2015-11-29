@@ -23,6 +23,7 @@
 */
 
 #include <stdint.h>
+#include <sys/param.h>
 
 #include "cr.h"
 #include "libmill.h"
@@ -147,6 +148,8 @@ void mill_wait(int block) {
 /* Defaults. */
 #elif defined __linux__
 #include "epoll.inc"
+#elif defined BSD
+#include "kqueue.inc"
 #else
 #include "poll.inc"
 #endif
