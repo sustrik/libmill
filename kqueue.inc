@@ -22,6 +22,7 @@
 
 */
 
+#include <limits.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -59,7 +60,10 @@ static void mill_poller_init(void) {
     int rc = getrlimit(RLIMIT_NOFILE, &rlim);
     int maxfds = rlim.rlim_max;
     mill_assert(rc == 0);
-    fprintf(stderr, "maxfds=%d\n", maxfds);
+    /* The above behaves weirdly on newer versions of OSX, ruturning limit
+       of -1. Fix it by using OPEN_MAX instead. */
+    if(maxfds < 0)
+        mafds = OPEN_MAX;
     mill_crpairs = (struct mill_crpair*)
         calloc(maxfds, sizeof(struct mill_crpair));
     mill_assert(mill_crpairs);
