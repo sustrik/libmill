@@ -142,7 +142,7 @@ fprintf(stderr, "EV_SET(%d, READ, ADD) currevs=%d\n", fd, (int)crp->currevs);
         else {
             if(crp->currevs & FDW_IN) {
                 EV_SET(&chngs[nchngs], fd, EVFILT_READ, EV_DELETE, 0, 0, 0);
-                crp->currevs &= !FDW_IN;
+                crp->currevs &= ~FDW_IN;
                 ++nchngs;
 fprintf(stderr, "EV_SET(%d, READ, DELETE) currevs=%d\n", fd, (int)crp->currevs);
             }
@@ -158,7 +158,7 @@ fprintf(stderr, "EV_SET(%d, WRITE, ADD) currevs=%d\n", fd, (int)crp->currevs);
         else {
             if(crp->currevs & FDW_OUT) {
                 EV_SET(&chngs[nchngs], fd, EVFILT_WRITE, EV_DELETE, 0, 0, 0);
-                crp->currevs &= !FDW_OUT;
+                crp->currevs &= ~FDW_OUT;
                 ++nchngs;
 fprintf(stderr, "EV_SET(%d, WRITE, DELETE) currevs=%d\n", fd, (int)crp->currevs);
             }
