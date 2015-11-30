@@ -122,6 +122,7 @@ unixsock unixlisten(const char *addr, int backlog) {
     /* Create the object. */
     struct mill_unixlistener *l = malloc(sizeof(struct mill_unixlistener));
     if(!l) {
+        fdclean(s);
         close(s);
         errno = ENOMEM;
         return NULL;
@@ -143,6 +144,7 @@ unixsock unixaccept(unixsock s, int64_t deadline) {
             mill_unixtune(as);
             struct mill_unixconn *conn = malloc(sizeof(struct mill_unixconn));
             if(!conn) {
+                fdclean(as);
                 close(as);
                 errno = ENOMEM;
                 return NULL;
@@ -182,6 +184,7 @@ unixsock unixconnect(const char *addr) {
     if(rc != 0) {
         int err = errno;
         mill_assert(rc == -1);
+        fdclean(s);
         close(s);
         errno = err;
         return NULL;
@@ -190,6 +193,7 @@ unixsock unixconnect(const char *addr) {
     /* Create the object. */
     struct mill_unixconn *conn = malloc(sizeof(struct mill_unixconn));
     if(!conn) {
+        fdclean(s);
         close(s);
         errno = ENOMEM;
         return NULL;
@@ -212,7 +216,9 @@ void unixpair(unixsock *a, unixsock *b) {
     mill_unixtune(fd[1]);
     struct mill_unixconn *conn = malloc(sizeof(struct mill_unixconn));
     if(!conn) {
+        fdclean(fd[0]);
         close(fd[0]);
+        fdclean(fd[1]);
         close(fd[1]);
         errno = ENOMEM;
         return;
@@ -222,7 +228,9 @@ void unixpair(unixsock *a, unixsock *b) {
     conn = malloc(sizeof(struct mill_unixconn));
     if(!conn) {
         free(*a);
+        fdclean(fd[0]);
         close(fd[0]);
+        fdclean(fd[1]);
         close(fd[1]);
         errno = ENOMEM;
         return;
@@ -417,6 +425,7 @@ size_t unixrecvuntil(unixsock s, void *buf, size_t len,
 void unixclose(unixsock s) {
     if(s->type == MILL_UNIXLISTENER) {
         struct mill_unixlistener *l = (struct mill_unixlistener*)s;
+        fdclean(l->fd);
         int rc = close(l->fd);
         mill_assert(rc == 0);
         free(l);
@@ -424,6 +433,7 @@ void unixclose(unixsock s) {
     }
     if(s->type == MILL_UNIXCONN) {
         struct mill_unixconn *c = (struct mill_unixconn*)s;
+        fdclean(c->fd);
         int rc = close(c->fd);
         mill_assert(rc == 0);
         free(c);
