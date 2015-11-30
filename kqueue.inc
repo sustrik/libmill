@@ -70,6 +70,7 @@ static void mill_poller_init(void) {
 }
 
 static void mill_poller_add(int fd, int events) {
+fprintf(stderr, "add(%d, %d)\n", fd, events);
     struct mill_crpair *crp = &mill_crpairs[fd];
     if(events & FDW_IN) {
         if(crp->in)
@@ -90,6 +91,7 @@ static void mill_poller_add(int fd, int events) {
 }
 
 static void mill_poller_rm(int fd, int events) {
+fprintf(stderr, "rm(%d, %d)\n", fd, events);
     struct mill_crpair *crp = &mill_crpairs[fd];
     if(events & FDW_IN)
         crp->in = NULL;
@@ -102,6 +104,7 @@ static void mill_poller_rm(int fd, int events) {
 }
 
 static void mill_poller_clean(int fd) {
+fprintf(stderr, "clean(%d)\n", fd);
     struct mill_crpair *crp = &mill_crpairs[fd];
     mill_assert(!crp->in);
     mill_assert(!crp->out);
@@ -207,7 +210,10 @@ fprintf(stderr, "poll(%d) = %d\n", timeout, nevs);
         int fd = chl - 1;
         struct mill_crpair *crp = &mill_crpairs[fd];
         if(crp->in == crp->out) {
+if(!crp->in) {
+fprintf(stderr, "fd=%d\n", fd);
             mill_assert(crp->in);
+}
             struct mill_cr *cr = mill_cont(crp->in, struct mill_cr, u_fdwait);
             mill_resume(cr, crp->firing);
 fprintf(stderr, "[%d]->in,out = NULL\n", fd);
