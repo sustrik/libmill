@@ -130,6 +130,7 @@ static int mill_poller_wait(int timeout) {
         struct mill_crpair *crp = &mill_crpairs[fd];
         if(crp->in) {
             if(!(crp->currevs & FDW_IN)) {
+frpintf(stderr, "EV_SET(%d, READ, ADD)\n", fd);
                 EV_SET(&chngs[nchngs], fd, EVFILT_READ, EV_ADD, 0, 0, 0);
                 crp->currevs |= FDW_IN;
                 ++nchngs;
@@ -137,6 +138,7 @@ static int mill_poller_wait(int timeout) {
         }
         else {
             if(crp->currevs & FDW_IN) {
+frpintf(stderr, "EV_SET(%d, READ, DELETE)\n", fd);
                 EV_SET(&chngs[nchngs], fd, EVFILT_READ, EV_DELETE, 0, 0, 0);
                 crp->currevs &= !FDW_IN;
                 ++nchngs;
@@ -144,6 +146,7 @@ static int mill_poller_wait(int timeout) {
         }
         if(crp->out) {
             if(!(crp->currevs & FDW_OUT)) {
+frpintf(stderr, "EV_SET(%d, WRITE, ADD)\n", fd);
                 EV_SET(&chngs[nchngs], fd, EVFILT_WRITE, EV_ADD, 0, 0, 0);
                 crp->currevs |= FDW_OUT;
                 ++nchngs;
@@ -151,6 +154,7 @@ static int mill_poller_wait(int timeout) {
         }
         else {
             if(crp->currevs & FDW_OUT) {
+frpintf(stderr, "EV_SET(%d, WRITE, DELETE)\n", fd);
                 EV_SET(&chngs[nchngs], fd, EVFILT_WRITE, EV_DELETE, 0, 0, 0);
                 crp->currevs &= !FDW_OUT;
                 ++nchngs;
@@ -174,6 +178,7 @@ static int mill_poller_wait(int timeout) {
         if(nevs < 0 && errno == EINTR)
             continue;
         mill_assert(nevs >= 0);
+frpintf(stderr, "poll(%d) = %d\n", timeout, nevs);
         break;
     }
     /* Join events on file descriptor basis. */
@@ -205,6 +210,7 @@ static int mill_poller_wait(int timeout) {
             mill_assert(crp->in);
             struct mill_cr *cr = mill_cont(crp->in, struct mill_cr, u_fdwait);
             mill_resume(cr, crp->firing);
+frpintf(stderr, "[%d]->in,out = NULL\n", fd);
             crp->in = NULL;
             crp->out = NULL;
         }
@@ -213,12 +219,14 @@ static int mill_poller_wait(int timeout) {
                 struct mill_cr *cr = mill_cont(crp->in, struct mill_cr,
                     u_fdwait);
                 mill_resume(cr, crp->firing & (FDW_IN | FDW_ERR));
+frpintf(stderr, "[%d]->in= NULL\n", fd);
                 crp->in = NULL;
             }
             if(crp->out) {
                 struct mill_cr *cr = mill_cont(crp->out, struct mill_cr,
                     u_fdwait);
                 mill_resume(cr, crp->firing & (FDW_OUT | FDW_ERR));
+frpintf(stderr, "[%d]->out = NULL\n", fd);
                 crp->out = NULL;
             }
         }
