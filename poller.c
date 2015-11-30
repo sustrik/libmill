@@ -91,6 +91,10 @@ int mill_fdwait(int fd, int events, int64_t deadline, const char *current) {
 }
 
 void fdclean(int fd) {
+    if(mill_slow(!mill_poller_initialised)) {
+        mill_poller_init();
+        mill_poller_initialised = 1;
+    }
     mill_poller_clean(fd);
 }
 

@@ -72,6 +72,7 @@ udpsock udplisten(ipaddr addr) {
         rc = getsockname(s, (struct sockaddr*)&baddr, &len);
         if(rc == -1) {
             int err = errno;
+            fdclean(s);
             close(s);
             errno = err;
             return NULL;
@@ -82,6 +83,7 @@ udpsock udplisten(ipaddr addr) {
     /* Create the object. */
     struct mill_udpsock *us = malloc(sizeof(struct mill_udpsock));
     if(!us) {
+        fdclean(s);
         close(s);
         errno = ENOMEM;
         return NULL;
@@ -131,6 +133,7 @@ size_t udprecv(udpsock s, ipaddr *addr, void *buf, size_t len,
 }
 
 void udpclose(udpsock s) {
+    fdclean(s->fd);
     int rc = close(s->fd);
     mill_assert(rc == 0);
     free(s);
