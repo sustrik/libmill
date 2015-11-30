@@ -70,7 +70,6 @@ static void mill_poller_init(void) {
 }
 
 static void mill_poller_add(int fd, int events) {
-fprintf(stderr, "add(%d, %d)\n", fd, events);
     struct mill_crpair *crp = &mill_crpairs[fd];
     if(events & FDW_IN) {
         if(crp->in)
@@ -91,7 +90,6 @@ fprintf(stderr, "add(%d, %d)\n", fd, events);
 }
 
 static void mill_poller_rm(int fd, int events) {
-fprintf(stderr, "rm(%d, %d)\n", fd, events);
     struct mill_crpair *crp = &mill_crpairs[fd];
     if(events & FDW_IN)
         crp->in = NULL;
@@ -104,7 +102,6 @@ fprintf(stderr, "rm(%d, %d)\n", fd, events);
 }
 
 static void mill_poller_clean(int fd) {
-fprintf(stderr, "clean(%d)\n", fd);
     struct mill_crpair *crp = &mill_crpairs[fd];
     mill_assert(!crp->in);
     mill_assert(!crp->out);
@@ -136,7 +133,6 @@ static int mill_poller_wait(int timeout) {
                 EV_SET(&chngs[nchngs], fd, EVFILT_READ, EV_ADD, 0, 0, 0);
                 crp->currevs |= FDW_IN;
                 ++nchngs;
-fprintf(stderr, "EV_SET(%d, READ, ADD) currevs=%d\n", fd, (int)crp->currevs);
             }
         }
         else {
@@ -144,7 +140,6 @@ fprintf(stderr, "EV_SET(%d, READ, ADD) currevs=%d\n", fd, (int)crp->currevs);
                 EV_SET(&chngs[nchngs], fd, EVFILT_READ, EV_DELETE, 0, 0, 0);
                 crp->currevs &= ~FDW_IN;
                 ++nchngs;
-fprintf(stderr, "EV_SET(%d, READ, DELETE) currevs=%d\n", fd, (int)crp->currevs);
             }
         }
         if(crp->out) {
@@ -152,7 +147,6 @@ fprintf(stderr, "EV_SET(%d, READ, DELETE) currevs=%d\n", fd, (int)crp->currevs);
                 EV_SET(&chngs[nchngs], fd, EVFILT_WRITE, EV_ADD, 0, 0, 0);
                 crp->currevs |= FDW_OUT;
                 ++nchngs;
-fprintf(stderr, "EV_SET(%d, WRITE, ADD) currevs=%d\n", fd, (int)crp->currevs);
            }
         }
         else {
@@ -160,7 +154,6 @@ fprintf(stderr, "EV_SET(%d, WRITE, ADD) currevs=%d\n", fd, (int)crp->currevs);
                 EV_SET(&chngs[nchngs], fd, EVFILT_WRITE, EV_DELETE, 0, 0, 0);
                 crp->currevs &= ~FDW_OUT;
                 ++nchngs;
-fprintf(stderr, "EV_SET(%d, WRITE, DELETE) currevs=%d\n", fd, (int)crp->currevs);
             }
         }
         crp->firing = 0;
@@ -181,7 +174,6 @@ fprintf(stderr, "EV_SET(%d, WRITE, DELETE) currevs=%d\n", fd, (int)crp->currevs)
         if(nevs < 0 && errno == EINTR)
             continue;
         mill_assert(nevs >= 0);
-fprintf(stderr, "poll(%d) = %d\n", timeout, nevs);
         break;
     }
     /* Join events on file descriptor basis. */
@@ -210,13 +202,9 @@ fprintf(stderr, "poll(%d) = %d\n", timeout, nevs);
         int fd = chl - 1;
         struct mill_crpair *crp = &mill_crpairs[fd];
         if(crp->in == crp->out) {
-if(!crp->in) {
-fprintf(stderr, "fd=%d\n", fd);
             mill_assert(crp->in);
-}
             struct mill_cr *cr = mill_cont(crp->in, struct mill_cr, u_fdwait);
             mill_resume(cr, crp->firing);
-fprintf(stderr, "[%d]->in,out = NULL\n", fd);
             crp->in = NULL;
             crp->out = NULL;
         }
@@ -225,14 +213,12 @@ fprintf(stderr, "[%d]->in,out = NULL\n", fd);
                 struct mill_cr *cr = mill_cont(crp->in, struct mill_cr,
                     u_fdwait);
                 mill_resume(cr, crp->firing & (FDW_IN | FDW_ERR));
-fprintf(stderr, "[%d]->in= NULL\n", fd);
                 crp->in = NULL;
             }
             if(crp->out) {
                 struct mill_cr *cr = mill_cont(crp->out, struct mill_cr,
                     u_fdwait);
                 mill_resume(cr, crp->firing & (FDW_OUT | FDW_ERR));
-fprintf(stderr, "[%d]->out = NULL\n", fd);
                 crp->out = NULL;
             }
         }
