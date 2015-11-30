@@ -114,6 +114,9 @@ static void mill_poller_rm(int fd, int events) {
     }
 }
 
+static void mill_poller_clean(int fd) {
+}
+
 static int mill_poller_wait(int timeout) {
     /* Wait for events. */
     int numevs;
