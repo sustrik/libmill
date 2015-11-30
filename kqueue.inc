@@ -133,34 +133,34 @@ static int mill_poller_wait(int timeout) {
         struct mill_crpair *crp = &mill_crpairs[fd];
         if(crp->in) {
             if(!(crp->currevs & FDW_IN)) {
-fprintf(stderr, "EV_SET(%d, READ, ADD)\n", fd);
                 EV_SET(&chngs[nchngs], fd, EVFILT_READ, EV_ADD, 0, 0, 0);
                 crp->currevs |= FDW_IN;
                 ++nchngs;
+fprintf(stderr, "EV_SET(%d, READ, ADD) currevs=%d\n", fd, (int)crp->currevs);
             }
         }
         else {
             if(crp->currevs & FDW_IN) {
-fprintf(stderr, "EV_SET(%d, READ, DELETE)\n", fd);
                 EV_SET(&chngs[nchngs], fd, EVFILT_READ, EV_DELETE, 0, 0, 0);
                 crp->currevs &= !FDW_IN;
                 ++nchngs;
+fprintf(stderr, "EV_SET(%d, READ, DELETE) currevs=%d\n", fd, (int)crp->currevs);
             }
         }
         if(crp->out) {
             if(!(crp->currevs & FDW_OUT)) {
-fprintf(stderr, "EV_SET(%d, WRITE, ADD)\n", fd);
                 EV_SET(&chngs[nchngs], fd, EVFILT_WRITE, EV_ADD, 0, 0, 0);
                 crp->currevs |= FDW_OUT;
                 ++nchngs;
+fprintf(stderr, "EV_SET(%d, WRITE, ADD) currevs=%d\n", fd, (int)crp->currevs);
            }
         }
         else {
             if(crp->currevs & FDW_OUT) {
-fprintf(stderr, "EV_SET(%d, WRITE, DELETE)\n", fd);
                 EV_SET(&chngs[nchngs], fd, EVFILT_WRITE, EV_DELETE, 0, 0, 0);
                 crp->currevs &= !FDW_OUT;
                 ++nchngs;
+fprintf(stderr, "EV_SET(%d, WRITE, DELETE) currevs=%d\n", fd, (int)crp->currevs);
             }
         }
         crp->firing = 0;
