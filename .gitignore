@@ -47,6 +47,7 @@ perf/chan
 perf/chs
 perf/chr
 perf/whispers
+perf/c10k
 tutorial/.dirstamp
 tutorial/step1
 tutorial/step2

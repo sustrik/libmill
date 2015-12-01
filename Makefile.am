@@ -101,7 +101,8 @@ noinst_PROGRAMS = \
     perf/chan\
     perf/chs\
     perf/chr\
-    perf/whispers
+    perf/whispers\
+    perf/c10k
 
 ################################################################################
 #  tutorial                                                                    #
