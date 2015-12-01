@@ -97,6 +97,10 @@
 
 <h3 id="intro">Introduction</h3>
 
+<p>Libmill is a lightweight coroutine library bringing Go-style concurrency
+to C language. It also contains simple networking library that allows users to
+quickly bootstrap application development.</p>
+
 <p>Libmill runs in following environments:</p>
 
 <ul>
@@ -147,7 +151,7 @@ int main() {
 }
 </pre>
 
-<p>Build and run the example:</p>
+<p>To build and run the example:</p>
 
 <pre>
 $ gcc -o example example.c -lmill
@@ -289,12 +293,12 @@ int main() {
 <p>Choose statement is equivalent to Go's <tt>select</tt>
 statement. It can be used to wait for multiple channels.</p>
 
-<p>Within <tt><a href="#choose">choose</a></tt> there is a list of clauses. Each
-clause is either an <tt>in</tt> clause (waiting for an incoming message) or an
-<tt>out</tt> clause (waiting till a message can be sent to the channel). Last
-clause can optionally be an <tt>otherwise</tt> clause that gets executed if none
-of the other clauses apply. Don't forget to add <tt>end</tt> keyword before the
-closing parenthesis:</p>
+<p>Inside <tt><a href="#choose">choose</a></tt>statement there is a list of
+clauses. Each clause is either an <tt>in</tt> clause (waiting for an incoming
+message) or an <tt>out</tt> clause (waiting till a message can be sent to the
+channel). Last clause can optionally be an <tt>otherwise</tt> clause that gets
+executed if none of the other clauses apply. Don't forget to add <tt>end</tt>
+keyword before the closing parenthesis:</p>
 
 <pre>
 choose {
