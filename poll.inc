@@ -55,7 +55,7 @@ static int mill_find_pollset(int fd) {
     return i;
 }
 
-static void mill_poller_init(void) {
+void mill_poller_init(void) {
 }
 
 static void mill_poller_add(int fd, int events) {

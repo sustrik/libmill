@@ -54,7 +54,7 @@ struct mill_crpair {
 static struct mill_crpair *mill_crpairs = NULL;
 static uint32_t mill_changelist = MILL_ENDLIST;
 
-static void mill_poller_init(void) {
+void mill_poller_init(void) {
     mill_efd = epoll_create(1);
     mill_assert(mill_efd >= 0);
     struct rlimit rlim;

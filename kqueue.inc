@@ -53,7 +53,7 @@ struct mill_crpair {
 static struct mill_crpair *mill_crpairs = NULL;
 static uint32_t mill_changelist = MILL_ENDLIST;
 
-static void mill_poller_init(void) {
+void mill_poller_init(void) {
     mill_kfd = kqueue();
     mill_assert(mill_kfd >= 0);
     struct rlimit rlim;

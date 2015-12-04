@@ -32,7 +32,7 @@
 
 /* Forward declarations for the functions implemented by specific poller
    mechanisms (poll, epoll, kqueue). */
-static void mill_poller_init(void);
+void mill_poller_init(void);
 static void mill_poller_add(int fd, int events);
 static void mill_poller_rm(int fd, int events);
 static void mill_poller_clean(int fd);
