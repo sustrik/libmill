@@ -22,6 +22,7 @@
 
 */
 
+#include <errno.h>
 #include <limits.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -54,19 +55,24 @@ static struct mill_crpair *mill_crpairs = NULL;
 static uint32_t mill_changelist = MILL_ENDLIST;
 
 void mill_poller_init(void) {
-    mill_kfd = kqueue();
-    mill_assert(mill_kfd >= 0);
     struct rlimit rlim;
     int rc = getrlimit(RLIMIT_NOFILE, &rlim);
+    if(mill_slow(rc < 0)) return;
     int maxfds = rlim.rlim_max;
-    mill_assert(rc == 0);
     /* The above behaves weirdly on newer versions of OSX, ruturning limit
        of -1. Fix it by using OPEN_MAX instead. */
     if(maxfds < 0)
         maxfds = OPEN_MAX;
     mill_crpairs = (struct mill_crpair*)
         calloc(maxfds, sizeof(struct mill_crpair));
-    mill_assert(mill_crpairs);
+    if(mill_slow(!mill_crpairs)) {errno = ENOMEM; return;}
+    mill_kfd = kqueue();
+    if(mill_slow(mill_kfd < 0)) {
+        free(mill_crpairs);
+        mill_crpairs = NULL;
+        return;
+    }
+    errno = 0;
 }
 
 static void mill_poller_add(int fd, int events) {

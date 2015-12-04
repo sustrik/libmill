@@ -53,6 +53,7 @@ void mill_msleep(int64_t deadline, const char *current) {
 int mill_fdwait(int fd, int events, int64_t deadline, const char *current) {
     if(mill_slow(!mill_poller_initialised)) {
         mill_poller_init();
+        mill_assert(errno == 0);
         mill_poller_initialised = 1;
     }
     /* If required, start waiting for the timeout. */
@@ -93,6 +94,7 @@ int mill_fdwait(int fd, int events, int64_t deadline, const char *current) {
 void fdclean(int fd) {
     if(mill_slow(!mill_poller_initialised)) {
         mill_poller_init();
+        mill_assert(errno == 0);
         mill_poller_initialised = 1;
     }
     mill_poller_clean(fd);
@@ -101,6 +103,7 @@ void fdclean(int fd) {
 void mill_wait(int block) {
     if(mill_slow(!mill_poller_initialised)) {
         mill_poller_init();
+        mill_assert(errno == 0);
         mill_poller_initialised = 1;
     }
     while(1) {

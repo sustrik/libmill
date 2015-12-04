@@ -22,6 +22,7 @@
 
 */
 
+#include <errno.h>
 #include <stdint.h>
 #include <string.h>
 #include <sys/epoll.h>
@@ -55,15 +56,20 @@ static struct mill_crpair *mill_crpairs = NULL;
 static uint32_t mill_changelist = MILL_ENDLIST;
 
 void mill_poller_init(void) {
-    mill_efd = epoll_create(1);
-    mill_assert(mill_efd >= 0);
     struct rlimit rlim;
     int rc = getrlimit(RLIMIT_NOFILE, &rlim);
+    if(mill_slow(rc < 0)) return;
     int maxfds = rlim.rlim_max;
-    mill_assert(rc == 0);
     mill_crpairs = (struct mill_crpair*)
         calloc(maxfds, sizeof(struct mill_crpair));
-    mill_assert(mill_crpairs);
+    if(mill_slow(!mill_crpairs)) {errno = ENOMEM; return;}
+    mill_efd = epoll_create(1);
+    if(mill_slow(mill_efd < 0)) {
+        free(mill_crpairs);
+        mill_crpairs = NULL;
+        return;
+    }
+    errno = 0;
 }
 
 static void mill_poller_add(int fd, int events) {

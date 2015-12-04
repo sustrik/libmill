@@ -56,6 +56,7 @@ static int mill_find_pollset(int fd) {
 }
 
 void mill_poller_init(void) {
+    errno = 0;
 }
 
 static void mill_poller_add(int fd, int events) {

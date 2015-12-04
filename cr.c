@@ -22,6 +22,7 @@
 
 */
 
+#include <errno.h>
 #include <stddef.h>
 #include <stdio.h>
 
@@ -78,6 +79,7 @@ int goprepare(int count, size_t stack_size, size_t val_size) {
         mill_panic("goprepare called while coroutines are running");
     /* Allocate any resources needed by the polling mechanism. */
     mill_poller_init();
+    mill_assert(errno == 0);
     /* If needed, make val size slightly bigger to align properly. */
     mill_valbuf_size = (val_size + 15) & ~((size_t)0xf);
     /* Preallocate the valbuf for the main coroutine. */
