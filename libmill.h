@@ -82,7 +82,7 @@ MILL_EXPORT int64_t now(void);
 /*  Coroutines                                                                */
 /******************************************************************************/
 
-MILL_EXPORT int goprepare(int count, size_t stack_size, size_t val_size);
+MILL_EXPORT void goprepare(int count, size_t stack_size, size_t val_size);
 
 MILL_EXPORT extern volatile int mill_unoptimisable1;
 MILL_EXPORT extern volatile void *mill_unoptimisable2;

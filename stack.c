@@ -107,7 +107,7 @@ static void *mill_allocstackmem(void) {
 }
 
 
-int mill_preparestacks(int count, size_t stack_size) {
+void mill_preparestacks(int count, size_t stack_size) {
     /* Purge the cached stacks. */
     while(1) {
         struct mill_slist_item *item = mill_slist_pop(&mill_cached_stacks);
@@ -116,22 +116,37 @@ int mill_preparestacks(int count, size_t stack_size) {
         free(((char*)(item + 1)) - mill_get_stack_size());
     }
     /* Now that there are no stacks allocated, we can adjust the stack size. */
+    size_t old_stack_size = mill_stack_size;
+    size_t old_sanitised_stack_size = mill_sanitised_stack_size;
     mill_stack_size = stack_size;
     mill_sanitised_stack_size = 0;
     /* Allocate the new stacks. */
     int i;
     for(i = 0; i != count; ++i) {
         void *ptr = mill_allocstackmem();
-        if(!ptr)
-            break;
+        if(!ptr) goto error;
         struct mill_slist_item *item = ((struct mill_slist_item*)ptr) - 1;
         mill_slist_push_back(&mill_cached_stacks, item);
     }
-    mill_num_cached_stacks = i;
+    mill_num_cached_stacks = count;
     /* Make sure that the stacks won't get deallocated even if they aren't used
        at the moment. */
-    mill_max_cached_stacks = i;
-    return i;
+    mill_max_cached_stacks = count;
+    errno = 0;
+    return;
+error:
+    /* If we can't allocate all the stacks, allocate none, restore state and
+       return error. */
+    while(1) {
+        struct mill_slist_item *item = mill_slist_pop(&mill_cached_stacks);
+        if(!item)
+            break;
+        free(((char*)(item + 1)) - mill_get_stack_size());
+    }
+    mill_num_cached_stacks = 0;
+    mill_stack_size = old_stack_size;
+    mill_sanitised_stack_size = old_sanitised_stack_size;
+    errno = ENOMEM;
 }
 
 void *mill_allocstack(void) {

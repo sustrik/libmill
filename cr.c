@@ -74,19 +74,18 @@ static void *mill_getvalbuf(struct mill_cr *cr, size_t size) {
     return cr->valbuf;
 }
 
-int goprepare(int count, size_t stack_size, size_t val_size) {
-    if(mill_slow(mill_hascrs()))
-        mill_panic("goprepare called while coroutines are running");
+void goprepare(int count, size_t stack_size, size_t val_size) {
+    if(mill_slow(mill_hascrs())) {errno = EAGAIN; return;}
     /* Allocate any resources needed by the polling mechanism. */
     mill_poller_init();
-    mill_assert(errno == 0);
+    if(mill_slow(errno != 0)) return;
     /* If needed, make val size slightly bigger to align properly. */
     mill_valbuf_size = (val_size + 15) & ~((size_t)0xf);
     /* Preallocate the valbuf for the main coroutine. */
-    if(!mill_getvalbuf(&mill_main, mill_valbuf_size))
-        return 0;
+    if(mill_slow(!mill_getvalbuf(&mill_main, mill_valbuf_size))) {
+        errno = ENOMEM; return;}
     /* Allocate the stacks. */
-    return mill_preparestacks(count, stack_size + mill_valbuf_size +
+    mill_preparestacks(count, stack_size + mill_valbuf_size +
         sizeof(struct mill_cr));
 }
 

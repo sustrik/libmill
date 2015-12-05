@@ -22,6 +22,7 @@
 
 */
 
+#include <errno.h>
 #include <assert.h>
 #include <stdio.h>
 
@@ -43,6 +44,7 @@ coroutine void dummy(void) {
 
 int main() {
     goprepare(10, 25000, 300);
+    assert(errno == 0);
     go(worker(3, 7));
     go(worker(1, 11));
     go(worker(2, 5));
