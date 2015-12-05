@@ -70,6 +70,7 @@
     <li><a href="#now">now</a></li>
     <li><a href="#setcls">setcls</a></li>
     <li><a href="#tcpaccept">tcpaccept</a></li>
+    <li><a href="#tcpaddr">tcpaddr</a></li>
     <li><a href="#tcpclose">tcpclose</a></li>
     <li><a href="#tcpconnect">tcpconnect</a></li>
     <li><a href="#tcpflush">tcpflush</a></li>
@@ -1428,6 +1429,13 @@ one of the following values:</p>
       operation.</li>
   <li><tt>ETIMEDOUT</tt>: Deadline was reached.</li>
 </ul>
+
+<h6 id="tcpaddr">ipaddr tcpaddr(tcpsock s);</h6>
+
+<p>After accepting an incoming TCP connection this function can be used to
+retrieve the IP address of the peer.</p>
+
+<p>The function cannot fail.</p>
 
 <h6 id="tcpclose">void tcpclose(tcpsock s);</h6>
 
