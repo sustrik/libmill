@@ -57,6 +57,7 @@
     <li><a href="#chs">chs</a></li>
     <li><a href="#cls">cls</a></li>
     <li><a href="#coroutine">coroutine</a></li>
+    <li><a href="#fdclean">fdclean</a></li>
     <li><a href="#fdwait">fdwait</a></li>
     <li><a href="#go">go</a></li>
     <li><a href="#goprepare">goprepare</a></li>
@@ -407,6 +408,17 @@ socket combination of <tt>FDW_ERR</tt> and <tt>FDW_IN</tt> may be returned.
 
 <p>The third parameter to <tt><a href="#fdwait">fdwait()</a></tt> is a deadline.
 If deadline is hit the function returns zero.</p>
+
+<p>When dealing with file descriptors directly (as opposed to using
+<tt>tcpsock</tt>, <tt>unixsock</tt> or <tt>udpsock</tt>) you have to call
+<tt>fdclean()</tt> function before closing it to drop any
+cached state libmill may have associated with the descriptor. If you don't
+do so, tricky, hard to debug, undefined behaviour may ensue.</p>
+
+<pre>
+fdclean(fd);
+close(fd);
+</pre>
 
 <h4 id="ip">Resolving IP addresses</h4>
 
@@ -764,11 +776,8 @@ in bytes and, additionally, the size of the biggest element you are going to
 pass through libmill channels:</p>
 
 <pre>
-int count = goprepare(100, 100000, 128);
+goprepare(100, 100000, 128);
 </pre>
-
-<p>The function returns number of stacks that it actually managed
-to allocate.</p>
 
 <p>From that point on your program shouldn't fail when launching a coroutine.
 However, if you launch more parallelly running coroutines than allocated
@@ -1130,6 +1139,18 @@ coroutine void foo(int i);
 specifier, however, they may fail in random fashion, depending on a particular
 combination of compiler, optimisation level and code in question.</p>
 
+<h6 id="fdclean">void fdclean(int fd);</h6>
+
+<p>This function drops any cached state associated with the file descriptor.
+It has to be called before the file descriptor is closed. If it is not,
+undefined behaviour may ensue.</p>
+
+<p><tt>tcpsock</tt>, <tt>unixsock</tt> and <tt>udpsock</tt> take care of
+calling this function, so unless you are creating custom file descriptors
+by hand, you don't have to care.</p>
+
+<p>The function cannot fail.</p>
+
 <h6 id="fdwait">int fdwait(int fd, int events, int64_t deadline);</h6>
 
 <p>Waits for an event from a file descriptor.</p>
@@ -1190,7 +1211,7 @@ combination of compiler, optimisation level and code in question.</p>
 the stacks on process startup using
 <tt><a href="#goprepare">goprepare()</a></tt>.</p>
 
-<h6 id="goprepare">int goprepare(int count, size_t stack_size, size_t val_size);</h6>
+<h6 id="goprepare">void goprepare(int count, size_t stack_size, size_t val_size);</h6>
 
 <p>Preallocate coroutine stacks. This function is useful to guarantee that
 coroutine invocation won't fail when there's insufficient memory to allocate
@@ -1207,18 +1228,29 @@ in bytes and, additionally, the size of the biggest element you are going to
 pass through libmill channels:</p>
 
 <pre>
-int count = goprepare(100, 100000, 128);
+goprepare(100, 100000, 128);
 </pre>
-
-<p>The function returns number of stacks that it actually managed
-to allocate. It may be less than the number of stacks asked for.</p>
 
 <p>Program can use up to the specified number of coroutines in parallel without
 the need for memory allocation. However, if the limit is reached -- or if
 message larger than <tt>val_size</tt> is sent through a channel -- memory
 allocation may occur, fail and cause panic and termination of the process.</p>
 
-<p>The function returns no errors.</p>
+<p>Additionally, the function preallocates any process-wide resources needed,
+   such as, for example, global pollsets.</p>
+
+<p>The function sets <tt>errno</tt> to zero in case of success or to one of
+the following errors otherwise:</p>
+
+<ul style="list-style: none;">
+  <li><tt>EAGAIN</tt>: There are coroutines running. The stacks can't be
+      reallocated.</li>
+  <li><tt>EMFILE</tt>: The maximum number of file descriptors in the process are
+      already open.</li>
+  <li><tt>ENFILE</tt>: The maximum number of file descriptors in the system are
+      already open.</li>
+  <li><tt>ENOMEM</tt>: Not enough memory to allocate the stacks.</li>
+</ul>
 
 <h6 id="goredump">void goredump(void);</h6>
 
