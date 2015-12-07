@@ -515,7 +515,7 @@ ipaddr addr = ipremote("192.168.0.111", 5555, 0, -1);
 tcpsock s = tcpconnect(addr, -1);
 </pre>
 
-<p>The arguments are IP address, port number and a deadline.</p>
+<p>The arguments are IP address and deadline.</p>
 
 <p>In case of error the function returns NULL and sets <tt>errno</tt> to one
 of the standard POSIX error values. If the deadline is reached, <tt>errno</tt>
