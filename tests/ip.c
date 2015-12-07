@@ -22,6 +22,7 @@
 
 */
 
+#include <arpa/inet.h>
 #include <assert.h>
 #include <netinet/in.h>
 
