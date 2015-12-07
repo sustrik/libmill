@@ -37,7 +37,10 @@
 #if !defined __sun
 #include <ifaddrs.h>
 #endif
+#include <stdio.h>
 #include <unistd.h>
+
+#include "dns/dns.h"
 
 #include "ip.h"
 #include "libmill.h"
@@ -45,6 +48,12 @@
 
 MILL_CT_ASSERT(sizeof(ipaddr) >= sizeof(struct sockaddr_in));
 MILL_CT_ASSERT(sizeof(ipaddr) >= sizeof(struct sockaddr_in6));
+
+static struct dns_resolv_conf *mill_dns_conf = NULL;
+static struct dns_hosts *mill_dns_hosts = NULL;
+static struct dns_hints *mill_dns_hints = NULL;
+static struct dns_resolver *mill_dns_resolver = NULL;
+static int mill_dns_pollfd = -1;
 
 static ipaddr mill_ipany(int port, int mode)
 {
@@ -240,77 +249,55 @@ ipaddr iplocal(const char *name, int port, int mode) {
 #endif
 }
 
-#if defined HAVE_LIBANL
-static void mill_getaddrinfo_a_done(union sigval sval) {
-    uint64_t i = 1;
-    ssize_t sz = write(sval.sival_int, &i, sizeof(i));
-    mill_assert(sz == sizeof(i));
-}
-#endif
-
 ipaddr ipremote(const char *name, int port, int mode, int64_t deadline) {
+    int rc;
     ipaddr addr = mill_ipliteral(name, port, mode);
-#if !defined HAVE_LIBANL
-    return addr;
-#else
     if(errno == 0)
        return addr;
+    /* Load DNS config files, unless they are already chached. */
+    if(mill_slow(!mill_dns_resolver)) {
+        /* TODO: Maybe re-read the configuration once in a while? */
+        mill_dns_conf = dns_resconf_local(&rc);
+        mill_assert(mill_dns_conf);
+        mill_dns_hosts = dns_hosts_local(&rc);
+        mill_assert(mill_dns_hosts);
+        mill_dns_hints = dns_hints_local(mill_dns_conf, &rc);
+        mill_assert(mill_dns_hints);
+        mill_dns_resolver = dns_res_open(mill_dns_conf, mill_dns_hosts,
+            mill_dns_hints, NULL, dns_opts(), &rc);
+        mill_assert(mill_dns_resolver);
+        mill_dns_pollfd = dns_res_pollfd(mill_dns_resolver);
+        mill_assert(mill_dns_pollfd >= 0);
+    }
     /* Let's do asynchronous DNS query here. */
-    int efd = eventfd(0, 0);
-    if(mill_slow(efd < 0))
-        return addr;
-    struct addrinfo request;
-    memset(&request, 0, sizeof(request));
-    request.ai_family = AF_UNSPEC;
-    request.ai_socktype = SOCK_STREAM;
-    struct gaicb gcb;
-    memset(&gcb, 0, sizeof(gcb));
-    gcb.ar_name = name;
-    gcb.ar_service = NULL;
-    gcb.ar_request = &request;
-    gcb.ar_result = NULL;
-    struct sigevent sev;
-    memset(&sev, 0, sizeof(sev));
-    /* The event will be delivered using a new thread rather than by a signal
-       running of one of the coroutines' stack and possibly breaking it. */
-    sev.sigev_notify = SIGEV_THREAD;
-    sev.sigev_notify_function = mill_getaddrinfo_a_done;
-    sev.sigev_value.sival_int = efd;
-    struct gaicb *pgcb = &gcb;
-    int rc = getaddrinfo_a(GAI_NOWAIT, &pgcb, 1, &sev);
-    if(mill_slow(rc != 0)) {
-        if(rc == EAI_AGAIN || rc == EAI_MEMORY) {
-            fdclean(efd);
-            close(efd);
-            errno = ENOMEM;
-            return addr;
-        }
-        mill_assert(0);
-    }
-    rc = fdwait(efd, FDW_IN, deadline);
-    if(rc == 0) {
-        gai_cancel(&gcb);
-        rc = fdwait(efd, FDW_IN, -1);
-    }
-    mill_assert(rc == FDW_IN);
-    fdclean(efd);
-    close(efd);
-    rc = gai_error(&gcb);
-    if(rc != 0) {
-        errno = EINVAL;
-        return addr;
-    }
+    mill_assert(port >= 0 && port <= 0xffff);
+    char portstr[8];
+    snprintf(portstr, sizeof(portstr), "%d", port);
+    struct dns_addrinfo *ai = dns_ai_open(name, portstr, DNS_T_A, NULL,
+        mill_dns_resolver, &rc);
+    mill_assert(ai);
     struct addrinfo *ipv4 = NULL;
     struct addrinfo *ipv6 = NULL;
-    struct addrinfo *it = gcb.ar_result;
-    while(it) {
+    struct addrinfo *it = NULL; 
+    while(1) {
+        rc = dns_ai_nextent(&it, ai);
+        if(rc == EAGAIN) {
+            int events = fdwait(mill_dns_pollfd, FDW_IN, deadline);
+            if(mill_slow(!events)) {
+                errno = ETIMEDOUT;
+                return addr;
+            }
+            mill_assert(events == FDW_IN);
+            continue;
+        }
+        if(rc == ENOENT)
+            break;
         if(!ipv4 && it->ai_family == AF_INET)
             ipv4 = it;
         if(!ipv6 && it->ai_family == AF_INET6)
             ipv6 = it;
         if(ipv4 && ipv6)
             break;
-        it = it->ai_next;
     }
     switch(mode) {
     case IPADDR_IPV4:
@@ -341,9 +328,8 @@ ipaddr ipremote(const char *name, int port, int mode, int64_t deadline) {
         memcpy(inaddr, ipv6->ai_addr, sizeof (struct sockaddr_in6));
         inaddr->sin6_port = htons(port);
     }
-    freeaddrinfo(gcb.ar_result);
+    dns_ai_close(ai);
     errno = 0;
     return addr;
-#endif
 }
 
