@@ -444,8 +444,8 @@ type. It can be assigned, returned from a function and so on.</p>
 <tt><a href="#iplocal">iplocal()</a></tt> that retrieves the IP address of a
 local network interface and <tt><a href="#ipremote">ipremote()</a></tt> that
 gets IP address of a remote machine. In addition to that, certain other library
-functions, <tt><a href="#udprecv">udprecv()</a></tt>, for one, return IP
-addresses.</p>
+functions, (<tt><a href="#udprecv">udprecv()</a></tt>,
+<tt><a href="#tcpaddr">tcpaddr()</a></tt>) return IP addresses.</p>
 
 <p><tt><a href="#iplocal">iplocal()</a></tt> converts a textual form of IP
 address, or a name of a local network interface and a port number into
@@ -461,38 +461,43 @@ ipaddr addr3 = iplocal("eth0", 5555, 0);
 interested in. Possible values are:</p>
 
 <ul>
-  <li>IPADDR_IPV4: get IPv4 address or error if it's not available</li>
-  <li>IPADDR_IPV6: get IPv6 address or error if it's not available</li>
-  <li>IPADDR_PREF_IPV4: get IPv4 address if possible, IPv6 address otherwise;
-      error if none is available</li>
-  <li>IPADDR_PREF_IPV6: get IPv6 address if possible, IPv4 address otherwise;
-      error if none is available</li>
+  <li><tt>IPADDR_IPV4</tt>: get IPv4 address or error if it's not available</li>
+  <li><tt>IPADDR_IPV6</tt>: get IPv6 address or error if it's not available</li>
+  <li><tt>IPADDR_PREF_IPV4</tt>: get IPv4 address if possible, IPv6 address
+      otherwise; error if none is available</li>
+  <li><tt>IPADDR_PREF_IPV6</tt>: get IPv6 address if possible, IPv4 address
+      otherwise; error if none is available</li>
 </ul>
 
-<p>Setting the argument to zero means "default" behaviour, which, at the
-present, is IPADDR_PREF_IPV4. However, in the future when IPv6 becomes more
-common it may be switched to IPADDR_PREF_IPV6.</p>
+<p>Setting the argument to zero means default behaviour, which, at the
+present, is <tt>IPADDR_PREF_IPV4</tt>. However, in the future when IPv6 becomes
+more common it may be switched to <tt>IPADDR_PREF_IPV6</tt>.</p>
 
-<p>If address parameter is set to NULL, INADDR_ANY or in6addr_any is returned.
-This value is useful when binding to all local network interfaces.</p>
+<p>If address parameter is set to NULL, <tt>INADDR_ANY</tt> or
+<tt>in6addr_any</tt> is returned. This value is useful when binding to all local
+network interfaces.</p>
 
-<p>In case of error <tt>errno</tt> is set to appropriate error code. Returned
-address has family type AF_UNSPEC which will cause any function you pass it to
-to fail.</tt></p>
+
 
 <p>The second function to produce IP addresses is
-<tt><a href="#ipremote">ipremote()</a></tt>. It converts textual form of IP
-address to <tt>ipaddr</tt>. In the future it is also meant to resolve remote
-host names, but this functionality is not available yet. The function also
-requires port, mode (same as in <tt><a href="#iplocal">iplocal()</a></tt>) and
-a deadline:</p>
+<tt><a href="#ipremote">ipremote()</a></tt>. It resolves remote host name to
+an IP address. However, be aware that this functionality is only available
+on Linux at the moment. On other systems you have to resort to numeric
+IP addresses.</p>
+
+<p>Given that remote host name resolution may involve a DNS query which in
+turn can take non-trivial amount of time,
+<tt><a href="#ipremote">ipremote()</a></tt> has also deadline parameter.</p>
 
 <pre>
 ipaddr addr = ipremote("192.168.0.111", 5555, 0, -1);
 </pre>
 
-<p>Behaviour in case of error is same as with
-<tt><a href="#iplocal">iplocal()</a></tt>.
+<p>Both <tt><a href="#iplocal">iplocal()</a></tt> and
+<tt><a href="#ipremote">ipremote()</a></tt> report errors in the same
+way. They set <tt>errno</tt> to appropriate error code. Additionally, returned
+address has family type AF_UNSPEC which will cause any function you pass it to
+fail.</tt></p>
 
 <p>You can also convert <tt>ipaddr</tt> into a human readable string. To do so
 you have to supply a buffer at least IPADDR_MAXSTRLEN long:</p>
