@@ -293,9 +293,9 @@ ipaddr ipremote(const char *name, int port, int mode, int64_t deadline) {
         }
         if(rc == ENOENT)
             break;
-        if(!ipv4 && it->ai_family == AF_INET)
+        if(!ipv4 && it && it->ai_family == AF_INET)
             ipv4 = it;
-        if(!ipv6 && it->ai_family == AF_INET6)
+        if(!ipv6 && it && it->ai_family == AF_INET6)
             ipv6 = it;
         if(ipv4 && ipv6)
             break;

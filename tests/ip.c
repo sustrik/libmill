@@ -29,11 +29,13 @@
 #include "../libmill.h"
 
 int main() {
-    ipaddr addr = ipremote("www.example.org", 80, IPADDR_IPV4, -1);
-    assert(errno == 0);
-    struct sockaddr_in *ain = (struct sockaddr_in*)&addr;
-    assert(ain->sin_family == AF_INET);
-    assert(ain->sin_port == htons(80));
+    ipaddr addr = ipremote("www.example.org", 80, IPADDR_IPV4, now() + 1000);
+    if(errno != ETIMEDOUT) {
+       assert(errno == 0);
+       struct sockaddr_in *ain = (struct sockaddr_in*)&addr;
+       assert(ain->sin_family == AF_INET);
+       assert(ain->sin_port == htons(80));
+    }
     return 0;
 }
 
