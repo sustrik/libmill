@@ -34,8 +34,8 @@
     <li><a href="#fds">Waiting for file descriptors</a></li>
     <li><a href="#ip">Resolving IP addresses</a></li>
     <li><a href="#tcp">TCP library</a></li>
-    <li><a href="#udp">UDP library</a></li>
     <li><a href="#unix">UNIX library</a></li>
+    <li><a href="#udp">UDP library</a></li>
     <li><a href="#clstorage">Coroutine-local storage</a></li>
     <li><a href="#memory">Dealing with memory</a></li>
     <li><a href="#multiprocessing">Multiprocessing</a></li>
@@ -651,6 +651,32 @@ size_t nbytes = tcprecvuntil(conn, buf, 256, ",}" , 2, -1);
 tcpclose(s);
 </pre>
 
+<h4 id="unix">UNIX library</h4>
+
+<p>Unix sockets are used for communicating between processes on the same
+machine.</p>
+
+<p>The API is identical to the TCP API with all <tt>tcp</tt> prefixes replaced
+by <tt>unix</tt> prefixes, e.g. <tt>unixsock</tt> or
+<tt><a href="#unixrecv">unixrecv()</a></tt>.</p>
+
+<p>Additionally, addresses passed to
+<tt><a href="#unixlisten">unixlisten()</a></tt> and
+<tt><a href="#unixconnect">unixconnect()</a></tt> represent are names of a local
+files rather than IP addresses. Also, there are no ports:</tt>
+
+<pre>
+unixsock s = unixconnect("/tmp/test.unix");
+</pre>
+
+Function <tt><a href="#unixpair">unixpair()</a></tt> creates a pair of connected
+sockets. It's a wrapper on top of standard <tt>socketpair()</tt> function:</p>
+
+<pre>
+unixsock s1, s2;
+unixpair(&s1, &s2);
+</pre>
+
 <h4 id="udp">UDP library</h4>
 
 <p>To open an UDP socket use <tt><a href="#udplisten">udplisten()</a></tt>
@@ -712,32 +738,6 @@ In the case of success <tt>errno</tt> is set to zero.</p>
 
 <pre>
 udpclose(s);
-</pre>
-
-<h4 id="unix">UNIX library</h4>
-
-<p>Unix sockets are used for communicating between processes on the same
-machine.</p>
-
-<p>The API is identical to the TCP API with all <tt>tcp</tt> prefixes replaced
-by <tt>unix</tt> prefixes, e.g. <tt>unixsock</tt> or
-<tt><a href="#unixrecv">unixrecv()</a></tt>.</p>
-
-<p>Additionally, addresses passed to
-<tt><a href="#unixlisten">unixlisten()</a></tt> and
-<tt><a href="#unixconnect">unixconnect()</a></tt> represent are names of a local
-files rather than IP addresses. Also, there are no ports:</tt>
-
-<pre>
-unixsock s = unixconnect("/tmp/test.unix");
-</pre>
-
-Function <tt><a href="#unixpair">unixpair()</a></tt> creates a pair of connected
-sockets. It's a wrapper on top of standard <tt>socketpair()</tt> function:</p>
-
-<pre>
-unixsock s1, s2;
-unixpair(&s1, &s2);
 </pre>
 
 <h4 id="clstorage">Coroutine-local storage</h4>
