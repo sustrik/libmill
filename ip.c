@@ -38,6 +38,7 @@
 #include <ifaddrs.h>
 #endif
 #include <stdio.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "dns/dns.h"
@@ -53,7 +54,6 @@ static struct dns_resolv_conf *mill_dns_conf = NULL;
 static struct dns_hosts *mill_dns_hosts = NULL;
 static struct dns_hints *mill_dns_hints = NULL;
 static struct dns_resolver *mill_dns_resolver = NULL;
-static int mill_dns_pollfd = -1;
 
 static ipaddr mill_ipany(int port, int mode)
 {
@@ -266,14 +266,15 @@ ipaddr ipremote(const char *name, int port, int mode, int64_t deadline) {
         mill_dns_resolver = dns_res_open(mill_dns_conf, mill_dns_hosts,
             mill_dns_hints, NULL, dns_opts(), &rc);
         mill_assert(mill_dns_resolver);
-        mill_dns_pollfd = dns_res_pollfd(mill_dns_resolver);
-        mill_assert(mill_dns_pollfd >= 0);
     }
     /* Let's do asynchronous DNS query here. */
     mill_assert(port >= 0 && port <= 0xffff);
     char portstr[8];
     snprintf(portstr, sizeof(portstr), "%d", port);
-    struct dns_addrinfo *ai = dns_ai_open(name, portstr, DNS_T_A, NULL,
+    struct addrinfo hints;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = PF_UNSPEC;
+    struct dns_addrinfo *ai = dns_ai_open(name, portstr, DNS_T_A, &hints,
         mill_dns_resolver, &rc);
     mill_assert(ai);
     struct addrinfo *ipv4 = NULL;
@@ -282,7 +283,7 @@ ipaddr ipremote(const char *name, int port, int mode, int64_t deadline) {
     while(1) {
         rc = dns_ai_nextent(&it, ai);
         if(rc == EAGAIN) {
-            int events = fdwait(mill_dns_pollfd, FDW_IN, deadline);
+            int events = fdwait(dns_ai_pollfd(ai), FDW_IN, deadline);
             if(mill_slow(!events)) {
                 errno = ETIMEDOUT;
                 return addr;
@@ -299,6 +300,7 @@ ipaddr ipremote(const char *name, int port, int mode, int64_t deadline) {
         if(ipv4 && ipv6)
             break;
     }
+    /* TODO: fdclean(fd) ? */
     switch(mode) {
     case IPADDR_IPV4:
         ipv6 = NULL;

@@ -38,6 +38,7 @@ tests/udp
 tests/unix
 tests/signals
 tests/overload
+tests/ip
 tests/*.trs
 tests/*.log
 perf/.dirstamp
