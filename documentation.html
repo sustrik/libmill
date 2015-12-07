@@ -417,11 +417,12 @@ socket combination of <tt>FDW_ERR</tt> and <tt>FDW_IN</tt> may be returned.
 <p>The third parameter to <tt><a href="#fdwait">fdwait()</a></tt> is a deadline.
 If deadline is hit the function returns zero.</p>
 
-<p>When dealing with file descriptors directly (as opposed to using
+<p>When handling the file descriptors directly (as opposed to using
 <tt>tcpsock</tt>, <tt>unixsock</tt> or <tt>udpsock</tt>) you have to call
-<tt>fdclean()</tt> function before closing it to drop any
-cached state libmill may have associated with the descriptor. If you don't
-do so, tricky, hard to debug, undefined behaviour may ensue.</p>
+<tt>fdclean()</tt> before closing any file descriptor you've previously
+used with <tt>fdwait()</tt>. It will drop any cached state <tt>fdwait()</tt>
+may have associated with the descriptor. If you don't do so undefined, hard to
+debug behaviour is likely to ensue.</p>
 
 <pre>
 fdclean(fd);
