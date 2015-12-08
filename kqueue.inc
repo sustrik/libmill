@@ -115,11 +115,11 @@ static void mill_poller_clean(int fd) {
     int nevs = 0;
     struct kevent evs[2];
     if(crp->currevs & FDW_IN) {
-        EV_SET(&chngs[nevs], fd, EVFILT_READ, EV_DELETE, 0, 0, 0);
+        EV_SET(&evs[nevs], fd, EVFILT_READ, EV_DELETE, 0, 0, 0);
         ++nevs;
     }
     if(crp->currevs & FDW_OUT) {
-        EV_SET(&chngs[nevs], fd, EVFILT_WRITE, EV_DELETE, 0, 0, 0);
+        EV_SET(&evs[nevs], fd, EVFILT_WRITE, EV_DELETE, 0, 0, 0);
         ++nevs;
     }
     if(nevs) {
