@@ -32,10 +32,13 @@
     <li><a href="#deadlines">Deadlines</a></li>
     <li><a href="#sleeping">Sleeping</a></li>
     <li><a href="#fds">Waiting for file descriptors</a></li>
-    <li><a href="#ip">Resolving IP addresses</a></li>
-    <li><a href="#tcp">TCP library</a></li>
-    <li><a href="#unix">UNIX library</a></li>
-    <li><a href="#udp">UDP library</a></li>
+    <li><a href="#network">Network</a></li>
+    <ul id="toc">
+      <li><a href="#ip">IP addresses</a></li>
+      <li><a href="#tcp">TCP</a></li>
+      <li><a href="#unix">UNIX</a></li>
+      <li><a href="#udp">UDP</a></li>
+    </ul>
     <li><a href="#clstorage">Coroutine-local storage</a></li>
     <li><a href="#memory">Dealing with memory</a></li>
     <li><a href="#multiprocessing">Multiprocessing</a></li>
@@ -217,8 +220,8 @@ function like this:</p>
 chan ch = chmake(int, 0);
 </pre>
 
-<p>This channel can be used to pass integer values. However, you can declare
-channel of any type you want.</p>
+<p>This channel can be used to pass integer values. However, one can declare
+channel of any type.</p>
 
 <p>The second parameter is the size of the channel's buffer. If it is set to
 zero, it means that the channel is unbuffered. Sender will block until there's a
@@ -249,11 +252,11 @@ int i = chr(ch, int);
 chdone(ch, int, -1);
 </pre>
 
-<p>The value passed to the function is used to signal to the receivers that
-sender is done. Once all the actual messages are read from the channel
-any subsequent calls to <tt><a href="#chr">chr()</a></tt> won't block and will
-return the specified message instead. The code on the receiver side typically
-looks like this:</p>
+<p>The value (third parameter) passed to the function is used to signal to the
+receivers that sender is done. Once all the actual messages are read from the
+channel any subsequent calls to <tt><a href="#chr">chr()</a></tt> won't block
+and will return the specified message instead. The code on the receiver side
+typically looks like this:</p>
 
 <pre>
 while(1) {
@@ -275,7 +278,7 @@ chclose(ch);
 remaining the channel, however, if the element itself has a pointer to a
 different object, that object won't get deallocated. In this respect
 <tt><a href="#chclose">chclose()</a></tt> is similar to the
-standard <tt>free()</tt> function.</p>
+standard C <tt>free()</tt> function.</p>
 
 <p>When sharing a channel between two or more coroutines you can duplicate
 the channel handle. Channel gets deallocated only after all its handles
@@ -433,11 +436,13 @@ close(fd);
 temporarily handed to you by a third party library you should use
 <tt>fdclean()</tt> before returning the ownership to the original owner.</p>
 
-<h4 id="ip">Resolving IP addresses</h4>
+<h4 id="network">Network</h4>
 
 <p>Network functionality, such as TCP or UDP, can be accessed via standard POSIX
 functions provided that you do it in a non-blocking way. To save you the trouble
 though, libmill provides a simple convenience wrapper on top of it.</p>
+
+<h5 id="ip">IP addresses</h5>
 
 <p>To use TCP or UDP you need IP addresses first. The wrapper type for IP
 addresses (both IPv4 and IPv6) is called <tt>ipaddr</tt>. It also
@@ -481,8 +486,6 @@ more common it may be switched to <tt>IPADDR_PREF_IPV6</tt>.</p>
 <tt>in6addr_any</tt> is returned. This value is useful when binding to all local
 network interfaces.</p>
 
-
-
 <p>The second function to produce IP addresses is
 <tt><a href="#ipremote">ipremote()</a></tt>. It resolves remote host name to
 an IP address. However, be aware that this functionality is only available
@@ -512,9 +515,9 @@ char buf[IPADDR_MAXSTRLEN];
 printf("Connecting to %s!\n", ipaddrstr(addr, buf));
 </pre>
 
-<h4 id="tcp">TCP library</h4>
+<h5 id="tcp">TCP</h5>
 
-<h5>Connecting to a remote endpoint</h5>
+<h6>Connecting to a remote endpoint</h6>
 
 <p>To connect to a remote server, use
 <tt><a href="#tcpconnect">tcpconnect()</a></tt> function:
@@ -530,7 +533,7 @@ tcpsock s = tcpconnect(addr, -1);
 of the standard POSIX error values. If the deadline is reached, <tt>errno</tt>
 is set to <tt>ETIMEDOUT</tt>.</p>
 
-<h5>Listening for incoming connections</h5>
+<h6>Listening for incoming connections</h6>
 
 <p>To start listening for incoming TCP connections use
 <tt><a href="#tcplisten">tcplisten()</a></tt> function. To accept a new
@@ -574,7 +577,7 @@ tcpsock s = tcpaccept(ls, now() + 1000);
 standard POSIX error values. If the deadline is reached, <tt>errno</tt>
 is set to <tt>ETIMEDOUT</tt>.</p>
 
-<h5>Sending data</h5>
+<h6>Sending data</h6>
 
 <p>To send data to the connection use <tt><a href="#tcpsend">tcpsend()</a></tt>
 function:</p>
@@ -606,7 +609,7 @@ tcpflush(s, -1);
 is broken it is set to <tt>ECONNRESET</tt>. If the deadline expires it is
 set to <tt>ETIMEDOUT</tt>.</p>
 
-<h5>Receiving data</h5>
+<h6>Receiving data</h6>
 
 <p>To read data from a connection use <tt><a href="#tcprecv">tcprecv()</a></tt>
 function:</p>
@@ -651,7 +654,7 @@ is received:</p>
 size_t nbytes = tcprecvuntil(conn, buf, 256, ",}" , 2, -1);
 </pre>
 
-<h5>Cleaning up</h5>
+<h6>Cleaning up</h6>
 
 <p>To close sockets (both listening and connected ones) use
 <tt><a href="#tcpclose">tcpclose()</a></tt> function:</p>
@@ -660,7 +663,7 @@ size_t nbytes = tcprecvuntil(conn, buf, 256, ",}" , 2, -1);
 tcpclose(s);
 </pre>
 
-<h4 id="unix">UNIX library</h4>
+<h5 id="unix">UNIX</h5>
 
 <p>Unix sockets are used for communicating between processes on the same
 machine.</p>
@@ -686,7 +689,7 @@ unixsock s1, s2;
 unixpair(&s1, &s2);
 </pre>
 
-<h4 id="udp">UDP library</h4>
+<h5 id="udp">UDP</h5>
 
 <p>To open an UDP socket use <tt><a href="#udplisten">udplisten()</a></tt>
 function. IP address of the local network interface should be supplied:</p>
