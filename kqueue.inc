@@ -111,6 +111,22 @@ static void mill_poller_clean(int fd) {
     struct mill_crpair *crp = &mill_crpairs[fd];
     mill_assert(!crp->in);
     mill_assert(!crp->out);
+    /* Remove the file descriptor from the pollset, if it is still there. */
+    int nevs = 0;
+    struct kevent evs[2];
+    if(crp->currevs & FDW_IN) {
+        EV_SET(&chngs[nevs], fd, EVFILT_READ, EV_DELETE, 0, 0, 0);
+        ++nevs;
+    }
+    if(crp->currevs & FDW_OUT) {
+        EV_SET(&chngs[nevs], fd, EVFILT_WRITE, EV_DELETE, 0, 0, 0);
+        ++nevs;
+    }
+    if(nevs) {
+        int rc = kevent(mill_kfd, evs, nevs, NULL, 0, NULL);
+        mill_assert(rc != -1);
+    }
+    /* Clean up the cache. */
     crp->currevs = 0;
     if(!crp->next) {
         crp->next = mill_changelist;
