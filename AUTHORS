@@ -1,3 +1,5 @@
+Full list of copyright holders:
+
 Alex Cornejo <acornejo@gmail.com>
 Bent Cardan <bent@nothingsatisfies.com> *
 Constantine Tarasenkov <constantine@protonmail.com> *
@@ -13,3 +15,7 @@ Paul Banks <banks@banksdesigns.co.uk>
 Yue Xu <red_angelx@qq.com>
 
 * Future patches by this author are submitted under MIT/X11 license
+
+Coprights for DNS resolution library in dns subdurectory are held by:
+
+William Ahern <william@25thandClement.com>
