@@ -8,6 +8,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra")
 
 # static and shared libs
 file(GLOB sources *.c dns/*.c)
+set_source_files_properties(dns/dns.c PROPERTIES COMPILE_FLAGS -std=c99)
 add_library(mill STATIC ${sources})
 add_library(mill_s SHARED ${sources})
 set_target_properties(mill_s PROPERTIES OUTPUT_NAME mill)
