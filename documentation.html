@@ -429,6 +429,10 @@ fdclean(fd);
 close(fd);
 </pre>
 
+<p>As for the file descriptors you don't own, as, for example, file descriptors
+temporarily handed to you by a third party library you should use
+<tt>fdclean()</tt> before returning the ownership to the original owner.</p>
+
 <h4 id="ip">Resolving IP addresses</h4>
 
 <p>Network functionality, such as TCP or UDP, can be accessed via standard POSIX
@@ -1158,6 +1162,10 @@ combination of compiler, optimisation level and code in question.</p>
 <p>This function drops any cached state associated with the file descriptor.
 It has to be called before the file descriptor is closed. If it is not,
 undefined behaviour may ensue.</p>
+
+<p>It should also be used when you are temporarily provided with a file
+descriptor by a third party library, just before returning the descriptor
+back to the original owner.</p>
 
 <p><tt>tcpsock</tt>, <tt>unixsock</tt> and <tt>udpsock</tt> take care of
 calling this function, so unless you are creating custom file descriptors
