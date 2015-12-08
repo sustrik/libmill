@@ -102,7 +102,7 @@ void udpsend(udpsock s, ipaddr addr, const void *buf, size_t len) {
     struct sockaddr *saddr = (struct sockaddr*) &addr;
     ssize_t ss = sendto(s->fd, buf, len, 0, saddr, saddr->sa_family ==
         AF_INET ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6));
-    if(mill_fast(ss == len)) {
+    if(mill_fast(ss == (ssize_t)len)) {
         errno = 0;
         return;
     }

@@ -4,10 +4,10 @@ project(libmill C)
 include(CheckSymbolExists)
 include(CheckFunctionExists)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wpedantic -Wextra")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra")
 
 # static and shared libs
-file(GLOB sources *.c)
+file(GLOB sources *.c dns/*.c)
 add_library(mill STATIC ${sources})
 add_library(mill_s SHARED ${sources})
 set_target_properties(mill_s PROPERTIES OUTPUT_NAME mill)
