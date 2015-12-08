@@ -25,16 +25,24 @@
 #include <arpa/inet.h>
 #include <assert.h>
 #include <netinet/in.h>
+#include <sys/socket.h>
 
 #include "../libmill.h"
 
 int main() {
     ipaddr addr = ipremote("www.example.org", 80, IPADDR_IPV4, now() + 1000);
-    if(errno != ETIMEDOUT) {
+    if(errno != ETIMEDOUT && errno != EADDRNOTAVAIL) {
        assert(errno == 0);
        struct sockaddr_in *ain = (struct sockaddr_in*)&addr;
        assert(ain->sin_family == AF_INET);
        assert(ain->sin_port == htons(80));
+    }
+    ipaddr addr6 = ipremote("www.example.org", 80, IPADDR_IPV6, now() + 1000);
+    if(errno != ETIMEDOUT && errno != EADDRNOTAVAIL) {
+       assert(errno == 0);
+       struct sockaddr_in6 *ain6 = (struct sockaddr_in6*)&addr6;
+       assert(ain6->sin6_family == AF_INET6);
+       assert(ain6->sin6_port == htons(80));
     }
     return 0;
 }

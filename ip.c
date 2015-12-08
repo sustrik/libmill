@@ -279,11 +279,17 @@ ipaddr ipremote(const char *name, int port, int mode, int64_t deadline) {
     mill_assert(ai);
     struct addrinfo *ipv4 = NULL;
     struct addrinfo *ipv6 = NULL;
-    struct addrinfo *it = NULL; 
+    struct addrinfo *it = NULL;
     while(1) {
         rc = dns_ai_nextent(&it, ai);
         if(rc == EAGAIN) {
-            int events = fdwait(dns_ai_pollfd(ai), FDW_IN, deadline);
+            int fd = dns_ai_pollfd(ai);
+            mill_assert(fd >= 0);
+            int events = fdwait(fd, FDW_IN, deadline);
+            /* There's no guarantee that the file descriptor will be reused
+               in next iteration. We have to clean the fdwait cache here
+               to be on the safe side. */
+            fdclean(fd);
             if(mill_slow(!events)) {
                 errno = ETIMEDOUT;
                 return addr;
@@ -300,7 +306,6 @@ ipaddr ipremote(const char *name, int port, int mode, int64_t deadline) {
         if(ipv4 && ipv6)
             break;
     }
-    /* TODO: fdclean(fd) ? */
     switch(mode) {
     case IPADDR_IPV4:
         ipv6 = NULL;
@@ -324,14 +329,21 @@ ipaddr ipremote(const char *name, int port, int mode, int64_t deadline) {
         struct sockaddr_in *inaddr = (struct sockaddr_in*)&addr;
         memcpy(inaddr, ipv4->ai_addr, sizeof (struct sockaddr_in));
         inaddr->sin_port = htons(port);
+        dns_ai_close(ai);
+        errno = 0;
+        return addr;
     }
     if(ipv6) {
         struct sockaddr_in6 *inaddr = (struct sockaddr_in6*)&addr;
         memcpy(inaddr, ipv6->ai_addr, sizeof (struct sockaddr_in6));
         inaddr->sin6_port = htons(port);
+        dns_ai_close(ai);
+        errno = 0;
+        return addr;
     }
     dns_ai_close(ai);
-    errno = 0;
+    ((struct sockaddr*)&addr)->sa_family = AF_UNSPEC;
+    errno = EADDRNOTAVAIL;
     return addr;
 }
 

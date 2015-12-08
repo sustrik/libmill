@@ -108,6 +108,15 @@ static void mill_poller_clean(int fd) {
     struct mill_crpair *crp = &mill_crpairs[fd];
     mill_assert(!crp->in);
     mill_assert(!crp->out);
+    /* Remove the file descriptor from the pollset, if it is still present. */
+    if(crp->currevs) {   
+        struct epoll_event ev;
+        ev.data.fd = fd;
+        ev.events = 0;
+        int rc = epoll_ctl(mill_efd, EPOLL_CTL_DEL, fd, &ev);
+        mill_assert(rc == 0 || errno == ENOENT);
+    }
+    /* Clean the cache. */
     crp->currevs = 0;
     if(!crp->next) {
         crp->next = mill_changelist;
