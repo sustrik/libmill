@@ -158,9 +158,9 @@ void mill_wait(int block) {
 #elif defined MILL_POLL
 #include "poll.inc"
 /* Defaults. */
-#elif defined __linux__
+#elif defined __linux__ && !defined MILL_NO_EPOLL
 #include "epoll.inc"
-#elif defined BSD
+#elif defined BSD && !defined MILL_NO_KQUEUE
 #include "kqueue.inc"
 #else
 #include "poll.inc"
