@@ -109,7 +109,7 @@ int main(int argc, char *argv[]) {
 
     int i;
     for (i = 0; i < nproc - 1; ++i) {
-        pid_t pid = fork();
+        pid_t pid = mfork();
         if(pid < 0) {
            perror("Can't create new process");
            return 1;
