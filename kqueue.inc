@@ -84,6 +84,10 @@ pid_t mill_fork(void) {
        identical to the one in the parent process, yet not sharing its
        destiny. */
     if(mill_kfd != -1) {
+        /* TODO: kqueue documentation says that a kqueue descriptor won't
+           survive a fork. If that was so, one would expect following close()
+           to fail with EBADF error. Yet, at least on FreeBSD, the call
+           succeeds. */
         int rc = close(mill_kfd);
         mill_assert(rc == 0);
         mill_kfd = kqueue();
