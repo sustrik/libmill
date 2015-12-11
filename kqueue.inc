@@ -52,19 +52,20 @@ struct mill_crpair {
 };
 
 static struct mill_crpair *mill_crpairs = NULL;
+static int mill_ncrpairs = 0;
 static uint32_t mill_changelist = MILL_ENDLIST;
 
 void mill_poller_init(void) {
     struct rlimit rlim;
     int rc = getrlimit(RLIMIT_NOFILE, &rlim);
     if(mill_slow(rc < 0)) return;
-    int maxfds = rlim.rlim_max;
+    mill_ncrpairs = rlim.rlim_max;
     /* The above behaves weirdly on newer versions of OSX, ruturning limit
        of -1. Fix it by using OPEN_MAX instead. */
-    if(maxfds < 0)
-        maxfds = OPEN_MAX;
+    if(mill_ncrpairs < 0)
+        mill_ncrpairs = OPEN_MAX;
     mill_crpairs = (struct mill_crpair*)
-        calloc(maxfds, sizeof(struct mill_crpair));
+        calloc(mill_ncrpairs, sizeof(struct mill_crpair));
     if(mill_slow(!mill_crpairs)) {errno = ENOMEM; return;}
     mill_kfd = kqueue();
     if(mill_slow(mill_kfd < 0)) {
@@ -73,6 +74,42 @@ void mill_poller_init(void) {
         return;
     }
     errno = 0;
+}
+
+pid_t mill_fork(void) {
+    pid_t pid = fork();
+    if(pid != 0)
+        return pid;
+    /* In the child process we have to create a new kernel-side pollset,
+       identical to the one in the parent process, yet not sharing its
+       destiny. */
+    if(mill_kfd != -1) {
+        int rc = close(mill_kfd);
+        mill_assert(rc == 0);
+        mill_kfd = kqueue();
+        mill_assert(mill_kfd >= 0);
+        struct kevent chngs[MILL_CHNGSSIZE];
+        int nchngs = 0;
+        int fd;
+        for(fd = 0; fd != mill_ncrpairs; ++fd) {
+            struct mill_crpair *crp = &mill_crpairs[fd];
+            if(nchngs >= MILL_CHNGSSIZE - 1) {
+                rc = kevent(mill_kfd, chngs, nchngs, NULL, 0, NULL);
+                mill_assert(rc != -1);
+                nchngs = 0;
+            }
+            if(crp->currevs & FDW_IN) {
+                EV_SET(&chngs[nchngs], fd, EVFILT_READ, EV_ADD, 0, 0, 0);
+                ++nchngs;
+            }
+            if(crp->currevs & FDW_OUT) {
+                EV_SET(&chngs[nchngs], fd, EVFILT_WRITE, EV_ADD, 0, 0, 0);
+                ++nchngs;
+            }
+        }
+    }
+    errno = 0;
+    return 0;
 }
 
 static void mill_poller_add(int fd, int events) {

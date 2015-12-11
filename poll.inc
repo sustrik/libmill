@@ -59,6 +59,9 @@ void mill_poller_init(void) {
     errno = 0;
 }
 
+pid_t mill_fork(void) {
+}
+
 static void mill_poller_add(int fd, int events) {
     int i = mill_find_pollset(fd);
     /* Grow the pollset as needed. */

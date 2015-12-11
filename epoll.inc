@@ -53,15 +53,16 @@ struct mill_crpair {
 };
 
 static struct mill_crpair *mill_crpairs = NULL;
+static int mill_ncrpairs = 0;
 static uint32_t mill_changelist = MILL_ENDLIST;
 
 void mill_poller_init(void) {
     struct rlimit rlim;
     int rc = getrlimit(RLIMIT_NOFILE, &rlim);
     if(mill_slow(rc < 0)) return;
-    int maxfds = rlim.rlim_max;
+    mill_ncrpairs = rlim.rlim_max;
     mill_crpairs = (struct mill_crpair*)
-        calloc(maxfds, sizeof(struct mill_crpair));
+        calloc(mill_ncrpairs, sizeof(struct mill_crpair));
     if(mill_slow(!mill_crpairs)) {errno = ENOMEM; return;}
     mill_efd = epoll_create(1);
     if(mill_slow(mill_efd < 0)) {
@@ -70,6 +71,37 @@ void mill_poller_init(void) {
         return;
     }
     errno = 0;
+}
+
+pid_t mill_fork(void) {
+    pid_t pid = fork();
+    if(pid != 0)
+        return pid;
+    /* In the child process we have to create a new kernel-side pollset,
+       identical to the one in the parent process, yet not sharing its
+       destiny. */
+    if(mill_efd != -1) {
+        int rc = close(mill_efd);
+        mill_assert(rc == 0);
+        mill_efd = epoll_create(1);
+        mill_assert(mill_efd >= 0);
+        int fd;
+        for(fd = 0; fd != mill_ncrpairs; ++fd) {
+            if(mill_crpairs[fd].currevs) {
+                struct epoll_event ev;
+                ev.data.fd = fd;
+                ev.events = 0;
+                if(mill_crpairs[fd].currevs & FDW_IN)
+                    ev.events |= EPOLLIN;
+                if(mill_crpairs[fd].currevs & FDW_OUT)
+                    ev.events |= EPOLLOUT;
+                rc = epoll_ctl(mill_efd, EPOLL_CTL_ADD, fd, &ev);
+                mill_assert(rc == 0);
+            }
+        }
+    }
+    errno = 0;
+    return 0;
 }
 
 static void mill_poller_add(int fd, int events) {
