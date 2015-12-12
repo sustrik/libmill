@@ -69,6 +69,7 @@
     <li><a href="#ipaddrstr">ipaddrstr</a></li>
     <li><a href="#iplocal">iplocal</a></li>
     <li><a href="#ipremote">ipremote</a></li>
+    <li><a href="#mfork">mfork</a></li>
     <li><a href="#msleep">msleep</a></li>
     <li><a href="#now">now</a></li>
     <li><a href="#setcls">setcls</a></li>
@@ -121,8 +122,8 @@ any successes or failures to the project mailing list.</p>
 as follows:</p>
 
 <pre>
-$ tar -xzf libmill-1.2.tar.gz
-$ cd libmill-1.2
+$ tar -xzf libmill-1.3.tar.gz
+$ cd libmill-1.3
 $ ./configure
 $ make
 $ make check
@@ -488,9 +489,7 @@ network interfaces.</p>
 
 <p>The second function to produce IP addresses is
 <tt><a href="#ipremote">ipremote()</a></tt>. It resolves remote host name to
-an IP address. However, be aware that this functionality is only available
-on Linux at the moment. On other systems you have to resort to numeric
-IP addresses.</p>
+an IP address.</p>
 
 <p>Given that remote host name resolution may involve a DNS query which in
 turn can take non-trivial amount of time,
@@ -1326,9 +1325,6 @@ ipaddr a1 = ipremote("192.168.0.111", 5555, 0, -1);
 ipaddr a2 = ipremote("www.expamle.org", 80, 0, -1); 
 </pre>
 
-<p>NOTE: Remote host name resolving may not be implemented for all operating
-systems. As a matter of fact, it only works on Linux at the moment.</p>
-
 <p>First argument is the string to convert. Second argument is the port number.
 Third argument specifies which kind of addresses should be returned. Possible
 values are:</p>
@@ -1359,6 +1355,20 @@ error.</p>
 OS-specific means there's no definitive list of possible error codes the
 function can return. You have to make the error handling as generic as
 possible.</p>
+
+<h6 id="mfork">pid_t mfork(void);</h6>
+
+<p>This function is a wrapper on top od the standard POSIX <tt>fork()</tt>
+function. In addition to forking the process it properly detaches libmill's
+internal resources (such as any kernel-side kqueue/epoll pollsets) in child
+process from those in the parent process.</p>
+
+<p>Using <tt>fork()</tt> instead of <tt>mfork()</tt> results in undefined
+behaviour.</p>
+
+<p>The function returns the process ID of the newly created process to the
+parent process, zero to the child process or -1 in case of error. In the latter
+case it also sets <tt>errno</tt> to the appropriate error code.</p>
 
 <h6 id="msleep">void msleep(int64_t deadline);</h6>
 

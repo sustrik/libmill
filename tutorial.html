@@ -586,6 +586,12 @@ the socket. Each process can then <tt>tcpaccept()</tt> connections from
 the listening socket making OS work as a simple load balancer, dispatching
 connections evenly among processes.</p>
 
+<p>We are going to use libmill's <tt>mfork()</tt> function instead of standard
+POSIX <tt>fork()</tt>. From user's point of view there's no semantic difference
+between the two functions, however, <tt>mfork()</tt> makes sure that all
+libmill's internal resources in the child process are properly detached
+from those in the parent process.</p>
+
 <pre>
 int main(int argc, char *argv[]) {
 
@@ -593,7 +599,7 @@ int main(int argc, char *argv[]) {
 
     int i;
     for (i = 0; i < nproc - 1; ++i) {
-        pid_t pid = fork();
+        pid_t pid = mfork();
         if(pid < 0) {
            perror("Can't create new process");
            return 1;
