@@ -105,7 +105,7 @@ void mill_chclose(chan ch, const char *current) {
 static void mill_choose_unblock(struct mill_clause *cl) {
     struct mill_slist_item *it;
     struct mill_clause *itcl;
-    for(it = mill_slist_begin(&cl->cr->u_choose.clauses);
+    for(it = mill_slist_begin(&cl->cr->choosedata.clauses);
           it; it = mill_slist_next(it)) {
         itcl = mill_cont(it, struct mill_clause, chitem);
         if(!itcl->used)
@@ -117,9 +117,9 @@ static void mill_choose_unblock(struct mill_clause *cl) {
 
 static void mill_choose_init_(const char *current) {
     mill_set_current(&mill_running->debug, current);
-    mill_slist_init(&mill_running->u_choose.clauses);
-    mill_running->u_choose.othws = 0;
-    mill_running->u_choose.available = 0;
+    mill_slist_init(&mill_running->choosedata.clauses);
+    mill_running->choosedata.othws = 0;
+    mill_running->choosedata.available = 0;
     ++mill_choose_seqnum;
 }
 
@@ -138,9 +138,9 @@ void mill_choose_in(void *clause, chan ch, size_t sz, int idx) {
     int available = ch->done || !mill_list_empty(&ch->sender.clauses) ||
         ch->items ? 1 : 0;
     if(available)
-        ++mill_running->u_choose.available;
+        ++mill_running->choosedata.available;
     /* If there are available clauses don't bother with non-available ones. */
-    if(!available && mill_running->u_choose.available)
+    if(!available && mill_running->choosedata.available)
         return;
     /* Fill in the clause entry. */
     struct mill_clause *cl = (struct mill_clause*) clause;
@@ -150,7 +150,7 @@ void mill_choose_in(void *clause, chan ch, size_t sz, int idx) {
     cl->idx = idx;
     cl->available = available;
     cl->used = 1;
-    mill_slist_push_back(&mill_running->u_choose.clauses, &cl->chitem);
+    mill_slist_push_back(&mill_running->choosedata.clauses, &cl->chitem);
     if(cl->ep->seqnum == mill_choose_seqnum) {
         ++cl->ep->refs;
         return;
@@ -171,9 +171,9 @@ void mill_choose_out(void *clause, chan ch, void *val, size_t sz, int idx) {
     int available = !mill_list_empty(&ch->receiver.clauses) ||
         ch->items < ch->bufsz ? 1 : 0;
     if(available)
-        ++mill_running->u_choose.available;
+        ++mill_running->choosedata.available;
     /* If there are available clauses don't bother with non-available ones. */
-    if(!available && mill_running->u_choose.available)
+    if(!available && mill_running->choosedata.available)
         return;
     /* Fill in the clause entry. */
     struct mill_clause *cl = (struct mill_clause*) clause;
@@ -183,7 +183,7 @@ void mill_choose_out(void *clause, chan ch, void *val, size_t sz, int idx) {
     cl->available = available;
     cl->idx = idx;
     cl->used = 1;
-    mill_slist_push_back(&mill_running->u_choose.clauses, &cl->chitem);
+    mill_slist_push_back(&mill_running->choosedata.clauses, &cl->chitem);
     if(cl->ep->seqnum == mill_choose_seqnum) {
         ++cl->ep->refs;
         return;
@@ -194,9 +194,9 @@ void mill_choose_out(void *clause, chan ch, void *val, size_t sz, int idx) {
 }
 
 void mill_choose_otherwise(void) {
-    if(mill_slow(mill_running->u_choose.othws != 0))
+    if(mill_slow(mill_running->choosedata.othws != 0))
         mill_panic("multiple 'otherwise' clauses in a choose statement");
-    mill_running->u_choose.othws = 1;
+    mill_running->choosedata.othws = 1;
 }
 
 /* Push new item to the channel. */
@@ -251,15 +251,15 @@ static void mill_dequeue(chan ch, void *val) {
 }
 
 int mill_choose_wait(void) {
-    struct mill_choose *uc = &mill_running->u_choose;
+    struct mill_choosedata *cd = &mill_running->choosedata;
     struct mill_slist_item *it;
     struct mill_clause *cl;
 
     /* If there are clauses that are immediately available
        randomly choose one of them. */
-    if(uc->available > 0) {
-        int chosen = uc->available == 1 ? 0 : (int)(random() % (uc->available));
-        for(it = mill_slist_begin(&uc->clauses); it; it = mill_slist_next(it)) {
+    if(cd->available > 0) {
+        int chosen = cd->available == 1 ? 0 : (int)(random() % (cd->available));
+        for(it = mill_slist_begin(&cd->clauses); it; it = mill_slist_next(it)) {
             cl = mill_cont(it, struct mill_clause, chitem);
             if(!cl->available)
                 continue;
@@ -277,14 +277,14 @@ int mill_choose_wait(void) {
     }
 
     /* If not so but there's an 'otherwise' clause we can go straight to it. */
-    if(uc->othws) {
+    if(cd->othws) {
         mill_resume(mill_running, -1);
         return mill_suspend();
     }
 
     /* In all other cases register this coroutine with the queried channels
        and wait till one of the clauses unblocks. */
-    for(it = mill_slist_begin(&uc->clauses); it; it = mill_slist_next(it)) {
+    for(it = mill_slist_begin(&cd->clauses); it; it = mill_slist_next(it)) {
         cl = mill_cont(it, struct mill_clause, chitem);
         if(mill_slow(cl->ep->refs > 1)) {
             if(cl->ep->tmp == -1)

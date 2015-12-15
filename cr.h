@@ -41,7 +41,7 @@ enum mill_state {
     MILL_CHOOSE
 };
 
-struct mill_choose {
+struct mill_choosedata {
     /* List of clauses in the 'choose' statement. */
     struct mill_slist clauses;
     /* 1 if there is 'otherwise' clause. 0 if there is not. */
@@ -77,7 +77,7 @@ struct mill_cr {
 
     /* This structure is used when the coroutine is executing a choose
        statement. */
-    struct mill_choose u_choose;
+    struct mill_choosedata choosedata;
 
     /* Stored coroutine context while it is not executing. */
     struct mill_ctx ctx;
