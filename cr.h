@@ -70,8 +70,9 @@ struct mill_choose {
    +----------------------------------------------------+--------+---------+
 
    - mill_cr contains generic book-keeping info about the coroutine
-   - valbuf is a buffer for temporary storing values received from channels
-   - stack is a standard C stack; it grows downwards
+   - valbuf is a buffer for temporarily storing values received from channels
+   - stack is a standard C stack; it grows downwards (at the moment libmill
+     doesn't support microarchitectures where stack grows upwards)
 
 */
 struct mill_cr {
