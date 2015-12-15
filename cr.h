@@ -41,19 +41,6 @@ enum mill_state {
     MILL_CHOOSE
 };
 
-struct mill_ready {
-    struct mill_slist_item item;
-};
-
-/* This structure covers fdwait and msleep operations. */
-struct mill_fdwait {
-    /* Item in the global list of timers. */
-    struct mill_list_item item;
-    /* The timepoint when the timer expires. */
-    int64_t expiry;
-};
-
-/* This structure covers chr, chs and choose operations. */
 struct mill_choose {
     /* List of clauses in the 'choose' statement. */
     struct mill_slist clauses;
@@ -79,8 +66,17 @@ struct mill_cr {
     /* Status of the coroutine. Used for debugging purposes. */
     enum mill_state state;
 
-    struct mill_ready u_ready;
-    struct mill_fdwait u_fdwait;
+    /* The coroutine is stored in this list if it is not blocked and it is
+       waiting to be executed. */
+    struct mill_slist_item ready;
+
+    /* If the coroutine is waiting for a deadline, it's stored in this list.
+       'expiry' is the time when the deadline expires. */
+    struct mill_list_item timer;
+    int64_t expiry;
+
+    /* This structure is used when the coroutine is executing a choose
+       statement. */
     struct mill_choose u_choose;
 
     /* Stored coroutine context while it is not executing. */

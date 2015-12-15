@@ -39,8 +39,8 @@ static struct pollfd *mill_pollset_fds = NULL;
 /* The item at a specific index in this array corresponds to the entry
    in mill_pollset fds with the same index. */
 struct mill_pollset_item {
-    struct mill_fdwait *in;
-    struct mill_fdwait *out;
+    struct mill_cr *in;
+    struct mill_cr *out;
 };
 static struct mill_pollset_item *mill_pollset_items = NULL;
 
@@ -87,25 +87,25 @@ static void mill_poller_add(int fd, int events) {
             mill_panic(
                 "multiple coroutines waiting for a single file descriptor");
         mill_pollset_fds[i].events |= POLLIN;
-        mill_pollset_items[i].in = &mill_running->u_fdwait;
+        mill_pollset_items[i].in = mill_running;
     }
     if(events & FDW_OUT) {
         if(mill_slow(mill_pollset_items[i].out))
             mill_panic(
                 "multiple coroutines waiting for a single file descriptor");
         mill_pollset_fds[i].events |= POLLOUT;
-        mill_pollset_items[i].out = &mill_running->u_fdwait;
+        mill_pollset_items[i].out = mill_running;
     }
 }
 
 static void mill_poller_rm(int fd, int events) {
     int i = mill_find_pollset(fd);
     mill_assert(i < mill_pollset_size);
-    if(mill_pollset_items[i].in == &mill_running->u_fdwait) {
+    if(mill_pollset_items[i].in == mill_running) {
         mill_pollset_items[i].in = NULL;
         mill_pollset_fds[i].events &= ~POLLIN;
     }
-    if(mill_pollset_items[i].out == &mill_running->u_fdwait) {
+    if(mill_pollset_items[i].out == mill_running) {
         mill_pollset_items[i].out = NULL;
         mill_pollset_fds[i].events &= ~POLLOUT;
     }
@@ -149,8 +149,7 @@ static int mill_poller_wait(int timeout) {
         /* Resume the blocked coroutines. */
         if(mill_pollset_items[i].in &&
               mill_pollset_items[i].in == mill_pollset_items[i].out) {
-            struct mill_cr *cr = mill_cont(mill_pollset_items[i].in,
-                struct mill_cr, u_fdwait);
+            struct mill_cr *cr = mill_pollset_items[i].in;
             mill_resume(cr, inevents | outevents);
             mill_pollset_fds[i].events = 0;
             mill_pollset_items[i].in = NULL;
@@ -158,15 +157,13 @@ static int mill_poller_wait(int timeout) {
         }
         else {
             if(mill_pollset_items[i].in && inevents) {
-                struct mill_cr *cr = mill_cont(mill_pollset_items[i].in,
-                    struct mill_cr, u_fdwait);
+                struct mill_cr *cr = mill_pollset_items[i].in;
                 mill_resume(cr, inevents);
                 mill_pollset_fds[i].events &= ~POLLIN;
                 mill_pollset_items[i].in = NULL;
             }
             else if(mill_pollset_items[i].out && outevents) {
-                struct mill_cr *cr = mill_cont(mill_pollset_items[i].out,
-                    struct mill_cr, u_fdwait);
+                struct mill_cr *cr = mill_pollset_items[i].out;
                 mill_resume(cr, outevents);
                 mill_pollset_fds[i].events &= ~POLLOUT;
                 mill_pollset_items[i].out = NULL;

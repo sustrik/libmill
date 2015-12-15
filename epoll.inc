@@ -44,8 +44,8 @@ static int mill_efd = -1;
    to send data to the descriptor. Thus, we are going to keep an array of
    pointer pairs for each file descriptor. */
 struct mill_crpair {
-    struct mill_fdwait *in;
-    struct mill_fdwait *out;
+    struct mill_cr *in;
+    struct mill_cr *out;
     uint32_t currevs;
     /* 1-based index, 0 stands for "not part of the list", MILL_ENDLIST
        stads for "no more elements in the list. */
@@ -110,13 +110,13 @@ static void mill_poller_add(int fd, int events) {
         if(crp->in)
             mill_panic(
                 "multiple coroutines waiting for a single file descriptor");
-        crp->in = &mill_running->u_fdwait;
+        crp->in = mill_running;
     }
     if(events & FDW_OUT) {
         if(crp->out)
             mill_panic(
                 "multiple coroutines waiting for a single file descriptor");
-        crp->out = &mill_running->u_fdwait;
+        crp->out = mill_running;
     }
     if(!crp->next) {
         crp->next = mill_changelist;
@@ -211,21 +211,16 @@ static int mill_poller_wait(int timeout) {
         }
         /* Resume the blocked coroutines. */  
         if(crp->in == crp->out) {
-            struct mill_cr *cr = mill_cont(crp->in, struct mill_cr, u_fdwait);
-            mill_resume(cr, inevents | outevents);
+            mill_resume(crp->in, inevents | outevents);
             mill_poller_rm(evs[i].data.fd, FDW_IN | FDW_OUT);
         }
         else {
             if(crp->in && inevents) {
-                struct mill_cr *cr = mill_cont(crp->in, struct mill_cr,
-                    u_fdwait);
-                mill_resume(cr, inevents);
+                mill_resume(crp->in, inevents);
                 mill_poller_rm(evs[i].data.fd, FDW_IN);
             }
             if(crp->out && outevents) {
-                struct mill_cr *cr = mill_cont(crp->out, struct mill_cr,
-                    u_fdwait);
-                mill_resume(cr, outevents);
+                mill_resume(crp->out, outevents);
                 mill_poller_rm(evs[i].data.fd, FDW_OUT);
             }
         }

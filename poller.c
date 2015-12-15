@@ -63,19 +63,19 @@ int mill_fdwait(int fd, int events, int64_t deadline, const char *current) {
     }
     /* If required, start waiting for the timeout. */
     if(deadline >= 0) {
-        mill_running->u_fdwait.expiry = deadline;
+        mill_running->expiry = deadline;
         /* Move the timer into the right place in the ordered list
            of existing timers. TODO: This is an O(n) operation! */
         struct mill_list_item *it = mill_list_begin(&mill_timers);
         while(it) {
-            struct mill_fdwait *timer = mill_cont(it, struct mill_fdwait, item);
+            struct mill_cr *cr = mill_cont(it, struct mill_cr, timer);
             /* If multiple timers expire at the same momemt they will be fired
                in the order they were created in (> rather than >=). */
-            if(timer->expiry > mill_running->u_fdwait.expiry)
+            if(cr->expiry > mill_running->expiry)
                 break;
             it = mill_list_next(it);
         }
-        mill_list_insert(&mill_timers, &mill_running->u_fdwait.item, it);
+        mill_list_insert(&mill_timers, &mill_running->timer, it);
     }
     /* If required, start waiting for the file descriptor. */
     if(fd >= 0)
@@ -87,7 +87,7 @@ int mill_fdwait(int fd, int events, int64_t deadline, const char *current) {
     /* Handle file descriptor events. */
     if(rc >= 0) {
         if(deadline >= 0)
-            mill_list_erase(&mill_timers, &mill_running->u_fdwait.item);
+            mill_list_erase(&mill_timers, &mill_running->timer);
         return rc;
     }
     /* Handle the timeout. Clean-up the pollset. */
@@ -122,7 +122,7 @@ void mill_wait(int block) {
             if(!mill_list_empty(&mill_timers)) {
                 int64_t nw = now();
                 int64_t expiry = mill_cont(mill_list_begin(&mill_timers),
-                    struct mill_fdwait, item)->expiry;
+                    struct mill_cr, timer)->expiry;
                 timeout = nw >= expiry ? 0 : expiry - nw;
             }
             else {
@@ -135,12 +135,12 @@ void mill_wait(int block) {
         if(!mill_list_empty(&mill_timers)) {
             int64_t nw = now();
             while(!mill_list_empty(&mill_timers)) {
-                struct mill_fdwait *timer = mill_cont(
-                    mill_list_begin(&mill_timers), struct mill_fdwait, item);
-                if(timer->expiry > nw)
+                struct mill_cr *cr = mill_cont(
+                    mill_list_begin(&mill_timers), struct mill_cr, timer);
+                if(cr->expiry > nw)
                     break;
                 mill_list_erase(&mill_timers, mill_list_begin(&mill_timers));
-                mill_resume(mill_cont(timer, struct mill_cr, u_fdwait), -1);
+                mill_resume(cr, -1);
                 fired = 1;
             }
         }

@@ -42,8 +42,8 @@
 static int mill_kfd = -1;
 
 struct mill_crpair {
-    struct mill_fdwait *in;
-    struct mill_fdwait *out;
+    struct mill_cr *in;
+    struct mill_cr *out;
     uint16_t currevs;
     uint16_t firing;
     /* 1-based index, 0 stands for "not part of the list", MILL_ENDLIST
@@ -122,13 +122,13 @@ static void mill_poller_add(int fd, int events) {
         if(crp->in)
             mill_panic(
                 "multiple coroutines waiting for a single file descriptor");
-        crp->in = &mill_running->u_fdwait;
+        crp->in = mill_running;
     }
     if(events & FDW_OUT) {
         if(crp->out)
             mill_panic(
                 "multiple coroutines waiting for a single file descriptor");
-        crp->out = &mill_running->u_fdwait;
+        crp->out = mill_running;
     }
     if(!crp->next) {
         crp->next = mill_changelist;
@@ -266,22 +266,17 @@ static int mill_poller_wait(int timeout) {
         struct mill_crpair *crp = &mill_crpairs[fd];
         if(crp->in == crp->out) {
             mill_assert(crp->in);
-            struct mill_cr *cr = mill_cont(crp->in, struct mill_cr, u_fdwait);
-            mill_resume(cr, crp->firing);
+            mill_resume(crp->in, crp->firing);
             crp->in = NULL;
             crp->out = NULL;
         }
         else {
             if(crp->in) {
-                struct mill_cr *cr = mill_cont(crp->in, struct mill_cr,
-                    u_fdwait);
-                mill_resume(cr, crp->firing & (FDW_IN | FDW_ERR));
+                mill_resume(crp->in, crp->firing & (FDW_IN | FDW_ERR));
                 crp->in = NULL;
             }
             if(crp->out) {
-                struct mill_cr *cr = mill_cont(crp->out, struct mill_cr,
-                    u_fdwait);
-                mill_resume(cr, crp->firing & (FDW_OUT | FDW_ERR));
+                mill_resume(crp->out, crp->firing & (FDW_OUT | FDW_ERR));
                 crp->out = NULL;
             }
         }

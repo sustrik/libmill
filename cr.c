@@ -106,7 +106,7 @@ int mill_suspend(void) {
         if(!mill_slist_empty(&mill_ready)) {
             ++counter;
             struct mill_slist_item *it = mill_slist_pop(&mill_ready);
-            mill_running = mill_cont(it, struct mill_cr, u_ready.item);
+            mill_running = mill_cont(it, struct mill_cr, ready);
             mill_jmp(&mill_running->ctx);
         }
         /*  Otherwise, we are going to wait for sleeping coroutines
@@ -120,7 +120,7 @@ int mill_suspend(void) {
 void mill_resume(struct mill_cr *cr, int result) {
     cr->result = result;
     cr->state = MILL_READY;
-    mill_slist_push_back(&mill_ready, &cr->u_ready.item);
+    mill_slist_push_back(&mill_ready, &cr->ready);
 }
 
 /* The intial part of go(). Starts the new coroutine.
