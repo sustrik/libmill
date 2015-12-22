@@ -235,6 +235,20 @@ MILL_EXPORT void mill_chclose(chan ch, const char *current);
 
 #define out(chan, type, val) mill_out((chan), type, (val), __COUNTER__)
 
+#define mill_deadline(ddline, idx) \
+                    break;\
+                }\
+                goto mill_concat(mill_label, idx);\
+            }\
+            mill_choose_deadline(ddline);\
+            if(0) {\
+                mill_concat(mill_label, idx):\
+                if(mill_idx == -1) {\
+                    goto mill_concat(mill_dummylabel, idx);\
+                    mill_concat(mill_dummylabel, idx)
+
+#define deadline(ddline) mill_deadline(ddline, __COUNTER__)
+
 #define mill_otherwise(idx) \
                     break;\
                 }\
@@ -260,6 +274,7 @@ MILL_EXPORT void mill_choose_init(const char *current);
 MILL_EXPORT void mill_choose_in(void *clause, chan ch, size_t sz, int idx);
 MILL_EXPORT void mill_choose_out(void *clause, chan ch, void *val, size_t sz,
     int idx);
+MILL_EXPORT void mill_choose_deadline(int64_t ddline);
 MILL_EXPORT void mill_choose_otherwise(void);
 MILL_EXPORT int mill_choose_wait(void);
 MILL_EXPORT void *mill_choose_val(size_t sz);

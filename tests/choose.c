@@ -373,6 +373,22 @@ int main() {
     assert(first > 1 && second > 1 && third > 1);
     chclose(ch20);
 
+    /* Test 'deadline' clause. */
+    test = 0;
+    chan ch21 = chmake(int, 0);
+    int64_t start = now();
+    choose {
+    in(ch21, int, val):
+        assert(0);
+    deadline(start + 50):
+        test = 1;
+    end
+    }
+    assert(test == 1);
+    int64_t diff = now() - start;
+    assert(diff > 30 && diff < 70);
+    chclose(ch21);
+
     return 0;
 }
 

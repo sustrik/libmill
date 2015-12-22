@@ -193,6 +193,10 @@ void mill_choose_out(void *clause, chan ch, void *val, size_t sz, int idx) {
     cl->ep->tmp = -1;
 }
 
+void mill_choose_deadline(int64_t ddline) {
+    mill_assert(0);
+}
+
 void mill_choose_otherwise(void) {
     if(mill_slow(mill_running->choosedata.othws != 0))
         mill_panic("multiple 'otherwise' clauses in a choose statement");
