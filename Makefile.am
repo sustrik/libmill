@@ -54,7 +54,6 @@ libmill_la_SOURCES = \
     udp.c \
     unix.c \
     utils.h \
-    utils.c \
     poll.inc \
     epoll.inc \
     kqueue.inc \

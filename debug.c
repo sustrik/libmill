@@ -25,6 +25,7 @@
 #include <assert.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/time.h>
 #include <time.h>
 
@@ -47,6 +48,11 @@ static int mill_next_chan_id = 1;
 
 /* List of all channels. */
 static struct mill_list mill_all_chans = {0};
+
+void mill_panic(const char *text) {
+    fprintf(stderr, "panic: %s\n", text);
+    abort();
+}
 
 void mill_register_cr(struct mill_debug_cr *cr, const char *created) {
     mill_list_insert(&mill_all_crs, &cr->item, NULL);
