@@ -39,9 +39,6 @@ struct mill_ctx {
 #define mill_setjmp(ctx) sigsetjmp((ctx)->jbuf, 0)
 #define mill_jmp(ctx) siglongjmp((ctx)->jbuf, 1)
 
-/* Cause panic. */
-void mill_panic(const char *text);
-
 /*  Takes a pointer to a member variable and computes pointer to the structure
     that contains it. 'type' is type of the structure, not the member. */
 #define mill_cont(ptr, type, member) \

@@ -33,6 +33,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include "debug.h"
 #include "ip.h"
 #include "libmill.h"
 #include "utils.h"

@@ -32,6 +32,7 @@
 #include <sys/un.h>
 #include <unistd.h>
 
+#include "debug.h"
 #include "libmill.h"
 #include "utils.h"
 

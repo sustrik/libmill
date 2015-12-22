@@ -29,6 +29,7 @@
 #include <unistd.h>
 #include <sys/mman.h>
 
+#include "debug.h"
 #include "slist.h"
 #include "stack.h"
 #include "utils.h"

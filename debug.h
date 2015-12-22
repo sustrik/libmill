@@ -48,6 +48,9 @@ struct mill_debug_chan {
     const char *created;
 };
 
+/* Cause panic. */
+void mill_panic(const char *text);
+
 /* No-op, but ensures that debugging functions get compiled into the binary. */
 void mill_preserve_debug(void);
 
