@@ -29,6 +29,7 @@
 #include "libmill.h"
 #include "list.h"
 #include "poller.h"
+#include "timer.h"
 
 /* Forward declarations for the functions implemented by specific poller
    mechanisms (poll, epoll, kqueue). */
@@ -41,10 +42,6 @@ static pid_t mill_fork(void);
 
 /* If 1, mill_poller_init was already called. */
 static int mill_poller_initialised = 0;
-
-/* Global linked list of all timers. The list is ordered.
-   First timer to be resume comes first and so on. */
-static struct mill_list mill_timers = {0};
 
 pid_t mfork(void) {
     return mill_fork();
@@ -62,21 +59,8 @@ int mill_fdwait(int fd, int events, int64_t deadline, const char *current) {
         mill_poller_initialised = 1;
     }
     /* If required, start waiting for the timeout. */
-    if(deadline >= 0) {
-        mill_running->expiry = deadline;
-        /* Move the timer into the right place in the ordered list
-           of existing timers. TODO: This is an O(n) operation! */
-        struct mill_list_item *it = mill_list_begin(&mill_timers);
-        while(it) {
-            struct mill_cr *cr = mill_cont(it, struct mill_cr, timer);
-            /* If multiple timers expire at the same momemt they will be fired
-               in the order they were created in (> rather than >=). */
-            if(cr->expiry > mill_running->expiry)
-                break;
-            it = mill_list_next(it);
-        }
-        mill_list_insert(&mill_timers, &mill_running->timer, it);
-    }
+    if(deadline >= 0)
+        mill_timer_add(deadline);
     /* If required, start waiting for the file descriptor. */
     if(fd >= 0)
         mill_poller_add(fd, events);
@@ -87,7 +71,7 @@ int mill_fdwait(int fd, int events, int64_t deadline, const char *current) {
     /* Handle file descriptor events. */
     if(rc >= 0) {
         if(deadline >= 0)
-            mill_list_erase(&mill_timers, &mill_running->timer);
+            mill_timer_rm();
         return rc;
     }
     /* Handle the timeout. Clean-up the pollset. */
@@ -113,39 +97,13 @@ void mill_wait(int block) {
     }
     while(1) {
         /* Compute timeout for the subsequent poll. */
-        int timeout;
-        if(!block) {
-            timeout = 0;
-        }
-        else {
-            /* Compute the time till next expired sleeping coroutine. */
-            if(!mill_list_empty(&mill_timers)) {
-                int64_t nw = now();
-                int64_t expiry = mill_cont(mill_list_begin(&mill_timers),
-                    struct mill_cr, timer)->expiry;
-                timeout = nw >= expiry ? 0 : expiry - nw;
-            }
-            else {
-                timeout = -1;
-            }
-        }
+        int timeout = block ? mill_timer_next() : 0;
         /* Wait for events. */
-        int fired = mill_poller_wait(timeout);
+        int fd_fired = mill_poller_wait(timeout);
         /* Fire all expired timers. */
-        if(!mill_list_empty(&mill_timers)) {
-            int64_t nw = now();
-            while(!mill_list_empty(&mill_timers)) {
-                struct mill_cr *cr = mill_cont(
-                    mill_list_begin(&mill_timers), struct mill_cr, timer);
-                if(cr->expiry > nw)
-                    break;
-                mill_list_erase(&mill_timers, mill_list_begin(&mill_timers));
-                mill_resume(cr, -1);
-                fired = 1;
-            }
-        }
+        int timer_fired = mill_timer_fire();
         /* Never retry the poll in non-blocking mode. */
-        if(!block || fired)
+        if(!block || fd_fired || timer_fired)
             break;
         /* If timeout was hit but there were no expired timers do the poll
            again. This should not happen in theory but let's be ready for the

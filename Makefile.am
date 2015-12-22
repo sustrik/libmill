@@ -49,6 +49,8 @@ libmill_la_SOURCES = \
     stack.h \
     stack.c \
     tcp.c \
+    timer.h \
+    timer.c \
     udp.c \
     unix.c \
     utils.h \

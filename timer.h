@@ -22,13 +22,24 @@
 
 */
 
-#include <stdio.h>
-#include <stdlib.h>
+#ifndef MILL_TIMER_INCLUDED
+#define MILL_TIMER_INCLUDED
 
-#include "utils.h"
+#include <stdint.h>
 
-void mill_panic(const char *text) {
-    fprintf(stderr, "panic: %s\n", text);
-    abort();
-}
+/* Add a timer for the running coroutine. */
+void mill_timer_add(int64_t deadline);
+
+/* Remove the timer associated with the running coroutine. */
+void mill_timer_rm(void);
+
+/* Number of milliseconds till the next timer expires.
+   If there are no timers returns -1. */
+int mill_timer_next(void);
+
+/* Resumes all coroutines whose timers have already expired.
+   Returns zero if no coroutine was resumed, 1 otherwise. */
+int mill_timer_fire(void);
+
+#endif
 
