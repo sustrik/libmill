@@ -52,6 +52,10 @@ void mill_msleep(int64_t deadline, const char *current) {
     mill_fdwait(-1, 0, deadline, current);
 }
 
+static void mill_poller_callback(struct mill_timer *timer) {
+    mill_resume(mill_cont(timer, struct mill_cr, timer), -1);
+}
+
 int mill_fdwait(int fd, int events, int64_t deadline, const char *current) {
     if(mill_slow(!mill_poller_initialised)) {
         mill_poller_init();
@@ -60,7 +64,7 @@ int mill_fdwait(int fd, int events, int64_t deadline, const char *current) {
     }
     /* If required, start waiting for the timeout. */
     if(deadline >= 0)
-        mill_timer_add(deadline);
+        mill_timer_add(&mill_running->timer, deadline, mill_poller_callback);
     /* If required, start waiting for the file descriptor. */
     if(fd >= 0)
         mill_poller_add(fd, events);
@@ -71,7 +75,7 @@ int mill_fdwait(int fd, int events, int64_t deadline, const char *current) {
     /* Handle file descriptor events. */
     if(rc >= 0) {
         if(deadline >= 0)
-            mill_timer_rm();
+            mill_timer_rm(&mill_running->timer);
         return rc;
     }
     /* Handle the timeout. Clean-up the pollset. */

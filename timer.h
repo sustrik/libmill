@@ -27,11 +27,27 @@
 
 #include <stdint.h>
 
+#include "list.h"
+
+struct mill_timer;
+
+typedef void (*mill_timer_callback)(struct mill_timer *timer);
+
+struct mill_timer {
+    /* Item in the global list of all timers. */
+    struct mill_list_item item;
+    /* The deadline when the timer expires. */
+    int64_t expiry;
+    /* Callback invoked when timer expires. Pfui Teufel! */
+    mill_timer_callback callback;
+};
+
 /* Add a timer for the running coroutine. */
-void mill_timer_add(int64_t deadline);
+void mill_timer_add(struct mill_timer *timer, int64_t deadline,
+    mill_timer_callback callback);
 
 /* Remove the timer associated with the running coroutine. */
-void mill_timer_rm(void);
+void mill_timer_rm(struct mill_timer *timer);
 
 /* Number of milliseconds till the next timer expires.
    If there are no timers returns -1. */

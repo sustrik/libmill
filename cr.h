@@ -30,6 +30,7 @@
 #include "debug.h"
 #include "list.h"
 #include "slist.h"
+#include "timer.h"
 #include "utils.h"
 
 enum mill_state {
@@ -70,10 +71,8 @@ struct mill_cr {
        waiting to be executed. */
     struct mill_slist_item ready;
 
-    /* If the coroutine is waiting for a deadline, it's stored in this list.
-       'expiry' is the time when the deadline expires. */
-    struct mill_list_item timer;
-    int64_t expiry;
+    /* If the coroutine is waiting for a deadline, it uses this timer. */
+    struct mill_timer timer;
 
     /* This structure is used when the coroutine is executing a choose
        statement. */

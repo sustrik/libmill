@@ -30,9 +30,7 @@
 static mach_timebase_info_data_t mill_mtid = {0};
 #endif
 
-#include "cr.h"
 #include "libmill.h"
-#include "list.h"
 #include "timer.h"
 #include "utils.h"
 
@@ -59,25 +57,27 @@ int64_t now(void) {
    First timer to be resume comes first and so on. */
 static struct mill_list mill_timers = {0};
 
-void mill_timer_add(int64_t deadline) {
+void mill_timer_add(struct mill_timer *timer, int64_t deadline,
+      mill_timer_callback callback) {
     mill_assert(deadline >= 0);
-    mill_running->expiry = deadline;
+    timer->expiry = deadline;
+    timer->callback = callback;
     /* Move the timer into the right place in the ordered list
        of existing timers. TODO: This is an O(n) operation! */
     struct mill_list_item *it = mill_list_begin(&mill_timers);
     while(it) {
-        struct mill_cr *cr = mill_cont(it, struct mill_cr, timer);
+        struct mill_timer *tm = mill_cont(it, struct mill_timer, item);
         /* If multiple timers expire at the same momemt they will be fired
            in the order they were created in (> rather than >=). */
-        if(cr->expiry > mill_running->expiry)
+        if(tm->expiry > timer->expiry)
             break;
         it = mill_list_next(it);
     }
-    mill_list_insert(&mill_timers, &mill_running->timer, it);
+    mill_list_insert(&mill_timers, &timer->item, it);
 }
 
-void mill_timer_rm(void) {
-    mill_list_erase(&mill_timers, &mill_running->timer);
+void mill_timer_rm(struct mill_timer *timer) {
+    mill_list_erase(&mill_timers, &timer->item);
 }
 
 int mill_timer_next(void) {
@@ -85,7 +85,7 @@ int mill_timer_next(void) {
         return -1;
     int64_t nw = now();
     int64_t expiry = mill_cont(mill_list_begin(&mill_timers),
-        struct mill_cr, timer)->expiry;
+        struct mill_timer, item)->expiry;
     return (int) (nw >= expiry ? 0 : expiry - nw);
 }
 
@@ -96,12 +96,13 @@ int mill_timer_fire(void) {
     int64_t nw = now();
     int fired = 0;
     while(!mill_list_empty(&mill_timers)) {
-        struct mill_cr *cr = mill_cont(
-            mill_list_begin(&mill_timers), struct mill_cr, timer);
-        if(cr->expiry > nw)
+        struct mill_timer *tm = mill_cont(
+            mill_list_begin(&mill_timers), struct mill_timer, item);
+        if(tm->expiry > nw)
             break;
         mill_list_erase(&mill_timers, mill_list_begin(&mill_timers));
-        mill_resume(cr, -1);
+        if(tm->callback)
+            tm->callback(tm);
         fired = 1;
     }
     return fired;
