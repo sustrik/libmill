@@ -213,6 +213,9 @@ void mill_choose_deadline(int64_t ddline) {
           mill_running->choosedata.ddline))
         mill_panic(
             "multiple 'otherwise' or 'deadline' clauses in a choose statement");
+    /* Infinite deadline clause can never fire so we can as well ignore it. */
+    if(ddline < 0)
+        return;
     mill_timer_add(&mill_running->timer, ddline, mill_choose_callback);
     mill_running->choosedata.ddline = 1;
 }
