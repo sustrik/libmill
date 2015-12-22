@@ -112,6 +112,8 @@ static void mill_choose_unblock(struct mill_clause *cl) {
             continue;
         mill_list_erase(&itcl->ep->clauses, &itcl->epitem);
     }
+    if(cl->cr->choosedata.ddline)
+        mill_timer_rm(&cl->cr->timer);
     mill_resume(cl->cr, cl->idx);
 }
 
@@ -119,6 +121,7 @@ static void mill_choose_init_(const char *current) {
     mill_set_current(&mill_running->debug, current);
     mill_slist_init(&mill_running->choosedata.clauses);
     mill_running->choosedata.othws = 0;
+    mill_running->choosedata.ddline = 0;
     mill_running->choosedata.available = 0;
     ++mill_choose_seqnum;
 }
@@ -193,13 +196,32 @@ void mill_choose_out(void *clause, chan ch, void *val, size_t sz, int idx) {
     cl->ep->tmp = -1;
 }
 
+static void mill_choose_callback(struct mill_timer *timer) {
+    struct mill_cr *cr = mill_cont(timer, struct mill_cr, timer);
+    struct mill_slist_item *it;
+    for(it = mill_slist_begin(&cr->choosedata.clauses);
+          it; it = mill_slist_next(it)) {
+        struct mill_clause *itcl = mill_cont(it, struct mill_clause, chitem);
+        mill_assert(itcl->used);
+        mill_list_erase(&itcl->ep->clauses, &itcl->epitem);
+    }
+    mill_resume(cr, -1);
+}
+
 void mill_choose_deadline(int64_t ddline) {
-    mill_assert(0);
+    if(mill_slow(mill_running->choosedata.othws ||
+          mill_running->choosedata.ddline))
+        mill_panic(
+            "multiple 'otherwise' or 'deadline' clauses in a choose statement");
+    mill_timer_add(&mill_running->timer, ddline, mill_choose_callback);
+    mill_running->choosedata.ddline = 1;
 }
 
 void mill_choose_otherwise(void) {
-    if(mill_slow(mill_running->choosedata.othws != 0))
-        mill_panic("multiple 'otherwise' clauses in a choose statement");
+    if(mill_slow(mill_running->choosedata.othws ||
+          mill_running->choosedata.ddline))
+        mill_panic(
+            "multiple 'otherwise' or 'deadline' clauses in a choose statement");
     mill_running->choosedata.othws = 1;
 }
 

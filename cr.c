@@ -109,8 +109,8 @@ int mill_suspend(void) {
             mill_running = mill_cont(it, struct mill_cr, ready);
             mill_jmp(&mill_running->ctx);
         }
-        /*  Otherwise, we are going to wait for sleeping coroutines
-            and for external events. */
+        /* Otherwise, we are going to wait for sleeping coroutines
+           and for external events. */
         mill_wait(1);
         mill_assert(!mill_slist_empty(&mill_ready));
         counter = 0;

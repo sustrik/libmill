@@ -38,6 +38,12 @@ coroutine void sender2(chan ch, int val) {
     chclose(ch);
 }
 
+coroutine void sender3(chan ch, int val, int64_t deadline) {
+    msleep(deadline);
+    chs(ch, int, val);
+    chclose(ch);
+}
+
 coroutine void receiver1(chan ch, int expected) {
     int val = chr(ch, int);
     assert(val == expected);
@@ -373,8 +379,7 @@ int main() {
     assert(first > 1 && second > 1 && third > 1);
     chclose(ch20);
 
-#if 0
-    /* Test 'deadline' clause. */
+    /* Test expiration of 'deadline' clause. */
     test = 0;
     chan ch21 = chmake(int, 0);
     int64_t start = now();
@@ -389,7 +394,23 @@ int main() {
     int64_t diff = now() - start;
     assert(diff > 30 && diff < 70);
     chclose(ch21);
-#endif
+
+    /* Test unexpired 'deadline' clause. */
+    test = 0;
+    chan ch22 = chmake(int, 0);
+    start = now();
+    go(sender3(chdup(ch22), 4444, start + 50));
+    choose {
+    in(ch22, int, val):
+        test = val;
+    deadline(start + 1000):
+        assert(0);
+    end
+    }
+    assert(test == 4444);
+    diff = now() - start;
+    assert(diff > 30 && diff < 70);
+    chclose(ch22);
 
     return 0;
 }
