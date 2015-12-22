@@ -31,6 +31,16 @@
 #include "list.h"
 #include "slist.h"
 
+/* One of these structures is preallocated for every coroutine. */
+struct mill_choosedata {
+    /* List of clauses in the 'choose' statement. */
+    struct mill_slist clauses;
+    /* 1 if there is 'otherwise' clause. 0 if there is not. */
+    int othws;
+    /* Number of clauses that are immediately available. */
+    int available;
+};
+
 /* Channel endpoint. */
 struct mill_ep {
     /* Thanks to this flag we can cast from ep pointer to chan pointer. */

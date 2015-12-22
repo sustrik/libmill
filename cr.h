@@ -27,6 +27,7 @@
 
 #include <stdint.h>
 
+#include "chan.h"
 #include "debug.h"
 #include "list.h"
 #include "slist.h"
@@ -40,15 +41,6 @@ enum mill_state {
     MILL_CHR,
     MILL_CHS,
     MILL_CHOOSE
-};
-
-struct mill_choosedata {
-    /* List of clauses in the 'choose' statement. */
-    struct mill_slist clauses;
-    /* 1 if there is 'otherwise' clause. 0 if there is not. */
-    int othws;
-    /* Number of clauses that are immediately available. */
-    int available;
 };
 
 /* The coroutine. The memory layout looks like this:
