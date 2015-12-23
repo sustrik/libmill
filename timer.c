@@ -22,6 +22,7 @@
 
 */
 
+#include <stdint.h>
 #include <sys/time.h>
 #include <time.h>
 
@@ -34,7 +35,13 @@ static mach_timebase_info_data_t mill_mtid = {0};
 #include "timer.h"
 #include "utils.h"
 
-int64_t now(void) {
+/* 1 millisecond expressed in CPU ticks. The value is chosen is such a way that
+   it works reasonably well for CPU frequencies above 500MHz. On significanly
+   slower machines you may wish to reconsider. */
+#define MILL_CLOCK_PRECISION 1000000
+
+/* Returns current time by querying the operating system. */
+static int64_t mill_now(void) {
 #if defined __APPLE__
     if (mill_slow(!mill_mtid.denom))
         mach_timebase_info(&mill_mtid);
@@ -50,6 +57,40 @@ int64_t now(void) {
     int rc = gettimeofday(&tv, NULL);
     assert(rc == 0);
     return ((int64_t)tv.tv_sec) * 1000 + (((int64_t)tv.tv_usec) / 1000);
+#endif
+}
+
+int64_t now(void) {
+#if (defined __GNUC__ || defined __clang__) && \
+      (defined __i386__ || defined __x86_64__)
+    /* Get the timestamp counter. This is time since startup, expressed in CPU
+       cycles. Unlike gettimeofday() or similar function, it's extremely fast -
+       it takes only few CPU cycles to evaluate. */
+    uint32_t low;
+    uint32_t high;
+    __asm__ volatile("rdtsc" : "=a" (low), "=d" (high));
+    int64_t tsc = (int64_t)((uint64_t)high << 32 | low);
+    /* These global variables are used to hold the last seen timestamp counter
+       and last seen time measurement. We'll initilise them the first time
+       this function is called. */
+    static int64_t last_tsc = -1;
+    static int64_t last_now = -1;
+    if(mill_slow(last_tsc < 0)) {
+        last_tsc = tsc;
+        last_now = mill_now();
+    }   
+    /* If TSC haven't jumped back or progressed more than 1/2 ms, we can use
+       the cached time value. */
+    if(mill_fast(tsc - last_tsc <= (MILL_CLOCK_PRECISION / 2) &&
+          tsc >= last_tsc))
+        return last_now;
+    /* It's more than 1/2 ms since we've last measured the time.
+       We'll do a new measurement now. */
+    last_tsc = tsc;
+    last_now = mill_now();
+    return last_now;
+#else
+    return mill_now();
 #endif
 }
 
