@@ -112,7 +112,7 @@ static void mill_choose_unblock(struct mill_clause *cl) {
             continue;
         mill_list_erase(&itcl->ep->clauses, &itcl->epitem);
     }
-    if(cl->cr->choosedata.ddline)
+    if(cl->cr->choosedata.ddline >= 0)
         mill_timer_rm(&cl->cr->timer);
     mill_resume(cl->cr, cl->idx);
 }
@@ -121,7 +121,7 @@ static void mill_choose_init_(const char *current) {
     mill_set_current(&mill_running->debug, current);
     mill_slist_init(&mill_running->choosedata.clauses);
     mill_running->choosedata.othws = 0;
-    mill_running->choosedata.ddline = 0;
+    mill_running->choosedata.ddline = -1;
     mill_running->choosedata.available = 0;
     ++mill_choose_seqnum;
 }
@@ -210,19 +210,18 @@ static void mill_choose_callback(struct mill_timer *timer) {
 
 void mill_choose_deadline(int64_t ddline) {
     if(mill_slow(mill_running->choosedata.othws ||
-          mill_running->choosedata.ddline))
+          mill_running->choosedata.ddline >= 0))
         mill_panic(
             "multiple 'otherwise' or 'deadline' clauses in a choose statement");
     /* Infinite deadline clause can never fire so we can as well ignore it. */
     if(ddline < 0)
         return;
-    mill_timer_add(&mill_running->timer, ddline, mill_choose_callback);
-    mill_running->choosedata.ddline = 1;
+    mill_running->choosedata.ddline = ddline;
 }
 
 void mill_choose_otherwise(void) {
     if(mill_slow(mill_running->choosedata.othws ||
-          mill_running->choosedata.ddline))
+          mill_running->choosedata.ddline >= 0))
         mill_panic(
             "multiple 'otherwise' or 'deadline' clauses in a choose statement");
     mill_running->choosedata.othws = 1;
@@ -310,6 +309,10 @@ int mill_choose_wait(void) {
         mill_resume(mill_running, -1);
         return mill_suspend();
     }
+
+    /* If deadline was specified, start the timer. */
+    if(cd->ddline >= 0)
+        mill_timer_add(&mill_running->timer, cd->ddline, mill_choose_callback);
 
     /* In all other cases register this coroutine with the queried channels
        and wait till one of the clauses unblocks. */

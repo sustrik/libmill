@@ -37,8 +37,8 @@ struct mill_choosedata {
     struct mill_slist clauses;
     /* 1 if there is 'otherwise' clause. 0 if there is not. */
     int othws;
-    /* 1 if there is 'deadline' clause. 0 if there is not. */
-    int ddline;
+    /* Deadline specified in 'deadline' clause. -1 if none. */
+    int64_t ddline;
     /* Number of clauses that are immediately available. */
     int available;
 };
