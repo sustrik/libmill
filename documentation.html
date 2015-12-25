@@ -306,11 +306,12 @@ int main() {
 <p>Choose statement is equivalent to Go's <tt>select</tt>
 statement. It can be used to wait for multiple channels.</p>
 
-<p>Inside <tt><a href="#choose">choose</a></tt>statement there is a list of
+<p>Inside <tt><a href="#choose">choose</a></tt> statement there is a list of
 clauses. Each clause is either an <tt>in</tt> clause (waiting for an incoming
 message) or an <tt>out</tt> clause (waiting till a message can be sent to the
-channel). Last clause can optionally be an <tt>otherwise</tt> clause that gets
-executed if none of the other clauses apply. Don't forget to add <tt>end</tt>
+channel). Last clause can optionally a <tt>deadline</tt> or an
+<tt>otherwise</tt> clause. The formet gets executed after deadline expires,
+the latter if none of the other clauses apply. Don't forget to add <tt>end</tt>
 keyword before the closing parenthesis:</p>
 
 <pre>
@@ -340,6 +341,13 @@ actual type of channel <tt>ch</tt> runtime exception is generated:</p>
 
 <pre>
 out(ch, type, val):
+</pre>
+
+<p>Clause <tt>deadline</tt>, if present, is executed after deadline expires and
+none of the other clauses fires before that:</p>
+
+<pre>
+deadline(now() + 1000):
 </pre>
 
 <p>Clause <tt>otherwise</tt> is optional. It is executed only if no other
@@ -1027,11 +1035,8 @@ memory to allocate the channel.</p>
 
 <p>Waits for activity on multiple channels.</p>
 
-<p>The statement consists of zero or more <tt>in</tt> clauses to wait for
-incoming messages, zero or more <tt>out</tt> clauses to wait until outgoing
-message can be written to a channel and zero or one <tt>otherwise</tt> clause.
-Last clause must always be <tt>end</tt>:</p>
-</p>
+<p>The statement consists of multiple clauses. Last clause must always be
+<tt>end</tt>:</p>
 
 <pre>
 choose {
@@ -1065,9 +1070,25 @@ and the message itself.</p>
 <p>If message type doesn't match the channel type program will panic and
 abort.</p>
 
+<p><tt>deadline</tt> clause will be executed if deadline expires while waiting
+for other clauses. For example:</p>
+
+<pre>
+choose {
+in(ch1, int, i):
+    foo(i);
+deadline(now() + 1000):
+    printf("Deadline exceeded!\n");
+end
+}
+</pre>
+
 <p><tt>otherwise</tt> clause is run if no other clause can be executed
 immediately. A <tt>choose</tt> statement with <tt>otherwise</tt> clause
 therefore never blocks.</p>
+
+<p><tt>deadline</tt> and <tt>otherwise</tt> clause are mutually exclusive and
+neither of them can occur multiple times.</p>
 
 <p>If multiple clauses can be executed immediately, one of them is chosen
 at random.</p>
@@ -1076,7 +1097,11 @@ at random.</p>
 to put <tt>break</tt> at the end of each clause as is the case with standard
 C <tt>switch</tt> statement.</p>
 
-<p>The constrect returns no errors.</p>
+<p>If <tt>break</tt> statement is used it will break out of the <tt>choose</tt>
+construct nonetheless. Behaviour of <tt>continue</tt> statement within
+<tt>choose</tt> is undefined.</p>
+
+<p>The construct returns no errors.</p>
 
 <h6 id="chr">type chr(chan ch, type);</h6>
 
