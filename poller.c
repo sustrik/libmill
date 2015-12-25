@@ -70,6 +70,8 @@ int mill_fdwait(int fd, int events, int64_t deadline, const char *current) {
         mill_poller_add(fd, events);
     /* Do actual waiting. */
     mill_running->state = fd < 0 ? MILL_MSLEEP : MILL_FDWAIT;
+    mill_running->fd = fd;
+    mill_running->events = events;
     mill_set_current(&mill_running->debug, current);
     int rc = mill_suspend();
     /* Handle file descriptor events. */

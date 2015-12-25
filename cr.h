@@ -66,6 +66,12 @@ struct mill_cr {
     /* If the coroutine is waiting for a deadline, it uses this timer. */
     struct mill_timer timer;
 
+    /* When the coroutine is blocked in fdwait(), these members contains the
+       file descriptor and events that the function waits for. They are used
+       only for debugging purposes. */
+    int fd;
+    int events;
+
     /* This structure is used when the coroutine is executing a choose
        statement. */
     struct mill_choosedata choosedata;

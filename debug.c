@@ -102,7 +102,11 @@ void goredump(void) {
             sprintf(buf, "msleep()");
             break;
         case MILL_FDWAIT:
-            sprintf(buf, "fdwait(%d)", -1);
+            sprintf(buf, "fdwait(%d, %s)", cr->fd,
+                (cr->events & FDW_IN) &&
+                    (cr->events & FDW_OUT) ? "FDW_IN | FDW_OUT" :
+                cr->events & FDW_IN ? "FDW_IN" :
+                cr->events & FDW_OUT ? "FDW_OUT" : 0);
             break;
         case MILL_CHR:
         case MILL_CHS:
