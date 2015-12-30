@@ -428,6 +428,45 @@ size_t tcprecvuntil(tcpsock s, void *buf, size_t len,
     return len;
 }
 
+void strshift(char *str, size_t len, char c) {
+	size_t i;
+	for (i=0; i<len-1; ++i) {
+		str[i] = str[i+1];
+	}
+	str[len-1] = c;
+}
+
+size_t tcprecvuntilpattern(tcpsock s, void *buf, size_t len,
+      const char *pattern, size_t patternlen, int64_t deadline) {
+    if(s->type != MILL_TCPCONN)
+        mill_panic("trying to receive from an unconnected socket");
+    char *pos = (char*)buf;
+    size_t i;
+    char *patternbuf = (char *)malloc(patternlen);
+    memset(patternbuf, 0, patternlen);
+    for(i = 0; i != len; ++i, ++pos) {
+        size_t res = tcprecv(s, pos, 1, deadline);
+        if(res == 1) {
+        		if (strlen(patternbuf) < patternlen) 
+        			strncat(patternbuf, &pos[0], 1);
+        		else 
+        			strshift(patternbuf, 4, pos[0]);
+
+        		if (strncmp(patternbuf, pattern, patternlen) == 0) {
+        			free(patternbuf);
+        			return i + 1;
+        		}
+        }
+        if (errno != 0) {
+        		free(patternbuf);
+         	return i + res;
+        }
+    }
+    free(patternbuf);
+    errno = ENOBUFS;
+    return len;
+}
+
 void tcpclose(tcpsock s) {
     if(s->type == MILL_TCPLISTENER) {
         struct mill_tcplistener *l = (struct mill_tcplistener*)s;
