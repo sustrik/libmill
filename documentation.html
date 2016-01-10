@@ -309,9 +309,9 @@ statement. It can be used to wait for multiple channels.</p>
 <p>Inside <tt><a href="#choose">choose</a></tt> statement there is a list of
 clauses. Each clause is either an <tt>in</tt> clause (waiting for an incoming
 message) or an <tt>out</tt> clause (waiting till a message can be sent to the
-channel). Last clause can optionally a <tt>deadline</tt> or an
-<tt>otherwise</tt> clause. The formet gets executed after deadline expires,
-the latter if none of the other clauses apply. Don't forget to add <tt>end</tt>
+channel). Last clause can optionally be a <tt>deadline</tt> or an
+<tt>otherwise</tt> clause. The former gets executed after deadline expires,
+the latter if none of the other clauses apply. Don't forget to add the <tt>end</tt>
 keyword before the closing parenthesis:</p>
 
 <pre>
@@ -344,7 +344,7 @@ out(ch, type, val):
 </pre>
 
 <p>Clause <tt>deadline</tt>, if present, is executed after deadline expires and
-none of the other clauses fires before that:</p>
+none of the other clauses fire before that:</p>
 
 <pre>
 deadline(now() + 1000):
@@ -364,7 +364,7 @@ at random.</p>
 
 <h4 id="deadlines">Deadlines</h4>
 
-<p>Unlike standard POSIX functions, libmill uses dealines rather than
+<p>Unlike standard POSIX functions, libmill uses deadlines rather than
 timeouts.</p>
 
 <p>Deadline is a point in time when a function should finish. Function
@@ -514,7 +514,7 @@ address has family type AF_UNSPEC which will cause any function you pass it to
 fail.</tt></p>
 
 <p>You can also convert <tt>ipaddr</tt> into a human readable string. To do so
-you have to supply a buffer at least IPADDR_MAXSTRLEN long:</p>
+you have to supply a buffer at least <tt>IPADDR_MAXSTRLEN</tt> long:</p>
 
 <pre>
 ipaddr addr = ...;
