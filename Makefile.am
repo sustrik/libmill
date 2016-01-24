@@ -58,7 +58,8 @@ libmill_la_SOURCES = \
     epoll.inc \
     kqueue.inc \
     dns/dns.h \
-    dns/dns.c
+    dns/dns.c \
+    file.c
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libmill.pc
@@ -89,7 +90,8 @@ check_PROGRAMS = \
     tests/unix\
     tests/signals\
     tests/overload\
-    tests/ip
+    tests/ip\
+    tests/file
 
 LDADD = libmill.la
 
