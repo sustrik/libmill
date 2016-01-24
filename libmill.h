@@ -29,6 +29,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <unistd.h>
+#include <sys/stat.h>
 
 /******************************************************************************/
 /*  ABI versioning support                                                    */
