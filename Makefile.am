@@ -77,6 +77,9 @@ libmill_la_CFLAGS = \
 #  automated tests                                                             #
 ################################################################################
 
+noinst_PROGRAMS = \
+    tests/file
+
 check_PROGRAMS = \
     tests/example\
     tests/go\
@@ -91,7 +94,7 @@ check_PROGRAMS = \
     tests/signals\
     tests/overload\
     tests/ip\
-    tests/file
+    tests/file.test
 
 LDADD = libmill.la
 
@@ -101,7 +104,7 @@ TESTS = $(check_PROGRAMS)
 #  performance tests                                                           #
 ################################################################################
 
-noinst_PROGRAMS = \
+noinst_PROGRAMS += \
     perf/go\
     perf/ctxswitch\
     perf/chan\

@@ -65,5 +65,10 @@ int main() {
     assert(errno == 0);
 
     mfclose(f1);
+
+    sz = mfread(mfin, buf, sizeof(buf), -1);
+    assert(errno == 0);
+    assert(sz == 3 && buf[0] == 'A' && buf[1] == 'B' && buf[2] == 'C');
+
     return 0;
 }

@@ -353,6 +353,11 @@ MILL_EXPORT void unixclose(unixsock s);
 /******************************************************************************/
 
 typedef struct mill_file *mfile;
+
+#define mfin mill_mfin()
+#define mfout mill_mfout()
+#define mferr mill_mferr()
+
 MILL_EXPORT mfile mfopen(const char *pathname, int flags, mode_t mode);
 MILL_EXPORT size_t mfwrite(mfile f, const void *buf, size_t len,
     int64_t deadline);
@@ -362,6 +367,9 @@ MILL_EXPORT void mfclose(mfile f);
 MILL_EXPORT off_t mftell(mfile f);
 MILL_EXPORT off_t mfseek(mfile f, off_t offset);
 MILL_EXPORT int mfeof(mfile f);
+MILL_EXPORT mfile mill_mfin(void);
+MILL_EXPORT mfile mill_mfout(void);
+MILL_EXPORT mfile mill_mferr(void);
 
 /******************************************************************************/
 /*  Debugging                                                                 */

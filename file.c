@@ -266,3 +266,30 @@ int mfeof(mfile f) {
     return (current == eof);
 }
 
+mfile mill_mfin(void) {
+    static struct mill_file f = {-1, 0, 0, 0};
+    if(mill_slow(f.fd < 0)) {
+        mill_filetune(STDIN_FILENO);
+        f.fd = STDIN_FILENO;
+    }
+    return &f;
+}
+
+mfile mill_mfout(void) {
+    static struct mill_file f = {-1, 0, 0, 0};
+    if(mill_slow(f.fd < 0)) {
+        mill_filetune(STDOUT_FILENO);
+        f.fd = STDOUT_FILENO;
+    }
+    return &f;
+}
+
+mfile mill_mferr(void) {
+    static struct mill_file f = {-1, 0, 0, 0};
+    if(mill_slow(f.fd < 0)) {
+        mill_filetune(STDERR_FILENO);
+        f.fd = STDERR_FILENO;
+    }
+    return &f;
+}
+
