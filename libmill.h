@@ -360,16 +360,16 @@ MILL_EXPORT int unixdetach(unixsock s);
 /******************************************************************************/
 
 typedef struct mill_file *mfile;
-MILL_EXPORT mfile fileopen(const char *pathname, int flags, mode_t mode);
-MILL_EXPORT size_t filewrite(mfile f, const void *buf, size_t len, int64_t deadline);
-MILL_EXPORT void fileflush(mfile f, int64_t deadline);
-MILL_EXPORT size_t fileread(mfile f, void *buf, size_t len, int64_t deadline);
-MILL_EXPORT void fileclose(mfile f);
-MILL_EXPORT mfile fileattach(int fd);
-MILL_EXPORT int filedetach(mfile f);
-MILL_EXPORT off_t filetell(mfile f);
-MILL_EXPORT off_t fileseek(mfile f, off_t offset);
-MILL_EXPORT int fileeof(mfile f);
+MILL_EXPORT mfile mfopen(const char *pathname, int flags, mode_t mode);
+MILL_EXPORT size_t mfwrite(mfile f, const void *buf, size_t len, int64_t deadline);
+MILL_EXPORT void mfflush(mfile f, int64_t deadline);
+MILL_EXPORT size_t mfread(mfile f, void *buf, size_t len, int64_t deadline);
+MILL_EXPORT void mfclose(mfile f);
+MILL_EXPORT mfile mfattach(int fd);
+MILL_EXPORT int mfdetach(mfile f);
+MILL_EXPORT off_t mftell(mfile f);
+MILL_EXPORT off_t mfseek(mfile f, off_t offset);
+MILL_EXPORT int mfeof(mfile f);
 
 /******************************************************************************/
 /*  Debugging                                                                 */

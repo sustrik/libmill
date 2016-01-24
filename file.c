@@ -56,7 +56,7 @@ static void mill_filetune(int fd) {
 }
 
 
-mfile fileopen(const char *pathname, int flags, mode_t mode) {
+mfile mfopen(const char *pathname, int flags, mode_t mode) {
     /* Open the file. */
     int fd = open(pathname, flags, mode);
     if (fd == -1)
@@ -79,7 +79,7 @@ mfile fileopen(const char *pathname, int flags, mode_t mode) {
     return f;
 }
 
-size_t filewrite(mfile f, const void *buf, size_t len, int64_t deadline) {
+size_t mfwrite(mfile f, const void *buf, size_t len, int64_t deadline) {
     /* If it fits into the output buffer copy it there and be done. */
     if(f->olen + len <= MILL_FILE_BUFLEN) {
         memcpy(&f->obuf[f->olen], buf, len);
@@ -89,7 +89,7 @@ size_t filewrite(mfile f, const void *buf, size_t len, int64_t deadline) {
     }
 
     /* If it doesn't fit, flush the output buffer first. */
-    fileflush(f, deadline);
+    mfflush(f, deadline);
     if(errno != 0)
         return 0;
 
@@ -124,7 +124,7 @@ size_t filewrite(mfile f, const void *buf, size_t len, int64_t deadline) {
     return len;
 }
 
-void fileflush(mfile f, int64_t deadline) {
+void mfflush(mfile f, int64_t deadline) {
     if(!f->olen) {
         errno = 0;
         return;
@@ -151,7 +151,7 @@ void fileflush(mfile f, int64_t deadline) {
     errno = 0;
 }
 
-size_t fileread(mfile f, void *buf, size_t len, int64_t deadline) {
+size_t mfread(mfile f, void *buf, size_t len, int64_t deadline) {
     /* If there's enough data in the buffer it's easy. */
     if(f->ilen >= len) {
         memcpy(buf, &f->ibuf[f->ifirst], len);
@@ -190,7 +190,7 @@ size_t fileread(mfile f, void *buf, size_t len, int64_t deadline) {
             }
             pos += sz;
             remaining -= sz;
-            if (sz != 0 && fileeof(f)) {
+            if (sz != 0 && mfeof(f)) {
                 return len - remaining;
             }
         }
@@ -220,7 +220,7 @@ size_t fileread(mfile f, void *buf, size_t len, int64_t deadline) {
                 errno = 0;
                 return len;
             }
-            if (sz != 0 && fileeof(f)) {
+            if (sz != 0 && mfeof(f)) {
                 return len - remaining;
             }
         }
@@ -234,7 +234,7 @@ size_t fileread(mfile f, void *buf, size_t len, int64_t deadline) {
     }
 }
 
-void fileclose(mfile f) {
+void mfclose(mfile f) {
     fdclean(f->fd);
     int rc = close(f->fd);
     mill_assert(rc == 0);
@@ -242,15 +242,13 @@ void fileclose(mfile f) {
     return;
 }
 
-mfile fileattach(int fd) {
+mfile mfattach(int fd) {
     struct mill_file *f = malloc(sizeof(struct mill_file));
     if(!f) {
         errno = ENOMEM;
         return NULL;
     }
-    int nfd = dup(fd);
-    mill_filetune(nfd);
-    f->fd = nfd;
+    f->fd = fd;
     f->ifirst = 0;
     f->ilen = 0;
     f->olen = 0;
@@ -258,24 +256,24 @@ mfile fileattach(int fd) {
     return f;
 }
 
-int filedetach(mfile f) {
+int mfdetach(mfile f) {
     int fd = f->fd;
     free(f);
     return fd;
 }
 
-off_t filetell(mfile f) {
+off_t mftell(mfile f) {
     return lseek(f->fd, 0, SEEK_CUR) - f->ilen;
 }
 
-off_t fileseek(mfile f, off_t offset) {
+off_t mfseek(mfile f, off_t offset) {
     f->ifirst = 0;
     f->ilen = 0;
     f->olen = 0;
     return lseek(f->fd, offset, SEEK_SET);
 }
 
-int fileeof(mfile f) {
+int mfeof(mfile f) {
     off_t current = lseek(f->fd, 0, SEEK_CUR);
     if (current == -1)
         return -1;

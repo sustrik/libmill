@@ -31,43 +31,43 @@
 #include "../libmill.h"
 
 int main() {
-    mfile f1 = fileopen("/tmp/file1", O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+    mfile f1 = mfopen("/tmp/file1", O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
     assert(f1);
 
-    int fd = filedetach(f1);
+    int fd = mfdetach(f1);
     assert(fd != -1);
-    f1 = fileattach(fd);
+    f1 = mfattach(fd);
     assert(f1);
 
-    assert(fileeof(f1));
+    assert(mfeof(f1));
     assert(errno == 0);
 
-    filewrite(f1, "ABC", 3, -1);
+    mfwrite(f1, "ABC", 3, -1);
     assert(errno == 0);
 
-    fileflush(f1, -1);
+    mfflush(f1, -1);
     assert(errno == 0);
 
-    assert(fileeof(f1));
+    assert(mfeof(f1));
     assert(errno == 0);
 
-    assert(filetell(f1) == 3);
+    assert(mftell(f1) == 3);
     assert(errno == 0);
 
-    fileseek(f1, 0);
+    mfseek(f1, 0);
     assert(errno == 0);
 
-    assert(!fileeof(f1));
+    assert(!mfeof(f1));
     assert(errno == 0);
 
     char buf[3];
-    size_t sz = fileread(f1, buf, sizeof(buf), -1);
+    size_t sz = mfread(f1, buf, sizeof(buf), -1);
     assert(errno == 0);
     assert(sz == 3 && buf[0] == 'A' && buf[1] == 'B' && buf[2] == 'C');
 
-    assert(fileeof(f1));
+    assert(mfeof(f1));
     assert(errno == 0);
 
-    fileclose(f1);
+    mfclose(f1);
     return 0;
 }
