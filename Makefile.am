@@ -93,12 +93,12 @@ check_PROGRAMS = \
     tests/unix\
     tests/signals\
     tests/overload\
-    tests/ip\
-    tests/file.test
+    tests/ip
 
 LDADD = libmill.la
 
-TESTS = $(check_PROGRAMS)
+TESTS = $(check_PROGRAMS) \
+    tests/file.test
 
 ################################################################################
 #  performance tests                                                           #
