@@ -41,6 +41,7 @@ tests/overload
 tests/ip
 tests/*.trs
 tests/*.log
+tests/file
 perf/.dirstamp
 perf/go
 perf/ctxswitch

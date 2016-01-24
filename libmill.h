@@ -355,6 +355,22 @@ MILL_EXPORT unixsock unixattach(int fd, int listening);
 MILL_EXPORT int unixdetach(unixsock s);
 
 /******************************************************************************/
+/*  File library                                                              */
+/******************************************************************************/
+
+typedef struct mill_file *mfile;
+MILL_EXPORT mfile fileopen(const char *pathname, int flags, mode_t mode);
+MILL_EXPORT size_t filewrite(mfile f, const void *buf, size_t len, int64_t deadline);
+MILL_EXPORT void fileflush(mfile f, int64_t deadline);
+MILL_EXPORT size_t fileread(mfile f, void *buf, size_t len, int64_t deadline);
+MILL_EXPORT void fileclose(mfile f);
+MILL_EXPORT mfile fileattach(int fd);
+MILL_EXPORT int filedetach(mfile f);
+MILL_EXPORT off_t filetell(mfile f);
+MILL_EXPORT off_t fileseek(mfile f, off_t offset);
+MILL_EXPORT int fileeof(mfile f);
+
+/******************************************************************************/
 /*  Debugging                                                                 */
 /******************************************************************************/
 
