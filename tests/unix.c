@@ -33,11 +33,6 @@ coroutine void client(const char *addr) {
     unixsock cs = unixconnect(addr);
     assert(cs);
 
-    int fd = unixdetach(cs);
-    assert(fd != -1);
-    cs = unixattach(fd, 0);
-    assert(cs);
-
     msleep(now() + 100);
 
     char buf[16];
@@ -62,11 +57,6 @@ int main() {
     }
 
     unixsock ls = unixlisten(sockname, 10);
-    assert(ls);
-
-    int fd = unixdetach(ls);
-    assert(fd != -1);
-    ls = unixattach(fd, 1);
     assert(ls);
 
     go(client(sockname));

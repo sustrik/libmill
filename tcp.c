@@ -448,50 +448,6 @@ void tcpclose(tcpsock s) {
     mill_assert(0);
 }
 
-tcpsock tcpattach(int fd, int listening) {
-    if(listening == 0) {
-        struct mill_tcpconn *conn = malloc(sizeof(struct mill_tcpconn));
-        if(!conn) {
-            errno = ENOMEM;
-            return NULL;
-        }
-        tcpconn_init(conn, fd);
-        errno = 0;
-        return (tcpsock)conn;
-    }
-    /* It's a listening socket. Find out the port it is listening on. */
-    ipaddr addr;
-    socklen_t sz = sizeof(ipaddr);
-    int rc = getsockname(fd, (struct sockaddr*)&addr, &sz);
-    if(rc == -1)
-        return NULL;
-    struct mill_tcplistener *l = malloc(sizeof(struct mill_tcplistener));
-    if(!l) {
-        errno = ENOMEM;
-        return NULL;
-    }
-    l->sock.type = MILL_TCPLISTENER;
-    l->fd = fd;
-    l->port = mill_ipport(addr);
-    errno = 0;
-    return &l->sock;
-}
-
-int tcpdetach(tcpsock s) {
-    if(s->type == MILL_TCPLISTENER) {
-        struct mill_tcplistener *l = (struct mill_tcplistener*)s;
-        int fd = l->fd;
-        free(l);
-        return fd;
-    }
-    if(s->type == MILL_TCPCONN) {
-        int fd = ((struct mill_tcpconn*)s)->fd;
-        free(s);
-        return fd;
-    }
-    mill_assert(0);
-}
-
 ipaddr tcpaddr(tcpsock s) {
     if(s->type != MILL_TCPCONN)
         mill_panic("trying to get address from a socket that isn't connected");

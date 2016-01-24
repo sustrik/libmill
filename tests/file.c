@@ -31,12 +31,8 @@
 #include "../libmill.h"
 
 int main() {
-    mfile f1 = mfopen("/tmp/file1", O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-    assert(f1);
-
-    int fd = mfdetach(f1);
-    assert(fd != -1);
-    f1 = mfattach(fd);
+    mfile f1 = mfopen("/tmp/file1", O_RDWR | O_CREAT | O_TRUNC, S_IRUSR |
+        S_IWUSR | S_IRGRP | S_IROTH);
     assert(f1);
 
     assert(mfeof(f1));

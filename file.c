@@ -242,26 +242,6 @@ void mfclose(mfile f) {
     return;
 }
 
-mfile mfattach(int fd) {
-    struct mill_file *f = malloc(sizeof(struct mill_file));
-    if(!f) {
-        errno = ENOMEM;
-        return NULL;
-    }
-    f->fd = fd;
-    f->ifirst = 0;
-    f->ilen = 0;
-    f->olen = 0;
-    errno = 0;
-    return f;
-}
-
-int mfdetach(mfile f) {
-    int fd = f->fd;
-    free(f);
-    return fd;
-}
-
 off_t mftell(mfile f) {
     return lseek(f->fd, 0, SEEK_CUR) - f->ilen;
 }
@@ -285,3 +265,4 @@ int mfeof(mfile f) {
         return -1;
     return (current == eof);
 }
+

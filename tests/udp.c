@@ -35,11 +35,6 @@ int main() {
     udpsock s2 = udplisten(iplocal(NULL, 5556, 0));
     assert(s2);
 
-    int fd = udpdetach(s2);
-    assert(fd != -1);
-    s2 = udpattach(fd);
-    assert(s2);
-
     char ipstr[IPADDR_MAXSTRLEN] = {0};
     ipaddrstr(ipremote("216.58.217.46", 5556, 0, -1), ipstr);
     assert(errno == 0);

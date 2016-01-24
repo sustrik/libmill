@@ -38,11 +38,6 @@ coroutine void client(int port) {
     assert(errno == 0);
     assert(strcmp(ipstr, "127.0.0.1") == 0);
 
-    int fd = tcpdetach(cs);
-    assert(fd != -1);
-    cs = tcpattach(fd, 0);
-    assert(cs);
-
     msleep(now() + 100);
 
     char buf[16];
@@ -62,12 +57,6 @@ int main() {
 
     tcpsock ls = tcplisten(iplocal(NULL, 5555, 0), 10);
     assert(ls);
-
-    int fd = tcpdetach(ls);
-    assert(fd != -1);
-    ls = tcpattach(fd, 1);
-    assert(ls);
-    assert(tcpport(ls) == 5555);
 
     go(client(5555));
 
