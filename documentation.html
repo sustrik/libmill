@@ -1371,9 +1371,13 @@ possible.</p>
 
 <h6 id="mferr">mferr</h6>
 
+<p><tt>mfile</tt> wrapper on top of stderr.</p>
+
 <h6 id="mfflush">void mfflush(mfile f, int64_t deadline);</h6>
 
 <h6 id="mfin">mfin</h6>
+
+<p><tt>mfile</tt> wrapper on top of stdin.</p>
 
 <h6 id="mfopen">mfile mfopen(const char *pathname, int flags, mode_t mode);</h6>
 
@@ -1392,6 +1396,8 @@ parent process, zero to the child process or -1 in case of error. In the latter
 case it also sets <tt>errno</tt> to the appropriate error code.</p>
 
 <h6 id="mfout">mfout</h6>
+
+<p><tt>mfile</tt> wrapper on top of stdout.</p>
 
 <h6 id="mfread">size_t mfread(mfile f, void *buf, size_t len, int64_t deadline);</h6>
 
