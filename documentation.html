@@ -64,7 +64,18 @@
     <li><a href="#ipaddrstr">ipaddrstr</a></li>
     <li><a href="#iplocal">iplocal</a></li>
     <li><a href="#ipremote">ipremote</a></li>
+    <li><a href="#mfclose">mfclose</a></li>
+    <li><a href="#mfeof">mfeof</a></li>
+    <li><a href="#mferr">mferr</a></li>
+    <li><a href="#mfflush">mfflush</a></li>
+    <li><a href="#mfin">mfin</a></li>
+    <li><a href="#mfopen">mfopen</a></li>
     <li><a href="#mfork">mfork</a></li>
+    <li><a href="#mfout">mfout</a></li>
+    <li><a href="#mfread">mfread</a></li>
+    <li><a href="#mfseek">mfseek</a></li>
+    <li><a href="#mftell">mftell</a></li>
+    <li><a href="#mfwrite">mfwrite</a></li>
     <li><a href="#msleep">msleep</a></li>
     <li><a href="#now">now</a></li>
     <li><a href="#setcls">setcls</a></li>
@@ -1354,6 +1365,18 @@ OS-specific means there's no definitive list of possible error codes the
 function can return. You have to make the error handling as generic as
 possible.</p>
 
+<h6 id="mfclose">void mfclose(mfile f);</h6>
+
+<h6 id="mfeof">int mfeof(mfile f);</h6>
+
+<h6 id="mferr">mferr</h6>
+
+<h6 id="mfflush">void mfflush(mfile f, int64_t deadline);</h6>
+
+<h6 id="mfin">mfin</h6>
+
+<h6 id="mfopen">mfile mfopen(const char *pathname, int flags, mode_t mode);</h6>
+
 <h6 id="mfork">pid_t mfork(void);</h6>
 
 <p>This function is a wrapper on top od the standard POSIX <tt>fork()</tt>
@@ -1367,6 +1390,16 @@ behaviour.</p>
 <p>The function returns the process ID of the newly created process to the
 parent process, zero to the child process or -1 in case of error. In the latter
 case it also sets <tt>errno</tt> to the appropriate error code.</p>
+
+<h6 id="mfout">mfout</h6>
+
+<h6 id="mfread">size_t mfread(mfile f, void *buf, size_t len, int64_t deadline);</h6>
+
+<h6 id="mfseek">off_t mfseek(mfile f, off_t offset);</h6>
+
+<h6 id="mftell">off_t mftell(mfile f);</h6>
+
+<h6 id="mfwrite">mfwrite(mfile f, const void *buf, size_t len, int64_t deadline);</h6>
 
 <h6 id="msleep">void msleep(int64_t deadline);</h6>
 
