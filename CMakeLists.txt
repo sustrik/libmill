@@ -45,6 +45,9 @@ file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/tests)
 file(GLOB test_files tests/*.c)
 foreach(test_file IN LISTS test_files)
   get_filename_component(test_name ${test_file} NAME_WE)
+  if(test_name EQUAL "file")
+    continue()
+  endif()
   add_executable(test_${test_name} ${test_file})
   set_target_properties(test_${test_name} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/tests
