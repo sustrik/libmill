@@ -45,6 +45,7 @@ file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/tests)
 file(GLOB test_files tests/*.c)
 foreach(test_file IN LISTS test_files)
   get_filename_component(test_name ${test_file} NAME_WE)
+  # CTest doesn't support stdin. Too bad. Let's skip the test.
   if(NOT test_name STREQUAL file)
     add_executable(test_${test_name} ${test_file})
     set_target_properties(test_${test_name} PROPERTIES
