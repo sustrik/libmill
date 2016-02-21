@@ -85,11 +85,10 @@ pid_t mill_fork(void) {
        destiny. */
     if(mill_kfd != -1) {
         /* TODO: kqueue documentation says that a kqueue descriptor won't
-           survive a fork. If that was so, one would expect following close()
-           to fail with EBADF error. Yet, at least on FreeBSD, the call
-           succeeds. */
-        int rc = close(mill_kfd);
-        mill_assert(rc == 0);
+           survive a fork. However, implementations seem to diverge.
+           On FreeBSD the following function succeeds. On OSX it returns
+           EACCESS. Therefore we ignore the return value. */
+        close(mill_kfd);
         mill_kfd = kqueue();
         mill_assert(mill_kfd >= 0);
         struct kevent chngs[MILL_CHNGSSIZE];
