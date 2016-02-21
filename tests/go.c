@@ -25,6 +25,7 @@
 #include <errno.h>
 #include <assert.h>
 #include <stdio.h>
+#include <sys/wait.h>
 
 #include "../libmill.h"
 
@@ -62,6 +63,12 @@ int main() {
     /* Try to fork the process. */
     pid_t pid = mfork();
     assert(pid != -1);
+    if(pid > 0) {
+        int status;
+        pid = waitpid(pid, &status, 0);
+        assert(pid != -1);
+        assert(WIFEXITED(status));
+    }
 
     return 0;
 }
