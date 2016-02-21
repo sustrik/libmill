@@ -97,7 +97,7 @@ pid_t mill_fork(void) {
         for(fd = 0; fd != mill_ncrpairs; ++fd) {
             struct mill_crpair *crp = &mill_crpairs[fd];
             if(nchngs >= MILL_CHNGSSIZE - 1) {
-                rc = kevent(mill_kfd, chngs, nchngs, NULL, 0, NULL);
+                int rc = kevent(mill_kfd, chngs, nchngs, NULL, 0, NULL);
                 mill_assert(rc != -1);
                 nchngs = 0;
             }
