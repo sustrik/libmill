@@ -97,8 +97,7 @@ check_PROGRAMS = \
 
 LDADD = libmill.la
 
-TESTS = $(check_PROGRAMS) \
-    tests/file.test
+TESTS = $(check_PROGRAMS)
 
 ################################################################################
 #  performance tests                                                           #

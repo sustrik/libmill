@@ -1,2 +1,0 @@
-#!/bin/sh
-./tests/file < ./tests/file.input
