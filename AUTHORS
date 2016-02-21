@@ -3,6 +3,7 @@ Full list of copyright holders:
 Alex Cornejo <acornejo@gmail.com>
 Bent Cardan <bent@nothingsatisfies.com> *
 Constantine Tarasenkov <constantine@protonmail.com> *
+Danny Thomas <d.thomas@its.uq.edu.au>
 Jim Jagielski <jimjag@gmail.com> *
 Jim Schimpf <jim.schimpf@gmail.com>
 Luca Barbato <luca.barbato@gmail.com>
@@ -17,6 +18,6 @@ Yue Xu <red_angelx@qq.com>
 
 * Future patches by this author are submitted under MIT/X11 license
 
-Coprights for DNS resolution library in dns subdurectory are held by:
+Coprights for DNS resolution library in dns subdirectory are held by:
 
 William Ahern <william@25thandClement.com>
