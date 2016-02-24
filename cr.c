@@ -123,8 +123,20 @@ void mill_resume(struct mill_cr *cr, int result) {
     mill_slist_push_back(&mill_ready, &cr->ready);
 }
 
+/* dill_prologue() and dill_epilogue() live in the same scope with
+   libdill's stack-switching black magic. As such, they are extremely
+   fragile. Therefore, the optimiser is prohibited to touch them. */
+#if defined __clang__
+#define dill_noopt __attribute__((optnone))
+#elif defined __GNUC__
+#define dill_noopt __attribute__((optimize("O0")))
+#else
+#error "Unsupported compiler!"
+#endif
+
 /* The intial part of go(). Starts the new coroutine.
    Returns the pointer to the top of its stack. */
+__attribute__((noinline)) dill_noopt
 void *mill_go_prologue(const char *created) {
     /* Ensure that debug functions are available whenever a single go()
        statement is present in the user's code. */
@@ -149,6 +161,7 @@ void *mill_go_prologue(const char *created) {
 }
 
 /* The final part of go(). Cleans up after the coroutine is finished. */
+__attribute__((noinline)) dill_noopt
 void mill_go_epilogue(void) {
     mill_trace(NULL, "go() done");
     mill_unregister_cr(&mill_running->debug);

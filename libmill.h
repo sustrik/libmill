@@ -90,8 +90,9 @@ MILL_EXPORT void goprepare(int count, size_t stack_size, size_t val_size);
 MILL_EXPORT extern volatile int mill_unoptimisable1;
 MILL_EXPORT extern volatile void *mill_unoptimisable2;
 
-MILL_EXPORT void *mill_go_prologue(const char *created);
-MILL_EXPORT void mill_go_epilogue(void);
+MILL_EXPORT __attribute__((noinline)) void *mill_go_prologue(
+    const char *created);
+MILL_EXPORT __attribute__((noinline)) void mill_go_epilogue(void);
 
 #define mill_string2(x) #x
 #define mill_string(x) mill_string2(x)
@@ -99,7 +100,7 @@ MILL_EXPORT void mill_go_epilogue(void);
 #if defined __GNUC__ || defined __clang__
 #define coroutine __attribute__((noinline))
 #else
-#define coroutine
+#error "Unsupported compiler!"
 #endif
 
 #define go(fn) \
