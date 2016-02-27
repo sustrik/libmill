@@ -75,7 +75,7 @@ fi
 #  --enable-valgrind                                                           #
 ################################################################################
 
-AC_ARG_ENABLE([valgrind], [AS_HELP_STRING([--enable-valgeind],
+AC_ARG_ENABLE([valgrind], [AS_HELP_STRING([--enable-valgrind],
     [Provide information about coroutine stacks to valgrind [default=no]])])
 
 if test "x$enable_valgrind" = "xyes"; then
