@@ -103,7 +103,7 @@ int mill_suspend(void) {
         counter = 0;
     }
     /* Store the context of the current coroutine, if any. */
-    if(mill_running && mill_setjmp(&mill_running->ctx))
+    if(mill_running && sigsetjmp(mill_running->ctx, 0))
         return mill_running->result;
     while(1) {
         /* If there's a coroutine ready to be executed go for it. */
@@ -111,7 +111,7 @@ int mill_suspend(void) {
             ++counter;
             struct mill_slist_item *it = mill_slist_pop(&mill_ready);
             mill_running = mill_cont(it, struct mill_cr, ready);
-            mill_jmp(&mill_running->ctx);
+            siglongjmp(mill_running->ctx, 1);
         }
         /* Otherwise, we are going to wait for sleeping coroutines
            and for external events. */
@@ -138,6 +138,10 @@ void mill_resume(struct mill_cr *cr, int result) {
 #error "Unsupported compiler!"
 #endif
 
+sigjmp_buf *mill_getctx(void) {
+    return &mill_running->ctx;
+}
+
 /* The intial part of go(). Starts the new coroutine.
    Returns the pointer to the top of its stack. */
 __attribute__((noinline)) dill_noopt
@@ -163,7 +167,7 @@ void *mill_go_prologue(const char *created) {
     cr->events = 0;
     mill_trace(created, "{%d}=go()", (int)cr->debug.id);
     /* Suspend the parent coroutine and make the new one running. */
-    if(mill_setjmp(&mill_running->ctx))
+    if(sigsetjmp(mill_running->ctx, 0))
         return NULL;
     mill_resume(mill_running, 0);    
     mill_running = cr;

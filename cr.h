@@ -25,6 +25,7 @@
 #ifndef MILL_CR_INCLUDED
 #define MILL_CR_INCLUDED
 
+#include <setjmp.h>
 #include <stdint.h>
 
 #include "chan.h"
@@ -77,7 +78,7 @@ struct mill_cr {
     struct mill_choosedata choosedata;
 
     /* Stored coroutine context while it is not executing. */
-    struct mill_ctx ctx;
+    sigjmp_buf ctx;
 
     /* Argument to resume() call being passed to the blocked suspend() call. */
     int result;
