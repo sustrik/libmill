@@ -91,6 +91,11 @@ struct mill_cr {
     /* Coroutine-local storage. */
     void *cls;
 
+#if defined MILL_VALGRIND
+    /* Valgrind stack identifier. */
+    int sid;
+#endif
+
     /* Debugging info. */
     struct mill_debug_cr debug;
 };

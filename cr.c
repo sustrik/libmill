@@ -26,6 +26,10 @@
 #include <stddef.h>
 #include <stdio.h>
 
+#if defined MILL_VALGRIND
+#include <valgrind/valgrind.h>
+#endif
+
 #include "cr.h"
 #include "debug.h"
 #include "libmill.h"
@@ -142,7 +146,15 @@ void *mill_go_prologue(const char *created) {
        statement is present in the user's code. */
     mill_preserve_debug();
     /* Allocate and initialise new stack. */
-    struct mill_cr *cr = ((struct mill_cr*)mill_allocstack()) - 1;
+#if defined MILL_VALGRIND
+    size_t stack_size;
+    struct mill_cr *cr = ((struct mill_cr*)mill_allocstack(&stack_size));
+    int sid = VALGRIND_STACK_REGISTER(((char*)cr) - stack_size, cr);
+    --cr;
+    cr->sid = sid;
+#else
+    struct mill_cr *cr = ((struct mill_cr*)mill_allocstack(NULL)) - 1;
+#endif
     mill_register_cr(&cr->debug, created);
     cr->valbuf = NULL;
     cr->valbuf_sz = 0;
@@ -167,6 +179,9 @@ void mill_go_epilogue(void) {
     mill_unregister_cr(&mill_running->debug);
     if(mill_running->valbuf)
         free(mill_running->valbuf);
+#if defined MILL_VALGRIND
+    VALGRIND_STACK_DEREGISTER(mill_running->sid);
+#endif
     mill_freestack(mill_running + 1);
     mill_running = NULL;
     /* Given that there's no running coroutine at this point

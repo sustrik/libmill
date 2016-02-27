@@ -33,7 +33,7 @@ void mill_preparestacks(int count, size_t stack_size);
 
 /* Allocates new stack. Returns pointer to the *top* of the stack.
    For now we assume that the stack grows downwards. */
-void *mill_allocstack(void);
+void *mill_allocstack(size_t *stack_size);
 
 /* Deallocates a stack. The argument is pointer to the top of the stack. */
 void mill_freestack(void *stack);

@@ -150,7 +150,7 @@ error:
     errno = ENOMEM;
 }
 
-void *mill_allocstack(void) {
+void *mill_allocstack(size_t *stack_size) {
     if(!mill_slist_empty(&mill_cached_stacks)) {
         --mill_num_cached_stacks;
         return (void*)(mill_slist_pop(&mill_cached_stacks) + 1);
@@ -158,6 +158,8 @@ void *mill_allocstack(void) {
     void *ptr = mill_allocstackmem();
     if(!ptr)
         mill_panic("not enough memory to allocate coroutine stack");
+    if(stack_size)
+        *stack_size = mill_get_stack_size();
     return ptr;
 }
 
