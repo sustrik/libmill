@@ -26,6 +26,7 @@
 #define LIBMILL_H_INCLUDED
 
 #include <errno.h>
+#include <setjmp.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <unistd.h>
@@ -90,6 +91,7 @@ MILL_EXPORT void goprepare(int count, size_t stack_size, size_t val_size);
 MILL_EXPORT extern volatile int mill_unoptimisable1;
 MILL_EXPORT extern volatile void *mill_unoptimisable2;
 
+MILL_EXPORT sigjmp_buf *mill_getctx(void);
 MILL_EXPORT __attribute__((noinline)) void *mill_go_prologue(
     const char *created);
 MILL_EXPORT __attribute__((noinline)) void mill_go_epilogue(void);
