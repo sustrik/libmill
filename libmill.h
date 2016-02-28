@@ -107,8 +107,9 @@ MILL_EXPORT __attribute__((noinline)) void mill_go_epilogue(void);
 
 #define go(fn) \
     do {\
-        void *mill_sp = mill_go_prologue(__FILE__ ":" mill_string(__LINE__));\
-        if(mill_sp) {\
+        void *mill_sp;\
+        if(!sigsetjmp(*mill_getctx(), 0)) {\
+            mill_sp = mill_go_prologue(__FILE__ ":" mill_string(__LINE__));\
             int mill_anchor[mill_unoptimisable1];\
             mill_unoptimisable2 = &mill_anchor;\
             char mill_filler[(char*)&mill_anchor - (char*)(mill_sp)];\

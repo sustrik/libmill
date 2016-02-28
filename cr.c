@@ -167,8 +167,6 @@ void *mill_go_prologue(const char *created) {
     cr->events = 0;
     mill_trace(created, "{%d}=go()", (int)cr->debug.id);
     /* Suspend the parent coroutine and make the new one running. */
-    if(sigsetjmp(mill_running->ctx, 0))
-        return NULL;
     mill_resume(mill_running, 0);    
     mill_running = cr;
     /* Return pointer to the top of the stack. There's valbuf interposed
