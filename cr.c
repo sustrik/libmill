@@ -111,6 +111,8 @@ int mill_suspend(void) {
             ++counter;
             struct mill_slist_item *it = mill_slist_pop(&mill_ready);
             mill_running = mill_cont(it, struct mill_cr, ready);
+            mill_assert(mill_running->is_ready == 1);
+            mill_running->is_ready = 0;
             siglongjmp(mill_running->ctx, 1);
         }
         /* Otherwise, we are going to wait for sleeping coroutines
@@ -124,6 +126,9 @@ int mill_suspend(void) {
 void mill_resume(struct mill_cr *cr, int result) {
     cr->result = result;
     cr->state = MILL_READY;
+    if(mill_slow(cr->is_ready))
+        return;
+    cr->is_ready = 1;
     mill_slist_push_back(&mill_ready, &cr->ready);
 }
 
@@ -160,6 +165,7 @@ void *mill_go_prologue(const char *created) {
     struct mill_cr *cr = ((struct mill_cr*)mill_allocstack(NULL)) - 1;
 #endif
     mill_register_cr(&cr->debug, created);
+    cr->is_ready = 0;
     cr->valbuf = NULL;
     cr->valbuf_sz = 0;
     cr->cls = NULL;

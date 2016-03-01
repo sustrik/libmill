@@ -61,7 +61,9 @@ struct mill_cr {
     enum mill_state state;
 
     /* The coroutine is stored in this list if it is not blocked and it is
-       waiting to be executed. */
+       waiting to be executed. In such case 'is_ready' is set to 1, otherwise
+       it's set to 0. */
+    int is_ready;
     struct mill_slist_item ready;
 
     /* If the coroutine is waiting for a deadline, it uses this timer. */
