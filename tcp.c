@@ -448,6 +448,14 @@ void tcpclose(tcpsock s) {
     mill_assert(0);
 }
 
+void tcpshutdown(tcpsock s) {
+    if (s->type != MILL_TCPCONN)
+        mill_panic("trying to shut down a listening socket");
+    struct mill_tcpconn *c = (struct mill_tcpconn*)s;
+    errno = 0;
+    shutdown(c->fd, SHUT_RDWR);
+}
+
 ipaddr tcpaddr(tcpsock s) {
     if(s->type != MILL_TCPCONN)
         mill_panic("trying to get address from a socket that isn't connected");
