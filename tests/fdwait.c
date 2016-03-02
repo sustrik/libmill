@@ -78,6 +78,10 @@ int main() {
     sz = recv(fds[0], &c, 1, 0);
     assert(sz == 1);
 
+    /* Check when both timeout and fd signals. */
+    rc = fdwait(fds[0], FDW_OUT, now() - 10000);
+    assert(rc == 0 || rc == FDW_OUT);
+
     /* Two interleaved deadlines. */
     int64_t start = now();
     go(trigger(fds[0], start + 50));

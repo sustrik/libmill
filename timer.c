@@ -118,7 +118,9 @@ void mill_timer_add(struct mill_timer *timer, int64_t deadline,
 }
 
 void mill_timer_rm(struct mill_timer *timer) {
+    mill_assert(timer->expiry >= 0);
     mill_list_erase(&mill_timers, &timer->item);
+    timer->expiry = -1;
 }
 
 int mill_timer_next(void) {

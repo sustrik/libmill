@@ -124,10 +124,9 @@ int mill_suspend(void) {
 }
 
 void mill_resume(struct mill_cr *cr, int result) {
+    mill_assert(!cr->is_ready);
     cr->result = result;
     cr->state = MILL_READY;
-    if(mill_slow(cr->is_ready))
-        return;
     cr->is_ready = 1;
     mill_slist_push_back(&mill_ready, &cr->ready);
 }
@@ -169,6 +168,7 @@ void *mill_go_prologue(const char *created) {
     cr->valbuf = NULL;
     cr->valbuf_sz = 0;
     cr->cls = NULL;
+    cr->timer.expiry = -1;
     cr->fd = -1;
     cr->events = 0;
     mill_trace(created, "{%d}=go()", (int)cr->debug.id);
