@@ -30,7 +30,7 @@ branches:
 
 install:
   - if [[ $CONF == "autotools-shared" ]]; then ./autogen.sh && ./configure && make; fi
-  - if [[ $CONF == "autotools-statis" ]]; then ./autogen.sh && ./configure --disable-shared && make; fi
+  - if [[ $CONF == "autotools-static" ]]; then ./autogen.sh && ./configure --disable-shared && make; fi
   - if [[ $CONF == "cmake-shared"  ]]; then cmake . && make; fi
 
 script:
