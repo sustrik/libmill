@@ -34,7 +34,7 @@ install:
   - if [[ $CONF == "cmake-shared"  ]]; then cmake . && make; fi
 
 script:
-  - if [[ $CMAKE == "false" ]]; then make check; else make test; fi
+  - if [[ $CONF == "cmake-shared" ]]; then make test; else make check; fi
 
 after_failure:
   - for f in tests/*.log; do echo; echo "${f}:"; cat $f; done;
