@@ -12,8 +12,9 @@ compiler:
 
 env:
   matrix:
-   - CMAKE="false"
-   - CMAKE="true"
+   - CONF="autotools-shared"
+   - CONF="autotools-static"
+   - CONF="cmake-shared"
 
 addons:
   apt:
@@ -28,8 +29,9 @@ branches:
     - master
 
 install:
-  - if [[ $CMAKE == "false" ]]; then ./autogen.sh && ./configure && make; fi
-  - if [[ $CMAKE == "true"  ]]; then cmake . && make; fi
+  - if [[ $CONF == "autotools-shared" ]]; then ./autogen.sh && ./configure && make; fi
+  - if [[ $CONF == "autotools-statis" ]]; then ./autogen.sh && ./configure --disable-shared && make; fi
+  - if [[ $CONF == "cmake-shared"  ]]; then cmake . && make; fi
 
 script:
   - if [[ $CMAKE == "false" ]]; then make check; else make test; fi
