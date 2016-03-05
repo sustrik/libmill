@@ -14,6 +14,7 @@ env:
   matrix:
    - CONF="autotools-shared"
    - CONF="autotools-static"
+   - CONF="autotools-shared-poll"
    - CONF="cmake-shared"
 
 addons:
@@ -31,10 +32,14 @@ branches:
 install:
   - if [[ $CONF == "autotools-shared" ]]; then ./autogen.sh && ./configure && make; fi
   - if [[ $CONF == "autotools-static" ]]; then ./autogen.sh && ./configure --disable-shared && make; fi
+  - if [[ $CONF == "autotools-shared-poll" ]]; then ./autogen.sh && ./configure CFLAGS=-DMILL_POLL && make; fi
   - if [[ $CONF == "cmake-shared"  ]]; then cmake . && make; fi
 
 script:
-  - if [[ $CONF == "cmake-shared" ]]; then make test; else make check; fi
+  - if [[ $CONF == "autotools-shared" ]]; then make check; fi
+  - if [[ $CONF == "autotools-static" ]]; then make check; fi
+  - if [[ $CONF == "autotools-shared-poll" ]]; then make check; fi
+  - if [[ $CONF == "cmake-shared"  ]]; then make test; fi
 
 after_failure:
   - for f in tests/*.log; do echo; echo "${f}:"; cat $f; done;
