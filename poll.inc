@@ -26,6 +26,7 @@
 #include <poll.h>
 #include <stddef.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include "cr.h"
 #include "list.h"
@@ -60,6 +61,7 @@ void mill_poller_init(void) {
 }
 
 pid_t mill_fork(void) {
+    return fork();
 }
 
 static void mill_poller_add(int fd, int events) {
