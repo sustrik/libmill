@@ -42,6 +42,7 @@ tests/ip
 tests/*.trs
 tests/*.log
 tests/file
+tests/mfork1
 perf/.dirstamp
 perf/go
 perf/ctxswitch

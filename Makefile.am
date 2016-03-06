@@ -93,7 +93,8 @@ check_PROGRAMS = \
     tests/signals\
     tests/overload\
     tests/ip\
-    tests/file
+    tests/file\
+    tests/mfork1
 
 LDADD = libmill.la
 
