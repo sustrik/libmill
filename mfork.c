@@ -1,6 +1,6 @@
 /*
 
-  Copyright (c) 2015 Martin Sustrik
+  Copyright (c) 2016 Martin Sustrik
 
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"),
@@ -22,19 +22,18 @@
 
 */
 
-#ifndef MILL_POLLER_INCLUDED
-#define MILL_POLLER_INCLUDED
+#include <unistd.h>
 
-void mill_poller_init(void);
-void mill_poller_postfork(void);
+#include "libmill.h"
+#include "poller.h"
 
-/* poller.c also implements mill_wait() and mill_fdwait() declared
-   in libmill.h. */
-
-/* Wait till at least one coroutine is resumed. If block is set to 0 the
-   function will poll for events and return immediately. If it is set to 1
-   it will block until there's at least one event to process. */
-void mill_wait(int block);
-
-#endif
-
+pid_t mfork(void) {
+    pid_t pid = fork();
+    if(pid != 0) {
+        /* Parent. */
+        return pid;
+    }
+    /* Child. */
+    mill_poller_postfork();
+    return 0;
+}

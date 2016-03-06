@@ -73,7 +73,7 @@ void mill_poller_init(void) {
     errno = 0;
 }
 
-pid_t mill_poller_postfork(void) {
+void mill_poller_postfork(void) {
     /* In the child process we have to create a new kernel-side pollset,
        identical to the one in the parent process, yet not sharing its
        destiny. */
@@ -97,8 +97,6 @@ pid_t mill_poller_postfork(void) {
             }
         }
     }
-    errno = 0;
-    return 0;
 }
 
 static void mill_poller_add(int fd, int events) {

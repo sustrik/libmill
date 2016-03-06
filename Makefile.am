@@ -42,6 +42,7 @@ libmill_la_SOURCES = \
     ip.c \
     list.h \
     list.c \
+    mfork.c \
     poller.h \
     poller.c \
     slist.h \

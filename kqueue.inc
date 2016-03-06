@@ -108,8 +108,6 @@ void mill_poller_postfork(void) {
             }
         }
     }
-    errno = 0;
-    return 0;
 }
 
 static void mill_poller_add(int fd, int events) {
