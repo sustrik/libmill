@@ -24,8 +24,10 @@
 
 #include <unistd.h>
 
+#include "cr.h"
 #include "libmill.h"
 #include "poller.h"
+#include "timer.h"
 
 pid_t mfork(void) {
     pid_t pid = fork();
@@ -34,6 +36,8 @@ pid_t mfork(void) {
         return pid;
     }
     /* Child. */
+    mill_cr_postfork();
     mill_poller_postfork();
+    mill_timer_postfork();
     return 0;
 }

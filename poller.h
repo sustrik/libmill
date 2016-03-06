@@ -26,7 +26,6 @@
 #define MILL_POLLER_INCLUDED
 
 void mill_poller_init(void);
-void mill_poller_postfork(void);
 
 /* poller.c also implements mill_wait() and mill_fdwait() declared
    in libmill.h. */
@@ -35,6 +34,10 @@ void mill_poller_postfork(void);
    function will poll for events and return immediately. If it is set to 1
    it will block until there's at least one event to process. */
 void mill_wait(int block);
+
+/* Called in the child process after fork to create a fresh new pollset
+   independent from the parent's pollset. */
+void mill_poller_postfork(void);
 
 #endif
 

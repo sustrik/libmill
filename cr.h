@@ -125,4 +125,8 @@ void mill_resume(struct mill_cr *cr, int result);
    to be at least 'size' bytes long. */
 void *mill_valbuf(struct mill_cr *cr, size_t size);
 
+/* Called in the child process after fork to stop all the coroutines 
+   inherited from the parent. */
+void mill_cr_postfork(void);
+
 #endif

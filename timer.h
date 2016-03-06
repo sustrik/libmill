@@ -60,5 +60,9 @@ int mill_timer_next(void);
    Returns zero if no coroutine was resumed, 1 otherwise. */
 int mill_timer_fire(void);
 
+/* Called after fork in the child process to deactivate all the timers
+   inherited from the parent. */
+void mill_timer_postfork(void);
+
 #endif
 

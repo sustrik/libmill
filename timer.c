@@ -151,3 +151,6 @@ int mill_timer_fire(void) {
     return fired;
 }
 
+void mill_timer_postfork(void) {
+}
+

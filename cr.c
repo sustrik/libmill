@@ -221,3 +221,8 @@ void setcls(void *val) {
     mill_running->cls = val;
 }
 
+void mill_cr_postfork(void) {
+    /* Drop all coroutines in the "ready to execute" list. */
+    mill_slist_init(&mill_ready);
+}
+
