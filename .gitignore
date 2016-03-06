@@ -44,6 +44,7 @@ tests/*.log
 tests/file
 tests/mfork1
 tests/mfork2
+tests/mfork3
 perf/.dirstamp
 perf/go
 perf/ctxswitch

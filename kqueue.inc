@@ -77,37 +77,18 @@ void mill_poller_init(void) {
 }
 
 void mill_poller_postfork(void) {
-    /* In the child process we have to create a new kernel-side pollset,
-       identical to the one in the parent process, yet not sharing its
-       destiny. */
     if(mill_kfd != -1) {
         /* TODO: kqueue documentation says that a kqueue descriptor won't
            survive a fork. However, implementations seem to diverge.
            On FreeBSD the following function succeeds. On OSX it returns
            EACCESS. Therefore we ignore the return value. */
         close(mill_kfd);
-        mill_kfd = kqueue();
-        mill_assert(mill_kfd >= 0);
-        struct kevent chngs[MILL_CHNGSSIZE];
-        int nchngs = 0;
-        int fd;
-        for(fd = 0; fd != mill_ncrpairs; ++fd) {
-            struct mill_crpair *crp = &mill_crpairs[fd];
-            if(nchngs >= MILL_CHNGSSIZE - 1) {
-                int rc = kevent(mill_kfd, chngs, nchngs, NULL, 0, NULL);
-                mill_assert(rc != -1);
-                nchngs = 0;
-            }
-            if(crp->currevs & FDW_IN) {
-                EV_SET(&chngs[nchngs], fd, EVFILT_READ, EV_ADD, 0, 0, 0);
-                ++nchngs;
-            }
-            if(crp->currevs & FDW_OUT) {
-                EV_SET(&chngs[nchngs], fd, EVFILT_WRITE, EV_ADD, 0, 0, 0);
-                ++nchngs;
-            }
-        }
     }
+    mill_kfd = -1;
+    mill_crpairs = NULL;
+    mill_ncrpairs = 0;
+    mill_changelist = MILL_ENDLIST;
+    mill_poller_init();
 }
 
 static void mill_poller_add(int fd, int events) {

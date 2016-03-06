@@ -96,7 +96,8 @@ check_PROGRAMS = \
     tests/ip\
     tests/file\
     tests/mfork1\
-    tests/mfork2
+    tests/mfork2\
+    tests/mfork3
 
 LDADD = libmill.la
 

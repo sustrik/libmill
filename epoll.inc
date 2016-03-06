@@ -74,29 +74,15 @@ void mill_poller_init(void) {
 }
 
 void mill_poller_postfork(void) {
-    /* In the child process we have to create a new kernel-side pollset,
-       identical to the one in the parent process, yet not sharing its
-       destiny. */
     if(mill_efd != -1) {
         int rc = close(mill_efd);
         mill_assert(rc == 0);
-        mill_efd = epoll_create(1);
-        mill_assert(mill_efd >= 0);
-        int fd;
-        for(fd = 0; fd != mill_ncrpairs; ++fd) {
-            if(mill_crpairs[fd].currevs) {
-                struct epoll_event ev;
-                ev.data.fd = fd;
-                ev.events = 0;
-                if(mill_crpairs[fd].currevs & FDW_IN)
-                    ev.events |= EPOLLIN;
-                if(mill_crpairs[fd].currevs & FDW_OUT)
-                    ev.events |= EPOLLOUT;
-                rc = epoll_ctl(mill_efd, EPOLL_CTL_ADD, fd, &ev);
-                mill_assert(rc == 0);
-            }
-        }
     }
+    mill_efd = -1;
+    mill_crpairs = NULL;
+    mill_ncrpairs = 0;
+    mill_changelist = MILL_ENDLIST;
+    mill_poller_init();
 }
 
 static void mill_poller_add(int fd, int events) {
