@@ -29,16 +29,11 @@
 
 #include "../libmill.h"
 
-int forked = 0;
-int worker_running = 0;
+int timeout = 0;
 
 coroutine void worker(void) {
-    while(1) {
-        if(forked)
-            break;
-        yield();
-    }
-    worker_running = 1;
+    msleep(now() + 100);
+    timeout = 1;
 }
 
 int main() {
@@ -57,12 +52,9 @@ int main() {
         return 0;
     }
 
-    /* Child tries to make sure that there's only one coroutine running. */
-    forked = 1; 
-    int i;
-    for(i = 0; i != 20; ++i)
-        yield();
-    assert(!worker_running);
+    /* Child waits to see whether the timer was properly removed. */
+    msleep(now() + 200);
+    assert(!timeout);
 
     return 0;
 }
