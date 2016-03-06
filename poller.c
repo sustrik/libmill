@@ -38,7 +38,7 @@ static void mill_poller_add(int fd, int events);
 static void mill_poller_rm(struct mill_cr *cr);
 static void mill_poller_clean(int fd);
 static int mill_poller_wait(int timeout);
-static pid_t mill_fork(void);
+static void mill_poller_postfork(void);
 
 /* If 1, mill_poller_init was already called. */
 static int mill_poller_initialised = 0;
@@ -55,7 +55,14 @@ do {\
 } while(0)
 
 pid_t mfork(void) {
-    return mill_fork();
+    pid_t pid = fork();
+    if(pid != 0) {
+        /* Parent. */
+        return pid;
+    }
+    /* Child. */
+    mill_poller_postfork();
+    return 0;
 }
 
 /* Pause current coroutine for a specified time interval. */
