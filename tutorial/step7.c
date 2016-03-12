@@ -114,8 +114,9 @@ int main(int argc, char *argv[]) {
            perror("Can't create new process");
            return 1;
         }
-        if(pid > 0)
-            break;
+        if(pid == 0) {
+          break;
+        }
     }
 
     chan ch = chmake(int, 0);
