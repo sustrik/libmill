@@ -66,7 +66,7 @@ udpsock udplisten(ipaddr addr) {
     /* If the user requested an ephemeral port,
        retrieve the port number assigned by the OS now. */
     int port = mill_ipport(addr);
-    if(!port == 0) {
+    if(port) {
         ipaddr baddr;
         socklen_t len = sizeof(ipaddr);
         rc = getsockname(s, (struct sockaddr*)&baddr, &len);
