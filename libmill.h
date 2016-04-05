@@ -150,9 +150,9 @@ MILL_EXPORT void setcls(void *val);
 /******************************************************************************/
 
 typedef struct mill_chan *chan;
-
-#define MILL_CLAUSELEN (sizeof(struct{void *f1; void *f2; void *f3; void *f4; \
-    void *f5; void *f6; int f7; int f8; int f9;}))
+typedef struct{void *f1; void *f2; void *f3; void *f4; \
+    void *f5; void *f6; int f7; int f8; int f9;} mill_clause;
+#define MILL_CLAUSELEN (sizeof(mill_clause))
 
 #define chmake(type, bufsz) mill_chmake(sizeof(type), bufsz,\
     __FILE__ ":" mill_string(__LINE__))
@@ -384,4 +384,3 @@ MILL_EXPORT void goredump(void);
 MILL_EXPORT void gotrace(int level);
 
 #endif
-
