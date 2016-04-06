@@ -22,12 +22,18 @@ addons:
     sources:
       - ubuntu-toolchain-r-test
     packages:
-      - gcc-4.8
+      - gcc-4.9
       - clang
 
 branches:
   only:
     - master
+
+before_install:
+  - if [[ $TRAVIS_OS_NAME == "linux" ]]; then export CC=gcc-4.9; fi
+  - echo -e 'int main(){printf("using gcc %d.%d.%d\\n",__GNUC__,__GNUC_MINOR__,__GNUC_PATCHLEVEL__); return 0;}' &> checkgcc.c
+  - cc checkgcc.c -o checkgcc
+  - ./checkgcc
 
 install:
   - if [[ $CONF == "autotools-shared" ]]; then ./autogen.sh && ./configure && make; fi
