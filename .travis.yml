@@ -29,6 +29,9 @@ branches:
   only:
     - master
 
+before_install:
+  - gcc -v
+
 install:
   - if [[ $CONF == "autotools-shared" ]]; then ./autogen.sh && ./configure && make; fi
   - if [[ $CONF == "autotools-static" ]]; then ./autogen.sh && ./configure --disable-shared && make; fi
