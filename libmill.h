@@ -46,7 +46,7 @@
 #define MILL_VERSION_CURRENT 15
 
 /*  The latest revision of the current interface. */
-#define MILL_VERSION_REVISION 3
+#define MILL_VERSION_REVISION 4
 
 /*  How many past interface versions are still supported. */
 #define MILL_VERSION_AGE 0
