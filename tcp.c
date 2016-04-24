@@ -279,6 +279,12 @@ size_t tcpsend(tcpsock s, const void *buf, size_t len, int64_t deadline) {
     while(remaining) {
         ssize_t sz = send(conn->fd, pos, remaining, 0);
         if(sz == -1) {
+            /* Operating systems are inconsistent w.r.t. returning EPIPE and
+               ECONNRESET. Let's paper over it like this. */
+            if(errno == EPIPE) {
+                errno = ECONNRESET;
+                return 0;
+            }
             if(errno != EAGAIN && errno != EWOULDBLOCK)
                 return 0;
             int rc = fdwait(conn->fd, FDW_OUT, deadline);
