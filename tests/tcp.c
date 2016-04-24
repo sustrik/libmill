@@ -24,6 +24,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "../libmill.h"
@@ -113,12 +114,17 @@ int main() {
         size_t sz = tcpsend(as, buffer, 2048, -1);
         if(errno == ECONNRESET)
             break;
-printf("errno=%d\n", errno);
-        assert(errno == 0);
+        if(errno != 0) {
+            fprintf(stderr, "errno=%d\n", errno);
+            assert(0);
+        }
         tcpflush(as, -1);
         if(errno == ECONNRESET)
             break;
-printf("errno=%d\n", errno);
+        if(errno != 0) {
+            fprintf(stderr, "errno=%d\n", errno);
+            assert(0);
+        }
         assert(errno == 0);
     }
     tcpclose(as);
