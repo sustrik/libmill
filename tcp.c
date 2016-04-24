@@ -286,7 +286,7 @@ size_t tcpsend(tcpsock s, const void *buf, size_t len, int64_t deadline) {
                 errno = ETIMEDOUT;
                 return len - remaining;
             }
-            mill_assert(rc == FDW_OUT);
+            mill_assert(rc & FDW_OUT);
             continue;
         }
         pos += sz;
@@ -315,7 +315,7 @@ void tcpflush(tcpsock s, int64_t deadline) {
                 errno = ETIMEDOUT;
                 return;
             }
-            mill_assert(rc == FDW_OUT);
+            mill_assert(rc & FDW_OUT);
             continue;
         }
         pos += sz;

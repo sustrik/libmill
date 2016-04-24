@@ -281,7 +281,7 @@ size_t unixsend(unixsock s, const void *buf, size_t len, int64_t deadline) {
                 errno = ETIMEDOUT;
                 return len - remaining;
             }
-            mill_assert(rc == FDW_OUT);
+            mill_assert(rc & FDW_OUT);
             continue;
         }
         pos += sz;
@@ -310,7 +310,7 @@ void unixflush(unixsock s, int64_t deadline) {
                 errno = ETIMEDOUT;
                 return;
             }
-            mill_assert(rc == FDW_OUT);
+            mill_assert(rc & FDW_OUT);
             continue;
         }
         pos += sz;
