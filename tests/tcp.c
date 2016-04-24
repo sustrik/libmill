@@ -113,7 +113,6 @@ int main() {
         size_t sz = tcpsend(as, buffer, 2048, -1);
         if(errno == ECONNRESET)
             break;
-printf("errno=%d\n", errno);
         assert(errno == 0);
         tcpflush(as, -1);
         if(errno == ECONNRESET)
