@@ -310,6 +310,12 @@ void tcpflush(tcpsock s, int64_t deadline) {
         if(sz == -1) {
             if(errno != EAGAIN && errno != EWOULDBLOCK)
                 return;
+            /* Operating systems are inconsistent w.r.t. returning EPIPE and
+               ECONNRESET. Let's paper over it like this. */
+            if(errno == EPIPE) {
+                errno = ECONNRESET;
+                return;
+            }
             int rc = fdwait(conn->fd, FDW_OUT, deadline);
             if(rc == 0) {
                 errno = ETIMEDOUT;
