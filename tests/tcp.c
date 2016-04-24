@@ -52,6 +52,15 @@ coroutine void client(int port) {
     tcpclose(cs);
 }
 
+coroutine void client2(int port) {
+    ipaddr addr = ipremote("127.0.0.1", port, 0, -1);
+    tcpsock conn = tcpconnect(addr, -1);
+    assert(conn);
+    msleep(now() + 100);
+    tcpclose(conn);
+}
+
+
 int main() {
     char buf[16];
 
@@ -80,6 +89,7 @@ int main() {
     tcpflush(as, -1);
     assert(errno == 0);
 
+    /* Test tcprecvuntil. */
     sz = tcprecvuntil(as, buf, sizeof(buf), "\n", 1, -1);
     assert(sz == 4);
     assert(buf[0] == '1' && buf[1] == '2' && buf[2] == '3' && buf[3] == '\n');
@@ -90,6 +100,25 @@ int main() {
     assert(sz == 3);
     assert(buf[0] == '6' && buf[1] == '7' && buf[2] == '8');
 
+    tcpclose(as);
+    tcpclose(ls);
+
+    /* Test whether libmill performs correctly when faced with TCP pushback. */
+    ls = tcplisten(iplocal(NULL, 5555, 0), 10);
+    go(client2(5555));
+    as = tcpaccept(ls, -1);
+    assert(as);
+    char buffer[2048];
+    while(1) {
+        size_t sz = tcpsend(as, buffer, 2048, -1);
+        if(errno == ECONNRESET)
+            break;
+        assert(errno == 0);
+        tcpflush(as, -1);
+        if(errno == ECONNRESET)
+            break;
+        assert(errno == 0);
+    }
     tcpclose(as);
     tcpclose(ls);
 
