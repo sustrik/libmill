@@ -299,28 +299,45 @@ ipaddr ipremote(const char *name, int port, int mode, int64_t deadline) {
         }
         if(rc == ENOENT)
             break;
-        if(!ipv4 && it && it->ai_family == AF_INET)
+
+        if(!ipv4 && it && it->ai_family == AF_INET) {
             ipv4 = it;
-        if(!ipv6 && it && it->ai_family == AF_INET6)
+        }
+        else if(!ipv6 && it && it->ai_family == AF_INET6) {
             ipv6 = it;
+        }
+        else {
+            free(it);
+        }
+        
         if(ipv4 && ipv6)
             break;
     }
     switch(mode) {
     case IPADDR_IPV4:
-        ipv6 = NULL;
+        if(ipv6) {
+            free(ipv6);
+            ipv6 = NULL;
+        }
         break;
     case IPADDR_IPV6:
-        ipv4 = NULL;
+        if(ipv4) {
+            free(ipv4);
+            ipv4 = NULL;
+        }
         break;
     case 0:
     case IPADDR_PREF_IPV4:
-        if(ipv4)
-           ipv6 = NULL;
+        if(ipv4 && ipv6) {
+            free(ipv6);
+            ipv6 = NULL;
+        }
         break;
     case IPADDR_PREF_IPV6:
-        if(ipv6)
-           ipv4 = NULL;
+        if(ipv6 && ipv4) {
+            free(ipv4);
+            ipv4 = NULL;
+        }
         break;
     default:
         mill_assert(0);
@@ -330,6 +347,7 @@ ipaddr ipremote(const char *name, int port, int mode, int64_t deadline) {
         memcpy(inaddr, ipv4->ai_addr, sizeof (struct sockaddr_in));
         inaddr->sin_port = htons(port);
         dns_ai_close(ai);
+        free(ipv4);
         errno = 0;
         return addr;
     }
@@ -338,6 +356,7 @@ ipaddr ipremote(const char *name, int port, int mode, int64_t deadline) {
         memcpy(inaddr, ipv6->ai_addr, sizeof (struct sockaddr_in6));
         inaddr->sin6_port = htons(port);
         dns_ai_close(ai);
+        free(ipv6);
         errno = 0;
         return addr;
     }
