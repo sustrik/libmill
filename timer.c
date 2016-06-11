@@ -60,7 +60,7 @@ static int64_t mill_os_time(void) {
 #endif
 }
 
-int64_t mill_now(void) {
+int64_t mill_now_(void) {
 #if (defined __GNUC__ || defined __clang__) && \
       (defined __i386__ || defined __x86_64__)
     /* Get the timestamp counter. This is time since startup, expressed in CPU

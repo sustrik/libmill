@@ -29,7 +29,7 @@
 #include "poller.h"
 #include "timer.h"
 
-pid_t mfork(void) {
+pid_t mill_mfork_(void) {
     pid_t pid = fork();
     if(pid != 0) {
         /* Parent. */

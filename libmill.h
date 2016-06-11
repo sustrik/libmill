@@ -88,14 +88,22 @@ extern "C" {
 /*  Helpers                                                                   */
 /******************************************************************************/
 
-#define mill_string2(x) #x
-#define mill_string(x) mill_string2(x)
-#define MILL_HERE (__FILE__ ":" mill_string(__LINE__))
+#define mill_string2_(x) #x
+#define mill_string1_(x) mill_string2_(x)
+#define MILL_HERE_ (__FILE__ ":" mill_string1_(__LINE__))
 
-MILL_EXPORT int64_t mill_now(
+MILL_EXPORT int64_t mill_now_(
     void);
-MILL_EXPORT pid_t mfork(
+MILL_EXPORT pid_t mill_mfork_(
     void);
+
+#if defined MILL_USE_PREFIX
+#define mill_now mill_now_
+#define mill_mfork mill_mfork_
+#else
+#define now mill_now_
+#define mfork mill_mfork_
+#endif
 
 /******************************************************************************/
 /*  Coroutines                                                                */
@@ -140,7 +148,7 @@ MILL_EXPORT void mill_setcls_(
     do {\
         void *mill_sp;\
         if(!sigsetjmp(*mill_getctx_(), 0)) {\
-            mill_sp = mill_prologue_(MILL_HERE);\
+            mill_sp = mill_prologue_(MILL_HERE_);\
             int mill_anchor[mill_unoptimisable1_];\
             mill_unoptimisable2_ = &mill_anchor;\
             char mill_filler[(char*)&mill_anchor - (char*)(mill_sp)];\
@@ -157,9 +165,9 @@ MILL_EXPORT void mill_setcls_(
 #define mill_coroutine __attribute__((noinline))
 #define mill_go(fn) mill_go_(fn)
 #define mill_goprepare mill_goprepare_
-#define mill_yield() mill_yield_(MILL_HERE)
-#define mill_msleep(dd) mill_msleep_((dd), MILL_HERE)
-#define mill_fdwait(fd, ev, dd) mill_fdwait_((fd), (ev), (dd), MILL_HERE)
+#define mill_yield() mill_yield_(MILL_HERE_)
+#define mill_msleep(dd) mill_msleep_((dd), MILL_HERE_)
+#define mill_fdwait(fd, ev, dd) mill_fdwait_((fd), (ev), (dd), MILL_HERE_)
 #define mill_fdclean mill_fdclean_
 #define mill_cls mill_cls_
 #define mill_setcls mill_setcls_
@@ -170,9 +178,9 @@ MILL_EXPORT void mill_setcls_(
 #define coroutine __attribute__((noinline))
 #define go(fn) mill_go_(fn)
 #define goprepare mill_goprepare_
-#define yield() mill_yield_(MILL_HERE)
-#define msleep(deadline) mill_msleep_((deadline), MILL_HERE)
-#define fdwait(fd, ev, dd) mill_fdwait_((fd), (ev), (dd), MILL_HERE)
+#define yield() mill_yield_(MILL_HERE_)
+#define msleep(deadline) mill_msleep_((deadline), MILL_HERE_)
+#define fdwait(fd, ev, dd) mill_fdwait_((fd), (ev), (dd), MILL_HERE_)
 #define fdclean mill_fdclean_
 #define cls mill_cls_
 #define setcls mill_setcls_
@@ -187,26 +195,26 @@ typedef struct{void *f1; void *f2; void *f3; void *f4; \
     void *f5; void *f6; int f7; int f8; int f9;} mill_clause;
 #define MILL_CLAUSELEN (sizeof(mill_clause))
 
-#define chmake(type, bufsz) mill_chmake(sizeof(type), bufsz, MILL_HERE)
+#define chmake(type, bufsz) mill_chmake(sizeof(type), bufsz, MILL_HERE_)
 
-#define chdup(channel) mill_chdup((channel), MILL_HERE)
+#define chdup(channel) mill_chdup((channel), MILL_HERE_)
 
 #define chs(channel, type, value) \
     do {\
         type mill_val = (value);\
-        mill_chs((channel), &mill_val, sizeof(type), MILL_HERE);\
+        mill_chs((channel), &mill_val, sizeof(type), MILL_HERE_);\
     } while(0)
 
 #define chr(channel, type) \
-    (*(type*)mill_chr((channel), sizeof(type), MILL_HERE))
+    (*(type*)mill_chr((channel), sizeof(type), MILL_HERE_))
 
 #define chdone(channel, type, value) \
     do {\
         type mill_val = (value);\
-        mill_chdone((channel), &mill_val, sizeof(type), MILL_HERE);\
+        mill_chdone((channel), &mill_val, sizeof(type), MILL_HERE_);\
     } while(0)
 
-#define chclose(channel) mill_chclose((channel), MILL_HERE)
+#define chclose(channel) mill_chclose((channel), MILL_HERE_)
 
 MILL_EXPORT chan mill_chmake(
     size_t sz,
@@ -237,7 +245,7 @@ MILL_EXPORT void mill_chclose(
 
 #define mill_choose \
     {\
-        mill_choose_init(MILL_HERE);\
+        mill_choose_init(MILL_HERE_);\
         int mill_idx = -2;\
         while(1) {\
             if(mill_idx != -2) {\
@@ -318,7 +326,6 @@ MILL_EXPORT void mill_chclose(
 # define mill_deadline(ddline) mill_internal__deadline(ddline, __COUNTER__)
 # define mill_otherwise mill_internal__otherwise(__COUNTER__)
 #else
-# define now mill_now
 # define choose mill_choose
 # define end mill_end
 # define in(chan, type, name) mill_internal__in((chan), type, name, __COUNTER__)
