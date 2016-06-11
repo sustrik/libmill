@@ -365,29 +365,57 @@ MILL_EXPORT void unixclose(unixsock s);
 /*  File library                                                              */
 /******************************************************************************/
 
-typedef struct mill_file *mfile;
+typedef struct mill_file *mill_mfile_;
 
-#define mfin mill_mfin()
-#define mfout mill_mfout()
-#define mferr mill_mferr()
-
-MILL_EXPORT mfile mfopen(const char *pathname, int flags, mode_t mode);
-MILL_EXPORT size_t mfwrite(mfile f, const void *buf, size_t len,
+MILL_EXPORT mill_mfile_ mill_mfopen_(const char *pathname, int flags,
+    mode_t mode);
+MILL_EXPORT size_t mill_mfwrite_(mill_mfile_ f, const void *buf, size_t len,
     int64_t deadline);
-MILL_EXPORT void mfflush(mfile f, int64_t deadline);
-MILL_EXPORT size_t mfread(mfile f, void *buf, size_t len, int64_t deadline);
-MILL_EXPORT void mfclose(mfile f);
-MILL_EXPORT off_t mftell(mfile f);
-MILL_EXPORT off_t mfseek(mfile f, off_t offset);
-MILL_EXPORT int mfeof(mfile f);
-MILL_EXPORT mfile mill_mfin(void);
-MILL_EXPORT mfile mill_mfout(void);
-MILL_EXPORT mfile mill_mferr(void);
+MILL_EXPORT void mill_mfflush_(mill_mfile_ f, int64_t deadline);
+MILL_EXPORT size_t mill_mfread_(mill_mfile_ f, void *buf, size_t len,
+    int64_t deadline);
+MILL_EXPORT void mill_mfclose_(mill_mfile_ f);
+MILL_EXPORT off_t mill_mftell_(mill_mfile_ f);
+MILL_EXPORT off_t mill_mfseek_(mill_mfile_ f, off_t offset);
+MILL_EXPORT int mill_mfeof_(mill_mfile_ f);
+MILL_EXPORT mill_mfile_ mill_mfin_(void);
+MILL_EXPORT mill_mfile_ mill_mfout_(void);
+MILL_EXPORT mill_mfile_ mill_mferr_(void);
+
+#if defined MILL_USE_PREFIX
+#define mill_mfile mill_mfile_
+#define mill_mfopen mill_mfopen_
+#define mill_mfwrite mill_mfwrite_
+#define mill_mfflush mill_mfflush_
+#define mill_mfread mill_mfread_
+#define mill_mfclose mill_mfclose_
+#define mill_mftell mill_mftell_
+#define mill_mfseek mill_mfseek_
+#define mill_mfeof mill_mfeof_
+#define mill_mfin mill_mfin_()
+#define mill_mfout mill_mfout_()
+#define mill_mferr mill_mferr_()
+#else
+#define mfile mill_mfile_
+#define mfopen mill_mfopen_
+#define mfwrite mill_mfwrite_
+#define mfflush mill_mfflush_
+#define mfread mill_mfread_
+#define mfclose mill_mfclose_
+#define mftell mill_mftell_
+#define mfseek mill_mfseek_
+#define mfeof mill_mfeof_
+#define mfin mill_mfin_()
+#define mfout mill_mfout_()
+#define mferr mill_mferr_()
+#endif
 
 /******************************************************************************/
 /*  Debugging                                                                 */
 /******************************************************************************/
 
+/* These symbols are not wrapped in macros so that they can be used
+   directly from the debugger. */
 MILL_EXPORT void goredump(void);
 MILL_EXPORT void gotrace(int level);
 
