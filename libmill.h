@@ -314,24 +314,26 @@ MILL_EXPORT const char *ipaddrstr(ipaddr addr, char *ipstr);
 /*  TCP library                                                               */
 /******************************************************************************/
 
-typedef struct mill_tcpsock *mill_tcpsock_;
+struct mill_tcpsock;
 
-MILL_EXPORT mill_tcpsock_ mill_tcplisten_(ipaddr addr, int backlog);
-MILL_EXPORT int mill_tcpport_(mill_tcpsock_ s);
-MILL_EXPORT mill_tcpsock_ mill_tcpaccept_(mill_tcpsock_ s, int64_t deadline);
-MILL_EXPORT ipaddr mill_tcpaddr_(mill_tcpsock_ s);
-MILL_EXPORT mill_tcpsock_ mill_tcpconnect_(ipaddr addr, int64_t deadline);
-MILL_EXPORT size_t mill_tcpsend_(mill_tcpsock_ s, const void *buf, size_t len,
+MILL_EXPORT struct mill_tcpsock *mill_tcplisten_(ipaddr addr, int backlog);
+MILL_EXPORT int mill_tcpport_(struct mill_tcpsock *s);
+MILL_EXPORT struct mill_tcpsock *mill_tcpaccept_(struct mill_tcpsock *s,
     int64_t deadline);
-MILL_EXPORT void mill_tcpflush_(mill_tcpsock_ s, int64_t deadline);
-MILL_EXPORT size_t mill_tcprecv_(mill_tcpsock_ s, void *buf, size_t len,
+MILL_EXPORT ipaddr mill_tcpaddr_(struct mill_tcpsock *s);
+MILL_EXPORT struct mill_tcpsock *mill_tcpconnect_(ipaddr addr,
     int64_t deadline);
-MILL_EXPORT size_t mill_tcprecvuntil_(mill_tcpsock_ s, void *buf, size_t len,
-    const char *delims, size_t delimcount, int64_t deadline);
-MILL_EXPORT void mill_tcpclose_(mill_tcpsock_ s);
+MILL_EXPORT size_t mill_tcpsend_(struct mill_tcpsock *s,
+    const void *buf, size_t len, int64_t deadline);
+MILL_EXPORT void mill_tcpflush_(struct mill_tcpsock *s, int64_t deadline);
+MILL_EXPORT size_t mill_tcprecv_(struct mill_tcpsock *s, void *buf, size_t len,
+    int64_t deadline);
+MILL_EXPORT size_t mill_tcprecvuntil_(struct mill_tcpsock *s, void *buf,
+    size_t len, const char *delims, size_t delimcount, int64_t deadline);
+MILL_EXPORT void mill_tcpclose_(struct mill_tcpsock *s);
 
 #if defined MILL_USE_PREFIX
-#define mill_tcpsock mill_tcpsock_
+typedef struct mill_tcpsock *mill_tcpsock;
 #define mill_tcplisten mill_tcplisten_
 #define mill_tcpport mill_tcpport_
 #define mill_tcpaccept mill_tcpaccept_
@@ -343,7 +345,7 @@ MILL_EXPORT void mill_tcpclose_(mill_tcpsock_ s);
 #define mill_tcprecvuntil mill_tcprecvuntil_
 #define mill_tcpclose mill_tcpclose_
 #else
-#define tcpsock mill_tcpsock_
+typedef struct mill_tcpsock *tcpsock;
 #define tcplisten mill_tcplisten_
 #define tcpport mill_tcpport_
 #define tcpaccept mill_tcpaccept_
@@ -360,25 +362,25 @@ MILL_EXPORT void mill_tcpclose_(mill_tcpsock_ s);
 /*  UDP library                                                               */
 /******************************************************************************/
 
-typedef struct mill_udpsock *mill_udpsock_;
+struct mill_udpsock;
 
-MILL_EXPORT mill_udpsock_ mill_udplisten_(ipaddr addr);
-MILL_EXPORT int mill_udpport_(mill_udpsock_ s);
-MILL_EXPORT void mill_udpsend_(mill_udpsock_ s, ipaddr addr,
+MILL_EXPORT struct mill_udpsock *mill_udplisten_(ipaddr addr);
+MILL_EXPORT int mill_udpport_(struct mill_udpsock *s);
+MILL_EXPORT void mill_udpsend_(struct mill_udpsock *s, ipaddr addr,
     const void *buf, size_t len);
-MILL_EXPORT size_t mill_udprecv_(mill_udpsock_ s, ipaddr *addr,
+MILL_EXPORT size_t mill_udprecv_(struct mill_udpsock *s, ipaddr *addr,
     void *buf, size_t len, int64_t deadline);
-MILL_EXPORT void mill_udpclose_(mill_udpsock_ s);
+MILL_EXPORT void mill_udpclose_(struct mill_udpsock *s);
 
 #if defined MILL_USE_PREFIX
-#define mill_udpsock mill_udpsock_
+typedef struct mill_udpsock *mill_udpsock;
 #define mill_udplisten mill_udplisten_
 #define mill_udpport mill_udpport_
 #define mill_udpsend mill_udpsend_
 #define mill_udprecv mill_udprecv_
 #define mill_udpclose mill_udpclose_
 #else
-#define udpsock mill_udpsock_
+typedef struct mill_udpsock *udpsock;
 #define udplisten mill_udplisten_
 #define udpport mill_udpport_
 #define udpsend mill_udpsend_
@@ -390,23 +392,26 @@ MILL_EXPORT void mill_udpclose_(mill_udpsock_ s);
 /*  UNIX library                                                              */
 /******************************************************************************/
 
-typedef struct mill_unixsock *mill_unixsock_;
+struct mill_unixsock;
 
-MILL_EXPORT mill_unixsock_ mill_unixlisten_(const char *addr, int backlog);
-MILL_EXPORT mill_unixsock_ mill_unixaccept_(mill_unixsock_ s, int64_t deadline);
-MILL_EXPORT mill_unixsock_ mill_unixconnect_(const char *addr);
-MILL_EXPORT void mill_unixpair_(mill_unixsock_ *a, mill_unixsock_ *b);
-MILL_EXPORT size_t mill_unixsend_(mill_unixsock_ s, const void *buf, size_t len,
+MILL_EXPORT struct mill_unixsock *mill_unixlisten_(const char *addr,
+    int backlog);
+MILL_EXPORT struct mill_unixsock *mill_unixaccept_(struct mill_unixsock *s,
     int64_t deadline);
-MILL_EXPORT void mill_unixflush_(mill_unixsock_ s, int64_t deadline);
-MILL_EXPORT size_t mill_unixrecv_(mill_unixsock_ s, void *buf, size_t len,
-    int64_t deadline);
-MILL_EXPORT size_t mill_unixrecvuntil_(mill_unixsock_ s, void *buf, size_t len,
-    const char *delims, size_t delimcount, int64_t deadline);
-MILL_EXPORT void mill_unixclose_(mill_unixsock_ s);
+MILL_EXPORT struct mill_unixsock *mill_unixconnect_(const char *addr);
+MILL_EXPORT void mill_unixpair_(struct mill_unixsock **a,
+    struct mill_unixsock **b);
+MILL_EXPORT size_t mill_unixsend_(struct mill_unixsock *s,
+    const void *buf, size_t len, int64_t deadline);
+MILL_EXPORT void mill_unixflush_(struct mill_unixsock *s, int64_t deadline);
+MILL_EXPORT size_t mill_unixrecv_(struct mill_unixsock *s,
+    void *buf, size_t len, int64_t deadline);
+MILL_EXPORT size_t mill_unixrecvuntil_(struct mill_unixsock *s, void *buf,
+    size_t len, const char *delims, size_t delimcount, int64_t deadline);
+MILL_EXPORT void mill_unixclose_(struct mill_unixsock *s);
 
 #if defined MILL_USE_PREFIX
-#define mill_unixsock mill_unixsock_
+typedef struct mill_unixsock *mill_unixsock;
 #define mill_unixlisten mill_unixlisten_
 #define mill_unixaccept mill_unixaccept_
 #define mill_unixconnect mill_unixconnect_
@@ -417,7 +422,7 @@ MILL_EXPORT void mill_unixclose_(mill_unixsock_ s);
 #define mill_unixrecvuntil mill_unixrecvuntil_
 #define mill_unixclose mill_unixclose_
 #else
-#define unixsock mill_unixsock_
+typedef struct mill_unixsock *unixsock;
 #define unixlisten mill_unixlisten_
 #define unixaccept mill_unixaccept_
 #define unixconnect mill_unixconnect_
