@@ -59,6 +59,10 @@ extern "C" {
 /*  Symbol visibility                                                         */
 /******************************************************************************/
 
+#if !defined __GNUC__ && !defined __clang__
+#error "Unsupported compiler!"
+#endif
+
 #if defined MILL_NO_EXPORTS
 #   define MILL_EXPORT
 #else
@@ -84,6 +88,10 @@ extern "C" {
 /*  Helpers                                                                   */
 /******************************************************************************/
 
+#define mill_string2(x) #x
+#define mill_string(x) mill_string2(x)
+#define MILL_HERE (__FILE__ ":" mill_string(__LINE__))
+
 MILL_EXPORT int64_t mill_now(
     void);
 MILL_EXPORT pid_t mfork(
@@ -93,77 +101,82 @@ MILL_EXPORT pid_t mfork(
 /*  Coroutines                                                                */
 /******************************************************************************/
 
-MILL_EXPORT void mill_goprepare(
+#define MILL_FDW_IN_ 1
+#define MILL_FDW_OUT_ 2
+#define MILL_FDW_ERR_ 4
+
+MILL_EXPORT extern volatile int mill_unoptimisable1_;
+MILL_EXPORT extern volatile void *mill_unoptimisable2_;
+
+MILL_EXPORT sigjmp_buf *mill_getctx_(
+    void);
+MILL_EXPORT __attribute__((noinline)) void *mill_prologue_(
+    const char *created);
+MILL_EXPORT __attribute__((noinline)) void mill_epilogue_(
+    void);
+
+MILL_EXPORT void mill_goprepare_(
     int count,
     size_t stack_size,
     size_t val_size);
-
-MILL_EXPORT extern volatile int mill_unoptimisable1;
-MILL_EXPORT extern volatile void *mill_unoptimisable2;
-
-MILL_EXPORT sigjmp_buf *mill_getctx(
-    void);
-MILL_EXPORT __attribute__((noinline)) void *mill_go_prologue(
-    const char *created);
-MILL_EXPORT __attribute__((noinline)) void mill_go_epilogue(
-    void);
-
-#define mill_string2(x) #x
-#define mill_string(x) mill_string2(x)
-
-#if defined __GNUC__ || defined __clang__
-#define coroutine __attribute__((noinline))
-#else
-#error "Unsupported compiler!"
-#endif
-
-#define MILL_HERE (__FILE__ ":" mill_string(__LINE__))
-
-#define mill_go(fn) \
-    do {\
-        void *mill_sp;\
-        if(!sigsetjmp(*mill_getctx(), 0)) {\
-            mill_sp = mill_go_prologue(MILL_HERE);\
-            int mill_anchor[mill_unoptimisable1];\
-            mill_unoptimisable2 = &mill_anchor;\
-            char mill_filler[(char*)&mill_anchor - (char*)(mill_sp)];\
-            mill_unoptimisable2 = &mill_filler;\
-            fn;\
-            mill_go_epilogue();\
-        }\
-    } while(0)
-
-#define yield() mill_yield(MILL_HERE)
-
-MILL_EXPORT void mill_yield(
+MILL_EXPORT void mill_yield_(
     const char *current);
-
-#define msleep(deadline) mill_msleep((deadline), MILL_HERE)
-
-MILL_EXPORT void mill_msleep(
+MILL_EXPORT void mill_msleep_(
     int64_t deadline,
     const char *current);
-
-#define fdwait(fd, events, deadline) \
-    mill_fdwait((fd), (events), (deadline), MILL_HERE)
-
-MILL_EXPORT void fdclean(
-    int fd);
-
-#define FDW_IN 1
-#define FDW_OUT 2
-#define FDW_ERR 4
-
-MILL_EXPORT int mill_fdwait(
+MILL_EXPORT int mill_fdwait_(
     int fd,
     int events,
     int64_t deadline,
     const char *current);
-
-MILL_EXPORT void *cls(
+MILL_EXPORT void mill_fdclean_(
+    int fd);
+MILL_EXPORT void *mill_cls_(
     void);
-MILL_EXPORT void setcls(
+MILL_EXPORT void mill_setcls_(
     void *val);
+
+#define mill_go_(fn) \
+    do {\
+        void *mill_sp;\
+        if(!sigsetjmp(*mill_getctx_(), 0)) {\
+            mill_sp = mill_prologue_(MILL_HERE);\
+            int mill_anchor[mill_unoptimisable1_];\
+            mill_unoptimisable2_ = &mill_anchor;\
+            char mill_filler[(char*)&mill_anchor - (char*)(mill_sp)];\
+            mill_unoptimisable2_ = &mill_filler;\
+            fn;\
+            mill_epilogue_();\
+        }\
+    } while(0)
+
+#if defined MILL_USE_PREFIX
+#define MILL_FDW_IN MILL_FDW_IN_
+#define MILL_FDW_OUT MILL_FDW_OUT_
+#define MILL_FDW_ERR MILL_FDW_ERR_
+#define mill_coroutine __attribute__((noinline))
+#define mill_go(fn) mill_go_(fn)
+#define mill_goprepare mill_goprepare_
+#define mill_yield() mill_yield_(MILL_HERE)
+#define mill_msleep(dd) mill_msleep_((dd), MILL_HERE)
+#define mill_fdwait(fd, ev, dd) mill_fdwait_((fd), (ev), (dd), MILL_HERE)
+#define mill_fdclean mill_fdclean_
+#define mill_cls mill_cls_
+#define mill_setcls mill_setcls_
+#else
+#define FDW_IN MILL_FDW_IN_
+#define FDW_OUT MILL_FDW_OUT_
+#define FDW_ERR MILL_FDW_ERR_
+#define coroutine __attribute__((noinline))
+#define go(fn) mill_go_(fn)
+#define goprepare mill_goprepare_
+#define yield() mill_yield_(MILL_HERE)
+#define msleep(deadline) mill_msleep_((deadline), MILL_HERE)
+#define fdwait(fd, ev, dd) mill_fdwait_((fd), (ev), (dd), MILL_HERE)
+#define fdclean mill_fdclean_
+#define cls mill_cls_
+#define setcls mill_setcls_
+#endif
 
 /******************************************************************************/
 /*  Channels                                                                  */
@@ -306,8 +319,6 @@ MILL_EXPORT void mill_chclose(
 # define mill_otherwise mill_internal__otherwise(__COUNTER__)
 #else
 # define now mill_now
-# define goprepare(cnt, stcksz, valsz) mill_goprepare((cnt), (stcksz), (valsz))
-# define go(fn) mill_go(fn)
 # define choose mill_choose
 # define end mill_end
 # define in(chan, type, name) mill_internal__in((chan), type, name, __COUNTER__)

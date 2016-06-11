@@ -30,11 +30,11 @@
 #define MILL_USE_PREFIX
 #include "../libmill.h"
 
-coroutine void client(const char *addr) {
+mill_coroutine void client(const char *addr) {
     mill_unixsock cs = mill_unixconnect(addr);
     assert(cs);
 
-    msleep(mill_now() + 100);
+    mill_msleep(mill_now() + 100);
 
     char buf[16];
     size_t sz = mill_unixrecv(cs, buf, 3, -1);

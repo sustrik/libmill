@@ -94,7 +94,7 @@ struct mill_cr {
     size_t valbuf_sz;
 
     /* Coroutine-local storage. */
-    void *cls;
+    void *clsval;
 
 #if defined MILL_VALGRIND
     /* Valgrind stack identifier. */

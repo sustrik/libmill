@@ -54,8 +54,8 @@ do {\
 } while(0)
 
 /* Pause current coroutine for a specified time interval. */
-void mill_msleep(int64_t deadline, const char *current) {
-    mill_fdwait(-1, 0, deadline, current);
+void mill_msleep_(int64_t deadline, const char *current) {
+    mill_fdwait_(-1, 0, deadline, current);
 }
 
 static void mill_poller_callback(struct mill_timer *timer) {
@@ -65,7 +65,7 @@ static void mill_poller_callback(struct mill_timer *timer) {
         mill_poller_rm(cr);
 }
 
-int mill_fdwait(int fd, int events, int64_t deadline, const char *current) {
+int mill_fdwait_(int fd, int events, int64_t deadline, const char *current) {
     check_poller_initialised();
     /* If required, start waiting for the timeout. */
     if(deadline >= 0)
@@ -89,7 +89,7 @@ int mill_fdwait(int fd, int events, int64_t deadline, const char *current) {
     return 0;
 }
 
-void fdclean(int fd) {
+void mill_fdclean_(int fd) {
     check_poller_initialised();
     mill_poller_clean(fd);
 }

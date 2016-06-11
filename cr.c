@@ -45,8 +45,8 @@ size_t mill_valbuf_size = 128;
 /* Valbuf for tha main coroutine. */
 char mill_main_valbuf[128];
 
-volatile int mill_unoptimisable1 = 1;
-volatile void *mill_unoptimisable2 = NULL;
+volatile int mill_unoptimisable1_ = 1;
+volatile void *mill_unoptimisable2_ = NULL;
 
 struct mill_cr mill_main = {0};
 
@@ -78,7 +78,7 @@ static void *mill_getvalbuf(struct mill_cr *cr, size_t size) {
     return cr->valbuf;
 }
 
-void mill_goprepare(int count, size_t stack_size, size_t val_size) {
+void mill_goprepare_(int count, size_t stack_size, size_t val_size) {
     if(mill_slow(mill_hascrs())) {errno = EAGAIN; return;}
     /* Allocate any resources needed by the polling mechanism. */
     mill_poller_init();
@@ -131,7 +131,7 @@ void mill_resume(struct mill_cr *cr, int result) {
     mill_slist_push_back(&mill_ready, &cr->ready);
 }
 
-/* dill_prologue() and dill_epilogue() live in the same scope with
+/* mill_prologue_() and mill_epilogue_() live in the same scope with
    libdill's stack-switching black magic. As such, they are extremely
    fragile. Therefore, the optimiser is prohibited to touch them. */
 #if defined __clang__
@@ -142,14 +142,14 @@ void mill_resume(struct mill_cr *cr, int result) {
 #error "Unsupported compiler!"
 #endif
 
-sigjmp_buf *mill_getctx(void) {
+sigjmp_buf *mill_getctx_(void) {
     return &mill_running->ctx;
 }
 
 /* The intial part of go(). Starts the new coroutine.
    Returns the pointer to the top of its stack. */
 __attribute__((noinline)) dill_noopt
-void *mill_go_prologue(const char *created) {
+void *mill_prologue_(const char *created) {
     /* Ensure that debug functions are available whenever a single go()
        statement is present in the user's code. */
     mill_preserve_debug();
@@ -167,7 +167,7 @@ void *mill_go_prologue(const char *created) {
     cr->is_ready = 0;
     cr->valbuf = NULL;
     cr->valbuf_sz = 0;
-    cr->cls = NULL;
+    cr->clsval = NULL;
     cr->timer.expiry = -1;
     cr->fd = -1;
     cr->events = 0;
@@ -182,7 +182,7 @@ void *mill_go_prologue(const char *created) {
 
 /* The final part of go(). Cleans up after the coroutine is finished. */
 __attribute__((noinline)) dill_noopt
-void mill_go_epilogue(void) {
+void mill_epilogue_(void) {
     mill_trace(NULL, "go() done");
     mill_unregister_cr(&mill_running->debug);
     if(mill_running->valbuf)
@@ -197,7 +197,7 @@ void mill_go_epilogue(void) {
     mill_suspend();
 }
 
-void mill_yield(const char *current) {
+void mill_yield_(const char *current) {
     mill_trace(current, "yield()");
     mill_set_current(&mill_running->debug, current);
     /* This looks fishy, but yes, we can resume the coroutine even before
@@ -213,12 +213,12 @@ void *mill_valbuf(struct mill_cr *cr, size_t size) {
     return ptr;
 }
 
-void *cls(void) {
-    return mill_running->cls;
+void *mill_cls_(void) {
+    return mill_running->clsval;
 }
 
-void setcls(void *val) {
-    mill_running->cls = val;
+void mill_setcls_(void *val) {
+    mill_running->clsval = val;
 }
 
 void mill_cr_postfork(void) {
