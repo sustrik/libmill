@@ -333,14 +333,31 @@ MILL_EXPORT void tcpclose(tcpsock s);
 /*  UDP library                                                               */
 /******************************************************************************/
 
-typedef struct mill_udpsock *udpsock;
+typedef struct mill_udpsock *mill_udpsock_;
 
-MILL_EXPORT udpsock udplisten(ipaddr addr);
-MILL_EXPORT int udpport(udpsock s);
-MILL_EXPORT void udpsend(udpsock s, ipaddr addr, const void *buf, size_t len);
-MILL_EXPORT size_t udprecv(udpsock s, ipaddr *addr,
+MILL_EXPORT mill_udpsock_ mill_udplisten_(ipaddr addr);
+MILL_EXPORT int mill_udpport_(mill_udpsock_ s);
+MILL_EXPORT void mill_udpsend_(mill_udpsock_ s, ipaddr addr,
+    const void *buf, size_t len);
+MILL_EXPORT size_t mill_udprecv_(mill_udpsock_ s, ipaddr *addr,
     void *buf, size_t len, int64_t deadline);
-MILL_EXPORT void udpclose(udpsock s);
+MILL_EXPORT void mill_udpclose_(mill_udpsock_ s);
+
+#if defined MILL_USE_PREFIX
+#define mill_udpsock mill_udpsock_
+#define mill_udplisten mill_udplisten_
+#define mill_udpport mill_udpport_
+#define mill_udpsend mill_udpsend_
+#define mill_udprecv mill_udprecv_
+#define mill_udpclose mill_udpclose_
+#else
+#define udpsock mill_udpsock_
+#define udplisten mill_udplisten_
+#define udpport mill_udpport_
+#define udpsend mill_udpsend_
+#define udprecv mill_udprecv_
+#define udpclose mill_udpclose_
+#endif
 
 /******************************************************************************/
 /*  UNIX library                                                              */

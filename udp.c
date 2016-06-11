@@ -51,7 +51,7 @@ static void mill_udptune(int s) {
     mill_assert(rc != -1);
 }
 
-udpsock udplisten(ipaddr addr) {
+struct mill_udpsock *mill_udplisten_(ipaddr addr) {
     /* Open the listening socket. */
     int s = socket(mill_ipfamily(addr), SOCK_DGRAM, 0);
     if(s == -1)
@@ -94,11 +94,12 @@ udpsock udplisten(ipaddr addr) {
     return us;
 }
 
-int udpport(udpsock s) {
+int mill_udpport_(struct mill_udpsock *s) {
     return s->port;
 }
 
-void udpsend(udpsock s, ipaddr addr, const void *buf, size_t len) {
+void mill_udpsend_(struct mill_udpsock *s, ipaddr addr,
+        const void *buf, size_t len) {
     struct sockaddr *saddr = (struct sockaddr*) &addr;
     ssize_t ss = sendto(s->fd, buf, len, 0, saddr, saddr->sa_family ==
         AF_INET ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6));
@@ -111,8 +112,8 @@ void udpsend(udpsock s, ipaddr addr, const void *buf, size_t len) {
         errno = 0;
 }
 
-size_t udprecv(udpsock s, ipaddr *addr, void *buf, size_t len,
-      int64_t deadline) {
+size_t mill_udprecv_(struct mill_udpsock *s, ipaddr *addr,
+      void *buf, size_t len, int64_t deadline) {
     ssize_t ss;
     while(1) {
         socklen_t slen = sizeof(ipaddr);
@@ -132,7 +133,7 @@ size_t udprecv(udpsock s, ipaddr *addr, void *buf, size_t len,
     return (size_t)ss;
 }
 
-void udpclose(udpsock s) {
+void mill_udpclose_(struct mill_udpsock *s) {
     fdclean(s->fd);
     int rc = close(s->fd);
     mill_assert(rc == 0);
