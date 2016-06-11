@@ -339,12 +339,13 @@ typedef struct mill_ipaddr ipaddr;
 
 struct mill_tcpsock;
 
-MILL_EXPORT struct mill_tcpsock *mill_tcplisten_(ipaddr addr, int backlog);
+MILL_EXPORT struct mill_tcpsock *mill_tcplisten_(struct mill_ipaddr addr,
+    int backlog);
 MILL_EXPORT int mill_tcpport_(struct mill_tcpsock *s);
 MILL_EXPORT struct mill_tcpsock *mill_tcpaccept_(struct mill_tcpsock *s,
     int64_t deadline);
-MILL_EXPORT ipaddr mill_tcpaddr_(struct mill_tcpsock *s);
-MILL_EXPORT struct mill_tcpsock *mill_tcpconnect_(ipaddr addr,
+MILL_EXPORT struct mill_ipaddr mill_tcpaddr_(struct mill_tcpsock *s);
+MILL_EXPORT struct mill_tcpsock *mill_tcpconnect_(struct mill_ipaddr addr,
     int64_t deadline);
 MILL_EXPORT size_t mill_tcpsend_(struct mill_tcpsock *s,
     const void *buf, size_t len, int64_t deadline);
@@ -387,12 +388,12 @@ typedef struct mill_tcpsock *tcpsock;
 
 struct mill_udpsock;
 
-MILL_EXPORT struct mill_udpsock *mill_udplisten_(ipaddr addr);
+MILL_EXPORT struct mill_udpsock *mill_udplisten_(struct mill_ipaddr addr);
 MILL_EXPORT int mill_udpport_(struct mill_udpsock *s);
-MILL_EXPORT void mill_udpsend_(struct mill_udpsock *s, ipaddr addr,
+MILL_EXPORT void mill_udpsend_(struct mill_udpsock *s, struct mill_ipaddr addr,
     const void *buf, size_t len);
-MILL_EXPORT size_t mill_udprecv_(struct mill_udpsock *s, ipaddr *addr,
-    void *buf, size_t len, int64_t deadline);
+MILL_EXPORT size_t mill_udprecv_(struct mill_udpsock *s,
+    struct mill_ipaddr *addr, void *buf, size_t len, int64_t deadline);
 MILL_EXPORT void mill_udpclose_(struct mill_udpsock *s);
 
 #if defined MILL_USE_PREFIX
