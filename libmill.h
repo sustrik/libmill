@@ -84,7 +84,7 @@ extern "C" {
 /*  Helpers                                                                   */
 /******************************************************************************/
 
-MILL_EXPORT int64_t now(void);
+MILL_EXPORT int64_t mill_now(void);
 
 /******************************************************************************/
 /*  Coroutines                                                                */
@@ -273,6 +273,7 @@ MILL_EXPORT void mill_chclose(chan ch, const char *current);
 # define mill_deadline(ddline) mill_internal__deadline(ddline, __COUNTER__)
 # define mill_otherwise mill_internal__otherwise(__COUNTER__)
 #else
+# define now mill_now
 # define go(fn) mill_go(fn)
 # define choose mill_choose
 # define end mill_end
