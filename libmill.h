@@ -314,20 +314,45 @@ MILL_EXPORT const char *ipaddrstr(ipaddr addr, char *ipstr);
 /*  TCP library                                                               */
 /******************************************************************************/
 
-typedef struct mill_tcpsock *tcpsock;
+typedef struct mill_tcpsock *mill_tcpsock_;
 
-MILL_EXPORT tcpsock tcplisten(ipaddr addr, int backlog);
-MILL_EXPORT int tcpport(tcpsock s);
-MILL_EXPORT tcpsock tcpaccept(tcpsock s, int64_t deadline);
-MILL_EXPORT ipaddr tcpaddr(tcpsock s);
-MILL_EXPORT tcpsock tcpconnect(ipaddr addr, int64_t deadline);
-MILL_EXPORT size_t tcpsend(tcpsock s, const void *buf, size_t len,
+MILL_EXPORT mill_tcpsock_ mill_tcplisten_(ipaddr addr, int backlog);
+MILL_EXPORT int tcpport(mill_tcpsock_ s);
+MILL_EXPORT mill_tcpsock_ mill_tcpaccept_(mill_tcpsock_ s, int64_t deadline);
+MILL_EXPORT ipaddr mill_tcpaddr_(mill_tcpsock_ s);
+MILL_EXPORT mill_tcpsock_ mill_tcpconnect_(ipaddr addr, int64_t deadline);
+MILL_EXPORT size_t mill_tcpsend_(mill_tcpsock_ s, const void *buf, size_t len,
     int64_t deadline);
-MILL_EXPORT void tcpflush(tcpsock s, int64_t deadline);
-MILL_EXPORT size_t tcprecv(tcpsock s, void *buf, size_t len, int64_t deadline);
-MILL_EXPORT size_t tcprecvuntil(tcpsock s, void *buf, size_t len,
+MILL_EXPORT void mill_tcpflush_(mill_tcpsock_ s, int64_t deadline);
+MILL_EXPORT size_t mill_tcprecv_(mill_tcpsock_ s, void *buf, size_t len,
+    int64_t deadline);
+MILL_EXPORT size_t mill_tcprecvuntil_(mill_tcpsock_ s, void *buf, size_t len,
     const char *delims, size_t delimcount, int64_t deadline);
-MILL_EXPORT void tcpclose(tcpsock s);
+MILL_EXPORT void mill_tcpclose_(mill_tcpsock_ s);
+
+#if defined MILL_USE_PREFIX
+#define mill_tcpsock mill_tcpsock_
+#define mill_tcplisten mill_tcplisten_
+#define mill_tcpaccept mill_tcpaccept_
+#define mill_tcpaddr mill_tcpaddr_
+#define mill_tcpconnect mill_tcpconnect_
+#define mill_tcpsend mill_tcpsend_
+#define mill_tcpflush mill_tcpflush_
+#define mill_tcprecv mill_tcprecv_
+#define mill_tcprecvuntil mill_tcprecvuntil_
+#define mill_tcpclose mill_tcpclose_
+#else
+#define tcpsock mill_tcpsock_
+#define tcplisten mill_tcplisten_
+#define tcpaccept mill_tcpaccept_
+#define tcpaddr mill_tcpaddr_
+#define tcpconnect mill_tcpconnect_
+#define tcpsend mill_tcpsend_
+#define tcpflush mill_tcpflush_
+#define tcprecv mill_tcprecv_
+#define tcprecvuntil mill_tcprecvuntil_
+#define tcpclose mill_tcpclose_
+#endif
 
 /******************************************************************************/
 /*  UDP library                                                               */
