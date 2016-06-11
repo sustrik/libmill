@@ -100,7 +100,7 @@ static void unixconn_init(struct mill_unixconn *conn, int fd) {
     conn->olen = 0;
 }
 
-unixsock unixlisten(const char *addr, int backlog) {
+struct mill_unixsock *mill_unixlisten_(const char *addr, int backlog) {
     struct sockaddr_un su;
     int rc = mill_unixresolve(addr, &su);
     if (rc != 0) {
@@ -134,7 +134,8 @@ unixsock unixlisten(const char *addr, int backlog) {
     return &l->sock;
 }
 
-unixsock unixaccept(unixsock s, int64_t deadline) {
+struct mill_unixsock *mill_unixaccept_(struct mill_unixsock *s,
+      int64_t deadline) {
     if(s->type != MILL_UNIXLISTENER)
         mill_panic("trying to accept on a socket that isn't listening");
     struct mill_unixlistener *l = (struct mill_unixlistener*)s;
@@ -152,7 +153,7 @@ unixsock unixaccept(unixsock s, int64_t deadline) {
             }
             unixconn_init(conn, as);
             errno = 0;
-            return (unixsock)conn;
+            return (struct mill_unixsock*)conn;
         }
         mill_assert(as == -1);
         if(errno != EAGAIN && errno != EWOULDBLOCK)
@@ -167,7 +168,7 @@ unixsock unixaccept(unixsock s, int64_t deadline) {
     }
 }
 
-unixsock unixconnect(const char *addr) {
+struct mill_unixsock *mill_unixconnect_(const char *addr) {
     struct sockaddr_un su;
     int rc = mill_unixresolve(addr, &su);
     if (rc != 0) {
@@ -201,10 +202,10 @@ unixsock unixconnect(const char *addr) {
     }
     unixconn_init(conn, s);
     errno = 0;
-    return (unixsock)conn;
+    return (struct mill_unixsock*)conn;
 }
 
-void unixpair(unixsock *a, unixsock *b) {
+void mill_unixpair_(struct mill_unixsock **a, struct mill_unixsock **b) {
     if(!a || !b) {
         errno = EINVAL;
         return;
@@ -225,7 +226,7 @@ void unixpair(unixsock *a, unixsock *b) {
         return;
     }
     unixconn_init(conn, fd[0]);
-    *a = (unixsock)conn;
+    *a = (struct mill_unixsock*)conn;
     conn = malloc(sizeof(struct mill_unixconn));
     if(!conn) {
         free(*a);
@@ -237,11 +238,12 @@ void unixpair(unixsock *a, unixsock *b) {
         return;
     }
     unixconn_init(conn, fd[1]);
-    *b = (unixsock)conn;
+    *b = (struct mill_unixsock*)conn;
     errno = 0;
 }
 
-size_t unixsend(unixsock s, const void *buf, size_t len, int64_t deadline) {
+size_t mill_unixsend_(struct mill_unixsock *s, const void *buf, size_t len,
+      int64_t deadline) {
     if(s->type != MILL_UNIXCONN)
         mill_panic("trying to send to an unconnected socket");
     struct mill_unixconn *conn = (struct mill_unixconn*)s;
@@ -296,7 +298,7 @@ size_t unixsend(unixsock s, const void *buf, size_t len, int64_t deadline) {
     return len;
 }
 
-void unixflush(unixsock s, int64_t deadline) {
+void mill_unixflush_(struct mill_unixsock *s, int64_t deadline) {
     if(s->type != MILL_UNIXCONN)
         mill_panic("trying to send to an unconnected socket");
     struct mill_unixconn *conn = (struct mill_unixconn*)s;
@@ -331,7 +333,8 @@ void unixflush(unixsock s, int64_t deadline) {
     errno = 0;
 }
 
-size_t unixrecv(unixsock s, void *buf, size_t len, int64_t deadline) {
+size_t mill_unixrecv_(struct mill_unixsock *s, void *buf, size_t len,
+      int64_t deadline) {
     if(s->type != MILL_UNIXCONN)
         mill_panic("trying to receive from an unconnected socket");
     struct mill_unixconn *conn = (struct mill_unixconn*)s;
@@ -413,7 +416,7 @@ size_t unixrecv(unixsock s, void *buf, size_t len, int64_t deadline) {
     }
 }
 
-size_t unixrecvuntil(unixsock s, void *buf, size_t len,
+size_t mill_unixrecvuntil_(struct mill_unixsock *s, void *buf, size_t len,
       const char *delims, size_t delimcount, int64_t deadline) {
     if(s->type != MILL_UNIXCONN)
         mill_panic("trying to receive from an unconnected socket");
@@ -434,7 +437,7 @@ size_t unixrecvuntil(unixsock s, void *buf, size_t len,
     return len;
 }
 
-void unixclose(unixsock s) {
+void mill_unixclose_(struct mill_unixsock *s) {
     if(s->type == MILL_UNIXLISTENER) {
         struct mill_unixlistener *l = (struct mill_unixlistener*)s;
         fdclean(l->fd);

@@ -346,20 +346,44 @@ MILL_EXPORT void udpclose(udpsock s);
 /*  UNIX library                                                              */
 /******************************************************************************/
 
-typedef struct mill_unixsock *unixsock;
+typedef struct mill_unixsock *mill_unixsock_;
 
-MILL_EXPORT unixsock unixlisten(const char *addr, int backlog);
-MILL_EXPORT unixsock unixaccept(unixsock s, int64_t deadline);
-MILL_EXPORT unixsock unixconnect(const char *addr);
-MILL_EXPORT void unixpair(unixsock *a, unixsock *b);
-MILL_EXPORT size_t unixsend(unixsock s, const void *buf, size_t len,
+MILL_EXPORT mill_unixsock_ mill_unixlisten_(const char *addr, int backlog);
+MILL_EXPORT mill_unixsock_ mill_unixaccept_(mill_unixsock_ s, int64_t deadline);
+MILL_EXPORT mill_unixsock_ mill_unixconnect_(const char *addr);
+MILL_EXPORT void mill_unixpair_(mill_unixsock_ *a, mill_unixsock_ *b);
+MILL_EXPORT size_t mill_unixsend_(mill_unixsock_ s, const void *buf, size_t len,
     int64_t deadline);
-MILL_EXPORT void unixflush(unixsock s, int64_t deadline);
-MILL_EXPORT size_t unixrecv(unixsock s, void *buf, size_t len,
+MILL_EXPORT void mill_unixflush_(mill_unixsock_ s, int64_t deadline);
+MILL_EXPORT size_t mill_unixrecv_(mill_unixsock_ s, void *buf, size_t len,
     int64_t deadline);
-MILL_EXPORT size_t unixrecvuntil(unixsock s, void *buf, size_t len,
+MILL_EXPORT size_t mill_unixrecvuntil_(mill_unixsock_ s, void *buf, size_t len,
     const char *delims, size_t delimcount, int64_t deadline);
-MILL_EXPORT void unixclose(unixsock s);
+MILL_EXPORT void mill_unixclose_(mill_unixsock_ s);
+
+#if defined MILL_USE_PREFIX
+#define mill_unixsock mill_unixsock_
+#define mill_unixlisten mill_unixlisten_
+#define mill_unixaccept mill_unixaccept_
+#define mill_unixconnect mill_unixconnect_
+#define mill_unixpair mill_unixpair_
+#define mill_unixsend mill_unixsend_
+#define mill_unixflush mill_unixflush_
+#define mill_unixrecv mill_unixrecv_
+#define mill_unixrecvuntil mill_unixrecvuntil_
+#define mill_unixclose mill_unixclose_
+#else
+#define unixsock mill_unixsock_
+#define unixlisten mill_unixlisten_
+#define unixaccept mill_unixaccept_
+#define unixconnect mill_unixconnect_
+#define unixpair mill_unixpair_
+#define unixsend mill_unixsend_
+#define unixflush mill_unixflush_
+#define unixrecv mill_unixrecv_
+#define unixrecvuntil mill_unixrecvuntil_
+#define unixclose mill_unixclose_
+#endif
 
 /******************************************************************************/
 /*  File library                                                              */
@@ -418,6 +442,11 @@ MILL_EXPORT mill_mfile_ mill_mferr_(void);
    directly from the debugger. */
 MILL_EXPORT void goredump(void);
 MILL_EXPORT void gotrace(int level);
+
+#if defined MILL_USE_PREFIX
+#define mill_goredump goredump
+#define mill_gotrace gotrace
+#endif
 
 #if defined(__cplusplus)
 }
