@@ -90,7 +90,7 @@ MILL_EXPORT int64_t mill_now(void);
 /*  Coroutines                                                                */
 /******************************************************************************/
 
-MILL_EXPORT void goprepare(int count, size_t stack_size, size_t val_size);
+MILL_EXPORT void mill_goprepare(int count, size_t stack_size, size_t val_size);
 
 MILL_EXPORT extern volatile int mill_unoptimisable1;
 MILL_EXPORT extern volatile void *mill_unoptimisable2;
@@ -274,6 +274,7 @@ MILL_EXPORT void mill_chclose(chan ch, const char *current);
 # define mill_otherwise mill_internal__otherwise(__COUNTER__)
 #else
 # define now mill_now
+# define goprepare(cnt, stcksz, valsz) mill_goprepare((cnt), (stcksz), (valsz))
 # define go(fn) mill_go(fn)
 # define choose mill_choose
 # define end mill_end
