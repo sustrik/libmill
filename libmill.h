@@ -317,7 +317,7 @@ MILL_EXPORT const char *ipaddrstr(ipaddr addr, char *ipstr);
 typedef struct mill_tcpsock *mill_tcpsock_;
 
 MILL_EXPORT mill_tcpsock_ mill_tcplisten_(ipaddr addr, int backlog);
-MILL_EXPORT int tcpport(mill_tcpsock_ s);
+MILL_EXPORT int mill_tcpport_(mill_tcpsock_ s);
 MILL_EXPORT mill_tcpsock_ mill_tcpaccept_(mill_tcpsock_ s, int64_t deadline);
 MILL_EXPORT ipaddr mill_tcpaddr_(mill_tcpsock_ s);
 MILL_EXPORT mill_tcpsock_ mill_tcpconnect_(ipaddr addr, int64_t deadline);
@@ -333,6 +333,7 @@ MILL_EXPORT void mill_tcpclose_(mill_tcpsock_ s);
 #if defined MILL_USE_PREFIX
 #define mill_tcpsock mill_tcpsock_
 #define mill_tcplisten mill_tcplisten_
+#define mill_tcpport mill_tcpport_
 #define mill_tcpaccept mill_tcpaccept_
 #define mill_tcpaddr mill_tcpaddr_
 #define mill_tcpconnect mill_tcpconnect_
@@ -344,6 +345,7 @@ MILL_EXPORT void mill_tcpclose_(mill_tcpsock_ s);
 #else
 #define tcpsock mill_tcpsock_
 #define tcplisten mill_tcplisten_
+#define tcpport mill_tcpport_
 #define tcpaccept mill_tcpaccept_
 #define tcpaddr mill_tcpaddr_
 #define tcpconnect mill_tcpconnect_
