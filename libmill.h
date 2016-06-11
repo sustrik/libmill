@@ -316,7 +316,8 @@ MILL_EXPORT void mill_chclose(
 # define otherwise mill_internal__otherwise(__COUNTER__)
 #endif
 
-MILL_EXPORT void mill_choose_init(const char *current);
+MILL_EXPORT void mill_choose_init(
+    const char *current);
 MILL_EXPORT void mill_choose_in(
     void *clause,
     chan ch,
@@ -560,43 +561,43 @@ typedef struct mill_unixsock *unixsock;
 /*  File library                                                              */
 /******************************************************************************/
 
-typedef struct mill_file *mill_mfile_;
+struct mill_file;
 
-MILL_EXPORT mill_mfile_ mill_mfopen_(
+MILL_EXPORT struct mill_file *mill_mfopen_(
     const char *pathname,
     int flags,
     mode_t mode);
 MILL_EXPORT size_t mill_mfwrite_(
-    mill_mfile_ f,
+    struct mill_file *f,
     const void *buf,
     size_t len,
     int64_t deadline);
 MILL_EXPORT void mill_mfflush_(
-    mill_mfile_ f,
+    struct mill_file *f,
     int64_t deadline);
 MILL_EXPORT size_t mill_mfread_(
-    mill_mfile_ f,
+    struct mill_file *f,
     void *buf,
     size_t len,
     int64_t deadline);
 MILL_EXPORT void mill_mfclose_(
-    mill_mfile_ f);
+    struct mill_file *f);
 MILL_EXPORT off_t mill_mftell_(
-    mill_mfile_ f);
+    struct mill_file *f);
 MILL_EXPORT off_t mill_mfseek_(
-    mill_mfile_ f,
+    struct mill_file *f,
     off_t offset);
 MILL_EXPORT int mill_mfeof_(
-    mill_mfile_ f);
-MILL_EXPORT mill_mfile_ mill_mfin_(
+    struct mill_file *f);
+MILL_EXPORT struct mill_file *mill_mfin_(
     void);
-MILL_EXPORT mill_mfile_ mill_mfout_(
+MILL_EXPORT struct mill_file *mill_mfout_(
     void);
-MILL_EXPORT mill_mfile_ mill_mferr_(
+MILL_EXPORT struct mill_file *mill_mferr_(
     void);
 
 #if defined MILL_USE_PREFIX
-#define mill_mfile mill_mfile_
+typedef struct mill_file *mill_mfile;
 #define mill_mfopen mill_mfopen_
 #define mill_mfwrite mill_mfwrite_
 #define mill_mfflush mill_mfflush_
@@ -609,7 +610,7 @@ MILL_EXPORT mill_mfile_ mill_mferr_(
 #define mill_mfout mill_mfout_()
 #define mill_mferr mill_mferr_()
 #else
-#define mfile mill_mfile_
+typedef struct mill_file *mfile;
 #define mfopen mill_mfopen_
 #define mfwrite mill_mfwrite_
 #define mfflush mill_mfflush_
@@ -629,8 +630,10 @@ MILL_EXPORT mill_mfile_ mill_mferr_(
 
 /* These symbols are not wrapped in macros so that they can be used
    directly from the debugger. */
-MILL_EXPORT void goredump(void);
-MILL_EXPORT void gotrace(int level);
+MILL_EXPORT void goredump(
+    void);
+MILL_EXPORT void gotrace(
+    int level);
 
 #if defined MILL_USE_PREFIX
 #define mill_goredump goredump
