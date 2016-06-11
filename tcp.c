@@ -101,28 +101,19 @@ static void tcpconn_init(struct mill_tcpconn *conn, int fd) {
     conn->olen = 0;
 }
 
-int tcplistenfd(ipaddr addr, int backlog) {
+tcpsock tcplisten(ipaddr addr, int backlog) {
     /* Open the listening socket. */
     int s = socket(mill_ipfamily(addr), SOCK_STREAM, 0);
-    if(s < 0)
-        return -1;
+    if(s == -1)
+        return NULL;
     mill_tcptune(s);
 
     /* Start listening. */
     int rc = bind(s, (struct sockaddr*)&addr, mill_iplen(addr));
     if(rc != 0)
-        return -1;
+        return NULL;
     rc = listen(s, backlog);
     if(rc != 0)
-        return -1;
-
-    return s;
-}
-
-tcpsock tcplisten(ipaddr addr, int backlog) {
-    /* Open the listening socket. */
-    int s = tcplistenfd(addr, backlog);
-    if(mill_slow(s < 0))
         return NULL;
 
     /* If the user requested an ephemeral port,
@@ -131,7 +122,7 @@ tcpsock tcplisten(ipaddr addr, int backlog) {
     if(port) {
         ipaddr baddr;
         socklen_t len = sizeof(ipaddr);
-        int rc = getsockname(s, (struct sockaddr*)&baddr, &len);
+        rc = getsockname(s, (struct sockaddr*)&baddr, &len);
         if(rc == -1) {
             int err = errno;
             fdclean(s);
@@ -169,56 +160,48 @@ int tcpport(tcpsock s) {
     mill_assert(0);
 }
 
-int tcpacceptfd(tcpsock s, ipaddr *addr, int64_t deadline) {
+tcpsock tcpaccept(tcpsock s, int64_t deadline) {
     if(s->type != MILL_TCPLISTENER)
         mill_panic("trying to accept on a socket that isn't listening");
     struct mill_tcplistener *l = (struct mill_tcplistener*)s;
     socklen_t addrlen;
-again:
-    /* Try to get new connection (non-blocking). */
-    addrlen = sizeof(ipaddr);
-    int as = accept(l->fd, (struct sockaddr *)addr, &addrlen);
-    if(mill_slow(as < 0)) {
+    ipaddr addr;
+    while(1) {
+        /* Try to get new connection (non-blocking). */
+        addrlen = sizeof(addr);
+        int as = accept(l->fd, (struct sockaddr *)&addr, &addrlen);
+        if (as >= 0) {
+            mill_tcptune(as);
+            struct mill_tcpconn *conn = malloc(sizeof(struct mill_tcpconn));
+            if(!conn) {
+                fdclean(as);
+                close(as);
+                errno = ENOMEM;
+                return NULL;
+            }
+            tcpconn_init(conn, as);
+            conn->addr = addr;
+            errno = 0;
+            return (tcpsock)conn;
+        }
+        mill_assert(as == -1);
         if(errno != EAGAIN && errno != EWOULDBLOCK)
-            return -1;
+            return NULL;
         /* Wait till new connection is available. */
         int rc = fdwait(l->fd, FDW_IN, deadline);
         if(rc == 0) {
             errno = ETIMEDOUT;
-            return -1;
+            return NULL;
         }
         mill_assert(rc == FDW_IN);
-        goto again;
     }
-    mill_tcptune(as);
-    return as;
 }
 
-
-tcpsock tcpaccept(tcpsock s, int64_t deadline) {
-    ipaddr addr;
-    int as = tcpacceptfd(s, &addr, deadline);
-    if(mill_slow(as < 0))
-        return NULL;
-    /* Create the socket object. */
-    struct mill_tcpconn *conn = malloc(sizeof(struct mill_tcpconn));
-    if(!conn) {
-        fdclean(as);
-        close(as);
-        errno = ENOMEM;
-        return NULL;
-    }
-    tcpconn_init(conn, as);
-    conn->addr = addr;
-    errno = 0;
-    return (tcpsock)conn;    
-}
-
-int tcpconnectfd(ipaddr addr, int64_t deadline) {
+tcpsock tcpconnect(ipaddr addr, int64_t deadline) {
     /* Open a socket. */
     int s = socket(mill_ipfamily(addr), SOCK_STREAM, 0);
     if(s == -1)
-        return -1;
+        return NULL;
     mill_tcptune(s);
 
     /* Connect to the remote endpoint. */
@@ -226,11 +209,11 @@ int tcpconnectfd(ipaddr addr, int64_t deadline) {
     if(rc != 0) {
         mill_assert(rc == -1);
         if(errno != EINPROGRESS)
-            return -1;
+            return NULL;
         rc = fdwait(s, FDW_OUT, deadline);
         if(rc == 0) {
             errno = ETIMEDOUT;
-            return -1;
+            return NULL;
         }
         int err;
         socklen_t errsz = sizeof(err);
@@ -240,22 +223,16 @@ int tcpconnectfd(ipaddr addr, int64_t deadline) {
             fdclean(s);
             close(s);
             errno = err;
-            return -1;
+            return NULL;
         }
         if(err != 0) {
             fdclean(s);
             close(s);
             errno = err;
-            return -1;
+            return NULL;
         }
     }
-    return s;
-}
 
-tcpsock tcpconnect(ipaddr addr, int64_t deadline) {
-    int s = tcpconnectfd(addr, deadline);
-    if(mill_slow(s < 0))
-        return NULL;
     /* Create the object. */
     struct mill_tcpconn *conn = malloc(sizeof(struct mill_tcpconn));
     if(!conn) {
