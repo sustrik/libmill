@@ -297,18 +297,41 @@ MILL_EXPORT void *mill_choose_val(size_t sz);
 /*  IP address library                                                        */
 /******************************************************************************/
 
-#define IPADDR_IPV4 1
-#define IPADDR_IPV6 2
-#define IPADDR_PREF_IPV4 3
-#define IPADDR_PREF_IPV6 4
-#define IPADDR_MAXSTRLEN 46
+#define MILL_IPADDR_IPV4_ 1
+#define MILL_IPADDR_IPV6_ 2
+#define MILL_IPADDR_PREF_IPV4_ 3
+#define MILL_IPADDR_PREF_IPV6_ 4
+#define MILL_IPADDR_MAXSTRLEN_ 46
 
-typedef struct {char data[32];} ipaddr;
+struct mill_ipaddr {char data[32];};
 
-MILL_EXPORT ipaddr iplocal(const char *name, int port, int mode);
-MILL_EXPORT ipaddr ipremote(const char *name, int port, int mode,
-    int64_t deadline);
-MILL_EXPORT const char *ipaddrstr(ipaddr addr, char *ipstr);
+MILL_EXPORT struct mill_ipaddr mill_iplocal_(const char *name, int port,
+    int mode);
+MILL_EXPORT struct mill_ipaddr mill_ipremote_(const char *name, int port,
+    int mode, int64_t deadline);
+MILL_EXPORT const char *mill_ipaddrstr_(struct mill_ipaddr addr, char *ipstr);
+
+#if defined MILL_USE_PREFIX
+#define MILL_IPADDR_IPV4 MILL_IPADDR_IPV4_
+#define MILL_IPADDR_IPV6 MILL_IPADDR_IPV6_
+#define MILL_IPADDR_PREF_IPV4 MILL_IPADDR_PREF_IPV4_
+#define MILL_IPADDR_PREF_IPV6 MILL_IPADDR_PREF_IPV6_
+#define MILL_IPADDR_MAXSTRLEN MILL_IPADDR_MAXSTRLEN_
+typedef struct mill_ipaddr mill_ipaddr;
+#define mill_iplocal mill_iplocal_
+#define mill_ipremote mill_ipremote_
+#define mill_ipaddrstr mill_ipaddrstr_
+#else
+#define IPADDR_IPV4 MILL_IPADDR_IPV4_
+#define IPADDR_IPV6 MILL_IPADDR_IPV6_
+#define IPADDR_PREF_IPV4 MILL_IPADDR_PREF_IPV4_
+#define IPADDR_PREF_IPV6 MILL_IPADDR_PREF_IPV6_
+#define IPADDR_MAXSTRLEN MILL_IPADDR_MAXSTRLEN_
+typedef struct mill_ipaddr ipaddr;
+#define iplocal mill_iplocal_
+#define ipremote mill_ipremote_
+#define ipaddrstr mill_ipaddrstr_
+#endif
 
 /******************************************************************************/
 /*  TCP library                                                               */

@@ -158,7 +158,7 @@ int mill_ipport(ipaddr addr) {
 }
 
 /* Convert IP address from network format to ASCII dot notation. */
-const char *ipaddrstr(ipaddr addr, char *ipstr) {
+const char *mill_ipaddrstr_(ipaddr addr, char *ipstr) {
     if (mill_ipfamily(addr) == AF_INET) {
         return inet_ntop(AF_INET, &(((struct sockaddr_in*)&addr)->sin_addr),
             ipstr, INET_ADDRSTRLEN);
@@ -169,7 +169,7 @@ const char *ipaddrstr(ipaddr addr, char *ipstr) {
     }
 }
 
-ipaddr iplocal(const char *name, int port, int mode) {
+ipaddr mill_iplocal_(const char *name, int port, int mode) {
     if(!name)
         return mill_ipany(port, mode);
     ipaddr addr = mill_ipliteral(name, port, mode);
@@ -248,7 +248,7 @@ ipaddr iplocal(const char *name, int port, int mode) {
 #endif
 }
 
-ipaddr ipremote(const char *name, int port, int mode, int64_t deadline) {
+ipaddr mill_ipremote_(const char *name, int port, int mode, int64_t deadline) {
     int rc;
     ipaddr addr = mill_ipliteral(name, port, mode);
     if(errno == 0)
