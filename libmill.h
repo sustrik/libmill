@@ -315,10 +315,13 @@ MILL_EXPORT const char *ipaddrstr(ipaddr addr, char *ipstr);
 typedef struct mill_tcpsock *tcpsock;
 
 MILL_EXPORT tcpsock tcplisten(ipaddr addr, int backlog);
+MILL_EXPORT int tcplistenfd(ipaddr addr, int backlog);
 MILL_EXPORT int tcpport(tcpsock s);
 MILL_EXPORT tcpsock tcpaccept(tcpsock s, int64_t deadline);
+MILL_EXPORT int tcpacceptfd(tcpsock s, ipaddr *addr, int64_t deadline);
 MILL_EXPORT ipaddr tcpaddr(tcpsock s);
 MILL_EXPORT tcpsock tcpconnect(ipaddr addr, int64_t deadline);
+MILL_EXPORT int tcpconnectfd(ipaddr addr, int64_t deadline);
 MILL_EXPORT size_t tcpsend(tcpsock s, const void *buf, size_t len,
     int64_t deadline);
 MILL_EXPORT void tcpflush(tcpsock s, int64_t deadline);
