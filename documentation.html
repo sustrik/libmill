@@ -177,6 +177,24 @@ $ gcc -o example example.c libmill.a
 $ ./example
 </pre>
 
+Libmill defines some fairly generic symbols like <tt>in</tt> or <tt>go</tt>.
+If it clashes with other libraries you can define <tt>MILL_USE_PREFIX</tt>
+macro before including the header file. That will add <tt>mill_</tt>
+(or <tt>MILL_</tt>) prefix to all the defined symbols. For example:
+
+<pre>
+#define MILL_USE_PREFIX
+#include &lt;libmill.h&gt;
+
+mill_coroutine void worker(void) {
+}
+
+int main() {
+    mill_go(worker());
+    return 0;
+}
+</pre>
+
 <h3 id="tour">A tour of the library</h3>
 
 <h4 id="coroutines">Coroutines</h4>
