@@ -192,33 +192,33 @@ MILL_EXPORT void mill_setcls_(
 /*  Channels                                                                  */
 /******************************************************************************/
 
-typedef struct mill_chan *chan;
+struct mill_chan;
+
 typedef struct{void *f1; void *f2; void *f3; void *f4;
-    void *f5; void *f6; int f7; int f8; int f9;} mill_clause;
+    void *f5; void *f6; int f7; int f8; int f9;} mill_clause_;
+#define MILL_CLAUSELEN_ (sizeof(mill_clause_))
 
-#define MILL_CLAUSELEN_ (sizeof(mill_clause))
-
-MILL_EXPORT chan mill_chmake_(
+MILL_EXPORT struct mill_chan *mill_chmake_(
     size_t sz,
     size_t bufsz,
     const char *created);
-MILL_EXPORT chan mill_chdup_(
-    chan ch,
+MILL_EXPORT struct mill_chan *mill_chdup_(
+    struct mill_chan *ch,
     const char *created);
 MILL_EXPORT void mill_chclose_(
-    chan ch,
+    struct mill_chan *ch,
     const char *current);
 MILL_EXPORT void mill_chs_(
-    chan ch,
+    struct mill_chan *ch,
     void *val,
     size_t sz,
     const char *current);
 MILL_EXPORT void *mill_chr_(
-    chan ch,
+    struct mill_chan *ch,
     size_t sz,
     const char *current);
 MILL_EXPORT void mill_chdone_(
-    chan ch,
+    struct mill_chan *ch,
     void *val,
     size_t sz,
     const char *current);
@@ -226,12 +226,12 @@ MILL_EXPORT void mill_choose_init_(
     const char *current);
 MILL_EXPORT void mill_choose_in_(
     void *clause,
-    chan ch,
+    struct mill_chan *ch,
     size_t sz,
     int idx);
 MILL_EXPORT void mill_choose_out_(
     void *clause,
-    chan ch,
+    struct mill_chan *ch,
     void *val,
     size_t sz,
     int idx);
@@ -337,6 +337,7 @@ MILL_EXPORT void *mill_choose_val_(
         }
 
 #if defined MILL_USE_PREFIX
+typedef struct mill_chan *mill_chan;
 #define mill_chmake(tp, sz) mill_chmake_(sizeof(tp), sz, MILL_HERE_)
 #define mill_chdup(ch) mill_chdup_((ch), MILL_HERE_)
 #define mill_chclose(ch) mill_chclose_((ch), MILL_HERE_)
@@ -350,6 +351,7 @@ MILL_EXPORT void *mill_choose_val_(
 #define mill_otherwise mill_choose_otherwise__(__COUNTER__)
 #define mill_end mill_choose_end__
 #else
+typedef struct mill_chan *chan;
 #define chmake(tp, sz) mill_chmake_(sizeof(tp), sz, MILL_HERE_)
 #define chdup(ch) mill_chdup_((ch), MILL_HERE_)
 #define chclose(ch) mill_chclose_((ch), MILL_HERE_)

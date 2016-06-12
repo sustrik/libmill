@@ -49,7 +49,7 @@ struct mill_chan *mill_getchan(struct mill_ep *ep) {
     }
 }
 
-chan mill_chmake_(size_t sz, size_t bufsz, const char *created) {
+struct mill_chan *mill_chmake_(size_t sz, size_t bufsz, const char *created) {
     /* If there's at least one channel created in the user's code
        we want the debug functions to get into the binary. */
     mill_preserve_debug();
@@ -77,7 +77,7 @@ chan mill_chmake_(size_t sz, size_t bufsz, const char *created) {
     return ch;
 }
 
-chan mill_chdup_(chan ch, const char *current) {
+struct mill_chan *mill_chdup_(struct mill_chan *ch, const char *current) {
     if(mill_slow(!ch))
         mill_panic("null channel used");
     mill_trace(current, "chdup(<%d>)", (int)ch->debug.id);
@@ -85,7 +85,7 @@ chan mill_chdup_(chan ch, const char *current) {
     return ch;
 }
 
-void mill_chclose_(chan ch, const char *current) {
+void mill_chclose_(struct mill_chan *ch, const char *current) {
     if(mill_slow(!ch))
         mill_panic("null channel used");
     mill_trace(current, "chclose(<%d>)", (int)ch->debug.id);
@@ -132,7 +132,7 @@ void mill_choose_init_(const char *current) {
     mill_choose_init(current);
 }
 
-void mill_choose_in_(void *clause, chan ch, size_t sz, int idx) {
+void mill_choose_in_(void *clause, struct mill_chan *ch, size_t sz, int idx) {
     if(mill_slow(!ch))
         mill_panic("null channel used");
     if(mill_slow(ch->sz != sz))
@@ -163,7 +163,8 @@ void mill_choose_in_(void *clause, chan ch, size_t sz, int idx) {
     cl->ep->tmp = -1;
 }
 
-void mill_choose_out_(void *clause, chan ch, void *val, size_t sz, int idx) {
+void mill_choose_out_(void *clause, struct mill_chan *ch, void *val, size_t sz,
+      int idx) {
     if(mill_slow(!ch))
         mill_panic("null channel used");
     if(mill_slow(ch->done))
@@ -228,7 +229,7 @@ void mill_choose_otherwise_(void) {
 }
 
 /* Push new item to the channel. */
-static void mill_enqueue(chan ch, void *val) {
+static void mill_enqueue(struct mill_chan *ch, void *val) {
     /* If there's a receiver already waiting, let's resume it. */
     if(!mill_list_empty(&ch->receiver.clauses)) {
         mill_assert(ch->items == 0);
@@ -246,7 +247,7 @@ static void mill_enqueue(chan ch, void *val) {
 }
 
 /* Pop one value from the channel. */
-static void mill_dequeue(chan ch, void *val) {
+static void mill_dequeue(struct mill_chan *ch, void *val) {
     /* Get a blocked sender, if any. */
     struct mill_clause *cl = mill_cont(
         mill_list_begin(&ch->sender.clauses), struct mill_clause, epitem);
@@ -343,7 +344,8 @@ void *mill_choose_val_(size_t sz) {
     return mill_valbuf(mill_running, sz);
 }
 
-void mill_chs_(chan ch, void *val, size_t sz, const char *current) {
+void mill_chs_(struct mill_chan *ch, void *val, size_t sz,
+      const char *current) {
     if(mill_slow(!ch))
         mill_panic("null channel used");
     mill_trace(current, "chs(<%d>)", (int)ch->debug.id);
@@ -354,7 +356,7 @@ void mill_chs_(chan ch, void *val, size_t sz, const char *current) {
     mill_choose_wait_();
 }
 
-void *mill_chr_(chan ch, size_t sz, const char *current) {
+void *mill_chr_(struct mill_chan *ch, size_t sz, const char *current) {
     if(mill_slow(!ch))
         mill_panic("null channel used");
     mill_trace(current, "chr(<%d>)", (int)ch->debug.id);
@@ -366,7 +368,8 @@ void *mill_chr_(chan ch, size_t sz, const char *current) {
     return mill_choose_val_(sz);
 }
 
-void mill_chdone_(chan ch, void *val, size_t sz, const char *current) {
+void mill_chdone_(struct mill_chan *ch, void *val, size_t sz,
+      const char *current) {
     if(mill_slow(!ch))
         mill_panic("null channel used");
     mill_trace(current, "chdone(<%d>)", (int)ch->debug.id);
