@@ -92,6 +92,8 @@ extern "C" {
 #define mill_string1_(x) mill_string2_(x)
 #define MILL_HERE_ (__FILE__ ":" mill_string1_(__LINE__))
 
+#define mill_concat_(x,y) x##y
+
 MILL_EXPORT int64_t mill_now_(
     void);
 MILL_EXPORT pid_t mill_mfork_(
@@ -191,170 +193,176 @@ MILL_EXPORT void mill_setcls_(
 /******************************************************************************/
 
 typedef struct mill_chan *chan;
-typedef struct{void *f1; void *f2; void *f3; void *f4; \
+typedef struct{void *f1; void *f2; void *f3; void *f4;
     void *f5; void *f6; int f7; int f8; int f9;} mill_clause;
-#define MILL_CLAUSELEN (sizeof(mill_clause))
 
-#define chmake(type, bufsz) mill_chmake(sizeof(type), bufsz, MILL_HERE_)
+#define MILL_CLAUSELEN_ (sizeof(mill_clause))
 
-#define chdup(channel) mill_chdup((channel), MILL_HERE_)
-
-#define chs(channel, type, value) \
-    do {\
-        type mill_val = (value);\
-        mill_chs((channel), &mill_val, sizeof(type), MILL_HERE_);\
-    } while(0)
-
-#define chr(channel, type) \
-    (*(type*)mill_chr((channel), sizeof(type), MILL_HERE_))
-
-#define chdone(channel, type, value) \
-    do {\
-        type mill_val = (value);\
-        mill_chdone((channel), &mill_val, sizeof(type), MILL_HERE_);\
-    } while(0)
-
-#define chclose(channel) mill_chclose((channel), MILL_HERE_)
-
-MILL_EXPORT chan mill_chmake(
+MILL_EXPORT chan mill_chmake_(
     size_t sz,
     size_t bufsz,
     const char *created);
-MILL_EXPORT chan mill_chdup(
+MILL_EXPORT chan mill_chdup_(
     chan ch,
     const char *created);
-MILL_EXPORT void mill_chs(
+MILL_EXPORT void mill_chclose_(
+    chan ch,
+    const char *current);
+MILL_EXPORT void mill_chs_(
     chan ch,
     void *val,
     size_t sz,
     const char *current);
-MILL_EXPORT void *mill_chr(
+MILL_EXPORT void *mill_chr_(
     chan ch,
     size_t sz,
     const char *current);
-MILL_EXPORT void mill_chdone(
+MILL_EXPORT void mill_chdone_(
     chan ch,
     void *val,
     size_t sz,
     const char *current);
-MILL_EXPORT void mill_chclose(
-    chan ch,
+MILL_EXPORT void mill_choose_init_(
     const char *current);
+MILL_EXPORT void mill_choose_in_(
+    void *clause,
+    chan ch,
+    size_t sz,
+    int idx);
+MILL_EXPORT void mill_choose_out_(
+    void *clause,
+    chan ch,
+    void *val,
+    size_t sz,
+    int idx);
+MILL_EXPORT void mill_choose_deadline_(
+    int64_t deadline);
+MILL_EXPORT void mill_choose_otherwise_(
+    void);
+MILL_EXPORT int mill_choose_wait_(
+    void);
+MILL_EXPORT void *mill_choose_val_(
+    size_t sz);
 
-#define mill_concat(x,y) x##y
+#define mill_chs__(channel, type, value) \
+    do {\
+        type mill_val = (value);\
+        mill_chs_((channel), &mill_val, sizeof(type), MILL_HERE_);\
+    } while(0)
 
-#define mill_choose \
+#define mill_chr__(channel, type) \
+    (*(type*)mill_chr_((channel), sizeof(type), MILL_HERE_))
+
+#define mill_chdone__(channel, type, value) \
+    do {\
+        type mill_val = (value);\
+        mill_chdone_((channel), &mill_val, sizeof(type), MILL_HERE_);\
+    } while(0)
+
+#define mill_choose_init__ \
     {\
-        mill_choose_init(MILL_HERE_);\
+        mill_choose_init_(MILL_HERE_);\
         int mill_idx = -2;\
         while(1) {\
             if(mill_idx != -2) {\
                 if(0)
 
-#define mill_internal__in(chan, type, name, idx) \
+#define mill_choose_in__(chan, type, name, idx) \
                     break;\
                 }\
-                goto mill_concat(mill_label, idx);\
+                goto mill_concat_(mill_label, idx);\
             }\
-            char mill_concat(mill_clause, idx)[MILL_CLAUSELEN];\
-            mill_choose_in(\
-                &mill_concat(mill_clause, idx)[0],\
+            char mill_concat_(mill_clause, idx)[MILL_CLAUSELEN_];\
+            mill_choose_in_(\
+                &mill_concat_(mill_clause, idx)[0],\
                 (chan),\
                 sizeof(type),\
                 idx);\
             if(0) {\
                 type name;\
-                mill_concat(mill_label, idx):\
+                mill_concat_(mill_label, idx):\
                 if(mill_idx == idx) {\
-                    name = *(type*)mill_choose_val(sizeof(type));\
-                    goto mill_concat(mill_dummylabel, idx);\
-                    mill_concat(mill_dummylabel, idx)
+                    name = *(type*)mill_choose_val_(sizeof(type));\
+                    goto mill_concat_(mill_dummylabel, idx);\
+                    mill_concat_(mill_dummylabel, idx)
 
-#define mill_internal__out(chan, type, val, idx) \
+#define mill_choose_out__(chan, type, val, idx) \
                     break;\
                 }\
-                goto mill_concat(mill_label, idx);\
+                goto mill_concat_(mill_label, idx);\
             }\
-            char mill_concat(mill_clause, idx)[MILL_CLAUSELEN];\
-            type mill_concat(mill_val, idx) = (val);\
-            mill_choose_out(\
-                &mill_concat(mill_clause, idx)[0],\
+            char mill_concat_(mill_clause, idx)[MILL_CLAUSELEN_];\
+            type mill_concat_(mill_val, idx) = (val);\
+            mill_choose_out_(\
+                &mill_concat_(mill_clause, idx)[0],\
                 (chan),\
-                &mill_concat(mill_val, idx),\
+                &mill_concat_(mill_val, idx),\
                 sizeof(type),\
                 idx);\
             if(0) {\
-                mill_concat(mill_label, idx):\
+                mill_concat_(mill_label, idx):\
                 if(mill_idx == idx) {\
-                    goto mill_concat(mill_dummylabel, idx);\
-                    mill_concat(mill_dummylabel, idx)
+                    goto mill_concat_(mill_dummylabel, idx);\
+                    mill_concat_(mill_dummylabel, idx)
 
-#define mill_internal__deadline(ddline, idx) \
+#define mill_choose_deadline__(ddline, idx) \
                     break;\
                 }\
-                goto mill_concat(mill_label, idx);\
+                goto mill_concat_(mill_label, idx);\
             }\
-            mill_choose_deadline(ddline);\
+            mill_choose_deadline_(ddline);\
             if(0) {\
-                mill_concat(mill_label, idx):\
+                mill_concat_(mill_label, idx):\
                 if(mill_idx == -1) {\
-                    goto mill_concat(mill_dummylabel, idx);\
-                    mill_concat(mill_dummylabel, idx)
+                    goto mill_concat_(mill_dummylabel, idx);\
+                    mill_concat_(mill_dummylabel, idx)
 
-#define mill_internal__otherwise(idx) \
+#define mill_choose_otherwise__(idx) \
                     break;\
                 }\
-                goto mill_concat(mill_label, idx);\
+                goto mill_concat_(mill_label, idx);\
             }\
-            mill_choose_otherwise();\
+            mill_choose_otherwise_();\
             if(0) {\
-                mill_concat(mill_label, idx):\
+                mill_concat_(mill_label, idx):\
                 if(mill_idx == -1) {\
-                    goto mill_concat(mill_dummylabel, idx);\
-                    mill_concat(mill_dummylabel, idx)
+                    goto mill_concat_(mill_dummylabel, idx);\
+                    mill_concat_(mill_dummylabel, idx)
 
-#define mill_end \
+#define mill_choose_end__ \
                     break;\
                 }\
             }\
-            mill_idx = mill_choose_wait();\
+            mill_idx = mill_choose_wait_();\
         }
 
 #if defined MILL_USE_PREFIX
-# define mill_in(chan, type, name) mill_internal__in((chan), type, name, __COUNTER__)
-# define mill_out(chan, type, val) mill_internal__out((chan), type, (val), __COUNTER__)
-# define mill_deadline(ddline) mill_internal__deadline(ddline, __COUNTER__)
-# define mill_otherwise mill_internal__otherwise(__COUNTER__)
+#define mill_chmake(tp, sz) mill_chmake_(sizeof(tp), sz, MILL_HERE_)
+#define mill_chdup(ch) mill_chdup_((ch), MILL_HERE_)
+#define mill_chclose(ch) mill_chclose_((ch), MILL_HERE_)
+#define mill_chs(ch, tp, val) mill_chs__((ch), tp, (val))
+#define mill_chr(ch, tp) mill_chr__((ch), tp)
+#define mill_chdone(ch, tp, val) mill_chdone__((ch), tp, (val))
+#define mill_choose mill_choose_init__
+#define mill_in(ch, tp, nm) mill_choose_in__((ch), tp, nm, __COUNTER__)
+#define mill_out(ch, tp, val) mill_choose_out__((ch), tp, (val), __COUNTER__)
+#define mill_deadline(dd) mill_choose_deadline__(dd, __COUNTER__)
+#define mill_otherwise mill_choose_otherwise__(__COUNTER__)
+#define mill_end mill_choose_end__
 #else
-# define choose mill_choose
-# define end mill_end
-# define in(chan, type, name) mill_internal__in((chan), type, name, __COUNTER__)
-# define out(chan, type, val) mill_internal__out((chan), type, (val), __COUNTER__)
-# define deadline(ddline) mill_internal__deadline(ddline, __COUNTER__)
-# define otherwise mill_internal__otherwise(__COUNTER__)
+#define chmake(tp, sz) mill_chmake_(sizeof(tp), sz, MILL_HERE_)
+#define chdup(ch) mill_chdup_((ch), MILL_HERE_)
+#define chclose(ch) mill_chclose_((ch), MILL_HERE_)
+#define chs(ch, tp, val) mill_chs__((ch), tp, (val))
+#define chr(ch, tp) mill_chr__((ch), tp)
+#define chdone(ch, tp, val) mill_chdone__((ch), tp, (val))
+#define choose mill_choose_init__
+#define in(ch, tp, nm) mill_choose_in__((ch), tp, nm, __COUNTER__)
+#define out(ch, tp, val) mill_choose_out__((ch), tp, (val), __COUNTER__)
+#define deadline(dd) mill_choose_deadline__(dd, __COUNTER__)
+#define otherwise mill_choose_otherwise__(__COUNTER__)
+#define end mill_choose_end__
 #endif
-
-MILL_EXPORT void mill_choose_init(
-    const char *current);
-MILL_EXPORT void mill_choose_in(
-    void *clause,
-    chan ch,
-    size_t sz,
-    int idx);
-MILL_EXPORT void mill_choose_out(
-    void *clause,
-    chan ch,
-    void *val,
-    size_t sz,
-    int idx);
-MILL_EXPORT void mill_choose_deadline(
-    int64_t deadline);
-MILL_EXPORT void mill_choose_otherwise(
-    void);
-MILL_EXPORT int mill_choose_wait(
-    void);
-MILL_EXPORT void *mill_choose_val(
-    size_t sz);
 
 /******************************************************************************/
 /*  IP address library                                                        */
