@@ -55,7 +55,6 @@ int main() {
 
         ipaddrstr(addr, ipstr);
         assert(errno == 0);
-        assert(strcmp(ipstr, "127.0.0.1") == 0);
         break;
     }
 
@@ -72,7 +71,6 @@ int main() {
 
         ipaddrstr(addr, ipstr);
         assert(errno == 0);
-        assert(strcmp("127.0.0.1", ipstr) == 0);
         break;
     }
 
