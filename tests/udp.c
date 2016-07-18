@@ -53,7 +53,6 @@ int main() {
         assert(errno == 0);
         assert(sz == 3);
 
-        ipaddrstr(addr, ipstr);
         assert(errno == 0);
         break;
     }
@@ -69,7 +68,6 @@ int main() {
         assert(errno == 0);
         assert(sz == 3);
 
-        ipaddrstr(addr, ipstr);
         assert(errno == 0);
         break;
     }
