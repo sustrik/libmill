@@ -52,8 +52,6 @@ int main() {
             continue;
         assert(errno == 0);
         assert(sz == 3);
-
-        assert(errno == 0);
         break;
     }
 
@@ -67,8 +65,6 @@ int main() {
             continue;
         assert(errno == 0);
         assert(sz == 3);
-
-        assert(errno == 0);
         break;
     }
 
