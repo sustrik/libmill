@@ -157,6 +157,7 @@ void mill_sslclose_(struct mill_sslsock *s) {
     switch(s->type) {
     case MILL_SSLLISTENER:;
         struct mill_ssllistener *l = (struct mill_ssllistener*)s;
+        SSL_CTX_free(l->ctx);
         /* TODO: close the context */
         tcpclose(l->s);
         free(l);
