@@ -586,6 +586,47 @@ typedef struct mill_unixsock *unixsock;
 #endif
 
 /******************************************************************************/
+/*  SSL library (experimental, subject to change)                             */
+/******************************************************************************/
+
+struct mill_sslsock;
+
+MILL_EXPORT int mill_sslinit_(const char *cert_file, const char *key_file);
+MILL_EXPORT struct mill_sslsock *mill_sslconnect_(struct mill_ipaddr addr,
+    int64_t deadline);
+MILL_EXPORT struct mill_sslsock *mill_sslaccept_(struct mill_tcpsock *lsock,
+    int64_t deadline);
+MILL_EXPORT int mill_sslrecv_(struct mill_sslsock *s, void *buf, int len,
+    int64_t deadline);
+MILL_EXPORT int mill_sslsend_(struct mill_sslsock *s, const void *buf, int len,
+    int64_t deadline); 
+MILL_EXPORT int mill_sslhandshake_(struct mill_sslsock *s, int64_t deadline);
+MILL_EXPORT void mill_sslclose_(struct mill_sslsock *s);
+MILL_EXPORT const char *mill_sslerrstr_(struct mill_sslsock *s);
+
+#if defined MILL_USE_PREFIX
+typedef struct mill_sslsock *mill_sslsock;
+#define mill_sslinit mill_sslinit_
+#define mill_sslconnect mill_sslconnect_
+#define mill_sslaccept mill_sslaccept_
+#define mill_sslrecv mill_sslrecv_
+#define mill_sslsend mill_sslsend_
+#define mill_sslhandshake mill_sslhandshake_
+#define mill_sslclose mill_sslclose_
+#define mill_sslerrstr mill_sslerrstr_
+#else
+typedef struct mill_sslsock *sslsock;
+#define sslinit mill_sslinit_
+#define sslconnect mill_sslconnect_
+#define sslaccept mill_sslaccept_
+#define sslrecv mill_sslrecv_
+#define sslsend mill_sslsend_
+#define sslhandshake mill_sslhandshake_
+#define sslclose mill_sslclose_
+#define sslerrstr mill_sslerrstr_
+#endif
+
+/******************************************************************************/
 /*  File library                                                              */
 /******************************************************************************/
 

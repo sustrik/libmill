@@ -468,3 +468,13 @@ ipaddr tcpaddr(struct mill_tcpsock *s) {
     return l->addr;
 }
 
+int tcpdetach(struct mill_tcpsock *s) {
+    int fd;
+    mill_assert(s->type == MILL_TCPCONN);
+    fd = ((struct mill_tcpconn*)s)->fd;
+    struct mill_tcpconn *c = (struct mill_tcpconn*)s;
+    fdclean(c->fd);
+    free(c);
+    return fd;
+}
+

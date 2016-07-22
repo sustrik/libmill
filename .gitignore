@@ -45,6 +45,7 @@ tests/file
 tests/mfork1
 tests/mfork2
 tests/mfork3
+tests/ssl
 perf/.dirstamp
 perf/go
 perf/ctxswitch
