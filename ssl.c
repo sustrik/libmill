@@ -78,25 +78,25 @@ struct mill_sslsock *mill_ssllisten_(struct mill_ipaddr addr, int backlog) {
 }
 
 static int ssl_wait(struct mill_sslconn *c, int64_t deadline) {
-    if (! BIO_should_retry(c->bio)) {
+    if(!BIO_should_retry(c->bio)) {
         c->sslerr = ERR_get_error();
         /* XXX: Ref. openssl/source/ssl/ssl_lib.c .. */
-        if (ERR_GET_LIB(c->sslerr) != ERR_LIB_SYS)
+        if(ERR_GET_LIB(c->sslerr) != ERR_LIB_SYS)
             errno = EIO;
         return -1;
     }
 
-    if (BIO_should_read(c->bio)) {
+    if(BIO_should_read(c->bio)) {
         int rc = fdwait(c->fd, FDW_IN, deadline);
-        if (rc == 0) {
+        if(rc == 0) {
             errno = ETIMEDOUT;
             return -1;
         }
         return rc;
     }
-    if (BIO_should_write(c->bio)) {
+    if(BIO_should_write(c->bio)) {
         int rc = fdwait(c->fd, FDW_OUT, deadline);
-        if (rc == 0) {
+        if(rc == 0) {
             errno = ETIMEDOUT;
             return -1;
         }
@@ -114,8 +114,8 @@ int mill_sslhandshake_(struct mill_sslsock *s, int64_t deadline) {
         mill_panic("trying to use an unconnected socket");
     struct mill_sslconn *c = (struct mill_sslconn*)s;
 
-    while (BIO_do_handshake(c->bio) <= 0) {
-        if (ssl_wait(c, deadline) < 0)
+    while(BIO_do_handshake(c->bio) <= 0) {
+        if(ssl_wait(c, deadline) < 0)
             return -1;
     }
 
@@ -163,9 +163,9 @@ const char *mill_sslerrstr_(struct mill_sslsock *s) {
     struct mill_sslconn *c = (struct mill_sslconn*)s;
 
     static const char unknown_err[] = "Unknown error";
-    if (c->sslerr)
+    if(c->sslerr)
         return ERR_error_string(c->sslerr, NULL);
-    if (errno)
+    if(errno)
         return strerror(errno);
     return unknown_err;
 }
@@ -174,10 +174,10 @@ static struct mill_sslsock *ssl_conn_new(tcpsock s, SSL_CTX *ctx, int client) {
     mill_assert(ctx);
     SSL *ssl = NULL;
     BIO *sbio = BIO_new_ssl(ctx, client);
-    if (! sbio)
+    if(!sbio)
         return NULL;
     BIO_get_ssl(sbio, & ssl);
-    if (!ssl) {
+    if(!ssl) {
         BIO_free(sbio);
         return NULL;
     }
@@ -186,7 +186,7 @@ static struct mill_sslsock *ssl_conn_new(tcpsock s, SSL_CTX *ctx, int client) {
     SSL_set_mode(ssl, SSL_MODE_ENABLE_PARTIAL_WRITE);
     int fd = tcpdetach(s);
     BIO *cbio = BIO_new_socket(fd, BIO_NOCLOSE);
-    if (! cbio) {
+    if(!cbio) {
         BIO_free(sbio);
         return NULL;
     } 
@@ -214,15 +214,15 @@ int mill_sslrecv_(struct mill_sslsock *s, void *buf, int len,
     struct mill_sslconn *c = (struct mill_sslconn*)s;
 
     int rc;
-    if (len < 0) {
+    if(len < 0) {
         errno = EINVAL;
         return -1;
     }
     do {
         rc = BIO_read(c->bio, buf, len);
-        if (rc >= 0)
+        if(rc >= 0)
             break;
-        if (ssl_wait(c, deadline) < 0)
+        if(ssl_wait(c, deadline) < 0)
             return -1;
     } while (1);
     return rc;
@@ -235,7 +235,7 @@ int mill_sslsend_(struct mill_sslsock *s, const void *buf, int len,
     struct mill_sslconn *c = (struct mill_sslconn*)s;
 
     int rc;
-    if (len < 0) {
+    if(len < 0) {
         errno = EINVAL;
         return -1;
     }
@@ -243,18 +243,16 @@ int mill_sslsend_(struct mill_sslsock *s, const void *buf, int len,
         rc = BIO_write(c->bio, buf, len);
         if (rc >= 0)
             break;
-        if (ssl_wait(c, deadline) < 0)
+        if(ssl_wait(c, deadline) < 0)
             return -1;
-    } while (1);
+    } while(1);
     return rc;
 }
 
 static int load_certificates(SSL_CTX *ctx,
-                const char *cert_file, const char *key_file) {
-
-    if (SSL_CTX_use_certificate_file(ctx, cert_file, SSL_FILETYPE_PEM) <= 0
-        || SSL_CTX_use_PrivateKey_file(ctx, key_file, SSL_FILETYPE_PEM) <= 0
-    )
+      const char *cert_file, const char *key_file) {
+    if(SSL_CTX_use_certificate_file(ctx, cert_file, SSL_FILETYPE_PEM) <= 0
+          || SSL_CTX_use_PrivateKey_file(ctx, key_file, SSL_FILETYPE_PEM) <= 0)
         return 0;
     if (SSL_CTX_check_private_key(ctx) <= 0) /* inconsistent private key */
         return 0;
@@ -272,7 +270,7 @@ static int ssl_init(void) {
     /* seed the PRNG .. */
 
     ssl_cli_ctx = SSL_CTX_new(SSLv23_client_method());
-    if (ssl_cli_ctx == NULL)
+    if(ssl_cli_ctx == NULL)
         return 0;
 #if 0
     /* XXX: if verifying cert using SSL_get_verify_result(), see ssl_handshake.
@@ -287,29 +285,29 @@ static int ssl_init(void) {
 
 /* use ERR_print_errors(_fp) for SSL error */
 int mill_sslinit_(const char *cert_file, const char *key_file) {
-    if (! ssl_cli_ctx) {
+    if(!ssl_cli_ctx) {
         if (! ssl_init())
             return 0;
     }
     ssl_serv_ctx = SSL_CTX_new(SSLv23_server_method());
-    if (! ssl_serv_ctx)
+    if(!ssl_serv_ctx)
         return 0;
     return load_certificates(ssl_serv_ctx, cert_file, key_file);
 }
 
 struct mill_sslsock *mill_sslconnect_(struct mill_ipaddr addr,
       int64_t deadline) {
-    if (! ssl_cli_ctx) {
-        if (! ssl_init()) {
+    if(!ssl_cli_ctx) {
+        if(!ssl_init()) {
             errno = EPROTO;
             return NULL;
         }
     }
     tcpsock sock = tcpconnect(addr, deadline);
-    if (! sock)
+    if(!sock)
         return NULL;
     struct mill_sslsock *c = ssl_conn_new(sock, ssl_cli_ctx, 1);
-    if (! c) {
+    if(!c) {
         tcpclose(sock);
         errno = ENOMEM;
         return NULL;
@@ -322,15 +320,15 @@ struct mill_sslsock *mill_sslaccept_(struct mill_sslsock *s, int64_t deadline) {
         mill_panic("trying to accept on a socket that isn't listening");
     struct mill_ssllistener *l = (struct mill_ssllistener*)s;
 
-    if (! ssl_serv_ctx) {
+    if(!ssl_serv_ctx) {
         errno = EPROTO;
         return NULL;
     }
     tcpsock sock = tcpaccept(l->s, deadline);
-    if (!sock)
+    if(!sock)
         return NULL;
     struct mill_sslsock *c = ssl_conn_new(sock, ssl_serv_ctx, 0);
-    if (! c) {
+    if(!c) {
         tcpclose(sock);
         errno = ENOMEM;
         return NULL;
