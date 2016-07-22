@@ -1,6 +1,6 @@
 /*
 
-  Copyright (c) 2016 John E. Haque
+  Copyright (c) 2016 Martin Sustrik
 
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"),
@@ -22,93 +22,113 @@
 
 */
 
-#if defined HAVE_SSL
-
 #include <assert.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "libmill.h"
+#include "../libmill.h"
 
-#define PORT 5555 
-#define NCLIENT 10
+coroutine void client(int port) {
+    ipaddr addr = ipremote("127.0.0.1", port, 0, -1);
+    sslsock cs = sslconnect(addr, -1);
+    assert(cs);
 
-int read_a_line(sslsock c, char *buf, int64_t deadline) {
-    int total = 0;
-    for(;;) {
-        assert(total < 256);
-        int len = sslrecv(c, buf + total, 1, deadline);
-        if (len <= 0)
-            return -1;
-        total += len;
-        if (buf[total-1] == '\n')
-            break;
-    }
-    return total;
-}
-
-coroutine void client(int num, ipaddr raddr) {
-    msleep(now()+ 50);
-
-    int64_t deadline = now() + 1000;
-    sslsock c = sslconnect(raddr, deadline);
-    assert(c);  /* TODO: check for error (errno) */
-
-    /* ssl_handshake(cs, -1); */
-
-    char req[256];
-    sprintf(req, "%d: This is a test.\n", num);
-    int reqlen = strlen(req);
-    int rc = sslsend(c, req, reqlen, deadline);
-    assert(rc == reqlen); /* TODO: check for error or partial write */
-    char resp[256];
-    int resplen = read_a_line(c, resp, deadline);
-    if (resplen >= 0)
-        fprintf(stderr, "Response: %.*s", resplen, resp);
-    sslclose(c);
-}
- 
-coroutine void serve_client(sslsock c) {
-    char buf[256];
-    int64_t deadline = now()+1000;
-    int total = read_a_line(c, buf, deadline);
-    if (total >= 0) {
-        fprintf(stderr, "Request: %.*s", total, buf);
-        int rc = sslsend(c, buf, total, deadline);
-        assert(rc == total);   /* TODO: check error and partial write */
-    }
-    sslclose(c);
-}
-
-int main(void) {
-    ipaddr laddr, raddr;
-    laddr = iplocal(NULL, PORT, 0);
-    raddr = ipremote("127.0.0.1", PORT, 0, -1);
+    char ipstr[16] = {0};
+    ipaddrstr(addr, ipstr);
     assert(errno == 0);
-    sslsock lsock = ssllisten(laddr, "./tests/cert.pem", "./tests/key.pem", 32);
+    assert(strcmp(ipstr, "127.0.0.1") == 0);
+
+    msleep(now() + 100);
+
+    char buf[16];
+    size_t sz = sslrecv(cs, buf, 3, -1);
+    assert(sz == 3 && buf[0] == 'A' && buf[1] == 'B' && buf[2] == 'C');
+
+    sz = sslsend(cs, "123\n45\n6789", 11, -1);
+    assert(sz == 11 && errno == 0);
+    sslflush(cs, -1);
     assert(errno == 0);
-    int port = sslport(lsock);
-    assert(port == PORT);
 
-    int i;
-    for (i = 1; i <= NCLIENT; i++)
-        go(client(i, raddr));
-    while (1) {
-        sslsock c = sslaccept(lsock, now() + 1000);
-        if (! c) /* ETIMEDOUT */
+    sslclose(cs);
+}
+
+coroutine void client2(int port) {
+    ipaddr addr = ipremote("127.0.0.1", port, 0, -1);
+    sslsock conn = sslconnect(addr, -1);
+    assert(conn);
+    msleep(now() + 100);
+    sslclose(conn);
+}
+
+
+int main() {
+    char buf[16];
+
+    sslsock ls = ssllisten(iplocal(NULL, 5555, 0),
+        "./tests/cert.pem", "./tests/key.pem", 10);
+    assert(ls);
+
+    go(client(5555));
+
+    sslsock as = sslaccept(ls, -1);
+
+    /* Test port. */
+    assert(sslport(as) != 5555);
+
+    /* Test deadline. */
+    int64_t deadline = now() + 30;
+    size_t sz = sslrecv(as, buf, sizeof(buf), deadline);
+    assert(sz == 0 && errno == ETIMEDOUT);
+    int64_t diff = now() - deadline;
+    assert(diff > -20 && diff < 20);
+
+    sz = sslsend(as, "ABC", 3, -1);
+    assert(sz == 3 && errno == 0);
+    sslflush(as, -1);
+    assert(errno == 0);
+
+    /* Test sslrecvuntil. */
+    sz = sslrecvuntil(as, buf, sizeof(buf), "\n", 1, -1);
+    assert(sz == 4);
+    assert(buf[0] == '1' && buf[1] == '2' && buf[2] == '3' && buf[3] == '\n');
+    sz = sslrecvuntil(as, buf, sizeof(buf), "\n", 1, -1);
+    assert(sz == 3);
+    assert(buf[0] == '4' && buf[1] == '5' && buf[2] == '\n');
+    sz = sslrecvuntil(as, buf, 3, "\n", 1, -1);
+    assert(sz == 3);
+    assert(buf[0] == '6' && buf[1] == '7' && buf[2] == '8');
+
+    sslclose(as);
+    sslclose(ls);
+
+    /* Test whether libmill performs correctly when faced with TCP pushback. */
+    ls = ssllisten(iplocal(NULL, 5555, 0),
+        "./tests/cert.pem", "./tests/key.pem", 10);
+    go(client2(5555));
+    as = sslaccept(ls, -1);
+    assert(as);
+    char buffer[2048];
+    while(1) {
+        size_t sz = sslsend(as, buffer, 2048, -1);
+        if(errno == ECONNRESET)
             break;
-        go(serve_client(c));
+        if(errno != 0) {
+            fprintf(stderr, "errno=%d\n", errno);
+            assert(0);
+        }
+        sslflush(as, -1);
+        if(errno == ECONNRESET)
+            break;
+        if(errno != 0) {
+            fprintf(stderr, "errno=%d\n", errno);
+            assert(0);
+        }
+        assert(errno == 0);
     }
+    sslclose(as);
+    sslclose(ls);
 
-    msleep(now() + 500);
     return 0;
 }
 
-#else
-
-int main(void) {
-    return 0;
-}
-
-#endif

@@ -128,7 +128,7 @@ static int ssl_wait(struct mill_sslconn *c, int64_t deadline) {
         unsigned long sslerr = ERR_get_error();
         /* XXX: Ref. openssl/source/ssl/ssl_lib.c .. */
         if(ERR_GET_LIB(sslerr) != ERR_LIB_SYS)
-            errno = EIO;
+            errno = ECONNRESET;
         return -1;
     }
 
@@ -149,7 +149,7 @@ static int ssl_wait(struct mill_sslconn *c, int64_t deadline) {
         return rc;
     }
     /* mill_assert(!BIO_should_io_special(c->bio)); */
-    errno = EIO;
+    errno = ECONNRESET;
     return -1;  /* should not happen ? */
 }
 
@@ -220,14 +220,13 @@ size_t mill_sslrecv_(struct mill_sslsock *s, void *buf, int len,
         errno = EINVAL;
         return -1;
     }
-    do {
+    while(1) {
         rc = BIO_read(c->bio, buf, len);
         if(rc >= 0)
-            break;
+            return rc;
         if(ssl_wait(c, deadline) < 0)
-            return -1;
-    } while (1);
-    return rc;
+            return 0;
+    }
 }
 
 size_t mill_sslrecvuntil_(struct mill_sslsock *s, void *buf, size_t len,
@@ -262,14 +261,13 @@ size_t mill_sslsend_(struct mill_sslsock *s, const void *buf, int len,
         errno = EINVAL;
         return -1;
     }
-    do {
+    while(1) {
         rc = BIO_write(c->bio, buf, len);
         if (rc >= 0)
-            break;
+            return rc;
         if(ssl_wait(c, deadline) < 0)
-            return -1;
-    } while(1);
-    return rc;
+            return 0;
+    }
 }
 
 void mill_sslflush_(struct mill_sslsock *s, int64_t deadline) {
