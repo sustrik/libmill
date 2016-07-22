@@ -468,13 +468,10 @@ ipaddr mill_tcpaddr_(struct mill_tcpsock *s) {
     return l->addr;
 }
 
-int tcpdetach(struct mill_tcpsock *s) {
-    int fd;
-    mill_assert(s->type == MILL_TCPCONN);
-    fd = ((struct mill_tcpconn*)s)->fd;
-    struct mill_tcpconn *c = (struct mill_tcpconn*)s;
-    fdclean(c->fd);
-    free(c);
-    return fd;
+/* This function is to be used only internally by libmill. Take into account
+   that once there are data in tcpsock's tx/rx buffers, the state of fd may
+   not match the state of tcpsock object. Works only on connected sockets. */
+int mill_tcpfd(struct mill_tcpsock *s) {
+    return ((struct mill_tcpconn*)s)->fd;
 }
 

@@ -33,7 +33,7 @@
 #include "utils.h"
 
 /* Defined in tcp.c, not exposed via libmill.h */
-int tcpdetach(struct mill_tcpsock *s);
+int mill_tcpfd(struct mill_tcpsock *s);
 
 /* Only one client context is needed, so let's make it global. */
 static SSL_CTX *ssl_cli_ctx;
@@ -55,9 +55,9 @@ struct mill_ssllistener {
 
 struct mill_sslconn {
     struct mill_sslsock sock;
-    unsigned long sslerr; 
-    int fd;
+    tcpsock s;
     BIO *bio;
+    unsigned long sslerr; 
 };
 
 /* Initialise OpenSSL library. */
@@ -125,7 +125,10 @@ int mill_sslport_(struct mill_sslsock *s) {
         struct mill_ssllistener *l = (struct mill_ssllistener*)s;
         return tcpport(l->s);
     }
-    /* TODO: Return port for MILL_SSLCONN. */
+    if(s->type == MILL_SSLCONN) {
+        struct mill_sslconn *c = (struct mill_sslconn*)s;
+        return tcpport(c->s);
+    }
     mill_assert(0);
 }
 
@@ -140,7 +143,7 @@ static int ssl_wait(struct mill_sslconn *c, int64_t deadline) {
     }
 
     if(BIO_should_read(c->bio)) {
-        int rc = fdwait(c->fd, FDW_IN, deadline);
+        int rc = fdwait(mill_tcpfd(c->s), FDW_IN, deadline);
         if(rc == 0) {
             errno = ETIMEDOUT;
             return -1;
@@ -148,7 +151,7 @@ static int ssl_wait(struct mill_sslconn *c, int64_t deadline) {
         return rc;
     }
     if(BIO_should_write(c->bio)) {
-        int rc = fdwait(c->fd, FDW_OUT, deadline);
+        int rc = fdwait(mill_tcpfd(c->s), FDW_OUT, deadline);
         if(rc == 0) {
             errno = ETIMEDOUT;
             return -1;
@@ -170,6 +173,7 @@ void mill_sslclose_(struct mill_sslsock *s) {
         break;
     case MILL_SSLCONN:;
         struct mill_sslconn *c = (struct mill_sslconn*)s;
+        tcpclose(c->s);
         BIO_ssl_shutdown(c->bio);
         BIO_free_all(c->bio);
         free(c);
@@ -207,8 +211,7 @@ static struct mill_sslsock *ssl_conn_new(tcpsock s, SSL_CTX *ctx, int client) {
 
     /* set .._PARTIAL_WRITE for non-blocking operation */
     SSL_set_mode(ssl, SSL_MODE_ENABLE_PARTIAL_WRITE);
-    int fd = tcpdetach(s);
-    BIO *cbio = BIO_new_socket(fd, BIO_NOCLOSE);
+    BIO *cbio = BIO_new_socket(mill_tcpfd(s), BIO_NOCLOSE);
     if(!cbio) {
         BIO_free(sbio);
         return NULL;
@@ -225,7 +228,7 @@ static struct mill_sslsock *ssl_conn_new(tcpsock s, SSL_CTX *ctx, int client) {
     c->sock.type = MILL_SSLCONN;
     c->bio = sbio;
     c->sslerr = 0;
-    c->fd = fd;
+    c->s = s;
     /* OPTIONAL: call ssl_handshake() to check/verify peer certificate */
     return &c->sock;
 }
@@ -306,8 +309,8 @@ struct mill_sslsock *mill_sslaccept_(struct mill_sslsock *s, int64_t deadline) {
 ipaddr mill_ssladdr_(struct mill_sslsock *s) {
     if(s->type != MILL_SSLCONN)
         mill_panic("trying to get address from a socket that isn't connected");
-    struct mill_sslconn *c = (struct mill_sslconn *)s;
-    mill_assert(0);
+    struct mill_sslconn *c = (struct mill_sslconn*)s;
+    return tcpaddr(c->s);
 }
 
 #endif
