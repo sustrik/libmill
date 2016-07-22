@@ -83,21 +83,11 @@ coroutine void serve_client(sslsock c) {
 
 
 int main(void) {
-    /* Only needed for a server */
-    int rc = sslinit("./tests/cert.pem", "./tests/key.pem");
-    if (rc == 0) {
-        /* ERR_print_errors_fp(stderr); */
-        fprintf(stderr, "ssl_serv_init(): initialization failed.\n");
-        fprintf(stderr, "Use the following command to create a self-signed certificate:\n");
-        fprintf(stderr, "openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 100 -nodes\n");
-        exit(1);
-    }
-
     ipaddr laddr, raddr;
     laddr = iplocal(NULL, PORT, 0);
     raddr = ipremote("127.0.0.1", PORT, 0, -1);
     assert(errno == 0);
-    sslsock lsock = ssllisten(laddr, 32);
+    sslsock lsock = ssllisten(laddr, "./tests/cert.pem", "./tests/key.pem", 32);
     assert(errno == 0);
     int i;
     for (i = 1; i <= NCLIENT; i++)

@@ -591,11 +591,10 @@ typedef struct mill_unixsock *unixsock;
 
 struct mill_sslsock;
 
-MILL_EXPORT int mill_sslinit_(
-    const char *cert_file,
-    const char *key_file);
 MILL_EXPORT struct mill_sslsock *mill_ssllisten_(
     struct mill_ipaddr addr,
+    const char *cert_file,
+    const char *key_file,
     int backlog);
 MILL_EXPORT struct mill_sslsock *mill_sslconnect_(
     struct mill_ipaddr addr,

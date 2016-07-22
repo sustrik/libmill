@@ -35,8 +35,8 @@
 /* Defined in tcp.c, not exposed via libmill.h */
 int tcpdetach(struct mill_tcpsock *s);
 
+/* Only one client context is needed, so let's make it global. */
 static SSL_CTX *ssl_cli_ctx;
-static SSL_CTX *ssl_serv_ctx;
 
 enum mill_ssltype {
    MILL_SSLLISTENER,
@@ -50,6 +50,7 @@ struct mill_sslsock {
 struct mill_ssllistener {
     struct mill_sslsock sock;
     tcpsock s;
+    SSL_CTX *ctx;
 };
 
 struct mill_sslconn {
@@ -59,6 +60,7 @@ struct mill_sslconn {
     BIO *bio;
 };
 
+/* Initialise OpenSSL library. */
 static void ssl_init(void) {
     static int initialised = 0;
     if(mill_fast(initialised))
@@ -84,21 +86,36 @@ static void ssl_init(void) {
 #endif
 }
 
-struct mill_sslsock *mill_ssllisten_(struct mill_ipaddr addr, int backlog) {
+struct mill_sslsock *mill_ssllisten_(struct mill_ipaddr addr,
+      const char *cert_file, const char *key_file, int backlog) {
     ssl_init();
+    /* Load certificates. */
+    SSL_CTX *ctx = SSL_CTX_new(SSLv23_server_method());
+    if(!ctx)
+        return NULL;
+    if(SSL_CTX_use_certificate_file(ctx, cert_file, SSL_FILETYPE_PEM) <= 0
+          || SSL_CTX_use_PrivateKey_file(ctx, key_file, SSL_FILETYPE_PEM) <= 0)
+        return NULL;
+    /* Check for inconsistent private key. */
+    if(SSL_CTX_check_private_key(ctx) <= 0)
+        return NULL;
     /* Open the listening socket. */
     tcpsock s = tcplisten(addr, backlog);
-    if(!s)
+    if(!s) {
+        /* TODO: close the context */
         return NULL;
+    }
     /* Create the object. */
     struct mill_ssllistener *l = malloc(sizeof(struct mill_ssllistener));
     if(!l) {
+        /* TODO: close the context */
         tcpclose(s);
         errno = ENOMEM;
         return NULL;
     }
     l->sock.type = MILL_SSLLISTENER;
     l->s = s;
+    l->ctx = ctx;
     errno = 0;
     return &l->sock;
 }
@@ -168,6 +185,7 @@ void mill_sslclose_(struct mill_sslsock *s) {
     switch(s->type) {
     case MILL_SSLLISTENER:;
         struct mill_ssllistener *l = (struct mill_ssllistener*)s;
+        /* TODO: close the context */
         tcpclose(l->s);
         free(l);
         break;
@@ -275,25 +293,6 @@ int mill_sslsend_(struct mill_sslsock *s, const void *buf, int len,
     return rc;
 }
 
-static int load_certificates(SSL_CTX *ctx,
-      const char *cert_file, const char *key_file) {
-    if(SSL_CTX_use_certificate_file(ctx, cert_file, SSL_FILETYPE_PEM) <= 0
-          || SSL_CTX_use_PrivateKey_file(ctx, key_file, SSL_FILETYPE_PEM) <= 0)
-        return 0;
-    if (SSL_CTX_check_private_key(ctx) <= 0) /* inconsistent private key */
-        return 0;
-    return 1;
-}
-
-/* use ERR_print_errors(_fp) for SSL error */
-int mill_sslinit_(const char *cert_file, const char *key_file) {
-    ssl_init();
-    ssl_serv_ctx = SSL_CTX_new(SSLv23_server_method());
-    if(!ssl_serv_ctx)
-        return 0;
-    return load_certificates(ssl_serv_ctx, cert_file, key_file);
-}
-
 struct mill_sslsock *mill_sslconnect_(struct mill_ipaddr addr,
       int64_t deadline) {
     ssl_init();
@@ -313,15 +312,10 @@ struct mill_sslsock *mill_sslaccept_(struct mill_sslsock *s, int64_t deadline) {
     if(s->type != MILL_SSLLISTENER)
         mill_panic("trying to accept on a socket that isn't listening");
     struct mill_ssllistener *l = (struct mill_ssllistener*)s;
-
-    if(!ssl_serv_ctx) {
-        errno = EPROTO;
-        return NULL;
-    }
     tcpsock sock = tcpaccept(l->s, deadline);
     if(!sock)
         return NULL;
-    struct mill_sslsock *c = ssl_conn_new(sock, ssl_serv_ctx, 0);
+    struct mill_sslsock *c = ssl_conn_new(sock, l->ctx, 0);
     if(!c) {
         tcpclose(sock);
         errno = ENOMEM;
