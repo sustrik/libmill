@@ -209,7 +209,7 @@ static struct mill_sslsock *ssl_conn_new(tcpsock s, SSL_CTX *ctx, int client) {
     return &c->sock;
 }
 
-int mill_sslrecv_(struct mill_sslsock *s, void *buf, int len,
+size_t mill_sslrecv_(struct mill_sslsock *s, void *buf, int len,
       int64_t deadline) {
     if(s->type != MILL_SSLCONN)
         mill_panic("trying to use an unconnected socket");
@@ -230,7 +230,28 @@ int mill_sslrecv_(struct mill_sslsock *s, void *buf, int len,
     return rc;
 }
 
-int mill_sslsend_(struct mill_sslsock *s, const void *buf, int len,
+size_t mill_sslrecvuntil_(struct mill_sslsock *s, void *buf, size_t len,
+      const char *delims, size_t delimcount, int64_t deadline) {
+    if(s->type != MILL_SSLCONN)
+        mill_panic("trying to receive from an unconnected socket");
+    char *pos = (char*)buf;
+    size_t i;
+    for(i = 0; i != len; ++i, ++pos) {
+        size_t res = sslrecv(s, pos, 1, deadline);
+        if(res == 1) {
+            size_t j;
+            for(j = 0; j != delimcount; ++j)
+                if(*pos == delims[j])
+                    return i + 1;
+        }
+        if (errno != 0)
+            return i + res;
+    }
+    errno = ENOBUFS;
+    return len;
+}
+
+size_t mill_sslsend_(struct mill_sslsock *s, const void *buf, int len,
       int64_t deadline) {
     if(s->type != MILL_SSLCONN)
         mill_panic("trying to use an unconnected socket");
@@ -249,6 +270,22 @@ int mill_sslsend_(struct mill_sslsock *s, const void *buf, int len,
             return -1;
     } while(1);
     return rc;
+}
+
+void mill_sslflush_(struct mill_sslsock *s, int64_t deadline) {
+    if(s->type != MILL_SSLCONN)
+        mill_panic("trying to use an unconnected socket");
+    struct mill_sslconn *c = (struct mill_sslconn*)s;
+
+    int rc;
+    while(1) {
+        rc = BIO_flush(c->bio);
+        if (rc >= 0)
+            break;
+        if(ssl_wait(c, deadline) < 0)
+            return;
+    }
+    errno = 0;
 }
 
 struct mill_sslsock *mill_sslconnect_(struct mill_ipaddr addr,
