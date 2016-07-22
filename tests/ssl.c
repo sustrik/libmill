@@ -22,6 +22,8 @@
 
 */
 
+#if defined HAVE_SSL
+
 #include <assert.h>
 #include <string.h>
 #include <stdio.h>
@@ -131,4 +133,12 @@ int main() {
 
     return 0;
 }
+
+#else
+
+int main(void) {
+    return 0;
+}
+
+#endif
 
