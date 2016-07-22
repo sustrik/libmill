@@ -81,7 +81,6 @@ coroutine void serve_client(sslsock c) {
     sslclose(c);
 }
 
-
 int main(void) {
     ipaddr laddr, raddr;
     laddr = iplocal(NULL, PORT, 0);
@@ -89,6 +88,9 @@ int main(void) {
     assert(errno == 0);
     sslsock lsock = ssllisten(laddr, "./tests/cert.pem", "./tests/key.pem", 32);
     assert(errno == 0);
+    int port = sslport(lsock);
+    assert(port == PORT);
+
     int i;
     for (i = 1; i <= NCLIENT; i++)
         go(client(i, raddr));

@@ -120,6 +120,16 @@ struct mill_sslsock *mill_ssllisten_(struct mill_ipaddr addr,
     return &l->sock;
 }
 
+int mill_sslport_(struct mill_sslsock *s) {
+    if(s->type == MILL_SSLLISTENER) {
+        struct mill_ssllistener *l = (struct mill_ssllistener*)s;
+        return tcpport(l->s);
+    }
+    /* TODO: Return port for MILL_SSLCONN. */
+    mill_assert(0);
+}
+
+
 static int ssl_wait(struct mill_sslconn *c, int64_t deadline) {
     if(!BIO_should_retry(c->bio)) {
         c->sslerr = ERR_get_error();
@@ -322,6 +332,13 @@ struct mill_sslsock *mill_sslaccept_(struct mill_sslsock *s, int64_t deadline) {
         return NULL;
     }
     return c;
+}
+
+ipaddr mill_ssladdr_(struct mill_sslsock *s) {
+    if(s->type != MILL_SSLCONN)
+        mill_panic("trying to get address from a socket that isn't connected");
+    struct mill_sslconn *c = (struct mill_sslconn *)s;
+    mill_assert(0);
 }
 
 #endif

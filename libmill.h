@@ -596,12 +596,16 @@ MILL_EXPORT struct mill_sslsock *mill_ssllisten_(
     const char *cert_file,
     const char *key_file,
     int backlog);
+MILL_EXPORT int mill_sslport_(
+    struct mill_sslsock *s);
 MILL_EXPORT struct mill_sslsock *mill_sslconnect_(
     struct mill_ipaddr addr,
     int64_t deadline);
 MILL_EXPORT struct mill_sslsock *mill_sslaccept_(
     struct mill_sslsock *s,
     int64_t deadline);
+MILL_EXPORT struct mill_ipaddr mill_ssladdr_(
+    struct mill_sslsock *s);
 MILL_EXPORT int mill_sslrecv_(
     struct mill_sslsock *s,
     void *buf,
@@ -622,10 +626,11 @@ MILL_EXPORT const char *mill_sslerrstr_(
 
 #if defined MILL_USE_PREFIX
 typedef struct mill_sslsock *mill_sslsock;
-#define mill_sslinit mill_sslinit_
 #define mill_ssllisten mill_ssllisten_
+#define mill_sslport mill_sslport_
 #define mill_sslconnect mill_sslconnect_
 #define mill_sslaccept mill_sslaccept_
+#define mill_ssladdr mill_ssladdr_
 #define mill_sslrecv mill_sslrecv_
 #define mill_sslsend mill_sslsend_
 #define mill_sslhandshake mill_sslhandshake_
@@ -633,10 +638,11 @@ typedef struct mill_sslsock *mill_sslsock;
 #define mill_sslerrstr mill_sslerrstr_
 #else
 typedef struct mill_sslsock *sslsock;
-#define sslinit mill_sslinit_
 #define ssllisten mill_ssllisten_
+#define sslport mill_sslport_
 #define sslconnect mill_sslconnect_
 #define sslaccept mill_sslaccept_
+#define ssladdr mill_ssladdr_
 #define sslrecv mill_sslrecv_
 #define sslsend mill_sslsend_
 #define sslhandshake mill_sslhandshake_
