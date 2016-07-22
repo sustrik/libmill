@@ -83,8 +83,11 @@ struct mill_sslsock *mill_ssllisten_(struct mill_ipaddr addr,
     SSL_CTX *ctx = SSL_CTX_new(SSLv23_server_method());
     if(!ctx)
         return NULL;
-    if(SSL_CTX_use_certificate_file(ctx, cert_file, SSL_FILETYPE_PEM) <= 0
-          || SSL_CTX_use_PrivateKey_file(ctx, key_file, SSL_FILETYPE_PEM) <= 0)
+    if(cert_file && SSL_CTX_use_certificate_file(ctx,
+          cert_file, SSL_FILETYPE_PEM) <= 0)
+        return NULL;
+    if(key_file && SSL_CTX_use_PrivateKey_file(ctx,
+          key_file, SSL_FILETYPE_PEM) <= 0)
         return NULL;
     /* Check for inconsistent private key. */
     if(SSL_CTX_check_private_key(ctx) <= 0)
@@ -288,7 +291,7 @@ void mill_sslflush_(struct mill_sslsock *s, int64_t deadline) {
 }
 
 struct mill_sslsock *mill_sslconnect_(struct mill_ipaddr addr,
-      int64_t deadline) {
+    const char *cert_file, const char *key_file, int64_t deadline) {
     ssl_init();
     tcpsock sock = tcpconnect(addr, deadline);
     if(!sock)

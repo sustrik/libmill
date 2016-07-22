@@ -33,7 +33,7 @@
 
 coroutine void client(int port) {
     ipaddr addr = ipremote("127.0.0.1", port, 0, -1);
-    sslsock cs = sslconnect(addr, -1);
+    sslsock cs = sslconnect(addr, NULL, NULL, -1);
     assert(cs);
 
     char ipstr[16] = {0};
@@ -57,7 +57,7 @@ coroutine void client(int port) {
 
 coroutine void client2(int port) {
     ipaddr addr = ipremote("127.0.0.1", port, 0, -1);
-    sslsock conn = sslconnect(addr, -1);
+    sslsock conn = sslconnect(addr, NULL, NULL, -1);
     assert(conn);
     msleep(now() + 100);
     sslclose(conn);
