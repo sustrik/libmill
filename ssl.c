@@ -70,19 +70,10 @@ static void ssl_init(void) {
     ERR_load_SSL_strings();
     OpenSSL_add_all_algorithms();
     SSL_library_init();
-
-    /* seed the PRNG .. */
-
+    /* TODO: If dev/urandom is present, OpenSSL will seed PRNG autmatically.
+       In other cases, seeding has to be done manually (see RAND_seed); */
     ssl_cli_ctx = SSL_CTX_new(SSLv23_client_method());
     mill_assert(ssl_cli_ctx);
-#if 0
-    /* XXX: if verifying cert using SSL_get_verify_result(), see ssl_handshake.
-     *
-     */
-    if (!SSL_CTX_load_verify_locations(ssl_cli_ctx, NULL, "/etc/ssl/certs")) {
-        ...
-    }
-#endif
 }
 
 struct mill_sslsock *mill_ssllisten_(struct mill_ipaddr addr,
