@@ -97,7 +97,7 @@ int main(void) {
     laddr = iplocal(NULL, PORT, 0);
     raddr = ipremote("127.0.0.1", PORT, 0, -1);
     assert(errno == 0);
-    tcpsock lsock = tcplisten(laddr, 32);
+    sslsock lsock = ssllisten(laddr, 32);
     assert(errno == 0);
     int i;
     for (i = 1; i <= NCLIENT; i++)

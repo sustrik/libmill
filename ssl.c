@@ -28,6 +28,7 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 
+#include "debug.h"
 #include "libmill.h"
 #include "utils.h"
 
@@ -37,13 +38,46 @@ int tcpdetach(struct mill_tcpsock *s);
 static SSL_CTX *ssl_cli_ctx;
 static SSL_CTX *ssl_serv_ctx;
 
+enum mill_ssltype {
+   MILL_SSLLISTENER,
+   MILL_SSLCONN
+};
+
 struct mill_sslsock {
+    enum mill_ssltype type;
+};
+
+struct mill_ssllistener {
+    struct mill_sslsock sock;
+    tcpsock s;
+};
+
+struct mill_sslconn {
+    struct mill_sslsock sock;
     unsigned long sslerr; 
     int fd;
     BIO *bio;
 };
 
-static int ssl_wait(struct mill_sslsock *c, int64_t deadline) {
+struct mill_sslsock *mill_ssllisten_(struct mill_ipaddr addr, int backlog) {
+    /* Open the listening socket. */
+    tcpsock s = tcplisten(addr, backlog);
+    if(!s)
+        return NULL;
+    /* Create the object. */
+    struct mill_ssllistener *l = malloc(sizeof(struct mill_ssllistener));
+    if(!l) {
+        tcpclose(s);
+        errno = ENOMEM;
+        return NULL;
+    }
+    l->sock.type = MILL_SSLLISTENER;
+    l->s = s;
+    errno = 0;
+    return &l->sock;
+}
+
+static int ssl_wait(struct mill_sslconn *c, int64_t deadline) {
     if (! BIO_should_retry(c->bio)) {
         c->sslerr = ERR_get_error();
         /* XXX: Ref. openssl/source/ssl/ssl_lib.c .. */
@@ -75,7 +109,11 @@ static int ssl_wait(struct mill_sslsock *c, int64_t deadline) {
 
 
 /* optional: call after ssl_connect()/ssl_accept() */
-int mill_sslhandshake_(struct mill_sslsock *c, int64_t deadline) {
+int mill_sslhandshake_(struct mill_sslsock *s, int64_t deadline) {
+    if(s->type != MILL_SSLCONN)
+        mill_panic("trying to use an unconnected socket");
+    struct mill_sslconn *c = (struct mill_sslconn*)s;
+
     while (BIO_do_handshake(c->bio) <= 0) {
         if (ssl_wait(c, deadline) < 0)
             return -1;
@@ -100,13 +138,30 @@ int mill_sslhandshake_(struct mill_sslsock *c, int64_t deadline) {
     return 0;
 }
 
-void mill_sslclose_(struct mill_sslsock *c) {
-    BIO_ssl_shutdown(c->bio);
-    BIO_free_all(c->bio);
-    free(c);
+void mill_sslclose_(struct mill_sslsock *s) {
+    switch(s->type) {
+    case MILL_SSLLISTENER:;
+        struct mill_ssllistener *l = (struct mill_ssllistener*)s;
+        tcpclose(l->s);
+        free(l);
+        break;
+    case MILL_SSLCONN:;
+        struct mill_sslconn *c = (struct mill_sslconn*)s;
+        BIO_ssl_shutdown(c->bio);
+        BIO_free_all(c->bio);
+        free(c);
+        break;
+    default:
+        mill_assert(0);
+    }
+    errno = 0;
 }
 
-const char *mill_sslerrstr_(struct mill_sslsock *c) {
+const char *mill_sslerrstr_(struct mill_sslsock *s) {
+    if(s->type != MILL_SSLCONN)
+        mill_panic("trying to use an unconnected socket");
+    struct mill_sslconn *c = (struct mill_sslconn*)s;
+
     static const char unknown_err[] = "Unknown error";
     if (c->sslerr)
         return ERR_error_string(c->sslerr, NULL);
@@ -136,22 +191,28 @@ static struct mill_sslsock *ssl_conn_new(tcpsock s, SSL_CTX *ctx, int client) {
         return NULL;
     } 
     BIO_push(sbio, cbio);
-    struct mill_sslsock *c = malloc(sizeof (struct mill_sslsock));
-    if (! c) {
+    struct mill_sslconn *c = malloc(sizeof (struct mill_sslconn));
+    if(!c) {
         BIO_free_all(sbio);
         return NULL;
     }
 
     /*  mill_assert(BIO_get_fd(sbio, NULL) == fd); */
 
+    c->sock.type = MILL_SSLCONN;
     c->bio = sbio;
     c->sslerr = 0;
     c->fd = fd;
     /* OPTIONAL: call ssl_handshake() to check/verify peer certificate */
-    return c;
+    return &c->sock;
 }
 
-int mill_sslrecv_(struct mill_sslsock *c, void *buf, int len, int64_t deadline) {
+int mill_sslrecv_(struct mill_sslsock *s, void *buf, int len,
+      int64_t deadline) {
+    if(s->type != MILL_SSLCONN)
+        mill_panic("trying to use an unconnected socket");
+    struct mill_sslconn *c = (struct mill_sslconn*)s;
+
     int rc;
     if (len < 0) {
         errno = EINVAL;
@@ -167,7 +228,12 @@ int mill_sslrecv_(struct mill_sslsock *c, void *buf, int len, int64_t deadline) 
     return rc;
 }
 
-int mill_sslsend_(struct mill_sslsock *c, const void *buf, int len, int64_t deadline) {
+int mill_sslsend_(struct mill_sslsock *s, const void *buf, int len,
+      int64_t deadline) {
+    if(s->type != MILL_SSLCONN)
+        mill_panic("trying to use an unconnected socket");
+    struct mill_sslconn *c = (struct mill_sslconn*)s;
+
     int rc;
     if (len < 0) {
         errno = EINVAL;
@@ -251,13 +317,16 @@ struct mill_sslsock *mill_sslconnect_(struct mill_ipaddr addr,
     return c;
 }
 
-struct mill_sslsock *mill_sslaccept_(struct mill_tcpsock *lsock,
-      int64_t deadline) {
+struct mill_sslsock *mill_sslaccept_(struct mill_sslsock *s, int64_t deadline) {
+    if(s->type != MILL_SSLLISTENER)
+        mill_panic("trying to accept on a socket that isn't listening");
+    struct mill_ssllistener *l = (struct mill_ssllistener*)s;
+
     if (! ssl_serv_ctx) {
         errno = EPROTO;
         return NULL;
     }
-    tcpsock sock = tcpaccept(lsock, deadline);
+    tcpsock sock = tcpaccept(l->s, deadline);
     if (!sock)
         return NULL;
     struct mill_sslsock *c = ssl_conn_new(sock, ssl_serv_ctx, 0);
