@@ -59,7 +59,33 @@ struct mill_sslconn {
     BIO *bio;
 };
 
+static void ssl_init(void) {
+    static int initialised = 0;
+    if(mill_fast(initialised))
+        return;
+    initialised = 1;
+
+    ERR_load_crypto_strings();
+    ERR_load_SSL_strings();
+    OpenSSL_add_all_algorithms();
+    SSL_library_init();
+
+    /* seed the PRNG .. */
+
+    ssl_cli_ctx = SSL_CTX_new(SSLv23_client_method());
+    mill_assert(ssl_cli_ctx);
+#if 0
+    /* XXX: if verifying cert using SSL_get_verify_result(), see ssl_handshake.
+     *
+     */
+    if (!SSL_CTX_load_verify_locations(ssl_cli_ctx, NULL, "/etc/ssl/certs")) {
+        ...
+    }
+#endif
+}
+
 struct mill_sslsock *mill_ssllisten_(struct mill_ipaddr addr, int backlog) {
+    ssl_init();
     /* Open the listening socket. */
     tcpsock s = tcplisten(addr, backlog);
     if(!s)
@@ -260,35 +286,8 @@ static int load_certificates(SSL_CTX *ctx,
 }
 
 /* use ERR_print_errors(_fp) for SSL error */
-static int ssl_init(void) {
-    ERR_load_crypto_strings();
-    ERR_load_SSL_strings();
-    OpenSSL_add_all_algorithms();
-
-    SSL_library_init();
-
-    /* seed the PRNG .. */
-
-    ssl_cli_ctx = SSL_CTX_new(SSLv23_client_method());
-    if(ssl_cli_ctx == NULL)
-        return 0;
-#if 0
-    /* XXX: if verifying cert using SSL_get_verify_result(), see ssl_handshake.
-     *
-     */
-    if (!SSL_CTX_load_verify_locations(ssl_cli_ctx, NULL, "/etc/ssl/certs")) {
-        ...
-    }
-#endif
-    return 1;
-}
-
-/* use ERR_print_errors(_fp) for SSL error */
 int mill_sslinit_(const char *cert_file, const char *key_file) {
-    if(!ssl_cli_ctx) {
-        if (! ssl_init())
-            return 0;
-    }
+    ssl_init();
     ssl_serv_ctx = SSL_CTX_new(SSLv23_server_method());
     if(!ssl_serv_ctx)
         return 0;
@@ -297,12 +296,7 @@ int mill_sslinit_(const char *cert_file, const char *key_file) {
 
 struct mill_sslsock *mill_sslconnect_(struct mill_ipaddr addr,
       int64_t deadline) {
-    if(!ssl_cli_ctx) {
-        if(!ssl_init()) {
-            errno = EPROTO;
-            return NULL;
-        }
-    }
+    ssl_init();
     tcpsock sock = tcpconnect(addr, deadline);
     if(!sock)
         return NULL;
