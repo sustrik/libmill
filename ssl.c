@@ -160,37 +160,6 @@ static int ssl_wait(struct mill_sslconn *c, int64_t deadline) {
     return -1;  /* should not happen ? */
 }
 
-
-/* optional: call after ssl_connect()/ssl_accept() */
-int mill_sslhandshake_(struct mill_sslsock *s, int64_t deadline) {
-    if(s->type != MILL_SSLCONN)
-        mill_panic("trying to use an unconnected socket");
-    struct mill_sslconn *c = (struct mill_sslconn*)s;
-
-    while(BIO_do_handshake(c->bio) <= 0) {
-        if(ssl_wait(c, deadline) < 0)
-            return -1;
-    }
-
-#if 0
-    SSL *ssl;
-    BIO_get_ssl(c->bio, &ssl);
-    X509 *cert = SSL_get_peer_certificate(ssl);
-    if (cert) {
-        X509_NAME *certname = X509_get_subject_name(cert);
-        X509_NAME_print_ex_fp(stderr, certname, 0, 0);
-        X509_free(cert);
-
-        /* verify cert, requires loading known certs.
-         * See SSL_CTX_load_verify_locations() call in ssl_init() */
-        if (SSL_get_verify_result(ssl) != X509_V_OK) {
-            ...
-        }
-    }
-#endif
-    return 0;
-}
-
 void mill_sslclose_(struct mill_sslsock *s) {
     switch(s->type) {
     case MILL_SSLLISTENER:;
