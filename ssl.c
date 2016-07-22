@@ -57,7 +57,6 @@ struct mill_sslconn {
     struct mill_sslsock sock;
     tcpsock s;
     BIO *bio;
-    unsigned long sslerr; 
 };
 
 /* Initialise OpenSSL library. */
@@ -135,9 +134,9 @@ int mill_sslport_(struct mill_sslsock *s) {
 
 static int ssl_wait(struct mill_sslconn *c, int64_t deadline) {
     if(!BIO_should_retry(c->bio)) {
-        c->sslerr = ERR_get_error();
+        unsigned long sslerr = ERR_get_error();
         /* XXX: Ref. openssl/source/ssl/ssl_lib.c .. */
-        if(ERR_GET_LIB(c->sslerr) != ERR_LIB_SYS)
+        if(ERR_GET_LIB(sslerr) != ERR_LIB_SYS)
             errno = EIO;
         return -1;
     }
@@ -184,26 +183,13 @@ void mill_sslclose_(struct mill_sslsock *s) {
     errno = 0;
 }
 
-const char *mill_sslerrstr_(struct mill_sslsock *s) {
-    if(s->type != MILL_SSLCONN)
-        mill_panic("trying to use an unconnected socket");
-    struct mill_sslconn *c = (struct mill_sslconn*)s;
-
-    static const char unknown_err[] = "Unknown error";
-    if(c->sslerr)
-        return ERR_error_string(c->sslerr, NULL);
-    if(errno)
-        return strerror(errno);
-    return unknown_err;
-}
-
 static struct mill_sslsock *ssl_conn_new(tcpsock s, SSL_CTX *ctx, int client) {
     mill_assert(ctx);
     SSL *ssl = NULL;
     BIO *sbio = BIO_new_ssl(ctx, client);
     if(!sbio)
         return NULL;
-    BIO_get_ssl(sbio, & ssl);
+    BIO_get_ssl(sbio, &ssl);
     if(!ssl) {
         BIO_free(sbio);
         return NULL;
@@ -227,7 +213,6 @@ static struct mill_sslsock *ssl_conn_new(tcpsock s, SSL_CTX *ctx, int client) {
 
     c->sock.type = MILL_SSLCONN;
     c->bio = sbio;
-    c->sslerr = 0;
     c->s = s;
     /* OPTIONAL: call ssl_handshake() to check/verify peer certificate */
     return &c->sock;

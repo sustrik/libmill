@@ -618,8 +618,6 @@ MILL_EXPORT int mill_sslsend_(
     int64_t deadline); 
 MILL_EXPORT void mill_sslclose_(
     struct mill_sslsock *s);
-MILL_EXPORT const char *mill_sslerrstr_(
-    struct mill_sslsock *s);
 
 #if defined MILL_USE_PREFIX
 typedef struct mill_sslsock *mill_sslsock;
@@ -631,7 +629,6 @@ typedef struct mill_sslsock *mill_sslsock;
 #define mill_sslrecv mill_sslrecv_
 #define mill_sslsend mill_sslsend_
 #define mill_sslclose mill_sslclose_
-#define mill_sslerrstr mill_sslerrstr_
 #else
 typedef struct mill_sslsock *sslsock;
 #define ssllisten mill_ssllisten_
@@ -642,7 +639,6 @@ typedef struct mill_sslsock *sslsock;
 #define sslrecv mill_sslrecv_
 #define sslsend mill_sslsend_
 #define sslclose mill_sslclose_
-#define sslerrstr mill_sslerrstr_
 #endif
 
 /******************************************************************************/
