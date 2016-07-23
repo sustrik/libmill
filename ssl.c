@@ -65,13 +65,10 @@ static void ssl_init(void) {
     if(mill_fast(initialised))
         return;
     initialised = 1;
-
-    ERR_load_crypto_strings();
-    ERR_load_SSL_strings();
     OpenSSL_add_all_algorithms();
     SSL_library_init();
-    /* TODO: If dev/urandom is present, OpenSSL will seed PRNG autmatically.
-       In other cases, seeding has to be done manually (see RAND_seed); */
+
+    /* TODO: Move to sslconnect() */
     ssl_cli_ctx = SSL_CTX_new(SSLv23_client_method());
     mill_assert(ssl_cli_ctx);
 }
@@ -83,8 +80,7 @@ struct mill_sslsock *mill_ssllisten_(struct mill_ipaddr addr,
     SSL_CTX *ctx = SSL_CTX_new(SSLv23_server_method());
     if(!ctx)
         return NULL;
-    if(cert_file && SSL_CTX_use_certificate_file(ctx,
-          cert_file, SSL_FILETYPE_PEM) <= 0)
+    if(cert_file && SSL_CTX_use_certificate_chain_file(ctx, cert_file) <= 0)
         return NULL;
     if(key_file && SSL_CTX_use_PrivateKey_file(ctx,
           key_file, SSL_FILETYPE_PEM) <= 0)
