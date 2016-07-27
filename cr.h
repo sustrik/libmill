@@ -82,7 +82,11 @@ struct mill_cr {
     struct mill_choosedata choosedata;
 
     /* Stored coroutine context while it is not executing. */
+#if defined(__x86_64__)
+    uint64_t ctx[10];
+#else
     sigjmp_buf ctx;
+#endif
 
     /* Argument to resume() call being passed to the blocked suspend() call. */
     int result;

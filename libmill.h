@@ -118,7 +118,13 @@ MILL_EXPORT pid_t mill_mfork_(
 MILL_EXPORT extern volatile int mill_unoptimisable1_;
 MILL_EXPORT extern volatile void *mill_unoptimisable2_;
 
-MILL_EXPORT sigjmp_buf *mill_getctx_(
+#if defined __x86_64__
+typedef uint64_t *mill_ctx;
+#else
+typedef sigjmp_buf *mill_ctx;
+#endif
+
+MILL_EXPORT mill_ctx mill_getctx_(
     void);
 MILL_EXPORT __attribute__((noinline)) void *mill_prologue_(
     const char *created);
@@ -146,10 +152,54 @@ MILL_EXPORT void *mill_cls_(
 MILL_EXPORT void mill_setcls_(
     void *val);
 
+
+#if defined(__x86_64__)
+#define mill_setjmp_(ctx) ({\
+    int ret;\
+    asm ("lea     LJMPRET%=(%%rip), %%rcx\n\t"\
+        "xor     %%rax, %%rax\n\t"\
+        "mov     %%rbx, (%%rdx)\n\t"\
+        "mov     %%rbp, 8(%%rdx)\n\t"\
+        "mov     %%r12, 16(%%rdx)\n\t"\
+        "mov     %%rsp, 24(%%rdx)\n\t"\
+        "mov     %%r13, 32(%%rdx)\n\t"\
+        "mov     %%r14, 40(%%rdx)\n\t"\
+        "mov     %%r15, 48(%%rdx)\n\t"\
+        "mov     %%rcx, 56(%%rdx)\n\t"\
+        "mov     %%rdi, 64(%%rdx)\n\t"\
+        "mov     %%rsi, 72(%%rdx)\n\t"\
+        "LJMPRET%=:\n\t"\
+        : "=a" (ret)\
+        : "d" (ctx) : "memory");\
+    ret;\
+})
+#define mill_longjmp_(ctx) \
+    asm("movq   (%%rax), %%rbx\n\t"\
+	    "movq   8(%%rax), %%rbp\n\t"\
+	    "movq   16(%%rax), %%r12\n\t"\
+	    "movq   24(%%rax), %%rdx\n\t"\
+	    "movq   32(%%rax), %%r13\n\t"\
+	    "movq   40(%%rax), %%r14\n\t"\
+	    "mov    %%rdx, %%rsp\n\t"\
+	    "movq   48(%%rax), %%r15\n\t"\
+	    "movq   56(%%rax), %%rdx\n\t"\
+	    "movq   64(%%rax), %%rdi\n\t"\
+	    "movq   72(%%rax), %%rsi\n\t"\
+	    "jmp    *%%rdx\n\t"\
+        : : "a" (ctx) : "rdx" \
+    )
+#else
+#define mill_setjmp_(ctx) \
+    sigsetjmp(*ctx, 0)
+#define mill_longjmp_(ctx, 1) \
+    siglongjmp(*ctx, 1)
+#endif
+
 #define mill_go_(fn) \
     do {\
         void *mill_sp;\
-        if(!sigsetjmp(*mill_getctx_(), 0)) {\
+        mill_ctx ctx = mill_getctx_();\
+        if(!mill_setjmp_(ctx)) {\
             mill_sp = mill_prologue_(MILL_HERE_);\
             int mill_anchor[mill_unoptimisable1_];\
             mill_unoptimisable2_ = &mill_anchor;\

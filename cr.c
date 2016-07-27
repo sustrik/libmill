@@ -53,7 +53,15 @@ struct mill_cr mill_main = {0};
 struct mill_cr *mill_running = &mill_main;
 
 /* Queue of coroutines scheduled for execution. */
-static struct mill_slist mill_ready = {0};
+struct mill_slist mill_ready = {0};
+
+inline mill_ctx mill_getctx_(void) {
+#if defined __x86_64__
+    return mill_running->ctx;
+#else
+    return &mill_running->ctx;
+#endif
+}
 
 static void *mill_getvalbuf(struct mill_cr *cr, size_t size) {
     /* Small valbufs don't require dynamic allocation. Also note that main
@@ -103,8 +111,11 @@ int mill_suspend(void) {
         counter = 0;
     }
     /* Store the context of the current coroutine, if any. */
-    if(mill_running && sigsetjmp(mill_running->ctx, 0))
-        return mill_running->result;
+    if(mill_running) {
+        mill_ctx ctx = mill_getctx_();
+        if (mill_setjmp_(ctx))
+            return mill_running->result;
+    }
     while(1) {
         /* If there's a coroutine ready to be executed go for it. */
         if(!mill_slist_empty(&mill_ready)) {
@@ -113,7 +124,7 @@ int mill_suspend(void) {
             mill_running = mill_cont(it, struct mill_cr, ready);
             mill_assert(mill_running->is_ready == 1);
             mill_running->is_ready = 0;
-            siglongjmp(mill_running->ctx, 1);
+            mill_longjmp_(mill_getctx_());
         }
         /* Otherwise, we are going to wait for sleeping coroutines
            and for external events. */
@@ -123,7 +134,7 @@ int mill_suspend(void) {
     }
 }
 
-void mill_resume(struct mill_cr *cr, int result) {
+inline void mill_resume(struct mill_cr *cr, int result) {
     mill_assert(!cr->is_ready);
     cr->result = result;
     cr->state = MILL_READY;
@@ -141,10 +152,6 @@ void mill_resume(struct mill_cr *cr, int result) {
 #else
 #error "Unsupported compiler!"
 #endif
-
-sigjmp_buf *mill_getctx_(void) {
-    return &mill_running->ctx;
-}
 
 /* The intial part of go(). Starts the new coroutine.
    Returns the pointer to the top of its stack. */
