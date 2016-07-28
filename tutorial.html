@@ -717,8 +717,8 @@ $ openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 100 -no
 
 <p>Try running the greetserver. With the files available it should not fail.</p>
 
-<p>For testing the server we can't use <tt>telnet</tt> as we did in the previous
-steps as it doesn't support TLS/SSL.</p>
+<p>Note that for testing the server we can't use <tt>telnet</tt> as we did in
+the previous steps as it doesn't support TLS/SSL.</p>
 
 <p>Luckily, OpenSSL comes with a client tool which works very much like
 <tt>telnet</tt>. Start it like this:</p>
