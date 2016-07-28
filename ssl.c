@@ -287,7 +287,7 @@ void mill_sslflush_(struct mill_sslsock *s, int64_t deadline) {
 }
 
 struct mill_sslsock *mill_sslconnect_(struct mill_ipaddr addr,
-    const char *cert_file, const char *key_file, int64_t deadline) {
+      int64_t deadline) {
     ssl_init();
     tcpsock sock = tcpconnect(addr, deadline);
     if(!sock)
