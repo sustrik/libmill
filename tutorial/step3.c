@@ -55,7 +55,7 @@ int main(int argc, char *argv[]) {
             goto cleanup;
 
         char inbuf[256];
-        size_t sz = tcprecvuntil(as, inbuf, sizeof(inbuf), "\r\n", 2, -1);
+        size_t sz = tcprecvuntil(as, inbuf, sizeof(inbuf), "\r", 1, -1);
         if(errno != 0)
             goto cleanup;
 
