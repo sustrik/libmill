@@ -31,6 +31,7 @@
   <li><a href="#step5">Step 5: Deadlines</a></li>
   <li><a href="#step6">Step 6: Communicating among coroutines</a></li>
   <li><a href="#step7">Step 7: Multi-process server</a></li>
+  <li><a href="#step8">Step 8: Secure communication</a></li>
 </ul>
 
 <h3 id="introduction">Introduction</h3>
@@ -655,6 +656,76 @@ Failed connections: 0
 </pre>
 
 <p>Yay! Everything works as expected.</p>
+
+<h3 id="step8">Step 8: Secure communication</h3>
+
+<p><b>WARNING: This step describes experimental functionality with unstable API.
+Do not use it for anything serious!</b></p>
+
+<p>Now that greet server works as expected it's time to start worrying about
+the privacy. Nobody wants NSA to read their daily greeting after all!</p>
+
+<p>To secure the communication we'll use TLS (formerly known as SSL). TLS
+makes sure that the server you are speaking to is actually what it pretends
+to be and afterwards encrypts the communication to protect it from
+eavesdroppers.</p>
+
+<p>As a first step, install OpenSSL. That's the library libmill uses to
+implement TLS.</p>
+
+<p>Once done you'll need to recompile libmill with TLS/SSL support switched on.
+By default it's switched off so that users who have no need for TLS/SSL are not
+forced to install OpenSSL.</p>
+
+<pre>
+$ cd libmill
+$ ./configure --enable-ssl
+$ make
+$ sudo make install
+</pre>
+
+<p>Our source code doesn't have to change much. What you need to do
+is replace each <tt>tcpsock</tt> by <tt>sslsock</tt>, each <tt>tcpconnect</tt>
+by <tt>sslconnect</tt> and so on. To do that you can simply replace all
+occurences of "tcp" in the source file by "ssl".</p>
+
+<p>The only thing that doesn't compile afterwards is the call to
+<tt>ssllisten()</tt>. It complains about wrong number of arguments. The reason
+is that <tt>ssllisten()</tt>, unlike <tt>tcplisten()</tt>, requires
+a certificate and a private key (both are suppoed to be stored in a file).
+You can modify the code as follows:</p>
+
+<pre>
+sslsock ls = ssllisten(addr, "./cert.pem", "./key.pem", 10);
+</pre>
+
+<p>That's all as far as code changes are concerned. The program now builds
+without errors. It can't be started though: <tt>ssllisten()</tt> fails with
+<tt>ENOENT</tt> error because it can't find the certificate and private
+key file.</p>
+
+<p>In real world you would get the certificate from your certification
+authority, however, for the purposes of this tutorial we can generate
+a self-signed certificate ourselves:</p>
+
+<pre>
+$ openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 100 -nodes
+</pre>
+
+<p>File <tt>cert.pem</tt> now contains your certificate and file
+<tt>key.pem</tt> contains your private key.</p>
+
+<p>Try running the greetserver. With the files available it should not fail.</p>
+
+<p>For testing the server we can't use <tt>telnet</tt> as we did in the previous
+steps as it doesn't support TLS/SSL.</p>
+
+<p>Luckily, OpenSSL comes with a client tool which works very much like
+<tt>telnet</tt>. Start it like this:</p>
+
+<pre>
+$ openssl s_client -connect -brief localhost:5555
+</pre>
 
 <p>Enjoy your time with the library and send any questions you may have to
 libmill@freelists.org</p>
