@@ -692,7 +692,7 @@ occurences of "tcp" in the source file by "ssl".</p>
 <p>The only thing that doesn't compile afterwards is the call to
 <tt>ssllisten()</tt>. It complains about wrong number of arguments. The reason
 is that <tt>ssllisten()</tt>, unlike <tt>tcplisten()</tt>, requires
-a certificate and a private key (both are suppoed to be stored in a file).
+a certificate and a private key (both are supposed to be stored in a file).
 You can modify the code as follows:</p>
 
 <pre>
