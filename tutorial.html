@@ -667,7 +667,7 @@ the privacy. Nobody wants NSA to read their daily greeting after all!</p>
 
 <p>To secure the communication we'll use TLS (formerly known as SSL). TLS
 makes sure that the server you are speaking to is actually what it pretends
-to be and afterwards encrypts the communication to protect it from
+to be and afterwards it encrypts the communication to protect it from
 eavesdroppers.</p>
 
 <p>As a first step, install OpenSSL. That's the library libmill uses to
@@ -701,7 +701,7 @@ sslsock ls = ssllisten(addr, "./cert.pem", "./key.pem", 10);
 
 <p>That's all as far as code changes are concerned. The program now builds
 without errors. It can't be started though: <tt>ssllisten()</tt> fails with
-<tt>ENOENT</tt> error because it can't find the certificate and private
+<tt>ENOENT</tt> error because it can't find the certificate and the private
 key file.</p>
 
 <p>In real world you would get the certificate from your certification
@@ -715,13 +715,15 @@ $ openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 100 -no
 <p>File <tt>cert.pem</tt> now contains your certificate and file
 <tt>key.pem</tt> contains your private key.</p>
 
-<p>Try running the greetserver. With the files available it should not fail.</p>
+<p>Try running the greetserver. With the files available it should not fail
+this time.</p>
 
 <p>Note that for testing the server we can't use <tt>telnet</tt> as we did in
-the previous steps as it doesn't support TLS/SSL.</p>
+the previous steps. <tt>telnet</tt> doesn't support TLS/SSL.</p>
 
 <p>Luckily, OpenSSL comes with a client tool which works very much like
-<tt>telnet</tt>. Start it like this:</p>
+<tt>telnet</tt>, except that you'll have to ignore a lot of debug info it will
+print out. Start it like this:</p>
 
 <pre>
 $ openssl s_client -crlf -connect localhost:5555
