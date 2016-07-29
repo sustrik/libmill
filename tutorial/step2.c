@@ -49,7 +49,7 @@ int main(int argc, char *argv[]) {
         tcpflush(as, -1);
 
         char inbuf[256];
-        size_t sz = tcprecvuntil(as, inbuf, sizeof(inbuf), "\r\n", 2, -1);
+        size_t sz = tcprecvuntil(as, inbuf, sizeof(inbuf), "\r", 1, -1);
 
         inbuf[sz - 1] = 0;
         char outbuf[256];
