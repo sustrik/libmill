@@ -191,7 +191,7 @@ MILL_EXPORT void mill_setcls_(
 #else
 #define mill_setjmp_(ctx) \
     sigsetjmp(*ctx, 0)
-#define mill_longjmp_(ctx, 1) \
+#define mill_longjmp_(ctx) \
     siglongjmp(*ctx, 1)
 #endif
 
