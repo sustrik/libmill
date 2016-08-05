@@ -67,10 +67,6 @@ static void ssl_init(void) {
     initialised = 1;
     OpenSSL_add_all_algorithms();
     SSL_library_init();
-
-    /* TODO: Move to sslconnect() */
-    ssl_cli_ctx = SSL_CTX_new(SSLv23_client_method());
-    mill_assert(ssl_cli_ctx);
 }
 
 struct mill_sslsock *mill_ssllisten_(struct mill_ipaddr addr,
@@ -289,6 +285,9 @@ void mill_sslflush_(struct mill_sslsock *s, int64_t deadline) {
 struct mill_sslsock *mill_sslconnect_(struct mill_ipaddr addr,
       int64_t deadline) {
     ssl_init();
+    ssl_cli_ctx = SSL_CTX_new(SSLv23_client_method());
+    mill_assert(ssl_cli_ctx);
+
     tcpsock sock = tcpconnect(addr, deadline);
     if(!sock)
         return NULL;
