@@ -69,23 +69,22 @@ static void ssl_init(void) {
     SSL_library_init();
 }
 
-struct mill_sslsock *mill_ssllisten_(struct mill_ipaddr addr,
-      const char *cert_file, const char *key_file, int backlog) {
+struct mill_sslsock *mill_ssllisten_(SSLSERVER_p_st server, int backlog) {
     ssl_init();
     /* Load certificates. */
-    SSL_CTX *ctx = SSL_CTX_new(SSLv23_server_method());
+    SSL_CTX *ctx = SSL_CTX_new((SSL_METHOD*)server->method);
     if(!ctx)
         return NULL;
-    if(cert_file && SSL_CTX_use_certificate_chain_file(ctx, cert_file) <= 0)
+    if(server->cert_file && SSL_CTX_use_certificate_chain_file(ctx, server->cert_file) <= 0)
         return NULL;
-    if(key_file && SSL_CTX_use_PrivateKey_file(ctx,
-          key_file, SSL_FILETYPE_PEM) <= 0)
+    if(server->key_file && SSL_CTX_use_PrivateKey_file(ctx,
+          server->key_file, SSL_FILETYPE_PEM) <= 0)
         return NULL;
     /* Check for inconsistent private key. */
     if(SSL_CTX_check_private_key(ctx) <= 0)
         return NULL;
     /* Open the listening socket. */
-    tcpsock s = tcplisten(addr, backlog);
+    tcpsock s = tcplisten(server->addr, backlog);
     if(!s) {
         /* TODO: close the context */
         return NULL;
