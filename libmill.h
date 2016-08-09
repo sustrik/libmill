@@ -641,11 +641,18 @@ typedef struct mill_unixsock *unixsock;
 
 struct mill_sslsock;
 typedef struct sslserver {
-	struct mill_ipaddr addr;
+	//const char*  addr;
+	//uint32_t port;
+	ipaddr addr;
 	void *method;
 	const char *cert_file;
 	const char *key_file;
 } SSLSERVER_st, *SSLSERVER_p_st;
+typedef struct sslclient {
+	struct mill_ipaddr addr;
+	void *method;
+	const char *cert_file;
+} SSLCLIENT_st, *SSLCLIENT_p_st;
 
 MILL_EXPORT struct mill_sslsock *mill_ssllisten_(
     SSLSERVER_p_st server,
@@ -653,7 +660,7 @@ MILL_EXPORT struct mill_sslsock *mill_ssllisten_(
 MILL_EXPORT int mill_sslport_(
     struct mill_sslsock *s);
 MILL_EXPORT struct mill_sslsock *mill_sslconnect_(
-    struct mill_ipaddr addr,
+    SSLCLIENT_p_st client,
     int64_t deadline);
 MILL_EXPORT struct mill_sslsock *mill_sslaccept_(
     struct mill_sslsock *s,

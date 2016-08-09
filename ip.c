@@ -31,6 +31,7 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <netinet/in.h>
+#include <net/if.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -99,11 +100,31 @@ static ipaddr mill_ipv4_literal(const char *addr, int port) {
 static ipaddr mill_ipv6_literal(const char *addr, int port) {
     ipaddr raddr;
     struct sockaddr_in6 *ipv6 = (struct sockaddr_in6*)&raddr;
+    struct sockaddr_in6 *sockv6;
+    char str[IPADDR_MAXSTRLEN];
     int rc = inet_pton(AF_INET6, addr, &ipv6->sin6_addr);
     mill_assert(rc >= 0);
     if(rc == 1) {
         ipv6->sin6_family = AF_INET6;
         ipv6->sin6_port = htons((uint16_t)port);
+    /* Grab IPv6 Scope ID from the IPv6 address. */
+    struct ifaddrs *ifaces = NULL;
+    int rc = getifaddrs (&ifaces);
+    mill_assert (rc == 0);
+    mill_assert (ifaces);
+    struct ifaddrs *ifv6 = NULL;
+    struct ifaddrs *it;
+    for(it = ifaces; it != NULL; it = it->ifa_next) {
+        if(!it->ifa_addr)
+            continue;
+	if(it->ifa_addr->sa_family == AF_INET6){
+		sockv6 = (struct sockaddr_in6 *)it->ifa_addr;
+		inet_ntop(AF_INET6, &(sockv6->sin6_addr), str, IPADDR_MAXSTRLEN);
+		if(strcmp(str, addr) == 0){
+	    		ipv6->sin6_scope_id = if_nametoindex(it->ifa_name);
+	    	}
+	}
+    }
         errno = 0;
         return raddr;
     }
@@ -237,7 +258,8 @@ ipaddr mill_iplocal_(const char *name, int port, int mode) {
         struct sockaddr_in6 *inaddr = (struct sockaddr_in6*)&addr;
         memcpy(inaddr, ipv6->ifa_addr, sizeof (struct sockaddr_in6));
         inaddr->sin6_port = htons(port);
-        freeifaddrs(ifaces);
+        inaddr->sin6_scope_id = if_nametoindex(ipv6->ifa_name);
+	freeifaddrs(ifaces);
         errno = 0;
         return addr;
     }
@@ -355,7 +377,7 @@ ipaddr mill_ipremote_(const char *name, int port, int mode, int64_t deadline) {
         struct sockaddr_in6 *inaddr = (struct sockaddr_in6*)&addr;
         memcpy(inaddr, ipv6->ai_addr, sizeof (struct sockaddr_in6));
         inaddr->sin6_port = htons(port);
-        dns_ai_close(ai);
+	dns_ai_close(ai);
         free(ipv6);
         errno = 0;
         return addr;

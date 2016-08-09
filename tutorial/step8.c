@@ -106,6 +106,7 @@ int main(int argc, char *argv[]) {
     SSLSERVER_p_st ss = malloc(sizeof(SSLSERVER_st));
     ss->method = (SSL_METHOD*) TLSv1_2_server_method();
     ss->addr = addr;
+    //ss->port = port;
     ss->cert_file = "./cert.pem";
     ss->key_file = "./key.pem";
     sslsock ls = ssllisten(ss, 10);
