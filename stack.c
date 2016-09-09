@@ -70,14 +70,17 @@ static size_t mill_get_stack_size(void) {
 /* Maximum number of unused cached stacks. Keep in mind that we can't
    deallocate the stack you are running on. Thus we need at least one cached
    stack. */
-static int mill_max_cached_stacks = 64;
+#define mill_default_max_cache_stacks 64
+static int mill_max_cached_stacks = mill_default_max_cache_stacks;
+static void *_mill_stack_array[mill_default_max_cache_stacks];
+static void **mill_stack_array = _mill_stack_array;
+static int mill_stack_array_index;
 
 /* A stack of unused coroutine stacks. This allows for extra-fast allocation
    of a new stack. The LIFO nature of this structure minimises cache misses.
    When the stack is cached its mill_slist_item is placed on its top rather
    then on the bottom. That way we minimise page misses. */
 static int mill_num_cached_stacks = 0;
-static struct mill_slist mill_cached_stacks = {0};
 
 static void *mill_allocstackmem(void) {
     void *ptr;
@@ -107,42 +110,61 @@ static void *mill_allocstackmem(void) {
     return (void*)(((char*)ptr) + mill_get_stack_size());
 }
 
+static int dec_index()
+{
+    mill_stack_array_index =
+        (mill_stack_array_index - 1 + mill_max_cached_stacks)
+            % mill_max_cached_stacks;
+    return mill_stack_array_index;
+}
+
+static int inc_index()
+{
+    int old = mill_stack_array_index;
+    mill_stack_array_index = (mill_stack_array_index + 1)
+        % mill_max_cached_stacks;
+    return old;
+}
 
 void mill_preparestacks(int count, size_t stack_size) {
     /* Purge the cached stacks. */
-    while(1) {
-        struct mill_slist_item *item = mill_slist_pop(&mill_cached_stacks);
-        if(!item)
-            break;
-        free(((char*)(item + 1)) - mill_get_stack_size());
+    for (int i = 0; i < mill_num_cached_stacks; ++i) {
+        free(mill_stack_array[dec_index()]);
+    }
+    if (mill_stack_array != _mill_stack_array) {
+        free(mill_stack_array); 
     }
     /* Now that there are no stacks allocated, we can adjust the stack size. */
     size_t old_stack_size = mill_stack_size;
     size_t old_sanitised_stack_size = mill_sanitised_stack_size;
     mill_stack_size = stack_size;
     mill_sanitised_stack_size = 0;
+    errno = 0;
+    if (count == mill_default_max_cache_stacks) {
+        return;
+    }
     /* Allocate the new stacks. */
+    mill_stack_array = malloc((size_t) count * sizeof(void*));
+    if (mill_slow(!mill_stack_array)) {
+        errno = ENOMEM;
+        return;
+    }
     int i;
     for(i = 0; i != count; ++i) {
         void *ptr = mill_allocstackmem();
         if(!ptr) goto error;
-        struct mill_slist_item *item = ((struct mill_slist_item*)ptr) - 1;
-        mill_slist_push_back(&mill_cached_stacks, item);
+        mill_stack_array[inc_index()] = ptr;
     }
     mill_num_cached_stacks = count;
     /* Make sure that the stacks won't get deallocated even if they aren't used
        at the moment. */
     mill_max_cached_stacks = count;
-    errno = 0;
     return;
 error:
     /* If we can't allocate all the stacks, allocate none, restore state and
        return error. */
-    while(1) {
-        struct mill_slist_item *item = mill_slist_pop(&mill_cached_stacks);
-        if(!item)
-            break;
-        free(((char*)(item + 1)) - mill_get_stack_size());
+    for (int j = 0; j < i; ++j) {
+        free(mill_stack_array[dec_index()]);
     }
     mill_num_cached_stacks = 0;
     mill_stack_size = old_stack_size;
@@ -151,9 +173,9 @@ error:
 }
 
 void *mill_allocstack(size_t *stack_size) {
-    if(!mill_slist_empty(&mill_cached_stacks)) {
-        --mill_num_cached_stacks;
-        return (void*)(mill_slist_pop(&mill_cached_stacks) + 1);
+    if (mill_num_cached_stacks > 0) {
+        mill_num_cached_stacks--;
+        return mill_stack_array[dec_index()];
     }
     void *ptr = mill_allocstackmem();
     if(!ptr)
@@ -165,22 +187,22 @@ void *mill_allocstack(size_t *stack_size) {
 
 void mill_freestack(void *stack) {
     /* Put the stack to the list of cached stacks. */
-    struct mill_slist_item *item = ((struct mill_slist_item*)stack) - 1;
-    mill_slist_push_back(&mill_cached_stacks, item);
-    if(mill_num_cached_stacks < mill_max_cached_stacks) {
-        ++mill_num_cached_stacks;
-        return;
-    }
-    /* We can't deallocate the stack we are running on at the moment.
-       Standard C free() is not required to work when it deallocates its
-       own stack from underneath itself. Instead, we'll deallocate one of
-       the unused cached stacks. */
-    item = mill_slist_pop(&mill_cached_stacks);
-    void *ptr = ((char*)(item + 1)) - mill_get_stack_size();
+    if (mill_num_cached_stacks == mill_max_cached_stacks) {
+        /* We can't deallocate the stack we are running on at the moment.
+           Standard C free() is not required to work when it deallocates its
+           own stack from underneath itself. Instead, we'll deallocate one of
+           the unused cached stacks. */
+        void *ptr = mill_stack_array[mill_stack_array_index];
+        ptr -= mill_get_stack_size();
+        mill_assert(ptr);
 #if HAVE_POSIX_MEMALIGN && HAVE_MPROTECT
-    int rc = mprotect(ptr, mill_page_size(), PROT_READ|PROT_WRITE);
-    mill_assert(rc == 0);
+        int rc = mprotect(ptr, mill_page_size(), PROT_READ|PROT_WRITE);
+        mill_assert(rc == 0);
 #endif
-    free(ptr);
-}
+        free(ptr);
+        mill_num_cached_stacks--;
+    }
 
+    mill_stack_array[inc_index()] = stack;
+    mill_num_cached_stacks++;
+}

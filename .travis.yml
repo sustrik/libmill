@@ -7,7 +7,7 @@ os:
   - linux
 
 compiler:
-  - gcc
+  - gcc-4.8
   - clang
 
 env:
