@@ -620,6 +620,8 @@ MILL_EXPORT size_t mill_unixrecvuntil_(
     const char *delims,
     size_t delimcount,
     int64_t deadline);
+MILL_EXPORT void mill_unixshutdown_(
+    struct mill_unixsock *s, int how);
 MILL_EXPORT void mill_unixclose_(
     struct mill_unixsock *s);
 
@@ -633,6 +635,7 @@ typedef struct mill_unixsock *mill_unixsock;
 #define mill_unixflush mill_unixflush_
 #define mill_unixrecv mill_unixrecv_
 #define mill_unixrecvuntil mill_unixrecvuntil_
+#define mill_unixshutdown mill_unixshutdown_
 #define mill_unixclose mill_unixclose_
 #else
 typedef struct mill_unixsock *unixsock;
@@ -644,6 +647,7 @@ typedef struct mill_unixsock *unixsock;
 #define unixflush mill_unixflush_
 #define unixrecv mill_unixrecv_
 #define unixrecvuntil mill_unixrecvuntil_
+#define unixshutdown mill_unixshutdown_
 #define unixclose mill_unixclose_
 #endif
 
