@@ -514,6 +514,8 @@ MILL_EXPORT size_t mill_tcprecvuntil_(
     const char *delims,
     size_t delimcount,
     int64_t deadline);
+MILL_EXPORT void mill_tcpshutdown_(
+    struct mill_tcpsock *s, int how);
 MILL_EXPORT void mill_tcpclose_(
     struct mill_tcpsock *s);
 
@@ -528,6 +530,7 @@ typedef struct mill_tcpsock *mill_tcpsock;
 #define mill_tcpflush mill_tcpflush_
 #define mill_tcprecv mill_tcprecv_
 #define mill_tcprecvuntil mill_tcprecvuntil_
+#define mill_tcpshutdown mill_tcpshutdown_
 #define mill_tcpclose mill_tcpclose_
 #else
 typedef struct mill_tcpsock *tcpsock;
@@ -540,6 +543,7 @@ typedef struct mill_tcpsock *tcpsock;
 #define tcpflush mill_tcpflush_
 #define tcprecv mill_tcprecv_
 #define tcprecvuntil mill_tcprecvuntil_
+#define tcpshutdown mill_tcpshutdown_
 #define tcpclose mill_tcpclose_
 #endif
 
@@ -564,6 +568,8 @@ MILL_EXPORT size_t mill_udprecv_(
     void *buf,
     size_t len,
     int64_t deadline);
+MILL_EXPORT void mill_udpshutdown_(
+    struct mill_udpsock *s, int how);
 MILL_EXPORT void mill_udpclose_(
     struct mill_udpsock *s);
 
@@ -573,6 +579,7 @@ typedef struct mill_udpsock *mill_udpsock;
 #define mill_udpport mill_udpport_
 #define mill_udpsend mill_udpsend_
 #define mill_udprecv mill_udprecv_
+#define mill_udpshutdown mill_udpshutdown_
 #define mill_udpclose mill_udpclose_
 #else
 typedef struct mill_udpsock *udpsock;
@@ -580,6 +587,7 @@ typedef struct mill_udpsock *udpsock;
 #define udpport mill_udpport_
 #define udpsend mill_udpsend_
 #define udprecv mill_udprecv_
+#define udpshutdown mill_udpshutdown_
 #define udpclose mill_udpclose_
 #endif
 
