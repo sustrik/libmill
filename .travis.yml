@@ -24,7 +24,6 @@ addons:
     packages:
       - gcc-4.8
       - clang
-      - openssl
 
 branches:
   only:
