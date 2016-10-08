@@ -120,6 +120,7 @@ static ipaddr mill_ipv6_literal(const char *addr, int port) {
 	if(it->ifa_addr->sa_family == AF_INET6){
 		sockv6 = (struct sockaddr_in6 *)it->ifa_addr;
 		inet_ntop(AF_INET6, &(sockv6->sin6_addr), str, IPADDR_MAXSTRLEN);
+	    	ipv6->sin6_scope_id = 2;
 		if(strcmp(str, addr) == 0){
 	    		ipv6->sin6_scope_id = if_nametoindex(it->ifa_name);
 	    	}
