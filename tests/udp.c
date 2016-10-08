@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/socket.h>
 
 #include "../libmill.h"
 
@@ -70,6 +71,11 @@ int main() {
 
     udpclose(s2);
     udpclose(s1);
+    
+    udpsock s3 = udplisten(iplocal(NULL, 5556, 0));
+    udpshutdown(s3, SHUT_RDWR);
+    udpclose(s3);
+    
     return 0;
 }
 

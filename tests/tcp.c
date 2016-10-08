@@ -26,6 +26,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/socket.h>
 
 #include "../libmill.h"
 
@@ -98,6 +99,7 @@ int main() {
     assert(sz == 3);
     assert(buf[0] == '6' && buf[1] == '7' && buf[2] == '8');
 
+    tcpshutdown(as, SHUT_RDWR);
     tcpclose(as);
     tcpclose(ls);
 

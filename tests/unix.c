@@ -26,6 +26,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <sys/socket.h>
 
 #define MILL_USE_PREFIX
 #include "../libmill.h"
@@ -45,6 +46,7 @@ mill_coroutine void client(const char *addr) {
     mill_unixflush(cs, -1);
     assert(errno == 0);
 
+    mill_unixshutdown(cs, SHUT_RDWR);
     mill_unixclose(cs);
 }
 

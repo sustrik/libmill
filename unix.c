@@ -164,6 +164,8 @@ struct mill_unixsock *mill_unixaccept_(struct mill_unixsock *s,
             errno = ETIMEDOUT;
             return NULL;
         }
+        if(rc & FDW_ERR)
+            return NULL;
         mill_assert(rc == FDW_IN);
     }
 }
@@ -435,6 +437,22 @@ size_t mill_unixrecvuntil_(struct mill_unixsock *s, void *buf, size_t len,
     }
     errno = ENOBUFS;
     return len;
+}
+
+void mill_unixshutdown_(struct mill_unixsock *s, int how) {
+    if(s->type == MILL_UNIXLISTENER) {
+        struct mill_unixlistener *l = (struct mill_unixlistener*)s;
+        int rc = shutdown(l->fd, how);
+        mill_assert(rc == 0);
+        return;
+    }
+    if(s->type == MILL_UNIXCONN) {
+        struct mill_unixconn *c = (struct mill_unixconn*)s;
+        int rc = shutdown(c->fd, how);
+        mill_assert(rc == 0);
+        return;
+    }
+    mill_assert(0);
 }
 
 void mill_unixclose_(struct mill_unixsock *s) {
