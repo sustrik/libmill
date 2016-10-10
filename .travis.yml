@@ -29,6 +29,9 @@ branches:
   only:
     - master
 
+before_install:
+  - 'if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then export CFLAGS="-I/usr/local/opt/openssl/include $CFLAGS" LDFLAGS="-L/usr/local/opt/openssl/lib $LDFLAGS"; fi'
+
 install:
   - if [[ $CONF == "autotools-shared" ]]; then ./autogen.sh && ./configure --enable-ssl  && make; fi
   - if [[ $CONF == "autotools-static" ]]; then ./autogen.sh && ./configure --enable-ssl --disable-shared && make; fi
