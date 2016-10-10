@@ -133,10 +133,6 @@ size_t mill_udprecv_(struct mill_udpsock *s, ipaddr *addr,
     return (size_t)ss;
 }
 
-void mill_udpshutdown_(struct mill_udpsock *s, int how) {
-    shutdown(s->fd, how);
-}
-
 void mill_udpclose_(struct mill_udpsock *s) {
     fdclean(s->fd);
     int rc = close(s->fd);

@@ -568,8 +568,6 @@ MILL_EXPORT size_t mill_udprecv_(
     void *buf,
     size_t len,
     int64_t deadline);
-MILL_EXPORT void mill_udpshutdown_(
-    struct mill_udpsock *s, int how);
 MILL_EXPORT void mill_udpclose_(
     struct mill_udpsock *s);
 
@@ -579,7 +577,6 @@ typedef struct mill_udpsock *mill_udpsock;
 #define mill_udpport mill_udpport_
 #define mill_udpsend mill_udpsend_
 #define mill_udprecv mill_udprecv_
-#define mill_udpshutdown mill_udpshutdown_
 #define mill_udpclose mill_udpclose_
 #else
 typedef struct mill_udpsock *udpsock;
@@ -587,7 +584,6 @@ typedef struct mill_udpsock *udpsock;
 #define udpport mill_udpport_
 #define udpsend mill_udpsend_
 #define udprecv mill_udprecv_
-#define udpshutdown mill_udpshutdown_
 #define udpclose mill_udpclose_
 #endif
 

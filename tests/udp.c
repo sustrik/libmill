@@ -72,10 +72,6 @@ int main() {
     udpclose(s2);
     udpclose(s1);
     
-    udpsock s3 = udplisten(iplocal(NULL, 5556, 0));
-    udpshutdown(s3, SHUT_RDWR);
-    udpclose(s3);
-    
     return 0;
 }
 

@@ -440,19 +440,10 @@ size_t mill_unixrecvuntil_(struct mill_unixsock *s, void *buf, size_t len,
 }
 
 void mill_unixshutdown_(struct mill_unixsock *s, int how) {
-    if(s->type == MILL_UNIXLISTENER) {
-        struct mill_unixlistener *l = (struct mill_unixlistener*)s;
-        int rc = shutdown(l->fd, how);
-        mill_assert(rc == 0);
-        return;
-    }
-    if(s->type == MILL_UNIXCONN) {
-        struct mill_unixconn *c = (struct mill_unixconn*)s;
-        int rc = shutdown(c->fd, how);
-        mill_assert(rc == 0);
-        return;
-    }
-    mill_assert(0);
+    mill_assert(s->type == MILL_UNIXCONN);
+    struct mill_unixconn *c = (struct mill_unixconn*)s;
+    int rc = shutdown(c->fd, how);
+    mill_assert(rc == 0 || errno == ENOTCONN);
 }
 
 void mill_unixclose_(struct mill_unixsock *s) {
