@@ -453,7 +453,10 @@ void mill_tcpshutdown_(struct mill_tcpsock *s, int how) {
     if(s->type == MILL_TCPCONN) {
         struct mill_tcpconn *c = (struct mill_tcpconn*)s;
         int rc = shutdown(c->fd, how);
-        mill_assert(rc == 0);
+        if(rc != 0) {
+            printf("errno=%d\n", errno);
+            mill_assert(0);
+        }
         return;
     }
     mill_assert(0);

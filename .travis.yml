@@ -45,7 +45,6 @@ script:
   - if [[ $CONF == "cmake-shared"  ]]; then make test; fi
 
 after_failure:
-  - ls tests/
   - for f in tests/*.log; do echo; echo "${f}:"; cat $f; done;
   - cat test-suite.log
 
