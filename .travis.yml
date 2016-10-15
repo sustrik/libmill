@@ -35,7 +35,7 @@ before_install:
 install:
   - if [[ $CONF == "autotools-shared" ]]; then ./autogen.sh && ./configure --enable-ssl  && make; fi
   - if [[ $CONF == "autotools-static" ]]; then ./autogen.sh && ./configure --enable-ssl --disable-shared && make; fi
-  - if [[ $CONF == "autotools-shared-poll" ]]; then ./autogen.sh && ./configure --enable-ssl CFLAGS=-DMILL_POLL && make; fi
+  - if [[ $CONF == "autotools-shared-poll" ]]; then ./autogen.sh && ./configure --enable-ssl CFLAGS="-DMILL_POLL $CFLAGS" && make; fi
   - if [[ $CONF == "cmake-shared"  ]]; then cmake . && make; fi
 
 script:
