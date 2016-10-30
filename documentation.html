@@ -1225,6 +1225,22 @@ is discarded and cannot be retrieved by the caller.</p>
 specifier, however, they may fail in random fashion, depending on a particular
 combination of compiler, optimisation level and code in question.</p>
 
+<p>Also, all arguments to a coroutine must not contain function calls. If they
+do the program may fail non-deterministically. If you need to pass a result of a
+computation to a coroutine do the computation first, then pass the result as
+an argument. Instead of:</p>
+
+<pre>
+go(bar(foo(a)));
+</pre>
+
+<p>Do this:</p>
+
+<pre>
+int a = foo();
+go(bar(a));
+</pre>
+
 <p>If there is not enough memory to allocate new stack for the coroutine,
 <tt>go()</tt> aborts the process. To avoid that happening you can pre-allocate
 the stacks on process startup using
