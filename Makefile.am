@@ -101,6 +101,10 @@ check_PROGRAMS = \
     tests/mfork3\
     tests/ssl
 
+EXTRA_DIST = \
+    tests/cert.pem \
+    tests/key.pem
+
 LDADD = libmill.la
 
 TESTS = $(check_PROGRAMS)
@@ -155,7 +159,7 @@ dist-hook:
 	fi; \
 	$(srcdir)/package_version.sh > $(distdir)/.version
 
-EXTRA_DIST = \
+EXTRA_DIST += \
     ./abi_version.sh \
     ./package_version.sh \
     ./CMakeLists.txt
