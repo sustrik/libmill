@@ -67,31 +67,33 @@ static void ssl_init(void) {
     initialised = 1;
     OpenSSL_add_all_algorithms();
     SSL_library_init();
-
-    /* TODO: Move to sslconnect() */
-    ssl_cli_ctx = SSL_CTX_new(SSLv23_client_method());
-    mill_assert(ssl_cli_ctx);
 }
 
-struct mill_sslsock *mill_ssllisten_(struct mill_ipaddr addr,
-      const char *cert_file, const char *key_file, int backlog) {
+struct mill_sslsock *mill_ssllisten_(SSLSERVER_p_st server, int backlog) {
     ssl_init();
     /* Load certificates. */
-    SSL_CTX *ctx = SSL_CTX_new(SSLv23_server_method());
+    SSL_CTX *ctx;
+    if(server->method != NULL){
+    	ctx = SSL_CTX_new((SSL_METHOD*)server->method);
+    } else {
+    	ctx = SSL_CTX_new(TLSv1_2_server_method());
+    }
     if(!ctx)
         return NULL;
-    if(cert_file && SSL_CTX_use_certificate_chain_file(ctx, cert_file) <= 0)
+    if(server->cert_file && SSL_CTX_use_certificate_chain_file(ctx, server->cert_file) <= 0)
         return NULL;
-    if(key_file && SSL_CTX_use_PrivateKey_file(ctx,
-          key_file, SSL_FILETYPE_PEM) <= 0)
+    if(server->key_file && SSL_CTX_use_PrivateKey_file(ctx,
+          server->key_file, SSL_FILETYPE_PEM) <= 0)
         return NULL;
     /* Check for inconsistent private key. */
     if(SSL_CTX_check_private_key(ctx) <= 0)
         return NULL;
     /* Open the listening socket. */
-    tcpsock s = tcplisten(addr, backlog);
+    //ipaddr laddr = iplocal((const char*)server->addr, server->port, 0);
+    tcpsock s = tcplisten(server->addr, backlog);
     if(!s) {
         /* TODO: close the context */
+	printf("error was exacltly here.");
         return NULL;
     }
     /* Create the object. */
@@ -286,10 +288,13 @@ void mill_sslflush_(struct mill_sslsock *s, int64_t deadline) {
     errno = 0;
 }
 
-struct mill_sslsock *mill_sslconnect_(struct mill_ipaddr addr,
+struct mill_sslsock *mill_sslconnect_(SSLCLIENT_p_st client,
       int64_t deadline) {
     ssl_init();
-    tcpsock sock = tcpconnect(addr, deadline);
+    ssl_cli_ctx = SSL_CTX_new((SSL_METHOD*)client->method);
+    mill_assert(ssl_cli_ctx);
+
+    tcpsock sock = tcpconnect(client->addr, deadline);
     if(!sock)
         return NULL;
     struct mill_sslsock *c = ssl_conn_new(sock, ssl_cli_ctx, 1);

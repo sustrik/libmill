@@ -28,7 +28,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-
+#include <openssl/ssl.h>
 #include "../libmill.h"
 
 #define CONN_ESTABLISHED 1
@@ -94,7 +94,6 @@ coroutine void dialogue(sslsock as, chan ch) {
 }
 
 int main(int argc, char *argv[]) {
-
     int port = 5555;
     int nproc = 1;
     if(argc > 1)
@@ -103,7 +102,14 @@ int main(int argc, char *argv[]) {
         nproc = atoi(argv[2]);
 
     ipaddr addr = iplocal(NULL, port, 0);
-    sslsock ls = ssllisten(addr, "./cert.pem", "./key.pem", 10);
+    
+    SSLSERVER_p_st ss = malloc(sizeof(SSLSERVER_st));
+    ss->method = (SSL_METHOD*) TLSv1_2_server_method();
+    ss->addr = addr;
+    //ss->port = port;
+    ss->cert_file = "./cert.pem";
+    ss->key_file = "./key.pem";
+    sslsock ls = ssllisten(ss, 10);
     if(!ls) {
         perror("Can't open listening socket");
         return 1;

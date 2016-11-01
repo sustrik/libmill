@@ -66,9 +66,12 @@ coroutine void client2(int port) {
 
 int main() {
     char buf[16];
-
-    sslsock ls = ssllisten(iplocal(NULL, 5555, 0),
-        "./tests/cert.pem", "./tests/key.pem", 10);
+    SSLSERVER_p_st ss = malloc(sizeof(SSLSERVER_st));
+    ss->method = NULL;
+    ss->addr = iplocal(NULL, 5555, 0);
+    ss->cert_file = "./tests/cert.pem";
+    ss->key_file = "./tests/key.pem";
+    sslsock ls = ssllisten(ss, 10);
     assert(ls);
 
     go(client(5555));
@@ -105,8 +108,12 @@ int main() {
     sslclose(ls);
 
     /* Test whether libmill performs correctly when faced with TCP pushback. */
-    ls = ssllisten(iplocal(NULL, 5555, 0),
-        "./tests/cert.pem", "./tests/key.pem", 10);
+    ss->method = NULL;
+    ss->addr = iplocal(NULL, 5555, 0);
+    ss->cert_file ="./tests/cert.pem";
+    ss->key_file ="./tests/key.pem";
+    ls = ssllisten(ss, 10);
+
     go(client2(5555));
     as = sslaccept(ls, -1);
     assert(as);
@@ -130,7 +137,7 @@ int main() {
     }
     sslclose(as);
     sslclose(ls);
-
+    free(ss);
     return 0;
 }
 
