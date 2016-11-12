@@ -37,7 +37,7 @@
 #include "libmill.h"
 #include "utils.h"
 
-struct mill_udpsock {
+struct mill_udpsock_ {
     int fd;
     int port;
 };
@@ -51,7 +51,7 @@ static void mill_udptune(int s) {
     mill_assert(rc != -1);
 }
 
-struct mill_udpsock *mill_udplisten_(ipaddr addr) {
+struct mill_udpsock_ *mill_udplisten_(ipaddr addr) {
     /* Open the listening socket. */
     int s = socket(mill_ipfamily(addr), SOCK_DGRAM, 0);
     if(s == -1)
@@ -81,7 +81,7 @@ struct mill_udpsock *mill_udplisten_(ipaddr addr) {
     }
 
     /* Create the object. */
-    struct mill_udpsock *us = malloc(sizeof(struct mill_udpsock));
+    struct mill_udpsock_ *us = malloc(sizeof(struct mill_udpsock_));
     if(!us) {
         fdclean(s);
         close(s);
@@ -94,11 +94,11 @@ struct mill_udpsock *mill_udplisten_(ipaddr addr) {
     return us;
 }
 
-int mill_udpport_(struct mill_udpsock *s) {
+int mill_udpport_(struct mill_udpsock_ *s) {
     return s->port;
 }
 
-void mill_udpsend_(struct mill_udpsock *s, ipaddr addr,
+void mill_udpsend_(struct mill_udpsock_ *s, ipaddr addr,
         const void *buf, size_t len) {
     struct sockaddr *saddr = (struct sockaddr*) &addr;
     ssize_t ss = sendto(s->fd, buf, len, 0, saddr, saddr->sa_family ==
@@ -112,7 +112,7 @@ void mill_udpsend_(struct mill_udpsock *s, ipaddr addr,
         errno = 0;
 }
 
-size_t mill_udprecv_(struct mill_udpsock *s, ipaddr *addr,
+size_t mill_udprecv_(struct mill_udpsock_ *s, ipaddr *addr,
       void *buf, size_t len, int64_t deadline) {
     ssize_t ss;
     while(1) {
@@ -133,7 +133,7 @@ size_t mill_udprecv_(struct mill_udpsock *s, ipaddr *addr,
     return (size_t)ss;
 }
 
-void mill_udpclose_(struct mill_udpsock *s) {
+void mill_udpclose_(struct mill_udpsock_ *s) {
     fdclean(s->fd);
     int rc = close(s->fd);
     mill_assert(rc == 0);

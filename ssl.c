@@ -33,7 +33,7 @@
 #include "utils.h"
 
 /* Defined in tcp.c, not exposed via libmill.h */
-int mill_tcpfd(struct mill_tcpsock *s);
+int mill_tcpfd(struct mill_tcpsock_ *s);
 
 /* Only one client context is needed, so let's make it global. */
 static SSL_CTX *ssl_cli_ctx;
@@ -43,18 +43,18 @@ enum mill_ssltype {
    MILL_SSLCONN
 };
 
-struct mill_sslsock {
+struct mill_sslsock_ {
     enum mill_ssltype type;
 };
 
 struct mill_ssllistener {
-    struct mill_sslsock sock;
+    struct mill_sslsock_ sock;
     tcpsock s;
     SSL_CTX *ctx;
 };
 
 struct mill_sslconn {
-    struct mill_sslsock sock;
+    struct mill_sslsock_ sock;
     tcpsock s;
     BIO *bio;
 };
@@ -73,7 +73,7 @@ static void ssl_init(void) {
     mill_assert(ssl_cli_ctx);
 }
 
-struct mill_sslsock *mill_ssllisten_(struct mill_ipaddr addr,
+struct mill_sslsock_ *mill_ssllisten_(struct mill_ipaddr addr,
       const char *cert_file, const char *key_file, int backlog) {
     ssl_init();
     /* Load certificates. */
@@ -109,7 +109,7 @@ struct mill_sslsock *mill_ssllisten_(struct mill_ipaddr addr,
     return &l->sock;
 }
 
-int mill_sslport_(struct mill_sslsock *s) {
+int mill_sslport_(struct mill_sslsock_ *s) {
     if(s->type == MILL_SSLLISTENER) {
         struct mill_ssllistener *l = (struct mill_ssllistener*)s;
         return tcpport(l->s);
@@ -152,7 +152,7 @@ static int ssl_wait(struct mill_sslconn *c, int64_t deadline) {
     return -1;  /* should not happen ? */
 }
 
-void mill_sslclose_(struct mill_sslsock *s) {
+void mill_sslclose_(struct mill_sslsock_ *s) {
     switch(s->type) {
     case MILL_SSLLISTENER:;
         struct mill_ssllistener *l = (struct mill_ssllistener*)s;
@@ -174,7 +174,7 @@ void mill_sslclose_(struct mill_sslsock *s) {
     errno = 0;
 }
 
-static struct mill_sslsock *ssl_conn_new(tcpsock s, SSL_CTX *ctx, int client) {
+static struct mill_sslsock_ *ssl_conn_new(tcpsock s, SSL_CTX *ctx, int client) {
     mill_assert(ctx);
     SSL *ssl = NULL;
     BIO *sbio = BIO_new_ssl(ctx, client);
@@ -209,7 +209,7 @@ static struct mill_sslsock *ssl_conn_new(tcpsock s, SSL_CTX *ctx, int client) {
     return &c->sock;
 }
 
-size_t mill_sslrecv_(struct mill_sslsock *s, void *buf, int len,
+size_t mill_sslrecv_(struct mill_sslsock_ *s, void *buf, int len,
       int64_t deadline) {
     if(s->type != MILL_SSLCONN)
         mill_panic("trying to use an unconnected socket");
@@ -229,7 +229,7 @@ size_t mill_sslrecv_(struct mill_sslsock *s, void *buf, int len,
     }
 }
 
-size_t mill_sslrecvuntil_(struct mill_sslsock *s, void *buf, size_t len,
+size_t mill_sslrecvuntil_(struct mill_sslsock_ *s, void *buf, size_t len,
       const char *delims, size_t delimcount, int64_t deadline) {
     if(s->type != MILL_SSLCONN)
         mill_panic("trying to receive from an unconnected socket");
@@ -250,7 +250,7 @@ size_t mill_sslrecvuntil_(struct mill_sslsock *s, void *buf, size_t len,
     return len;
 }
 
-size_t mill_sslsend_(struct mill_sslsock *s, const void *buf, int len,
+size_t mill_sslsend_(struct mill_sslsock_ *s, const void *buf, int len,
       int64_t deadline) {
     if(s->type != MILL_SSLCONN)
         mill_panic("trying to use an unconnected socket");
@@ -270,7 +270,7 @@ size_t mill_sslsend_(struct mill_sslsock *s, const void *buf, int len,
     }
 }
 
-void mill_sslflush_(struct mill_sslsock *s, int64_t deadline) {
+void mill_sslflush_(struct mill_sslsock_ *s, int64_t deadline) {
     if(s->type != MILL_SSLCONN)
         mill_panic("trying to use an unconnected socket");
     struct mill_sslconn *c = (struct mill_sslconn*)s;
@@ -286,13 +286,13 @@ void mill_sslflush_(struct mill_sslsock *s, int64_t deadline) {
     errno = 0;
 }
 
-struct mill_sslsock *mill_sslconnect_(struct mill_ipaddr addr,
+struct mill_sslsock_ *mill_sslconnect_(struct mill_ipaddr addr,
       int64_t deadline) {
     ssl_init();
     tcpsock sock = tcpconnect(addr, deadline);
     if(!sock)
         return NULL;
-    struct mill_sslsock *c = ssl_conn_new(sock, ssl_cli_ctx, 1);
+    struct mill_sslsock_ *c = ssl_conn_new(sock, ssl_cli_ctx, 1);
     if(!c) {
         tcpclose(sock);
         errno = ENOMEM;
@@ -301,14 +301,14 @@ struct mill_sslsock *mill_sslconnect_(struct mill_ipaddr addr,
     return c;
 }
 
-struct mill_sslsock *mill_sslaccept_(struct mill_sslsock *s, int64_t deadline) {
+struct mill_sslsock_ *mill_sslaccept_(struct mill_sslsock_ *s, int64_t deadline) {
     if(s->type != MILL_SSLLISTENER)
         mill_panic("trying to accept on a socket that isn't listening");
     struct mill_ssllistener *l = (struct mill_ssllistener*)s;
     tcpsock sock = tcpaccept(l->s, deadline);
     if(!sock)
         return NULL;
-    struct mill_sslsock *c = ssl_conn_new(sock, l->ctx, 0);
+    struct mill_sslsock_ *c = ssl_conn_new(sock, l->ctx, 0);
     if(!c) {
         tcpclose(sock);
         errno = ENOMEM;
@@ -317,7 +317,7 @@ struct mill_sslsock *mill_sslaccept_(struct mill_sslsock *s, int64_t deadline) {
     return c;
 }
 
-ipaddr mill_ssladdr_(struct mill_sslsock *s) {
+ipaddr mill_ssladdr_(struct mill_sslsock_ *s) {
     if(s->type != MILL_SSLCONN)
         mill_panic("trying to get address from a socket that isn't connected");
     struct mill_sslconn *c = (struct mill_sslconn*)s;

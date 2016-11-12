@@ -155,7 +155,7 @@ void goredump(void) {
         "----------------------------------------------------------------------"
         "--------------------------------------------------\n");
     for(it = mill_list_begin(&mill_all_chans); it; it = mill_list_next(it)) {
-        struct mill_chan *ch = mill_cont(it, struct mill_chan, debug.item);
+        struct mill_chan_ *ch = mill_cont(it, struct mill_chan_, debug.item);
         snprintf(idbuf, sizeof(idbuf), "<%d>", (int)ch->debug.id);
         sprintf(buf, "%d/%d",
             (int)ch->items,

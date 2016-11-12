@@ -59,7 +59,7 @@ struct mill_ep {
 };
 
 /* Channel. */
-struct mill_chan {
+struct mill_chan_ {
     /* The size of the elements stored in the channel, in bytes. */
     size_t sz;
     /* Channel holds two lists, the list of clauses waiting to send and list
@@ -107,7 +107,7 @@ struct mill_clause {
 };
 
 /* Returns pointer to the channel that contains specified endpoint. */
-struct mill_chan *mill_getchan(struct mill_ep *ep);
+struct mill_chan_ *mill_getchan(struct mill_ep *ep);
 
 #endif
 
