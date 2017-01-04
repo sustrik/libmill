@@ -144,6 +144,7 @@ int mill_timer_fire(void) {
         if(tm->expiry > nw)
             break;
         mill_list_erase(&mill_timers, mill_list_begin(&mill_timers));
+        tm->expiry = -1;
         if(tm->callback)
             tm->callback(tm);
         fired = 1;
