@@ -4,7 +4,8 @@ project(libmill C)
 include(CheckSymbolExists)
 include(CheckFunctionExists)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu11 -Wall -Wextra")
+# set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra")
 
 # static and shared libs
 file(GLOB sources *.c dns/*.c)
