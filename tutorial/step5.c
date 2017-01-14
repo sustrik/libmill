@@ -52,8 +52,6 @@ coroutine void dialogue(tcpsock as) {
     if(errno != 0)
         goto cleanup;
     tcpflush(as, deadline);
-    if(errno != 0)
-        goto cleanup;
 
     cleanup:
     tcpclose(as);
