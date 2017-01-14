@@ -51,7 +51,7 @@ int main(int argc, char *argv[]) {
         char inbuf[256];
         size_t sz = tcprecvuntil(as, inbuf, sizeof(inbuf), "\r", 1, -1);
 
-        inbuf[sz - 1] = 0;
+        inbuf[sz - 2] = 0;
         char outbuf[256];
         int rc = snprintf(outbuf, sizeof(outbuf), "Hello, %s!\r\n", inbuf);
 
