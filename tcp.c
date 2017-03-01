@@ -84,6 +84,11 @@ static void mill_tcptune(int s) {
     opt = 1;
     rc = setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof (opt));
     mill_assert(rc == 0);
+#ifdef SO_REUSEPORT
+    opt = 1;
+    rc = setsockopt(s, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof (opt));
+    if(rc != 0) perror("setsockopt SO_REUSEPORT failed");
+#endif
     /* If possible, prevent SIGPIPE signal when writing to the connection
         already closed by the peer. */
 #ifdef SO_NOSIGPIPE

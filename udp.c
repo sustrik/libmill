@@ -49,6 +49,11 @@ static void mill_udptune(int s) {
         opt = 0;
     int rc = fcntl(s, F_SETFL, opt | O_NONBLOCK);
     mill_assert(rc != -1);
+#ifdef SO_REUSEPORT
+    opt = 1;
+    rc = setsockopt(s, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof (opt));
+    if(rc != 0) perror("setsockopt SO_REUSEPORT failed");
+#endif
 }
 
 struct mill_udpsock_ *mill_udplisten_(ipaddr addr) {
