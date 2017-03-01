@@ -453,6 +453,10 @@ MILL_EXPORT const char *mill_ipaddrstr_(
     struct mill_ipaddr addr,
     char *ipstr);
 
+MILL_EXPORT int mill_ipfamily_(struct mill_ipaddr addr);
+MILL_EXPORT int mill_iplen_(struct mill_ipaddr addr);
+MILL_EXPORT int mill_ipport_(struct mill_ipaddr addr);
+
 #if defined MILL_USE_PREFIX
 #define MILL_IPADDR_IPV4 MILL_IPADDR_IPV4_
 #define MILL_IPADDR_IPV6 MILL_IPADDR_IPV6_
@@ -463,6 +467,9 @@ typedef struct mill_ipaddr mill_ipaddr;
 #define mill_iplocal mill_iplocal_
 #define mill_ipremote mill_ipremote_
 #define mill_ipaddrstr mill_ipaddrstr_
+#define mill_ipfamily mill_ipfamily_
+#define mill_iplen mill_iplen_
+#define mill_ipport mill_ipport_
 #else
 #define IPADDR_IPV4 MILL_IPADDR_IPV4_
 #define IPADDR_IPV6 MILL_IPADDR_IPV6_
@@ -473,6 +480,9 @@ typedef struct mill_ipaddr ipaddr;
 #define iplocal mill_iplocal_
 #define ipremote mill_ipremote_
 #define ipaddrstr mill_ipaddrstr_
+#define ipfamily mill_ipfamily_
+#define iplen mill_iplen_
+#define ipport mill_ipport_
 #endif
 
 /******************************************************************************/

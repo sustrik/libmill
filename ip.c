@@ -43,7 +43,6 @@
 
 #include "dns/dns.h"
 
-#include "ip.h"
 #include "libmill.h"
 #include "utils.h"
 
@@ -142,24 +141,24 @@ static ipaddr mill_ipliteral(const char *addr, int port, int mode) {
     }
 }
 
-int mill_ipfamily(ipaddr addr) {
+int mill_ipfamily_(ipaddr addr) {
     return ((struct sockaddr*)&addr)->sa_family;
 }
 
-int mill_iplen(ipaddr addr) {
-    return mill_ipfamily(addr) == AF_INET ?
+int mill_iplen_(ipaddr addr) {
+    return mill_ipfamily_(addr) == AF_INET ?
         sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6);
 }
 
-int mill_ipport(ipaddr addr) {
-    return ntohs(mill_ipfamily(addr) == AF_INET ?
+int mill_ipport_(ipaddr addr) {
+    return ntohs(mill_ipfamily_(addr) == AF_INET ?
         ((struct sockaddr_in*)&addr)->sin_port :
         ((struct sockaddr_in6*)&addr)->sin6_port);
 }
 
 /* Convert IP address from network format to ASCII dot notation. */
 const char *mill_ipaddrstr_(ipaddr addr, char *ipstr) {
-    if (mill_ipfamily(addr) == AF_INET) {
+    if (mill_ipfamily_(addr) == AF_INET) {
         return inet_ntop(AF_INET, &(((struct sockaddr_in*)&addr)->sin_addr),
             ipstr, INET_ADDRSTRLEN);
     }

@@ -34,7 +34,6 @@
 #include <unistd.h>
 
 #include "debug.h"
-#include "ip.h"
 #include "libmill.h"
 #include "utils.h"
 
@@ -84,6 +83,11 @@ static void mill_tcptune(int s) {
     opt = 1;
     rc = setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof (opt));
     mill_assert(rc == 0);
+#ifdef SO_REUSEPORT
+    opt = 1;
+    rc = setsockopt(s, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof (opt));
+    if(rc != 0) perror("setsockopt SO_REUSEPORT failed");
+#endif
     /* If possible, prevent SIGPIPE signal when writing to the connection
         already closed by the peer. */
 #ifdef SO_NOSIGPIPE
@@ -103,13 +107,13 @@ static void tcpconn_init(struct mill_tcpconn *conn, int fd) {
 
 struct mill_tcpsock_ *mill_tcplisten_(ipaddr addr, int backlog) {
     /* Open the listening socket. */
-    int s = socket(mill_ipfamily(addr), SOCK_STREAM, 0);
+    int s = socket(mill_ipfamily_(addr), SOCK_STREAM, 0);
     if(s == -1)
         return NULL;
     mill_tcptune(s);
 
     /* Start listening. */
-    int rc = bind(s, (struct sockaddr*)&addr, mill_iplen(addr));
+    int rc = bind(s, (struct sockaddr*)&addr, mill_iplen_(addr));
     if(rc != 0)
         return NULL;
     rc = listen(s, backlog);
@@ -118,7 +122,7 @@ struct mill_tcpsock_ *mill_tcplisten_(ipaddr addr, int backlog) {
 
     /* If the user requested an ephemeral port,
        retrieve the port number assigned by the OS now. */
-    int port = mill_ipport(addr);
+    int port = mill_ipport_(addr);
     if(!port) {
         ipaddr baddr;
         socklen_t len = sizeof(ipaddr);
@@ -130,7 +134,7 @@ struct mill_tcpsock_ *mill_tcplisten_(ipaddr addr, int backlog) {
             errno = err;
             return NULL;
         }
-        port = mill_ipport(baddr);
+        port = mill_ipport_(baddr);
     }
 
     /* Create the object. */
@@ -151,7 +155,7 @@ struct mill_tcpsock_ *mill_tcplisten_(ipaddr addr, int backlog) {
 int mill_tcpport_(struct mill_tcpsock_ *s) {
     if(s->type == MILL_TCPCONN) {
         struct mill_tcpconn *c = (struct mill_tcpconn*)s;
-        return mill_ipport(c->addr);
+        return mill_ipport_(c->addr);
     }
     else if(s->type == MILL_TCPLISTENER) {
         struct mill_tcplistener *l = (struct mill_tcplistener*)s;
@@ -201,13 +205,13 @@ struct mill_tcpsock_ *mill_tcpaccept_(struct mill_tcpsock_ *s, int64_t deadline)
 
 struct mill_tcpsock_ *mill_tcpconnect_(ipaddr addr, int64_t deadline) {
     /* Open a socket. */
-    int s = socket(mill_ipfamily(addr), SOCK_STREAM, 0);
+    int s = socket(mill_ipfamily_(addr), SOCK_STREAM, 0);
     if(s == -1)
         return NULL;
     mill_tcptune(s);
 
     /* Connect to the remote endpoint. */
-    int rc = connect(s, (struct sockaddr*)&addr, mill_iplen(addr));
+    int rc = connect(s, (struct sockaddr*)&addr, mill_iplen_(addr));
     if(rc != 0) {
         mill_assert(rc == -1);
         if(errno != EINPROGRESS)
