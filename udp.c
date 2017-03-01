@@ -33,7 +33,6 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#include "ip.h"
 #include "libmill.h"
 #include "utils.h"
 
@@ -58,19 +57,19 @@ static void mill_udptune(int s) {
 
 struct mill_udpsock_ *mill_udplisten_(ipaddr addr) {
     /* Open the listening socket. */
-    int s = socket(mill_ipfamily(addr), SOCK_DGRAM, 0);
+    int s = socket(mill_ipfamily_(addr), SOCK_DGRAM, 0);
     if(s == -1)
         return NULL;
     mill_udptune(s);
 
     /* Start listening. */
-    int rc = bind(s, (struct sockaddr*)&addr, mill_iplen(addr));
+    int rc = bind(s, (struct sockaddr*)&addr, mill_iplen_(addr));
     if(rc != 0)
         return NULL;
 
     /* If the user requested an ephemeral port,
        retrieve the port number assigned by the OS now. */
-    int port = mill_ipport(addr);
+    int port = mill_ipport_(addr);
     if(!port) {
         ipaddr baddr;
         socklen_t len = sizeof(ipaddr);
@@ -82,7 +81,7 @@ struct mill_udpsock_ *mill_udplisten_(ipaddr addr) {
             errno = err;
             return NULL;
         }
-        port = mill_ipport(baddr);
+        port = mill_ipport_(baddr);
     }
 
     /* Create the object. */
