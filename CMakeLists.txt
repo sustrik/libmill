@@ -4,7 +4,9 @@ project(libmill VERSION 1.18 LANGUAGES C)
 include(CheckSymbolExists)
 include(CheckFunctionExists)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra")
+if(CMAKE_C_COMPILER_ID EQUAL "Clang" OR CMAKE_C_COMPILER_ID EQUAL "GNU")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra")
+endif()
 
 # static and shared libs
 file(GLOB sources *.c dns/*.c)
