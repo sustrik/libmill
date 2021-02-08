@@ -149,9 +149,14 @@ extern int dns_debug;
 #define DNS_PRAGMA_QUIET _Pragma("GCC diagnostic ignored \"-Woverride-init\"")
 #define DNS_PRAGMA_POP _Pragma("GCC diagnostic pop")
 
+#if __GNUC__ < 9
 /* GCC parses the _Pragma operator less elegantly than clang. */
 #define dns_quietinit(...) \
-	__extension__ ({ DNS_PRAGMA_PUSH DNS_PRAGMA_QUIET __VA_ARGS__; DNS_PRAGMA_POP })
+        __extension__ ({ DNS_PRAGMA_PUSH DNS_PRAGMA_QUIET __VA_ARGS__; DNS_PRAGMA_POP })
+#else
+#define dns_quietinit(...) __VA_ARGS__
+#endif
+
 #else
 #define DNS_PRAGMA_PUSH
 #define DNS_PRAGMA_QUIET
